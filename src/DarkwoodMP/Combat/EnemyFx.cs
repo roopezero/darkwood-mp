@@ -7,8 +7,9 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// What the host's enemies do that a joiner sees or hears on its own screen, beyond their sounds and blood
-    /// (NetEnemies) and explosions (EnemyAreaHits):
+    /// What the host's enemies do that a joiner sees or hears on its own
+    /// screen, beyond their sounds and blood (NetEnemies) and explosions
+    /// (EnemyAreaHits):
     ///
     /// - Combat music (CombatMusic). The game plays it while `Player.charactersAttackingMe` has someone in it, which
     ///   `Character.addToPlayerAttackers` fills only for the host's player. The host checks twice a second, for each
@@ -46,7 +47,8 @@ namespace DarkwoodMP.Combat
             get
             {
                 var s = Session.Instance;
-                return s != null && s.IsHost && s.Peers.Count > 0 && WorldShare.InWorld;
+                return s != null && s.IsHost && s.Peers.Count > 0
+                    && WorldShare.InWorld;
             }
         }
 
@@ -69,11 +71,14 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        // ---- combat music ------------------------------------------------------------------------------
+        // ---- combat music ---------------------------------------------------
 
-        private static readonly Dictionary<ulong, bool> _inCombat = new Dictionary<ulong, bool>();
+        private static readonly Dictionary<ulong, bool> _inCombat =
+            new Dictionary<ulong, bool>();
 
-        /// <summary>Client: the host says one of its enemies is after our player.</summary>
+        /// <summary>
+        /// Client: the host says one of its enemies is after our player.
+        /// </summary>
         public static bool HostSaysInCombat;
 
         private static void HostCombat()
@@ -91,7 +96,10 @@ namespace DarkwoodMP.Combat
                 {
                     foreach (var c in chars)
                     {
-                        if (c != null && c.alive && NetEnemies.Eligible(c) && c.behaviour == Character.Behaviour.chasingTarget && c.target == proxy.transform)
+                        if (c != null && c.alive && NetEnemies.Eligible(c)
+                            && c.behaviour
+                                == Character.Behaviour.chasingTarget
+                            && c.target == proxy.transform)
                         {
                             fight = true;
                             break;
@@ -111,7 +119,8 @@ namespace DarkwoodMP.Combat
                     {
                         text = "is";
                     }
-                    Plugin.Log.LogInfo($"[enemyfx] {proxy.OwnerName} {text} in combat");
+                    Plugin.Log.LogInfo(
+                        $"[enemyfx] {proxy.OwnerName} {text} in combat");
                 }
                 if (proxy.Owner == Sync.PlayerSync.DummyId)
                 {
@@ -141,10 +150,13 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            bool want = HostSaysInCombat || (me.charactersAttackingMe != null && me.charactersAttackingMe.Count > 0);
+            bool want = HostSaysInCombat
+                || (me.charactersAttackingMe != null
+                    && me.charactersAttackingMe.Count > 0);
             if (want != me.InCombat)
             {
-                me.InCombat = want; // the setter starts or fades out the combat track
+                // the setter starts or fades out the combat track
+                me.InCombat = want;
             }
             string text = "off";
             if (want)
@@ -156,13 +168,18 @@ namespace DarkwoodMP.Combat
             {
                 hostSays = "an enemy is after us";
             }
-            Plugin.Log.LogInfo($"[enemyfx] combat music {text} (the host says {hostSays})");
+            Plugin.Log.LogInfo(
+                $"[enemyfx] combat music {text} (the host says {hostSays})");
         }
 
-        // ---- effect prefabs -----------------------------------------------------------------------------
+        // ---- effect prefabs -------------------------------------------------
 
-        /// <summary>Host: one of its enemies made a prefab (kind 1) or a pooled FX effect (kind 2) here.</summary>
-        internal static void SendPrefab(byte kind, string name, Vector3 pos, float rotY)
+        /// <summary>
+        /// Host: one of its enemies made a prefab (kind 1) or a pooled FX
+        /// effect (kind 2) here.
+        /// </summary>
+        internal static void SendPrefab(
+            byte kind, string name, Vector3 pos, float rotY)
         {
             if (!Hosting || WorldActions.Replaying)
             {
@@ -180,11 +197,15 @@ namespace DarkwoodMP.Combat
             s.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[enemyfx] sent {name} at {pos.x:0},{pos.z:0}");
+                Plugin.Log.LogInfo(
+                    $"[enemyfx] sent {name} at {pos.x:0},{pos.z:0}");
             }
         }
 
-        /// <summary>Host: one of its enemies switched its particle emitter; the players that have it see it too.</summary>
+        /// <summary>
+        /// Host: one of its enemies switched its particle emitter; the players
+        /// that have it see it too.
+        /// </summary>
         internal static void SendEmitter(Character c, int toggle)
         {
             if (!Hosting || WorldActions.Replaying)
@@ -210,7 +231,8 @@ namespace DarkwoodMP.Combat
         private static void OnEffect(ulong from, PacketReader r)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsClient || from != s.HostId || !WorldShare.InWorld)
+            if (s == null || !s.IsClient || from != s.HostId
+                || !WorldShare.InWorld)
             {
                 return;
             }
@@ -246,34 +268,43 @@ namespace DarkwoodMP.Combat
                 rotY = r.R.ReadSingle();
             }
             var me = Player.Instance;
-            if (me == null || EnemyAreaHits.PlayerAway() || Core.trueDistance(me.transform.position, pos) > 4000f)
+            if (me == null || EnemyAreaHits.PlayerAway()
+                || Core.trueDistance(me.transform.position, pos) > 4000f)
             {
                 var log = Plugin.Log;
                 string where = "away";
                 if (me != null && !EnemyAreaHits.PlayerAway())
                 {
-                    where = $"too far (at {me.transform.position.x:0},{me.transform.position.z:0})";
+                    where =
+                        $"too far (at {me.transform.position.x:0},{me.transform.position.z:0})";
                 }
-                log.LogInfo($"[enemyfx] the host's enemy made {name}, not shown: our player is {where}");
+                log.LogInfo(
+                    $"[enemyfx] the host's enemy made {name}, not shown: our player is {where}");
                 return;
             }
             if (Show(() =>
                 {
                     if (kind == 1)
                     {
-                        Core.AddPrefab(name, pos, Quaternion.Euler(90f, rotY, 0f), null);
+                        Core.AddPrefab(
+                            name, pos, Quaternion.Euler(90f, rotY, 0f), null);
                     }
                     else
                     {
-                        Core.AddPooledPrefab("FX", name, pos, Quaternion.identity);
+                        Core.AddPooledPrefab(
+                            "FX", name, pos, Quaternion.identity);
                     }
                 }))
             {
-                Plugin.Log.LogInfo($"[enemyfx] the host's enemy made {name} at {pos.x:0},{pos.z:0}");
+                Plugin.Log.LogInfo(
+                    $"[enemyfx] the host's enemy made {name} at {pos.x:0},{pos.z:0}");
             }
         }
 
-        /// <summary>Makes an effect the host's enemy made, as a replay (nothing in it is sent back).</summary>
+        /// <summary>
+        /// Makes an effect the host's enemy made, as a replay (nothing in it is
+        /// sent back).
+        /// </summary>
         private static bool Show(System.Action make)
         {
             WorldActions.Replaying = true;
@@ -284,7 +315,8 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogInfo($"[enemyfx] couldn't show the host's effect here: {e.Message}");
+                Plugin.Log.LogInfo(
+                    $"[enemyfx] couldn't show the host's effect here: {e.Message}");
                 return false;
             }
             finally
@@ -293,9 +325,10 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        // ---- the banshee's sight (client) -----------------------------------------------------------------
+        // ---- the banshee's sight (client) -----------------------------------
 
-        private static readonly HashSet<Character> _seen = new HashSet<Character>();
+        private static readonly HashSet<Character> _seen =
+            new HashSet<Character>();
 
         private static void BansheeSight()
         {
@@ -315,20 +348,25 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                bool far = c.inSightOfPlayer != null && c.inSightOfPlayer.playerCanBeFarAway;
+                bool far = c.inSightOfPlayer != null
+                    && c.inSightOfPlayer.playerCanBeFarAway;
                 if (!me.isInSight(c.transform, far))
                 {
                     continue;
                 }
                 now.Add(c);
-                float d = Mathf.Max(1f, Core.trueDistance(c.transform.position, me.transform.position));
+                float d = Mathf.Max(
+                    1f,
+                    Core.trueDistance(
+                        c.transform.position, me.transform.position));
                 if (d < nearestDist)
                 {
                     nearestDist = d;
                     nearest = c;
                 }
             }
-            // Out of sight now: as onBansheeOutOfSightOfPlayer does for its look.
+            // Out of sight now: as onBansheeOutOfSightOfPlayer does for its
+            // look.
             foreach (var c in _seen)
             {
                 if (c != null && !now.Contains(c))
@@ -347,7 +385,8 @@ namespace DarkwoodMP.Combat
             }
             if (_seen.Count == 0)
             {
-                Plugin.Log.LogInfo($"[enemyfx] our player sees the host's banshee {nearest.name} ({nearestDist:0} away)");
+                Plugin.Log.LogInfo(
+                    $"[enemyfx] our player sees the host's banshee {nearest.name} ({nearestDist:0} away)");
             }
             _seen.Clear();
             foreach (var c in now)
@@ -355,10 +394,12 @@ namespace DarkwoodMP.Combat
                 _seen.Add(c);
                 SightLight(c, true);
             }
-            // As onBansheeSeePlayer and bansheeAgitated do, for the nearest one.
+            // As onBansheeSeePlayer and bansheeAgitated do, for the nearest
+            // one.
             if (me.bansheeAgitatedSoundAO == null)
             {
-                me.bansheeAgitatedSoundAO = AudioController.Play("banshee_agitated_player", me._transform);
+                me.bansheeAgitatedSoundAO = AudioController.Play(
+                    "banshee_agitated_player", me._transform);
             }
             CamMain instance = Singleton<CamMain>.Instance;
             if (instance != null)
@@ -371,7 +412,10 @@ namespace DarkwoodMP.Combat
                 ui.initBansheeOverlay();
                 if (ui.bansheeOverlay != null)
                 {
-                    Core.tweenAlpha(ui.bansheeOverlay.gameObject, Mathf.Clamp(70f / nearestDist, 0f, 0.5f), 0.5f, timeScaleDependent: true);
+                    Core.tweenAlpha(
+                        ui.bansheeOverlay.gameObject,
+                        Mathf.Clamp(70f / nearestDist, 0f, 0.5f), 0.5f,
+                        timeScaleDependent: true);
                 }
             }
         }
@@ -389,11 +433,14 @@ namespace DarkwoodMP.Combat
                 ui.initBansheeOverlay();
                 if (ui.bansheeOverlay != null)
                 {
-                    Core.tweenAlpha(ui.bansheeOverlay.gameObject, 0f, 0.5f, timeScaleDependent: true);
+                    Core.tweenAlpha(
+                        ui.bansheeOverlay.gameObject, 0f, 0.5f,
+                        timeScaleDependent: true);
                 }
                 ui.wantToRemoveBansheeOverlay();
             }
-            Plugin.Log.LogInfo("[enemyfx] the host's banshees are out of our player's sight");
+            Plugin.Log.LogInfo(
+                "[enemyfx] the host's banshees are out of our player's sight");
         }
 
         private static void SightLight(Character c, bool on)
@@ -407,9 +454,11 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// "--dwmp-test-blast" (host), after AreaHitsTest: the nearest enemy to a joined player screams as a banshee does
-    /// (FX/BansheeScream, sent as EnemyEffect), the forest spirit's effect is made beside the player (pooled, sent as
-    /// EnemyEffect), and the host's after-night is ended (AfterNightEnded).
+    /// "--dwmp-test-blast" (host), after AreaHitsTest: the nearest enemy to a
+    /// joined player screams as a banshee does (FX/BansheeScream, sent as
+    /// EnemyEffect), the forest spirit's effect is made beside the player
+    /// (pooled, sent as EnemyEffect), and the host's after-night is ended
+    /// (AfterNightEnded).
     /// </summary>
     static class EnemyFxTest
     {
@@ -429,32 +478,42 @@ namespace DarkwoodMP.Combat
             var c = AreaHitsTest.NearestEnemy(at);
             if (c != null)
             {
-                Plugin.Log.LogInfo($"--dwmp-test-blast: {c.name} screams as a banshee");
+                Plugin.Log.LogInfo(
+                    $"--dwmp-test-blast: {c.name} screams as a banshee");
                 try
                 {
                     c.bansheeScream();
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogInfo($"--dwmp-test-blast: the scream failed here: {e.Message}");
+                    Plugin.Log.LogInfo(
+                        $"--dwmp-test-blast: the scream failed here: {e.Message}");
                 }
             }
-            Plugin.Log.LogInfo($"--dwmp-test-blast: the forest spirit's effect beside {p.OwnerName}");
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-blast: the forest spirit's effect beside {p.OwnerName}");
             try
             {
-                Core.AddPooledPrefab("FX", EnemyPooledFxPatch.ForestSpirit, at + new Vector3(100f, 0f, 0f), Quaternion.identity);
+                Core.AddPooledPrefab(
+                    "FX", EnemyPooledFxPatch.ForestSpirit,
+                    at + new Vector3(100f, 0f, 0f), Quaternion.identity);
             }
             catch (System.Exception e)
             {
-                // Chapter 1's FX pool hasn't got it: send it anyway, for the joiner's side of the message.
-                Plugin.Log.LogInfo($"--dwmp-test-blast: no such pooled effect here ({e.Message}): sent without the patch");
-                EnemyFx.SendPrefab(2, EnemyPooledFxPatch.ForestSpirit, at + new Vector3(100f, 0f, 0f), 0f);
+                // Chapter 1's FX pool hasn't got it: send it anyway, for the
+                // joiner's side of the message.
+                Plugin.Log.LogInfo(
+                    $"--dwmp-test-blast: no such pooled effect here ({e.Message}): sent without the patch");
+                EnemyFx.SendPrefab(
+                    2, EnemyPooledFxPatch.ForestSpirit,
+                    at + new Vector3(100f, 0f, 0f), 0f);
             }
             yield return new WaitForSeconds(1f);
             var ctl = Singleton<Controller>.Instance;
             if (ctl != null)
             {
-                Plugin.Log.LogInfo("--dwmp-test-blast: the host's after-night ends");
+                Plugin.Log.LogInfo(
+                    "--dwmp-test-blast: the host's after-night ends");
                 ctl.isAfterNight = true;
                 ctl.endAfterNight();
             }
@@ -462,7 +521,10 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Client: the game's own count of attackers (in an area of our own) mustn't turn off the host's combat music.</summary>
+    /// <summary>
+    /// Client: the game's own count of attackers (in an area of our own)
+    /// mustn't turn off the host's combat music.
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.checkInCombatChars))]
     static class CombatMusicKeepPatch
     {
@@ -474,13 +536,17 @@ namespace DarkwoodMP.Combat
             }
             if (!__instance.InCombat)
             {
-                __instance.InCombat = true; // (setting it off and on again would fade the music out)
+                // (setting it off and on again would fade the music out)
+                __instance.InCombat = true;
             }
             return false;
         }
     }
 
-    /// <summary>Host: the banshee's scream (FX/BansheeScream where it stands) goes to the joiners too.</summary>
+    /// <summary>
+    /// Host: the banshee's scream (FX/BansheeScream where it stands) goes to
+    /// the joiners too.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.bansheeScream))]
     static class BansheeScreamPatch
     {
@@ -488,20 +554,35 @@ namespace DarkwoodMP.Combat
         {
             if (NetEnemies.Eligible(__instance))
             {
-                EnemyFx.SendPrefab(1, "FX/BansheeScream", __instance.transform.position, 0f);
+                EnemyFx.SendPrefab(
+                    1, "FX/BansheeScream", __instance.transform.position, 0f);
             }
         }
     }
 
-    /// <summary>Host: pooled effects of enemies (the forest spirit's teleport and spawn) go to the joiners too.</summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPooledPrefab), new[] { typeof(string), typeof(string), typeof(Vector3), typeof(Quaternion) })]
+    /// <summary>
+    /// Host: pooled effects of enemies (the forest spirit's teleport and spawn)
+    /// go to the joiners too.
+    /// </summary>
+    [HarmonyPatch(typeof(Core), nameof(Core.AddPooledPrefab), new[]
+    {
+        typeof(string),
+        typeof(string),
+        typeof(Vector3),
+        typeof(Quaternion)
+    })]
     static class EnemyPooledFxPatch
     {
-        /// <summary>The one pooled FX effect enemies make (the forest spirit's teleport and spawn).</summary>
+        /// <summary>
+        /// The one pooled FX effect enemies make (the forest spirit's teleport
+        /// and spawn).
+        /// </summary>
         internal const string ForestSpirit = "ForestSpirit_fastSpawnEff";
 
-        // A postfix: it isn't sent when the pool hasn't got it here (the call throws).
-        static void Postfix(string pool, string prefab, Vector3 position, Transform __result)
+        // A postfix: it isn't sent when the pool hasn't got it here (the call
+        // throws).
+        static void Postfix(
+            string pool, string prefab, Vector3 position, Transform __result)
         {
             if (__result != null && pool == "FX" && prefab == ForestSpirit)
             {
@@ -510,13 +591,18 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Host: an enemy's animation switched its particle emitter (Character.modifyEmitter).</summary>
+    /// <summary>
+    /// Host: an enemy's animation switched its particle emitter
+    /// (Character.modifyEmitter).
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.modifyEmitter))]
     static class EnemyEmitterPatch
     {
         static void Postfix(Character __instance, int _toggle)
         {
-            if (NetEnemies.Eligible(__instance) && (__instance._particleLight != null || __instance._particleEmitter != null))
+            if (NetEnemies.Eligible(__instance)
+                && (__instance._particleLight != null
+                    || __instance._particleEmitter != null))
             {
                 EnemyFx.SendEmitter(__instance, _toggle);
             }

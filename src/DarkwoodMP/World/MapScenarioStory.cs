@@ -7,14 +7,16 @@ using static DarkwoodMP.World.MapScenario;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Steps of the two-game map test for story triggers that a player's shared action sets off
-    /// (tools/tests/map_scenario_story.py).
+    /// Steps of the two-game map test for story triggers that a player's shared
+    /// action sets off (tools/tests/map_scenario_story.py).
     ///
-    /// A door opened or closed, a thing switched on or off and a trap disarmed are shared actions: the other games
-    /// apply them as replays. A trigger on the thing (onOpenDoor, onTurnOn, onDisarmed...) used to start in every
-    /// replay as a whole event, so the host's player got the steps of the joiner who opened the door, and the joiner's
-    /// own request came after it and was refused as already happened. Now only the player who did it sets the trigger
-    /// off; the others run its shared part when it reaches them.
+    /// A door opened or closed, a thing switched on or off and a trap disarmed
+    /// are shared actions: the other games apply them as replays. A trigger on
+    /// the thing (onOpenDoor, onTurnOn, onDisarmed...) used to start in every
+    /// replay as a whole event, so the host's player got the steps of the
+    /// joiner who opened the door, and the joiner's own request came after it
+    /// and was refused as already happened. Now only the player who did it sets
+    /// the trigger off; the others run its shared part when it reaches them.
     /// </summary>
     public static class MapScenarioStory
     {
@@ -30,9 +32,11 @@ namespace DarkwoodMP.World
             public GameObject Thing;
             public LaterTestCounter C;
         }
-        private static readonly Dictionary<string, Made> _made = new Dictionary<string, Made>();
+        private static readonly Dictionary<string, Made> _made =
+            new Dictionary<string, Made>();
 
-        private static readonly AccessTools.FieldRef<Player, Item> TrapBeingDisarmed = AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
+        private static readonly AccessTools.FieldRef<Player, Item> TrapBeingDisarmed =
+            AccessTools.FieldRefAccess<Player, Item>("trapBeingDisarmed");
 
         private static PlayerStepCounter Counter()
         {
@@ -46,8 +50,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "door:N" (the Nth door from the centre, MapScenarioWorld.Nth), "trap:NAME" (an armed trap), "enemy" (the
-        /// host's enemy nearest to our player) or an item's NAME.
+        /// "door:N" (the Nth door from the centre, MapScenarioWorld.Nth),
+        /// "trap:NAME" (an armed trap), "enemy" (the host's enemy nearest to
+        /// our player) or an item's NAME.
         /// </summary>
         private static GameObject Thing(string spec)
         {
@@ -62,7 +67,8 @@ namespace DarkwoodMP.World
             }
             if (spec.StartsWith("door:"))
             {
-                // The Nth door that isn't broken in the save (the test world has broken ones, which the host won't open).
+                // The Nth door that isn't broken in the save (the test world
+                // has broken ones, which the host won't open).
                 int want = int.Parse(spec.Substring(5));
                 for (int i = 0, whole = 0; i < 64; i++)
                 {
@@ -80,7 +86,10 @@ namespace DarkwoodMP.World
             }
             if (spec.StartsWith("trap:"))
             {
-                Trigger trigger = MapScenarioWorld.Find<Trigger>(spec.Substring(5), x => x.active && !x.triggered && x.canDisarm && x.GetComponent<Item>() != null);
+                Trigger trigger = MapScenarioWorld.Find<Trigger>(
+                    spec.Substring(5),
+                    x => x.active && !x.triggered && x.canDisarm
+                        && x.GetComponent<Item>() != null);
                 if (trigger != null)
                 {
                     return trigger.gameObject;
@@ -96,10 +105,13 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "act-setup ID THING TYPE once|multi" (both games): a trigger of TYPE (onOpenDoor, onTurnOn, onDisarmed...)
-        /// on THING with three runFunction steps: two on our player (the unique object "player" and the player's own
-        /// object, counted by ID) and a shared one on a counter beside it. A trap is made to stay after a disarm and
-        /// to be disarmed every time, so the trigger's object is still there when its event runs.
+        /// "act-setup ID THING TYPE once|multi" (both games): a trigger of TYPE
+        /// (onOpenDoor, onTurnOn, onDisarmed...) on THING with three
+        /// runFunction steps: two on our player (the unique object "player" and
+        /// the player's own object, counted by ID) and a shared one on a
+        /// counter beside it. A trap is made to stay after a disarm and to be
+        /// disarmed every time, so the trigger's object is still there when its
+        /// event runs.
         /// </summary>
         private static IEnumerator Setup(string[] a, Result r)
         {
@@ -115,9 +127,11 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[1]} here");
                 yield break;
             }
-            var type = (global::EventTrigger.Type)System.Enum.Parse(typeof(global::EventTrigger.Type), a[2]);
+            var type = (global::EventTrigger.Type)System.Enum.Parse(
+                typeof(global::EventTrigger.Type), a[2]);
             bool multi = a[3] == "multi";
-            // So nothing in the test area breaks it during the steps (the host doesn't open a broken door).
+            // So nothing in the test area breaks it during the steps (the host
+            // doesn't open a broken door).
             var door = go.GetComponent<Door>();
             if (door != null)
             {
@@ -141,30 +155,65 @@ namespace DarkwoodMP.World
             ge.multipleFire = multi;
             Counter().N.Remove(id);
             m.C = root.AddComponent<LaterTestCounter>();
-            ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpOwnCount", activeModifier2 = true, stringValue = id, targetUniqueObjects = new List<string> { "player" }, eventAmount = 1 });
-            ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpOwnCount", activeModifier2 = true, stringValue = id, targetGameObjects = new List<GameObject> { Player.Instance.gameObject }, eventAmount = 1 });
-            ge.events.Add(new GameEvent { type = GameEvent.Type.runFunction, Value = "DwmpLaterCount", targetGameObjects = new List<GameObject> { root }, eventAmount = 1 });
+            ge.events.Add(new GameEvent
+            {
+                type = GameEvent.Type.runFunction,
+                Value = "DwmpOwnCount",
+                activeModifier2 = true,
+                stringValue = id,
+                targetUniqueObjects = new List<string> { "player" },
+                eventAmount = 1
+            });
+            ge.events.Add(new GameEvent
+            {
+                type = GameEvent.Type.runFunction,
+                Value = "DwmpOwnCount",
+                activeModifier2 = true,
+                stringValue = id,
+                targetGameObjects = new List<GameObject>
+                {
+                    Player.Instance.gameObject
+                },
+                eventAmount = 1
+            });
+            ge.events.Add(new GameEvent
+            {
+                type = GameEvent.Type.runFunction,
+                Value = "DwmpLaterCount",
+                targetGameObjects = new List<GameObject> { root },
+                eventAmount = 1
+            });
             EventTriggers et = go.GetComponent<EventTriggers>();
             if (et == null)
             {
                 et = go.AddComponent<EventTriggers>();
             }
-            var t = new global::EventTrigger { type = type, multipleFire = multi, gameEvents = ge, thisEventTriggers = et };
+            var t = new global::EventTrigger
+            {
+                type = type,
+                multipleFire = multi,
+                gameEvents = ge,
+                thisEventTriggers = et
+            };
             et.eventTriggers.Add(t);
             _made[id] = m;
             yield return null;
-            r.Info = $"trigger {id} #{et.eventTriggers.Count - 1} ({type}, {a[3]}) on {go.name} {ObjRef.Of(go)} at {Fmt(go.transform.position)}";
+            r.Info =
+                $"trigger {id} #{et.eventTriggers.Count - 1} ({type}, {a[3]}) on {go.name} {ObjRef.Of(go)} at {Fmt(go.transform.position)}";
         }
 
         /// <summary>
-        /// "act-do ID open|close|on|off|disarm|hit OWN": our player does it to ID's thing, as the player would; OWN steps
-        /// must then act on our player (2, or 0).
+        /// "act-do ID open|close|on|off|disarm|hit OWN": our player does it to
+        /// ID's thing, as the player would; OWN steps must then act on our
+        /// player (2, or 0).
         /// </summary>
         private static IEnumerator Do(string[] a, Result r)
         {
-            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.Thing == null)
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m)
+                || m.Thing == null)
             {
-                r.Fail("act-do ID open|close|on|off|disarm OWN (act-setup first)");
+                r.Fail(
+                    "act-do ID open|close|on|off|disarm OWN (act-setup first)");
                 yield break;
             }
             int want = int.Parse(a[2]);
@@ -187,7 +236,8 @@ namespace DarkwoodMP.World
                             {
                                 if (open)
                                 {
-                                    door.open(p.transform.position, p.transform, 0f);
+                                    door.open(
+                                        p.transform.position, p.transform, 0f);
                                 }
                                 else
                                 {
@@ -196,7 +246,8 @@ namespace DarkwoodMP.World
                             });
                         }
                         yield return new WaitForSeconds(0.5f);
-                        state = $"open={door.opened} broken={door.destroyed} health={door.health}";
+                        state =
+                            $"open={door.opened} broken={door.destroyed} health={door.health}";
                         if (door.opened != open)
                         {
                             r.Fail($"{m.Thing.name}: {state}");
@@ -234,9 +285,13 @@ namespace DarkwoodMP.World
                     }
                 case "hit":
                     {
-                        // A light hit by our player (a client's goes to the host, which applies it).
+                        // A light hit by our player (a client's goes to the
+                        // host, which applies it).
                         var ch = m.Thing.GetComponent<Character>();
-                        AsPlayer(() => ch.getHit(1f, p.transform, false, true, false, true, false, false, false));
+                        AsPlayer(
+                            () => ch.getHit(
+                                1f, p.transform, false, true, false, true,
+                                false, false, false));
                         state = $"alive={ch.alive}";
                         break;
                     }
@@ -251,7 +306,8 @@ namespace DarkwoodMP.World
                             p.progressBarCompleted();
                         });
                         float until0 = Time.realtimeSinceStartup + 4f;
-                        while (trap != null && !trap.triggered && Time.realtimeSinceStartup < until0)
+                        while (trap != null && !trap.triggered
+                            && Time.realtimeSinceStartup < until0)
                         {
                             yield return null;
                         }
@@ -267,7 +323,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1.5f);
             int got = c.Of(a[0]) - had;
-            r.Info = $"{m.Thing.name} {state}: {got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
+            r.Info =
+                $"{m.Thing.name} {state}: {got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
             if (got != want)
             {
                 r.Fail(r.Info);
@@ -275,10 +332,14 @@ namespace DarkwoodMP.World
             yield return Walk(Centre, 60f);
         }
 
-        /// <summary>"act-count ID OWN SHARED": in this game, OWN steps of ID acted on our player and its shared step ran SHARED times.</summary>
+        /// <summary>
+        /// "act-count ID OWN SHARED": in this game, OWN steps of ID acted on
+        /// our player and its shared step ran SHARED times.
+        /// </summary>
         private static IEnumerator Count(string[] a, Result r)
         {
-            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m) || m.C == null)
+            if (a.Length < 3 || !_made.TryGetValue(a[0], out var m)
+                || m.C == null)
             {
                 r.Fail("act-count ID OWN SHARED (act-setup first)");
                 yield break;
@@ -294,9 +355,11 @@ namespace DarkwoodMP.World
             string doorNote = "";
             if (m.Thing != null && m.Thing.GetComponent<Door>() is Door d)
             {
-                doorNote = $"; door open={d.opened} broken={d.destroyed} health={d.health}";
+                doorNote =
+                    $"; door open={d.opened} broken={d.destroyed} health={d.health}";
             }
-            r.Info = $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + doorNote;
+            r.Info =
+                $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + doorNote;
             if (got != own || m.C.N != shared)
             {
                 r.Fail(r.Info);

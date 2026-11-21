@@ -11,26 +11,30 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Steps of the two-game map test for gaps in docs/INTERACTIONS.md that no other test reached: the dream clock
-    /// (11), journal items handed over (61), the morning in the hideout (62, 63, 38), food rotting in an open
-    /// container (64), vines (65), shadow-covered items (66) and a death bag's map marker (68). The order they run in
-    /// is tools/tests/map_scenario_gaps.py.
+    /// Steps of the two-game map test for gaps in docs/INTERACTIONS.md that no
+    /// other test reached: the dream clock (11), journal items handed over
+    /// (61), the morning in the hideout (62, 63, 38), food rotting in an open
+    /// container (64), vines (65), shadow-covered items (66) and a death bag's
+    /// map marker (68). The order they run in is
+    /// tools/tests/map_scenario_gaps.py.
     ///
-    /// The things these steps add are put at fixed offsets from the centre (<see cref="Spots"/>), away from the
-    /// stations, and found again in both games as the nearest of their kind to that spot. Waits are in real time:
+    /// The things these steps add are put at fixed offsets from the centre
+    /// (<see cref="Spots"/>), away from the stations, and found again in both
+    /// games as the nearest of their kind to that spot. Waits are in real time:
     /// a dialogue may slow or stop the game's time.
     /// </summary>
     public static class MapScenarioGaps
     {
         private static List<NPC> _awayTraders = new List<NPC>();
 
-        private static readonly Dictionary<string, Vector3> Spots = new Dictionary<string, Vector3>
-        {
-            ["rot"] = new Vector3(-700f, 0f, 700f),
-            ["shadow"] = new Vector3(700f, 0f, -700f),
-            ["vine"] = new Vector3(-700f, 0f, -700f),
-            ["transport"] = new Vector3(600f, 0f, 600f),
-        };
+        private static readonly Dictionary<string, Vector3> Spots =
+            new Dictionary<string, Vector3>
+            {
+                ["rot"] = new Vector3(-700f, 0f, 700f),
+                ["shadow"] = new Vector3(700f, 0f, -700f),
+                ["vine"] = new Vector3(-700f, 0f, -700f),
+                ["transport"] = new Vector3(600f, 0f, 600f),
+            };
         private static Vector3 Spot(string which) => Centre + Spots[which];
 
         public static void Register()
@@ -53,14 +57,23 @@ namespace DarkwoodMP.World
             // 62, 63, 38 the morning
             MapScenario.Add("an-start", AnStart, timeout: 40f);
             MapScenario.Add("an-dawn", AnDawn);
-            // "trader-away" (both games): the test area's night trader goes. In the game he is only ever in the
-            // hideout in the morning; two copies of one trader at once (the station's and the morning's) get
-            // their stock by name (TraderSync), on a different copy in each game.
-            // He is switched off, not destroyed (TraderSync only finds active traders), and "trader-back" switches him on
-            // again after the morning steps, for the night trader's kill (map_scenario_fixchecks.py) at the end.
+            // "trader-away" (both games): the test area's night trader goes. In
+            // the game he is only ever in the hideout in the morning; two
+            // copies of one trader at once (the station's and the morning's)
+            // get their stock by name (TraderSync), on a different copy in each
+            // game.
+            // He is switched off, not destroyed (TraderSync only finds active
+            // traders), and "trader-back" switches him on again after the
+            // morning steps, for the night trader's kill
+            // (map_scenario_fixchecks.py) at the end.
             MapScenario.Add("trader-away", (a, r) =>
             {
-                _awayTraders = StateDump.All<NPC>().Where(n => n.trader && n.name == "nightTrader" && n.gameObject.activeSelf && StateDump.Flat(n.transform.position - Centre) < 2000f).ToList();
+                _awayTraders = StateDump.All<NPC>()
+                    .Where(
+                        n => n.trader && n.name == "nightTrader"
+                            && n.gameObject.activeSelf
+                            && StateDump.Flat(n.transform.position - Centre)
+                                < 2000f).ToList();
                 foreach (var n in _awayTraders)
                 {
                     n.gameObject.SetActive(false);
@@ -132,7 +145,9 @@ namespace DarkwoodMP.World
                 }
                 foreach (var sa in StateDump.All<ShadowArmor>())
                 {
-                    if (sa.GetComponent<Item>() == null || sa.GetComponent<Character>() != null || !ctx.Near(sa.transform.position))
+                    if (sa.GetComponent<Item>() == null
+                        || sa.GetComponent<Character>() != null
+                        || !ctx.Near(sa.transform.position))
                     {
                         continue;
                     }
@@ -154,7 +169,8 @@ namespace DarkwoodMP.World
                     var e = ctx.Add(d.gameObject);
                     if (d.additionalMapMarker != null)
                     {
-                        e["marker"] = (object)StateDump.Pos(d.additionalMapMarker.transform.position);
+                        e["marker"] = (object)StateDump.Pos(
+                            d.additionalMapMarker.transform.position);
                     }
                     else
                     {
@@ -167,20 +183,32 @@ namespace DarkwoodMP.World
                 var c = Singleton<Controller>.Instance;
                 if (c != null)
                 {
-                    ctx.Set("morning", new Dictionary<string, object> { ["afterNight"] = c.isAfterNight });
+                    ctx.Set("morning", new Dictionary<string, object>
+                    {
+                        ["afterNight"] = c.isAfterNight
+                    });
                 }
             });
         }
 
         private static IEnumerator Nothing() => MapScenarioIssues.Nothing();
-        private static List<string> LogSince(int mark) => MapScenarioIssues.LogLines().Skip(Math.Max(0, mark)).ToList();
-        /// <summary>The log lines since `mark` that say something was refused (not this test's own [map] lines).</summary>
-        private static List<string> Refused(int mark) => LogSince(mark).Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
-        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component => MapScenarioIssues.NearestAll(to, ok);
+        private static List<string> LogSince(int mark) =>
+            MapScenarioIssues.LogLines().Skip(Math.Max(0, mark)).ToList();
+        /// <summary>
+        /// The log lines since `mark` that say something was refused (not this
+        /// test's own [map] lines).
+        /// </summary>
+        private static List<string> Refused(int mark) => LogSince(mark)
+            .Where(l => l.Contains("refused") && !l.Contains("[map]")).ToList();
+        private static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
+            MapScenarioIssues.NearestAll(to, ok);
 
-        private static GameObject Place(string prefab, Vector3 at, bool save = true)
+        private static GameObject Place(
+            string prefab, Vector3 at, bool save = true)
         {
-            var go = Core.AddPrefab(prefab, at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
+            var go = Core.AddPrefab(
+                prefab, at, Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer,
+                worldSpace: true);
             if (go != null && save)
             {
                 Core.addToSaveable(go, isDynamic: true, assignID: true);
@@ -188,22 +216,38 @@ namespace DarkwoodMP.World
             return go;
         }
 
-        // ---- setup (host, before the join) ---------------------------------------------------------------------
+        // ---- setup (host, before the join) ----------------------------------
 
-        private const string RotPrefab = "Furnitures/Cottage/Wardrobe_low_small_01";
-        private static readonly string[] ShadowPrefabs = { "Locations/med_hideout_05/LootContainer_MetalCrate_med_hideout_05_level", "Loot_containers/_Locations/LootContainer_WoodenCrate_1A" };
+        private const string RotPrefab =
+            "Furnitures/Cottage/Wardrobe_low_small_01";
+        private static readonly string[] ShadowPrefabs =
+        {
+            "Locations/med_hideout_05/LootContainer_MetalCrate_med_hideout_05_level",
+            "Loot_containers/_Locations/LootContainer_WoodenCrate_1A"
+        };
 
-        private static Inventory RotWardrobe() => NearestAll<Inventory>(Spot("rot"), i => i.invType == Inventory.InvType.itemInv && i.name.StartsWith("Wardrobe_low_small_01", StringComparison.Ordinal) && StateDump.Flat(i.transform.position - Spot("rot")) < 200f);
-        private static Item ShadowCrate() => NearestAll<Item>(Spot("shadow"), i => StateDump.Flat(i.transform.position - Spot("shadow")) < 120f && i.GetComponent<Inventory>() != null);
+        private static Inventory RotWardrobe() => NearestAll<Inventory>(
+            Spot("rot"),
+            i => i.invType == Inventory.InvType.itemInv
+                && i.name.StartsWith(
+                    "Wardrobe_low_small_01", StringComparison.Ordinal)
+                && StateDump.Flat(i.transform.position - Spot("rot")) < 200f);
+        private static Item ShadowCrate() => NearestAll<Item>(
+            Spot("shadow"),
+            i => StateDump.Flat(i.transform.position - Spot("shadow")) < 120f
+                && i.GetComponent<Inventory>() != null);
 
-        /// <summary>The first item type (by name) that rots in a container: one with a rotten form whose durability
-        /// drains. One that isn't an experience item (mushrooms) if there is one: those drain only while the game's
-        /// clock runs, which on a joiner it never does (the clock is the host's).</summary>
+        /// <summary>The first item type (by name) that rots in a container: one
+        /// with a rotten form whose durability drains. One that isn't an
+        /// experience item (mushrooms) if there is one: those drain only while
+        /// the game's clock runs, which on a joiner it never does (the clock is
+        /// the host's).</summary>
         private static string RotFood(out string all)
         {
             var db = Singleton<ItemsDatabase>.Instance;
             var found = new List<(string type, bool exp)>();
-            foreach (var t in db.itemsDict.Keys.OrderBy(k => k, StringComparer.Ordinal))
+            foreach (var t in db.itemsDict.Keys.OrderBy(
+                k => k, StringComparer.Ordinal))
             {
                 InvItem it;
                 try
@@ -214,7 +258,8 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                if (it != null && it.rottenItem != null && it.durabilityDrain > 0f && it.maxDurability > 0f)
+                if (it != null && it.rottenItem != null
+                    && it.durabilityDrain > 0f && it.maxDurability > 0f)
                 {
                     found.Add((t, it.isExpItem));
                 }
@@ -228,7 +273,8 @@ namespace DarkwoodMP.World
                 }
                 return f.type + mark;
             }));
-            string type = found.Where(f => !f.exp).Select(f => f.type).FirstOrDefault();
+            string type =
+                found.Where(f => !f.exp).Select(f => f.type).FirstOrDefault();
             if (type == null)
             {
                 type = found.Select(f => f.type).FirstOrDefault();
@@ -236,8 +282,9 @@ namespace DarkwoodMP.World
             return type;
         }
 
-        /// <summary>"gaps-setup" (host, before the join): a wardrobe with rotting food in it; a crate with a shadow
-        /// on it (one that dies from a few hits, and not from light).</summary>
+        /// <summary>"gaps-setup" (host, before the join): a wardrobe with
+        /// rotting food in it; a crate with a shadow on it (one that dies from
+        /// a few hits, and not from light).</summary>
         private static IEnumerator Setup(string[] a, Result r)
         {
             var made = new List<string>();
@@ -275,10 +322,12 @@ namespace DarkwoodMP.World
                 inv = w.GetComponentInChildren<Inventory>();
             }
             string food = RotFood(out string foods);
-            // Not a failure here (that would stop the whole run): rot-open fails later instead.
+            // Not a failure here (that would stop the whole run): rot-open
+            // fails later instead.
             if (inv == null || food == null)
             {
-                made.Add($"no inventory in the wardrobe ({inv != null}) or no rotting food (of {Singleton<ItemsDatabase>.Instance.itemsDict.Count} items: {foods})");
+                made.Add(
+                    $"no inventory in the wardrobe ({inv != null}) or no rotting food (of {Singleton<ItemsDatabase>.Instance.itemsDict.Count} items: {foods})");
             }
             else
             {
@@ -293,9 +342,12 @@ namespace DarkwoodMP.World
                         s.removeItem();
                     }
                 }
-                var max = Singleton<ItemsDatabase>.Instance.getItem(food, instantiate: false).maxDurability;
-                inv.slots[0].createItem(food, 1); // durability 1: whole (the game multiplies it by the maximum)
-                made.Add($"wardrobe {ObjRef.Of(inv.gameObject)} at {Fmt(w.transform.position)} with {food} ({max:0.##}; rotting: {foods})");
+                var max = Singleton<ItemsDatabase>.Instance.getItem(
+                    food, instantiate: false).maxDurability;
+                // durability 1: whole (the game multiplies it by the maximum)
+                inv.slots[0].createItem(food, 1);
+                made.Add(
+                    $"wardrobe {ObjRef.Of(inv.gameObject)} at {Fmt(w.transform.position)} with {food} ({max:0.##}; rotting: {foods})");
             }
 
             var item = crate.GetComponent<Item>();
@@ -308,29 +360,36 @@ namespace DarkwoodMP.World
             sa.health = 30f;
             sa.normalDamageMod = 1f;
             sa.lightDamage = 0f;
-            AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth")(sa) = 30f;
+            AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth")(sa) =
+                30f;
             if (item != null)
             {
                 item.shadowArmor = sa;
             }
-            made.Add($"shadow crate {used} {ObjRef.Of(crate)} at {Fmt(crate.transform.position)} (item {item != null})");
+            made.Add(
+                $"shadow crate {used} {ObjRef.Of(crate)} at {Fmt(crate.transform.position)} (item {item != null})");
             r.Info = string.Join("; ", made);
         }
 
-        // ---- 11 dreams ----------------------------------------------------------------------------------------
+        // ---- 11 dreams ------------------------------------------------------
 
-        private static int _noted;      // clock-note's minute
-        private static int _dreamTime;  // the dream's minute, from "dream start"
+        // clock-note's minute
+        private static int _noted;
+        // the dream's minute, from "dream start"
+        private static int _dreamTime;
 
-        /// <summary>"dream start|end": as if our player went into a dream (Dreams.startDreaming: the world's time kept in
-        /// timeCopy, the clock showing the dream's, 5 hours on) or woke (endDreaming: the clock back to timeCopy). A
-        /// joiner uses the dream-switching flag, which TimeSync treats the same, so its game doesn't also wake its own
+        /// <summary>"dream start|end": as if our player went into a dream
+        /// (Dreams.startDreaming: the world's time kept in timeCopy, the clock
+        /// showing the dream's, 5 hours on) or woke (endDreaming: the clock
+        /// back to timeCopy). A joiner uses the dream-switching flag, which
+        /// TimeSync treats the same, so its game doesn't also wake its own
         /// enemies near it for a dream that isn't there.</summary>
         private static IEnumerator Dream(string[] a, Result r)
         {
             var d = Singleton<Dreams>.Instance;
             var c = Singleton<Controller>.Instance;
-            bool client = Net.Session.Instance != null && Net.Session.Instance.IsClient;
+            bool client =
+                Net.Session.Instance != null && Net.Session.Instance.IsClient;
             if (d == null || c == null)
             {
                 r.Fail("no Dreams or Controller");
@@ -349,7 +408,8 @@ namespace DarkwoodMP.World
                 }
                 c.CurrentTime = (c.CurrentTime + 300) % 1440;
                 _dreamTime = c.CurrentTime;
-                r.Info = $"world time {d.timeCopy:0} kept, dream at {c.CurrentTime}";
+                r.Info =
+                    $"world time {d.timeCopy:0} kept, dream at {c.CurrentTime}";
             }
             else
             {
@@ -362,8 +422,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(0.5f);
         }
 
-        /// <summary>"clock-check noted|dream [SECS]": after SECS (3) real seconds, our clock is still the minute
-        /// noted with clock-note (within 3: the host's world clock stood still while it dreamed), or still our dream's.</summary>
+        /// <summary>"clock-check noted|dream [SECS]": after SECS (3) real
+        /// seconds, our clock is still the minute noted with clock-note (within
+        /// 3: the host's world clock stood still while it dreamed), or still
+        /// our dream's.</summary>
         private static IEnumerator ClockCheck(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
@@ -382,7 +444,8 @@ namespace DarkwoodMP.World
             {
                 want = _noted;
             }
-            int off = Math.Abs(((c.CurrentTime - want) % 1440 + 1440 + 720) % 1440 - 720);
+            int off = Math.Abs(
+                ((c.CurrentTime - want) % 1440 + 1440 + 720) % 1440 - 720);
             r.Info = $"clock {c.CurrentTime} (wanted {want}, {off} off)";
             if (off > 3)
             {
@@ -390,12 +453,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- 61 journal ---------------------------------------------------------------------------------------
+        // ---- 61 journal -----------------------------------------------------
 
         private static string _jKind, _jType;
 
-        /// <summary>"journal-pick key|item": the first key (or quest item) by name that our journal hasn't got. Run in
-        /// both games, which have the same journal, so they pick the same.</summary>
+        /// <summary>"journal-pick key|item": the first key (or quest item) by
+        /// name that our journal hasn't got. Run in both games, which have the
+        /// same journal, so they pick the same.</summary>
         private static IEnumerator JournalPick(string[] a, Result r)
         {
             var j = Singleton<UI>.Instance.journal;
@@ -439,13 +503,17 @@ namespace DarkwoodMP.World
             }
             if (_jType == null)
             {
-                r.Fail($"no {_jKind} our journal hasn't got (of {keys.Count} in the database)");
+                r.Fail(
+                    $"no {_jKind} our journal hasn't got (of {keys.Count} in the database)");
             }
             r.Info = $"{_jKind} {_jType}";
             yield break;
         }
 
-        /// <summary>"journal-add": our player picks up the picked key or item (as KeyReference/QuestItemReference.pickup).</summary>
+        /// <summary>
+        /// "journal-add": our player picks up the picked key or item (as
+        /// KeyReference/QuestItemReference.pickup).
+        /// </summary>
         private static IEnumerator JournalAdd(string[] a, Result r)
         {
             if (_jType == null)
@@ -466,7 +534,10 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>"journal-remove": handed over in a dialogue (DialogueWindow's removeItem outcome takes it out of the journal).</summary>
+        /// <summary>
+        /// "journal-remove": handed over in a dialogue (DialogueWindow's
+        /// removeItem outcome takes it out of the journal).
+        /// </summary>
         private static IEnumerator JournalRemove(string[] a, Result r)
         {
             if (_jType == null)
@@ -492,7 +563,10 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>"journal-has yes|no": whether our journal has the picked one (waiting up to 8 s for it to arrive).</summary>
+        /// <summary>
+        /// "journal-has yes|no": whether our journal has the picked one
+        /// (waiting up to 8 s for it to arrive).
+        /// </summary>
         private static IEnumerator JournalHas(string[] a, Result r)
         {
             if (_jType == null)
@@ -532,7 +606,8 @@ namespace DarkwoodMP.World
                 }
                 r.Fail(r.Info + $", wanted {text}");
             }
-            // Stay a moment, so that a game that still had it doesn't send it back in its next snapshot.
+            // Stay a moment, so that a game that still had it doesn't send it
+            // back in its next snapshot.
             yield return new WaitForSecondsRealtime(FlagsSync.Interval + 0.5f);
             if (Has() != want)
             {
@@ -541,11 +616,12 @@ namespace DarkwoodMP.World
                 {
                     way = "off";
                 }
-                r.Fail($"{_jType} came {way} after {FlagsSync.Interval + 0.5f:0.#} s");
+                r.Fail(
+                    $"{_jType} came {way} after {FlagsSync.Interval + 0.5f:0.#} s");
             }
         }
 
-        // ---- 62, 63, 38 the morning ---------------------------------------------------------------------------
+        // ---- 62, 63, 38 the morning -----------------------------------------
 
         internal static Location Hideout(Player p)
         {
@@ -558,8 +634,12 @@ namespace DarkwoodMP.World
             var wg = Singleton<WorldGenerator>.Instance;
             if (wg != null)
             {
-                return wg.locations.Where(l => l != null && l.playerBase && !l.isSubLocation)
-                    .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
+                return wg.locations.Where(
+                    l => l != null && l.playerBase && !l.isSubLocation)
+                    .OrderBy(
+                        l => StateDump.Flat(
+                            l.transform.position
+                                - p.transform.position)).FirstOrDefault();
             }
             return null;
         }
@@ -586,8 +666,10 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>"an-start [noreward] [late]": our player in their hideout at dawn: the game's morning (Controller.startAfterNight,
-        /// which dawn calls in each game): the trader or the wolf comes, the clock is frozen until we walk out.</summary>
+        /// <summary>"an-start [noreward] [late]": our player in their hideout
+        /// at dawn: the game's morning (Controller.startAfterNight, which dawn
+        /// calls in each game): the trader or the wolf comes, the clock is
+        /// frozen until we walk out.</summary>
         private static IEnumerator AnStart(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -614,25 +696,29 @@ namespace DarkwoodMP.World
             }
             if (Location.getAtPos(p.transform.position) != l)
             {
-                r.Fail($"couldn't get into {l.name} (at {Fmt(p.transform.position)})");
+                r.Fail(
+                    $"couldn't get into {l.name} (at {Fmt(p.transform.position)})");
                 yield break;
             }
             bool reward = !a.Contains("noreward");
             c.startAfterNight(reward);
-            // late: the day's morning is already over, so the host ends this one at once; here only that it began counts.
+            // late: the day's morning is already over, so the host ends this
+            // one at once; here only that it began counts.
             bool late = a.Contains("late"), began = c.isAfterNight;
             yield return new WaitForSecondsRealtime(1f);
             var npc = MorningNpc(l);
             if (late)
             {
-                r.Info = $"{l.name}: began {began}, afterNight now {c.isAfterNight}";
+                r.Info =
+                    $"{l.name}: began {began}, afterNight now {c.isAfterNight}";
                 if (!began)
                 {
                     r.Fail(r.Info);
                 }
                 yield break;
             }
-            string head = $"{l.name}: afterNight {c.isAfterNight}, frozen {p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, ";
+            string head =
+                $"{l.name}: afterNight {c.isAfterNight}, frozen {p.effects.hasEffectType(CharacterEffectType.timeFreeze)}, ";
             string who = "no trader or wolf";
             if (npc != null)
             {
@@ -645,8 +731,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"an-dawn" (host): a new dawn in our game while our player isn't in a hideout (no morning of our own):
-        /// the day's morning isn't over yet, so a joiner's morning stays until someone walks out (AfterNight.HostDawn).</summary>
+        /// <summary>"an-dawn" (host): a new dawn in our game while our player
+        /// isn't in a hideout (no morning of our own): the day's morning isn't
+        /// over yet, so a joiner's morning stays until someone walks out
+        /// (AfterNight.HostDawn).</summary>
         private static IEnumerator AnDawn(string[] a, Result r)
         {
             AfterNight.HostDawn();
@@ -654,8 +742,9 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>"an-end": our player's morning ends, as walking out of the hideout does (Location.OnTriggerExit -> endAfterNight,
-        /// and on a joiner AfterNightWalkOutPatch telling the host).</summary>
+        /// <summary>"an-end": our player's morning ends, as walking out of the
+        /// hideout does (Location.OnTriggerExit -> endAfterNight, and on a
+        /// joiner AfterNightWalkOutPatch telling the host).</summary>
         private static IEnumerator AnEnd(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
@@ -686,7 +775,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"an-check on|off": whether our game is in its morning (waiting up to 6 s); off: the trader has gone too.</summary>
+        /// <summary>
+        /// "an-check on|off": whether our game is in its morning (waiting up to
+        /// 6 s); off: the trader has gone too.
+        /// </summary>
         private static IEnumerator AnCheck(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
@@ -704,7 +796,8 @@ namespace DarkwoodMP.World
             {
                 npc = l.trader.GetComponent<NPC>();
             }
-            bool frozen = Player.Instance.effects.hasEffectType(CharacterEffectType.timeFreeze);
+            bool frozen = Player.Instance.effects.hasEffectType(
+                CharacterEffectType.timeFreeze);
             string traderName = "gone";
             if (npc != null)
             {
@@ -715,15 +808,17 @@ namespace DarkwoodMP.World
             {
                 text = ", the wolf here";
             }
-            r.Info = $"afterNight {c.isAfterNight}, frozen {frozen}, trader {traderName}{text}";
+            r.Info =
+                $"afterNight {c.isAfterNight}, frozen {frozen}, trader {traderName}{text}";
             if (c.isAfterNight != want || (!want && (npc != null || frozen)))
             {
                 r.Fail(r.Info);
             }
         }
 
-        /// <summary>"an-clock running|stopped" (host): whether the world clock goes on during our morning (waiting up
-        /// to 15 s for it, after the joiners' grace), checked over the next few game minutes.</summary>
+        /// <summary>"an-clock running|stopped" (host): whether the world clock
+        /// goes on during our morning (waiting up to 15 s for it, after the
+        /// joiners' grace), checked over the next few game minutes.</summary>
         private static IEnumerator AnClock(string[] a, Result r)
         {
             var c = Singleton<Controller>.Instance;
@@ -742,7 +837,8 @@ namespace DarkwoodMP.World
             float wait = Mathf.Max(3f, c.timeChangeInterval * 3f);
             yield return new WaitForSecondsRealtime(wait);
             int moved = ((c.CurrentTime - t0) % 1440 + 1440) % 1440;
-            r.Info = $"DoUpdateTime {c.DoUpdateTime}, clock {t0} -> {c.CurrentTime} in {wait:0.#} s";
+            r.Info =
+                $"DoUpdateTime {c.DoUpdateTime}, clock {t0} -> {c.CurrentTime} in {wait:0.#} s";
             bool wrong = c.DoUpdateTime != want;
             if (!wrong)
             {
@@ -768,8 +864,10 @@ namespace DarkwoodMP.World
 
         private static NPC _talkingTo;
 
-        /// <summary>"talk [--refused]": our player talks to the morning's trader (or wolf) in our hideout (NPC.talkTo).
-        /// With --refused, someone else is talking to them: the host says so and our dialogue closes again.</summary>
+        /// <summary>"talk [--refused]": our player talks to the morning's
+        /// trader (or wolf) in our hideout (NPC.talkTo). With --refused,
+        /// someone else is talking to them: the host says so and our dialogue
+        /// closes again.</summary>
         private static IEnumerator Talk(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -781,7 +879,8 @@ namespace DarkwoodMP.World
             }
             if (!npc.wantsToTalk || npc.characterDialogue == null)
             {
-                r.Fail($"{npc.name} doesn't want to talk (wantsToTalk {npc.wantsToTalk})");
+                r.Fail(
+                    $"{npc.name} doesn't want to talk (wantsToTalk {npc.wantsToTalk})");
                 yield break;
             }
             bool expectRefused = a.Contains("--refused");
@@ -789,15 +888,21 @@ namespace DarkwoodMP.World
             int mark = MapScenarioIssues.LogMark();
             var win = Singleton<UI>.Instance.dialogueWindow;
             AsPlayer(() => npc.talkTo());
-            bool host = Net.Session.Instance == null || Net.Session.Instance.IsHost;
+            bool host =
+                Net.Session.Instance == null || Net.Session.Instance.IsHost;
             if (expectRefused)
             {
                 float until = Time.realtimeSinceStartup + 12f;
-                while (Time.realtimeSinceStartup < until && (win.npc == npc || !LogSince(mark).Any(l => !l.Contains("[map]") && l.Contains("is talking to them"))))
+                while (Time.realtimeSinceStartup < until
+                    && (win.npc == npc || !LogSince(mark).Any(
+                        l => !l.Contains("[map]")
+                            && l.Contains("is talking to them"))))
                 {
                     yield return new WaitForSecondsRealtime(0.25f);
                 }
-                bool told = LogSince(mark).Any(l => !l.Contains("[map]") && l.Contains("is talking to them"));
+                bool told = LogSince(mark).Any(
+                    l => !l.Contains("[map]")
+                        && l.Contains("is talking to them"));
                 string name = npc.name;
                 ObjRef id = ObjRef.Of(npc.gameObject);
                 string dialogue = "closed";
@@ -822,7 +927,12 @@ namespace DarkwoodMP.World
                 time = 1.5f;
             }
             yield return new WaitForSecondsRealtime(time);
-            var refused = LogSince(mark).Where(l => !l.Contains("[map]")).Where(l => l.Contains("is talking to them") || l.Contains("just talked to them") || (l.Contains("refused") && l.Contains("talk"))).ToList();
+            var refused = LogSince(mark).Where(l => !l.Contains("[map]"))
+                .Where(
+                    l => l.Contains("is talking to them")
+                        || l.Contains("just talked to them")
+                        || (l.Contains("refused")
+                            && l.Contains("talk"))).ToList();
             string talker = npc.name;
             ObjRef talkerId = ObjRef.Of(npc.gameObject);
             string state = "not open";
@@ -848,8 +958,10 @@ namespace DarkwoodMP.World
             {
                 if (!win.tweening && Player.Instance.inDialogue)
                 {
-                    // Not from the main menu, which shows the goodbye line instead (see TalkLock.CloseWhenReady). This
-                    // runs nested in the step, where an exception would end it without a reply: catch it.
+                    // Not from the main menu, which shows the goodbye line
+                    // instead (see TalkLock.CloseWhenReady). This runs nested
+                    // in the step, where an exception would end it without a
+                    // reply: catch it.
                     win.currentMenu = DialogueWindow.CurrentMenu.gossip;
                     try
                     {
@@ -857,14 +969,18 @@ namespace DarkwoodMP.World
                     }
                     catch (Exception e)
                     {
-                        Plugin.Log.LogWarning($"[map] closing the dialogue: {e.Message}");
+                        Plugin.Log.LogWarning(
+                            $"[map] closing the dialogue: {e.Message}");
                     }
                 }
                 yield return new WaitForSecondsRealtime(0.3f);
             }
         }
 
-        /// <summary>"trade-open": in our dialogue (after "talk"), open the trade window (DialogueWindow.openTrade).</summary>
+        /// <summary>
+        /// "trade-open": in our dialogue (after "talk"), open the trade window
+        /// (DialogueWindow.openTrade).
+        /// </summary>
         private static IEnumerator TradeOpen(string[] a, Result r)
         {
             var win = Singleton<UI>.Instance.dialogueWindow;
@@ -880,7 +996,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             float until = Time.realtimeSinceStartup + 8f;
-            while ((win.tweening || !p.inDialogue) && Time.realtimeSinceStartup < until)
+            while ((win.tweening || !p.inDialogue)
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
@@ -907,25 +1024,30 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"talk-free": our dialogue (and trade) closed by itself, and our player has the controls back (issue
-        /// #15: the host walked out of the hideout while we traded, and the trader left our game with us stuck in it).</summary>
+        /// <summary>"talk-free": our dialogue (and trade) closed by itself, and
+        /// our player has the controls back (issue #15: the host walked out of
+        /// the hideout while we traded, and the trader left our game with us
+        /// stuck in it).</summary>
         private static IEnumerator TalkFree(string[] a, Result r)
         {
             var win = Singleton<UI>.Instance.dialogueWindow;
             var p = Player.Instance;
-            bool Free() => !p.inDialogue && !p.inShop && !p.performingAction && win.npc == null && !win.gameObject.activeSelf;
+            bool Free() => !p.inDialogue && !p.inShop && !p.performingAction
+                && win.npc == null && !win.gameObject.activeSelf;
             float until = Time.realtimeSinceStartup + 15f;
             while (!Free() && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
-            yield return new WaitForSecondsRealtime(1.5f); // the fade back and Core.forbidInputsFor
+            // the fade back and Core.forbidInputsFor
+            yield return new WaitForSecondsRealtime(1.5f);
             string text = "closed";
             if (win.gameObject.activeSelf)
             {
                 text = "open";
             }
-            r.Info = $"inDialogue {p.inDialogue}, inShop {p.inShop}, performingAction {p.performingAction}, window " +
+            r.Info =
+                $"inDialogue {p.inDialogue}, inShop {p.inShop}, performingAction {p.performingAction}, window " +
                      $"{text}, timeScale {Time.timeScale:0.##}, afterNight {Singleton<Controller>.Instance.isAfterNight}";
             if (!Free() || Time.timeScale <= 0f)
             {
@@ -962,11 +1084,12 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- 64 rotting food in an open container ------------------------------------------------------------
+        // ---- 64 rotting food in an open container ---------------------------
 
-        /// <summary>"rot-open" (client): open the setup's wardrobe, let its food rot by the game's own refresh
-        /// (Inventory.refreshItems) while it's open, then take the food. Neither the rot nor the take may be sent as
-        /// a change the host refuses.</summary>
+        /// <summary>"rot-open" (client): open the setup's wardrobe, let its
+        /// food rot by the game's own refresh (Inventory.refreshItems) while
+        /// it's open, then take the food. Neither the rot nor the take may be
+        /// sent as a change the host refuses.</summary>
         private static IEnumerator RotOpen(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -978,27 +1101,39 @@ namespace DarkwoodMP.World
             }
             yield return Walk(inv.transform.position);
             p.openedItemInventory = inv; // as if its window were open
-            yield return new WaitForSecondsRealtime(SlotShare.AskTimeout + 0.5f);
-            var slot = inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.baseClass != null && s.invItem.baseClass.rottenItem != null);
+            yield return new WaitForSecondsRealtime(
+                SlotShare.AskTimeout + 0.5f);
+            var slot = inv.slots.FirstOrDefault(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.baseClass != null
+                    && s.invItem.baseClass.rottenItem != null);
             if (slot == null)
             {
-                r.Fail($"no rotting food in {inv.name} {ObjRef.Of(inv.gameObject)}");
+                r.Fail(
+                    $"no rotting food in {inv.name} {ObjRef.Of(inv.gameObject)}");
                 p.openedItemInventory = null;
                 yield break;
             }
             var it = slot.invItem;
             string food = it.type; // (the slot's item is cleared when it moves)
-            float max = Mathf.Max(1f, it.baseClass.maxDurability), d0 = it.durability;
+            float max = Mathf.Max(1f, it.baseClass.maxDurability),
+                d0 = it.durability;
             if (!it.activated)
             {
-                it.switchActive(true); // a seen perishable in a container rots (checkForActiveSwitches)
+                // a seen perishable in a container rots
+                // (checkForActiveSwitches)
+                it.switchActive(true);
             }
             int mark = MapScenarioIssues.LogMark();
             int calls = 0;
-            for (int frame = 0; frame < 30 && !InvItemClass.isNull(slot.invItem) && d0 - slot.invItem.durability < 0.02f * max; frame++)
+            for (int frame = 0; frame < 30
+                && !InvItemClass.isNull(slot.invItem)
+                && d0 - slot.invItem.durability < 0.02f * max; frame++)
             {
-                // An experience item drains only while the clock runs (refreshItems), which a joiner's never does by
-                // itself: let it run for these refreshes, as the host's does (TimeSync turns it off again).
+                // An experience item drains only while the clock runs
+                // (refreshItems), which a joiner's never does by itself: let it
+                // run for these refreshes, as the host's does (TimeSync turns
+                // it off again).
                 var ctl = Singleton<Controller>.Instance;
                 bool was = ctl.DoUpdateTime;
                 if (it.baseClass.isExpItem)
@@ -1007,7 +1142,8 @@ namespace DarkwoodMP.World
                 }
                 try
                 {
-                    for (int i = 0; i < 1000 && slot.invItem == it && d0 - it.durability < 0.02f * max; i++)
+                    for (int i = 0; i < 1000 && slot.invItem == it
+                        && d0 - it.durability < 0.02f * max; i++)
                     {
                         inv.refreshItems();
                         calls++;
@@ -1028,10 +1164,15 @@ namespace DarkwoodMP.World
             {
                 d1 = slot.invItem.durability;
             }
-            yield return new WaitForSecondsRealtime(1.5f); // a few of Containers' looks at the open slots
-            var sent = LogSince(mark).Where(l => l.Contains($"slot(s) of {inv.name}") && l.Contains("sent") && !l.Contains("[map]")).ToList();
+            // a few of Containers' looks at the open slots
+            yield return new WaitForSecondsRealtime(1.5f);
+            var sent = LogSince(mark)
+                .Where(
+                    l => l.Contains($"slot(s) of {inv.name}")
+                        && l.Contains("sent") && !l.Contains("[map]")).ToList();
             var refused = Refused(mark);
-            r.Info = $"{it.type} durability {d0:0.###} -> {d1:0.###} of {max:0.##} in {calls} refreshes";
+            r.Info =
+                $"{it.type} durability {d0:0.###} -> {d1:0.###} of {max:0.##} in {calls} refreshes";
             if (d1 < 0f || d1 >= d0)
             {
                 r.Fail($"it didn't rot: {r.Info}");
@@ -1040,20 +1181,25 @@ namespace DarkwoodMP.World
             }
             if (sent.Count > 0)
             {
-                r.Fail($"the rot was sent as our change: {sent[0].Trim()}; {r.Info}");
+                r.Fail(
+                    $"the rot was sent as our change: {sent[0].Trim()}; {r.Info}");
             }
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}; {r.Info}");
             }
-            int carried0 = p.Inventory.slots.Concat(p.Hotbar.slots).Count(x => x != null && !InvItemClass.isNull(x.invItem) && x.invItem.type == food);
+            int carried0 = p.Inventory.slots.Concat(p.Hotbar.slots).Count(
+                x => x != null && !InvItemClass.isNull(x.invItem)
+                    && x.invItem.type == food);
             mark = MapScenarioIssues.LogMark();
             AsPlayer(() => slot.transferItemAllToPlayer());
             yield return new WaitForSecondsRealtime(2f);
             p.openedItemInventory = null;
             yield return new WaitForSecondsRealtime(0.5f);
             refused = Refused(mark);
-            int carried1 = p.Inventory.slots.Concat(p.Hotbar.slots).Count(x => x != null && !InvItemClass.isNull(x.invItem) && x.invItem.type == food);
+            int carried1 = p.Inventory.slots.Concat(p.Hotbar.slots).Count(
+                x => x != null && !InvItemClass.isNull(x.invItem)
+                    && x.invItem.type == food);
             r.Info += $"; carried {carried0} -> {carried1}";
             if (refused.Count > 0)
             {
@@ -1065,7 +1211,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"rot-host" (host): the client's take came through (no food left in the wardrobe) and we refused nothing of it.</summary>
+        /// <summary>
+        /// "rot-host" (host): the client's take came through (no food left in
+        /// the wardrobe) and we refused nothing of it.
+        /// </summary>
         private static IEnumerator RotHost(string[] a, Result r)
         {
             var inv = RotWardrobe();
@@ -1074,9 +1223,12 @@ namespace DarkwoodMP.World
                 r.Fail("no wardrobe at the rot spot");
                 yield break;
             }
-            var left = inv.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(s => $"{s.invItem.type}x{s.invItem.amount}").ToList();
-            var refused = MapScenarioIssues.LogLines().Where(l => l.Contains($"of {inv.name}: refused")).ToList();
-            r.Info = $"{inv.name} {ObjRef.Of(inv.gameObject)}: [{string.Join(",", left)}]";
+            var left = inv.slots.Where(s => !InvItemClass.isNull(s.invItem))
+                .Select(s => $"{s.invItem.type}x{s.invItem.amount}").ToList();
+            var refused = MapScenarioIssues.LogLines()
+                .Where(l => l.Contains($"of {inv.name}: refused")).ToList();
+            r.Info =
+                $"{inv.name} {ObjRef.Of(inv.gameObject)}: [{string.Join(",", left)}]";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
@@ -1087,22 +1239,30 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- 65 vines -----------------------------------------------------------------------------------------
+        // ---- 65 vines -------------------------------------------------------
 
-        private static ChainParent Vine() => NearestAll<ChainParent>(Spot("vine"), cp => StateDump.Flat(cp.transform.position - Spot("vine")) < 300f);
+        private static ChainParent Vine() => NearestAll<ChainParent>(
+            Spot("vine"),
+            cp => StateDump.Flat(cp.transform.position - Spot("vine")) < 300f);
 
-        /// <summary>Where the game keeps its vines (Items/vine is only a segment): the vine attack's pieces, which a
-        /// VineSpawner or a vine trap (Trigger.prefabToSpawn) makes.</summary>
+        /// <summary>Where the game keeps its vines (Items/vine is only a
+        /// segment): the vine attack's pieces, which a VineSpawner or a vine
+        /// trap (Trigger.prefabToSpawn) makes.</summary>
         private static readonly string[] VinePrefabs =
         {
-            "Traps/vineAttack_vines", "Traps/vineAttack_100", "Traps/vineAttack_140", "Traps/vineAttack_200",
+            "Traps/vineAttack_vines", "Traps/vineAttack_100",
+            "Traps/vineAttack_140", "Traps/vineAttack_200",
             "Traps/vineAttack_400", "Traps/vineAttack_background", "Items/vine",
         };
 
-        /// <summary>The first prefab with a ChainParent: one of VinePrefabs, or what one of them spawns.</summary>
+        /// <summary>
+        /// The first prefab with a ChainParent: one of VinePrefabs, or what one
+        /// of them spawns.
+        /// </summary>
         private static GameObject VinePrefab(out string from)
         {
-            bool Has(Object o) => o is GameObject g && g.GetComponentInChildren<ChainParent>(true) != null;
+            bool Has(Object o) => o is GameObject g
+                && g.GetComponentInChildren<ChainParent>(true) != null;
             foreach (var path in VinePrefabs)
             {
                 var pf = Resources.Load("Prefabs/" + path) as GameObject;
@@ -1117,7 +1277,11 @@ namespace DarkwoodMP.World
                 }
                 foreach (var t in pf.GetComponentsInChildren<Trigger>(true))
                 {
-                    foreach (var o in new[] { t.prefabToSpawn, t.nonPooledPrefabToSpawn })
+                    foreach (var o in new[]
+                    {
+                        t.prefabToSpawn,
+                        t.nonPooledPrefabToSpawn
+                    })
                     {
                         if (Has(o))
                         {
@@ -1126,7 +1290,8 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
-                foreach (var vs in pf.GetComponentsInChildren<VineSpawner>(true))
+                foreach (var vs in pf.GetComponentsInChildren<VineSpawner>(
+                    true))
                 {
                     foreach (var o in vs.vines)
                     {
@@ -1142,15 +1307,17 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>"vine-make" (both games): a vine at the vine spot, as a VineSpawner makes one in each game after the
-        /// join (not shared, found by where it stands). It isn't fastened to anything, so it's taken as attached and
-        /// staying so (no detach timer).</summary>
+        /// <summary>"vine-make" (both games): a vine at the vine spot, as a
+        /// VineSpawner makes one in each game after the join (not shared, found
+        /// by where it stands). It isn't fastened to anything, so it's taken as
+        /// attached and staying so (no detach timer).</summary>
         private static IEnumerator VineMake(string[] a, Result r)
         {
             var pf = VinePrefab(out string from);
             if (pf == null)
             {
-                r.Fail($"no prefab with a ChainParent among {string.Join(", ", VinePrefabs)}");
+                r.Fail(
+                    $"no prefab with a ChainParent among {string.Join(", ", VinePrefabs)}");
                 yield break;
             }
             Vector3 position = Spot("vine");
@@ -1163,7 +1330,8 @@ namespace DarkwoodMP.World
             var go = Object.Instantiate(pf, position, rotation, parent);
             go.name = pf.name;
             var cp = go.GetComponentInChildren<ChainParent>(true);
-            yield return new WaitForSecondsRealtime(0.5f); // init runs a frame later
+            // init runs a frame later
+            yield return new WaitForSecondsRealtime(0.5f);
             cp.timeToDetach = 0f;
             cp.attached = true;
             if (cp.health <= 0f)
@@ -1179,15 +1347,17 @@ namespace DarkwoodMP.World
             {
                 segment = cp.lastChainSegment.name;
             }
-            r.Info = $"{from}: {vine} at {spot}: health {health:0} of {full:0}, segment {segment}";
+            r.Info =
+                $"{from}: {vine} at {spot}: health {health:0} of {full:0}, segment {segment}";
             if (cp.maxHealth <= 0f)
             {
                 r.Fail(r.Info + ": no health to cut");
             }
         }
 
-        /// <summary>"vine-cut half|all": our player hits the vine (MeleeSensor -> ChainParent.getHit) for half its
-        /// maximum health, or for what's left.</summary>
+        /// <summary>"vine-cut half|all": our player hits the vine (MeleeSensor
+        /// -> ChainParent.getHit) for half its maximum health, or for what's
+        /// left.</summary>
         private static IEnumerator VineCut(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -1225,14 +1395,18 @@ namespace DarkwoodMP.World
             AsPlayer(() => cp.getHit(dmg, p.transform, seg));
             yield return new WaitForSecondsRealtime(1.5f);
             var refused = Refused(mark);
-            r.Info = $"hit {dmg:0}: health {cp.health:0}, attached {cp.attached}";
+            r.Info =
+                $"hit {dmg:0}: health {cp.health:0}, attached {cp.attached}";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
             }
         }
 
-        /// <summary>"vine-check attached|cut [HEALTH|half]": the vine here (waiting up to 5 s).</summary>
+        /// <summary>
+        /// "vine-check attached|cut [HEALTH|half]": the vine here (waiting up
+        /// to 5 s).
+        /// </summary>
         private static IEnumerator VineCheck(string[] a, Result r)
         {
             bool attached = a.Length == 0 || a[0] == "attached";
@@ -1256,23 +1430,27 @@ namespace DarkwoodMP.World
             {
                 health = F(a[1]);
             }
-            bool Ok() => cp.attached == attached && (health < 0f || Mathf.Abs(cp.health - health) < 0.5f);
+            bool Ok() => cp.attached == attached
+                && (health < 0f || Mathf.Abs(cp.health - health) < 0.5f);
             float until = Time.realtimeSinceStartup + 5f;
             while (!Ok() && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
-            r.Info = $"{ObjRef.Of(cp.gameObject)}: attached {cp.attached}, health {cp.health:0} of {cp.maxHealth:0}";
+            r.Info =
+                $"{ObjRef.Of(cp.gameObject)}: attached {cp.attached}, health {cp.health:0} of {cp.maxHealth:0}";
             if (!Ok())
             {
                 r.Fail(r.Info);
             }
         }
 
-        // ---- 66 shadow-covered items --------------------------------------------------------------------------
+        // ---- 66 shadow-covered items ----------------------------------------
 
-        /// <summary>"shadow-ready" (both games): the crate's Item points at its shadow. The game finds it in Item.Awake,
-        /// before a save's ShadowArmor is added to a prefab that has none, which ours (made for the test) hasn't.</summary>
+        /// <summary>"shadow-ready" (both games): the crate's Item points at its
+        /// shadow. The game finds it in Item.Awake, before a save's ShadowArmor
+        /// is added to a prefab that has none, which ours (made for the test)
+        /// hasn't.</summary>
         private static IEnumerator ShadowReady(string[] a, Result r)
         {
             var crate = ShadowCrate();
@@ -1284,14 +1462,19 @@ namespace DarkwoodMP.World
             var sa = crate.GetComponent<ShadowArmor>();
             if (sa == null)
             {
-                r.Fail($"{crate.name} {ObjRef.Of(crate.gameObject)} has no shadow");
+                r.Fail(
+                    $"{crate.name} {ObjRef.Of(crate.gameObject)} has no shadow");
                 yield break;
             }
             crate.shadowArmor = sa;
-            r.Info = $"{crate.name} {ObjRef.Of(crate.gameObject)}: shadow {BreakSync.ShadowHealth(crate):0.#} of {sa.maxHealth:0}, item health {crate.health}";
+            r.Info =
+                $"{crate.name} {ObjRef.Of(crate.gameObject)}: shadow {BreakSync.ShadowHealth(crate):0.#} of {sa.maxHealth:0}, item health {crate.health}";
         }
 
-        /// <summary>"shadow-hit DAMAGE": our player hits the crate (Item.getHit), which only the shadow takes.</summary>
+        /// <summary>
+        /// "shadow-hit DAMAGE": our player hits the crate (Item.getHit), which
+        /// only the shadow takes.
+        /// </summary>
         private static IEnumerator ShadowHit(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -1312,7 +1495,8 @@ namespace DarkwoodMP.World
             AsPlayer(() => crate.getHit(dmg, p.transform));
             yield return new WaitForSecondsRealtime(1.5f);
             var refused = Refused(mark);
-            r.Info = $"shadow {BreakSync.ShadowHealth(crate):0.#}, item health {hp} -> {crate.health}";
+            r.Info =
+                $"shadow {BreakSync.ShadowHealth(crate):0.#}, item health {hp} -> {crate.health}";
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
@@ -1323,8 +1507,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"shadow-check alive MAXHEALTH|dead": the crate's shadow here (waiting up to 15 s): alive and going down
-        /// to at most MAXHEALTH, or gone; the crate itself unhurt.</summary>
+        /// <summary>"shadow-check alive MAXHEALTH|dead": the crate's shadow
+        /// here (waiting up to 15 s): alive and going down to at most
+        /// MAXHEALTH, or gone; the crate itself unhurt.</summary>
         private static IEnumerator ShadowCheck(string[] a, Result r)
         {
             var crate = ShadowCrate();
@@ -1344,7 +1529,8 @@ namespace DarkwoodMP.World
                 var sa = crate.GetComponent<ShadowArmor>();
                 if (alive)
                 {
-                    return sa != null && BreakSync.ShadowHealth(crate) <= at + 0.01f;
+                    return sa != null
+                        && BreakSync.ShadowHealth(crate) <= at + 0.01f;
                 }
                 return sa == null;
             }
@@ -1359,16 +1545,19 @@ namespace DarkwoodMP.World
             {
                 text = $"alive, going to {BreakSync.ShadowHealth(crate):0.#}";
             }
-            r.Info = $"shadow {text}, item health {crate.health}, destroyed {crate.destroyed}";
+            r.Info =
+                $"shadow {text}, item health {crate.health}, destroyed {crate.destroyed}";
             if (!Ok() || crate.destroyed)
             {
                 r.Fail(r.Info);
             }
         }
 
-        /// <summary>"shadow-reload": the crate is loaded again from a save that says its shadow is dead, as a joiner who
-        /// joins after it died loads it: the prefab's shadow is back, then Item.SaveState.loadValues (with no shadow
-        /// state) kills it with die(instant: true). The shadow isn't checked here; shadow-check dead does that.</summary>
+        /// <summary>"shadow-reload": the crate is loaded again from a save that
+        /// says its shadow is dead, as a joiner who joins after it died loads
+        /// it: the prefab's shadow is back, then Item.SaveState.loadValues
+        /// (with no shadow state) kills it with die(instant: true). The shadow
+        /// isn't checked here; shadow-check dead does that.</summary>
         private static IEnumerator ShadowReload(string[] a, Result r)
         {
             var crate = ShadowCrate();
@@ -1396,20 +1585,29 @@ namespace DarkwoodMP.World
             r.Info = $"after loadValues: shadow {text}";
         }
 
-        // ---- 68 a death bag's map marker ----------------------------------------------------------------------
+        // ---- 68 a death bag's map marker ------------------------------------
 
         private static GameObject _marker;
 
-        /// <summary>The death bag nearest the transport spot (within 2500 of the centre).</summary>
-        private static DeathDrop Bag() => NearestAll<DeathDrop>(Spot("transport"), d => d.GetComponent<Inventory>() != null && StateDump.Flat(d.transform.position - Centre) < 2500f);
+        /// <summary>
+        /// The death bag nearest the transport spot (within 2500 of the
+        /// centre).
+        /// </summary>
+        private static DeathDrop Bag() => NearestAll<DeathDrop>(
+            Spot("transport"),
+            d => d.GetComponent<Inventory>() != null
+                && StateDump.Flat(d.transform.position - Centre) < 2500f);
 
-        /// <summary>"bag-drop": our player leaves a death bag as if they died in a separate location (Player.dropBody
-        /// with OutsideLocations.playerInOutsideLocation and the thing that took them there): the game puts the bag
-        /// and a map marker at that thing.</summary>
+        /// <summary>"bag-drop": our player leaves a death bag as if they died
+        /// in a separate location (Player.dropBody with
+        /// OutsideLocations.playerInOutsideLocation and the thing that took
+        /// them there): the game puts the bag and a map marker at that
+        /// thing.</summary>
         private static IEnumerator BagDrop(string[] a, Result r)
         {
             var p = Player.Instance;
-            var bags = p.Inventory.slots.Where(s => InvItemClass.isNull(s.invItem)).Take(4).ToList();
+            var bags = p.Inventory.slots.Where(
+                s => InvItemClass.isNull(s.invItem)).Take(4).ToList();
             string[] kit = { "bandages", "wire", "rope", "nail" };
             for (int i = 0; i < bags.Count; i++)
             {
@@ -1432,8 +1630,10 @@ namespace DarkwoodMP.World
                 o.playerInOutsideLocation = wasIn;
                 o.objectThatTransportedMe = wasObj;
             }
-            yield return new WaitForSecondsRealtime(3f); // a bag is sent once it has come to rest
-            var bag = NearestAll<DeathDrop>(p.transform.position, d => d.GetComponent<Inventory>() != null);
+            // a bag is sent once it has come to rest
+            yield return new WaitForSecondsRealtime(3f);
+            var bag = NearestAll<DeathDrop>(
+                p.transform.position, d => d.GetComponent<Inventory>() != null);
             if (bag != null)
             {
                 _marker = bag.additionalMapMarker;
@@ -1464,8 +1664,9 @@ namespace DarkwoodMP.World
             Object.Destroy(transport);
         }
 
-        /// <summary>"bag-check here|gone": the death bag here, with its marker at the transport spot (waiting up to
-        /// 8 s), or the bag and its marker gone.</summary>
+        /// <summary>"bag-check here|gone": the death bag here, with its marker
+        /// at the transport spot (waiting up to 8 s), or the bag and its marker
+        /// gone.</summary>
         private static IEnumerator BagCheck(string[] a, Result r)
         {
             bool here = a.Length == 0 || a[0] == "here";
@@ -1476,7 +1677,10 @@ namespace DarkwoodMP.World
                 {
                     return b == null && _marker == null;
                 }
-                return b != null && b.additionalMapMarker != null && StateDump.Flat(b.additionalMapMarker.transform.position - Spot("transport")) < 5f;
+                return b != null && b.additionalMapMarker != null
+                    && StateDump.Flat(
+                        b.additionalMapMarker.transform.position - Spot(
+                            "transport")) < 5f;
             }
             float until = Time.realtimeSinceStartup + 8f;
             while (!Ok() && Time.realtimeSinceStartup < until)
@@ -1504,7 +1708,8 @@ namespace DarkwoodMP.World
                 string markerSpot = "none";
                 if (bag.additionalMapMarker != null)
                 {
-                    markerSpot = Fmt(bag.additionalMapMarker.transform.position);
+                    markerSpot =
+                        Fmt(bag.additionalMapMarker.transform.position);
                 }
                 r.Info = $"bag {id} at {spot}, marker {markerSpot}";
             }
@@ -1514,7 +1719,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"bag-take": our player empties the death bag (it goes when emptied, and its marker with it).</summary>
+        /// <summary>
+        /// "bag-take": our player empties the death bag (it goes when emptied,
+        /// and its marker with it).
+        /// </summary>
         private static IEnumerator BagTake(string[] a, Result r)
         {
             var p = Player.Instance;

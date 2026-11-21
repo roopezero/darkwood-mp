@@ -11,9 +11,10 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for what each player sees (tools/tests/map_scenario_view.py): players walking up to a spot at
-    /// running speed, together and far behind each other, while every game watches its own view light
-    /// (Player.FOVLight) every frame:
+    /// Map test steps for what each player sees
+    /// (tools/tests/map_scenario_view.py): players walking up to a spot at
+    /// running speed, together and far behind each other, while every game
+    /// watches its own view light (Player.FOVLight) every frame:
     ///
     ///   black: its renderer switched off (Light2D.LateUpdate's ray straight down hit something, Sync.ViewWatch);
     ///   not its own: the cone's mesh doesn't match rays cast from where our player stands now (a mesh drawn by
@@ -23,43 +24,57 @@ namespace DarkwoodMP.World
     ///   one side cut: how far the view reaches on the left and on the right of where our player faces, and what
     ///   stops it there.
     ///
-    /// Steps: "vw-find PATTERN [N]", "vw-mark PATTERN INDEX", "vw-stage SPEC", "vw-approach LEN [SPEED]",
-    /// "vw-check [DIR TAG]".
+    /// Steps: "vw-find PATTERN [N]", "vw-mark PATTERN INDEX", "vw-stage SPEC",
+    /// "vw-approach LEN [SPEED]", "vw-check [DIR TAG]".
     /// </summary>
     public static class MapScenarioView
     {
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight = HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, float> CurrentFov = HarmonyLib.AccessTools.FieldRefAccess<Player, float>("currentFOV");
+        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
+            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
+        private static readonly HarmonyLib.AccessTools.FieldRef<Player, float> CurrentFov =
+            HarmonyLib.AccessTools.FieldRefAccess<Player, float>("currentFOV");
 
         private static Vector3? _mark;
         private static string _markName = "";
 
         public static void Register()
         {
-            // "vw-find PATTERN [N]": the N (8) objects whose name has PATTERN nearest the centre, with what of them cuts the view.
+            // "vw-find PATTERN [N]": the N (8) objects whose name has PATTERN
+            // nearest the centre, with what of them cuts the view.
             Add("vw-find", Find, timeout: 30f);
-            // "vw-mark PATTERN INDEX": the INDEXth of those (0: the nearest) is the spot the players walk to.
+            // "vw-mark PATTERN INDEX": the INDEXth of those (0: the nearest) is
+            // the spot the players walk to.
             Add("vw-mark", MarkStep, timeout: 30f);
-            // "vw-stage SPEC": walk (quickly) to our start on the line from the mark towards the centre.
-            // SPEC "LEAD;host=GAP/SIDE;c1=GAP/SIDE;...": LEAD + GAP from the mark, SIDE to the right of that line.
+            // "vw-stage SPEC": walk (quickly) to our start on the line from the
+            // mark towards the centre.
+            // SPEC "LEAD;host=GAP/SIDE;c1=GAP/SIDE;...": LEAD + GAP from the
+            // mark, SIDE to the right of that line.
             Add("vw-stage", Stage, timeout: 180f);
-            // "vw-approach LEN [SPEED]": walk LEN towards the mark at SPEED (our player's run speed), watching the view.
+            // "vw-approach LEN [SPEED]": walk LEN towards the mark at SPEED
+            // (our player's run speed), watching the view.
             Add("vw-approach", Approach, timeout: 400f);
-            // "vw-check [DIR TAG]": our view now, for 3 s (a screenshot DIR/NAME-TAG.png with DIR).
+            // "vw-check [DIR TAG]": our view now, for 3 s (a screenshot
+            // DIR/NAME-TAG.png with DIR).
             Add("vw-check", Check, timeout: 40f);
-            // "vw-tree PATTERN [INDEX [self]]": the INDEXth spot's objects (self: from the match itself, not its chunk), colliders and scripted events, into the log.
+            // "vw-tree PATTERN [INDEX [self]]": the INDEXth spot's objects
+            // (self: from the match itself, not its chunk), colliders and
+            // scripted events, into the log.
             Add("vw-tree", Tree, timeout: 30f);
-            // "vw-color NAME [NAME...]": the colour of each sprite named NAME within 1500 of the mark (vw-mark first).
+            // "vw-color NAME [NAME...]": the colour of each sprite named NAME
+            // within 1500 of the mark (vw-mark first).
             Add("vw-color", Colors, timeout: 20f);
-            // "vw-pace DIST TIMES": back and forth DIST towards and away from the mark TIMES times at run speed.
+            // "vw-pace DIST TIMES": back and forth DIST towards and away from
+            // the mark TIMES times at run speed.
             Add("vw-pace", Pace, timeout: 300f);
-            // "vw-areas": every repeatable area trigger in this game: the steps they run, counted by type (into the log).
+            // "vw-areas": every repeatable area trigger in this game: the steps
+            // they run, counted by type (into the log).
             Add("vw-areas", Areas, timeout: 60f);
         }
 
         private static IEnumerator Areas(string[] a, Result r)
         {
-            var count = new SortedDictionary<string, int>(System.StringComparer.Ordinal);
+            var count = new SortedDictionary<string, int>(
+                System.StringComparer.Ordinal);
             int n = 0;
             foreach (var ets in Object.FindObjectsOfType<EventTriggers>(true))
             {
@@ -69,12 +84,18 @@ namespace DarkwoodMP.World
                 }
                 foreach (var et in ets.eventTriggers)
                 {
-                    if (et == null || et.type != global::EventTrigger.Type.area || !et.multipleFire)
+                    if (et == null
+                        || et.type != global::EventTrigger.Type.area
+                        || !et.multipleFire)
                     {
                         continue;
                     }
                     n++;
-                    foreach (var (label, ge) in new[] { ("enter", et.gameEvents), ("exit", et.gameEventsExit) })
+                    foreach (var (label, ge) in new[]
+                    {
+                        ("enter", et.gameEvents),
+                        ("exit", et.gameEventsExit)
+                    })
                     {
                         if (ge != null)
                         {
@@ -85,7 +106,8 @@ namespace DarkwoodMP.World
                                     continue;
                                 }
                                 string text = "";
-                                if (e.type == GameEvent.Type.runFunction || e.type == GameEvent.Type.fireEvent)
+                                if (e.type == GameEvent.Type.runFunction
+                                    || e.type == GameEvent.Type.fireEvent)
                                 {
                                     text = " " + e.Value;
                                 }
@@ -104,7 +126,8 @@ namespace DarkwoodMP.World
                 }
             }
             yield return null;
-            r.Info = $"{n} repeatable area triggers: " + string.Join("; ", count.Select(kv => $"{kv.Key} x{kv.Value}"));
+            r.Info = $"{n} repeatable area triggers: " + string.Join(
+                "; ", count.Select(kv => $"{kv.Key} x{kv.Value}"));
             Plugin.Log.LogInfo($"[view] vw-areas: {r.Info}");
         }
 
@@ -148,15 +171,21 @@ namespace DarkwoodMP.World
                 {
                     var d = to - p.transform.position;
                     d.y = 0f;
-                    Place(p.transform.position + Vector3.ClampMagnitude(d, speed * FrameTime));
+                    Place(
+                        p.transform.position + Vector3.ClampMagnitude(
+                            d, speed * FrameTime));
                     yield return eof;
                     w.Frame(false);
                 }
             }
-            r.Info = $"{Me()} paced {dist:0} x{times} at {speed:0}/s, now {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark; {w}";
+            r.Info =
+                $"{Me()} paced {dist:0} x{times} at {speed:0}/s, now {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark; {w}";
         }
 
-        /// <summary>The colours (alpha last) of the sprites named so near the mark: "spot_black a0.00 ...".</summary>
+        /// <summary>
+        /// The colours (alpha last) of the sprites named so near the mark:
+        /// "spot_black a0.00 ...".
+        /// </summary>
         internal static string ColorsNow(string[] names)
         {
             if (_mark == null)
@@ -166,7 +195,9 @@ namespace DarkwoodMP.World
             var parts = new List<string>();
             foreach (var s in Object.FindObjectsOfType<tk2dBaseSprite>(true))
             {
-                if (s != null && names.Contains(s.name) && StateDump.Flat(s.transform.position - _mark.Value) < 1500f)
+                if (s != null && names.Contains(s.name)
+                    && StateDump.Flat(s.transform.position - _mark.Value)
+                        < 1500f)
                 {
                     string name = s.name;
                     float red = s.color.r;
@@ -178,7 +209,8 @@ namespace DarkwoodMP.World
                     {
                         off = " (off)";
                     }
-                    parts.Add($"{name} rgb {red:0.00},{green:0.00},{blue:0.00} a{alpha:0.00}{off}");
+                    parts.Add(
+                        $"{name} rgb {red:0.00},{green:0.00},{blue:0.00} a{alpha:0.00}{off}");
                 }
             }
             if (parts.Count == 0)
@@ -188,7 +220,10 @@ namespace DarkwoodMP.World
             return string.Join(", ", parts);
         }
 
-        /// <summary>The area triggers by the mark: our player's entries and exits as the game counted them, and whether it stands on each.</summary>
+        /// <summary>
+        /// The area triggers by the mark: our player's entries and exits as the
+        /// game counted them, and whether it stands on each.
+        /// </summary>
         private static string AreasNow()
         {
             var p = Player.Instance;
@@ -199,10 +234,15 @@ namespace DarkwoodMP.World
             var parts = new List<string>();
             foreach (var et in Object.FindObjectsOfType<EventTriggers>())
             {
-                if (et != null && et.reactsToPlayer && StateDump.Flat(et.transform.position - _mark.Value) < 700f
-                    && et.eventTriggers.Exists(t => t != null && t.type == global::EventTrigger.Type.area))
+                if (et != null && et.reactsToPlayer
+                    && StateDump.Flat(et.transform.position - _mark.Value)
+                        < 700f
+                    && et.eventTriggers.Exists(
+                        t => t != null
+                            && t.type == global::EventTrigger.Type.area))
                 {
-                    parts.Add($"{et.name} entered {et.entered} left {et.exited}, on it {Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
+                    parts.Add(
+                        $"{et.name} entered {et.entered} left {et.exited}, on it {Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
                 }
             }
             if (parts.Count == 0)
@@ -213,8 +253,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "vw-color [dark|clear] NAME...": with dark or clear, the first NAME (the screen-covering spot_black) must be
-        /// faded in (alpha over 0.5) or out (under 0.1) in this game; the fades take up to 14 s, so this waits up to 16 s.
+        /// "vw-color [dark|clear] NAME...": with dark or clear, the first NAME
+        /// (the screen-covering spot_black) must be faded in (alpha over 0.5)
+        /// or out (under 0.1) in this game; the fades take up to 14 s, so this
+        /// waits up to 16 s.
         /// </summary>
         private static IEnumerator Colors(string[] a, Result r)
         {
@@ -233,7 +275,11 @@ namespace DarkwoodMP.World
                 names = a;
             }
             float Alpha() => Object.FindObjectsOfType<tk2dBaseSprite>(true)
-                .Where(s => s != null && names.Length > 0 && s.name == names[0] && _mark != null && StateDump.Flat(s.transform.position - _mark.Value) < 1500f)
+                .Where(
+                    s => s != null && names.Length > 0 && s.name == names[0]
+                        && _mark != null
+                        && StateDump.Flat(s.transform.position - _mark.Value)
+                            < 1500f)
                 .Select(s =>
                 {
                     if (s.gameObject.activeInHierarchy)
@@ -274,10 +320,12 @@ namespace DarkwoodMP.World
             {
                 origin = Vector3.zero;
             }
-            r.Info = $"{Me()} {StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
+            r.Info =
+                $"{Me()} {StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
             if (!Ok())
             {
-                r.Fail($"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
+                r.Fail(
+                    $"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
             }
         }
 
@@ -297,7 +345,9 @@ namespace DarkwoodMP.World
             var root = list[i].transform;
             if (a.Length < 3 || a[2] != "self")
             {
-                while (root.parent != null && root.parent.name != "WorldChunks" && root.parent.name != "WorldChunk")
+                while (root.parent != null
+                    && root.parent.name != "WorldChunks"
+                    && root.parent.name != "WorldChunk")
                 {
                     root = root.parent;
                 }
@@ -305,7 +355,9 @@ namespace DarkwoodMP.World
             var sb = new System.Text.StringBuilder();
             void Walk(Transform t, int depth)
             {
-                var comps = string.Join(",", t.GetComponents<Component>().Where(c => c != null && !(c is Transform)).Select(c => c.GetType().Name));
+                var comps = string.Join(",", t.GetComponents<Component>()
+                        .Where(c => c != null && !(c is Transform))
+                        .Select(c => c.GetType().Name));
                 var so = t.GetComponent<SaveableObject>();
                 string name = t.name;
                 bool active = t.gameObject.activeSelf;
@@ -317,7 +369,8 @@ namespace DarkwoodMP.World
                 {
                     saved = $" saved={so.Active}";
                 }
-                sb.Append($"\n{new string(' ', depth * 2)}{name} active={active} layer={layer} at {spot} y {height:0}{saved} [{comps}]");
+                sb.Append(
+                    $"\n{new string(' ', depth * 2)}{name} active={active} layer={layer} at {spot} y {height:0}{saved} [{comps}]");
                 foreach (var c in t.GetComponents<Collider>())
                 {
                     string text = "";
@@ -330,7 +383,8 @@ namespace DarkwoodMP.World
                     {
                         offNote = "";
                     }
-                    sb.Append($" col:{c.GetType().Name}{text}{offNote} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
+                    sb.Append(
+                        $" col:{c.GetType().Name}{text}{offNote} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
                 }
                 var ets = t.GetComponent<EventTriggers>();
                 if (ets != null)
@@ -342,8 +396,14 @@ namespace DarkwoodMP.World
                         {
                             disabledNote = " disabled";
                         }
-                        sb.Append($"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{disabledNote}");
-                        foreach (var (label, ge) in new[] { ("do", et.gameEvents), ("exit", et.gameEventsExit), ("else", et.gameEventsElse) })
+                        sb.Append(
+                            $"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{disabledNote}");
+                        foreach (var (label, ge) in new[]
+                        {
+                            ("do", et.gameEvents),
+                            ("exit", et.gameEventsExit),
+                            ("else", et.gameEventsElse)
+                        })
                         {
                             if (ge != null)
                             {
@@ -351,12 +411,15 @@ namespace DarkwoodMP.World
                                 {
                                     if (e != null)
                                     {
-                                        List<GameObject> targetGameObjects = e.targetGameObjects;
+                                        List<GameObject> targetGameObjects =
+                                            e.targetGameObjects;
                                         if (targetGameObjects == null)
                                         {
-                                            targetGameObjects = new List<GameObject>();
+                                            targetGameObjects =
+                                                new List<GameObject>();
                                         }
-                                        string names = string.Join(",", targetGameObjects.Select(g =>
+                                        string names = string.Join(",",
+                                            targetGameObjects.Select(g =>
                                         {
                                             if (g == null)
                                             {
@@ -364,7 +427,8 @@ namespace DarkwoodMP.World
                                             }
                                             return g.name;
                                         }));
-                                        List<string> ids = e.targetUniqueObjects;
+                                        List<string> ids =
+                                            e.targetUniqueObjects;
                                         if (ids == null)
                                         {
                                             ids = new List<string>();
@@ -374,7 +438,8 @@ namespace DarkwoodMP.World
                                         {
                                             disabled = " disabled";
                                         }
-                                        sb.Append($"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{names}|{string.Join(",", ids)}] fromParent={e.getTargetGameObjectsFromParent}{disabled}");
+                                        sb.Append(
+                                            $"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{names}|{string.Join(",", ids)}] fromParent={e.getTargetGameObjectsFromParent}{disabled}");
                                     }
                                 }
                             }
@@ -388,12 +453,16 @@ namespace DarkwoodMP.World
             }
             Walk(root, 0);
             Plugin.Log.LogInfo($"[view] vw-tree {root.name}:{sb}");
-            r.Info = $"{root.name}: {root.GetComponentsInChildren<Transform>(true).Length} objects (in the log)";
+            r.Info =
+                $"{root.name}: {root.GetComponentsInChildren<Transform>(true).Length} objects (in the log)";
         }
 
-        // ---- who we are -------------------------------------------------------------------------------------
+        // ---- who we are -----------------------------------------------------
 
-        /// <summary>"host", or "c1".."c4" for the client games (named Client1..Client4 by the tests).</summary>
+        /// <summary>
+        /// "host", or "c1".."c4" for the client games (named Client1..Client4
+        /// by the tests).
+        /// </summary>
         private static string Me()
         {
             var s = Session.Instance;
@@ -413,24 +482,37 @@ namespace DarkwoodMP.World
             return n;
         }
 
-        // ---- finding the spot -------------------------------------------------------------------------------
+        // ---- finding the spot -----------------------------------------------
 
         private static List<GameObject> Matches(string pattern)
         {
             var c = Centre;
             return Object.FindObjectsOfType<Transform>(true)
-                .Where(t => t != null && t.gameObject.scene.IsValid() && t.name.IndexOf(pattern, System.StringComparison.OrdinalIgnoreCase) >= 0)
+                .Where(
+                    t => t != null && t.gameObject.scene.IsValid()
+                        && t.name.IndexOf(
+                            pattern,
+                            System.StringComparison.OrdinalIgnoreCase) >= 0)
                 .Select(t => t.gameObject)
-                // One per spot: a prefab's children often carry the same name part.
-                .GroupBy(g => new Vector2Int(Mathf.RoundToInt(g.transform.position.x / 100f), Mathf.RoundToInt(g.transform.position.z / 100f)))
-                .Select(g => g.OrderBy(x => x.transform.GetSiblingIndex()).First())
-                .OrderBy(g => StateDump.Flat(g.transform.position - c)).ToList();
+                // One per spot: a prefab's children often carry the same name
+                // part.
+                .GroupBy(
+                    g => new Vector2Int(
+                        Mathf.RoundToInt(g.transform.position.x / 100f),
+                        Mathf.RoundToInt(g.transform.position.z / 100f)))
+                .Select(g => g.OrderBy(x => x.transform.GetSiblingIndex())
+                    .First())
+                .OrderBy(g => StateDump.Flat(g.transform.position - c))
+                .ToList();
         }
 
         private static string Describe(GameObject g)
         {
             var so = g.GetComponentInParent<SaveableObject>(true);
-            var cols = g.GetComponentsInChildren<Collider>(true).Where(x => (Sync.ViewWatch.HideMask & (1 << x.gameObject.layer)) != 0).ToList();
+            var cols = g.GetComponentsInChildren<Collider>(true)
+                .Where(
+                    x => (Sync.ViewWatch.HideMask & (1 << x.gameObject.layer))
+                        != 0).ToList();
             string path = Sync.ViewWatch.Path(g.transform);
             string spot = Fmt(g.transform.position);
             float distance = StateDump.Flat(g.transform.position - Centre);
@@ -478,7 +560,8 @@ namespace DarkwoodMP.World
                 n = int.Parse(a[1], CultureInfo.InvariantCulture);
             }
             var list = Matches(a[0]);
-            r.Info = $"{list.Count} spots with '{a[0]}': " + string.Join("; ", list.Take(n).Select(Describe));
+            r.Info = $"{list.Count} spots with '{a[0]}': " + string.Join(
+                "; ", list.Take(n).Select(Describe));
             Plugin.Log.LogInfo($"[view] vw-find {a[0]}: {r.Info}");
         }
 
@@ -496,14 +579,18 @@ namespace DarkwoodMP.World
                 r.Fail($"only {list.Count} spots with '{a[0]}'");
                 yield break;
             }
-            _mark = new Vector3(list[i].transform.position.x, 0f, list[i].transform.position.z);
+            _mark = new Vector3(
+                list[i].transform.position.x, 0f, list[i].transform.position.z);
             _markName = list[i].name;
             r.Info = $"mark: {Describe(list[i])}";
         }
 
-        // ---- walking up to it -------------------------------------------------------------------------------
+        // ---- walking up to it -----------------------------------------------
 
-        /// <summary>From the mark towards the centre (the way the players come from), flat and of length 1.</summary>
+        /// <summary>
+        /// From the mark towards the centre (the way the players come from),
+        /// flat and of length 1.
+        /// </summary>
         private static Vector3 Back()
         {
             var d = Centre - _mark.Value;
@@ -549,10 +636,14 @@ namespace DarkwoodMP.World
             var to = _mark.Value + back * (lead + gap) + right * side;
             yield return Walk(to, 20f, detours: 0);
             Face(_mark.Value);
-            r.Info = $"{me} at {Fmt(Player.Instance.transform.position)}, {StateDump.Flat(Player.Instance.transform.position - _mark.Value):0} from the mark {_markName}";
+            r.Info =
+                $"{me} at {Fmt(Player.Instance.transform.position)}, {StateDump.Flat(Player.Instance.transform.position - _mark.Value):0} from the mark {_markName}";
         }
 
-        /// <summary>Our player faces the point (its up is its front), as the mouse would turn it.</summary>
+        /// <summary>
+        /// Our player faces the point (its up is its front), as the mouse would
+        /// turn it.
+        /// </summary>
         private static void Face(Vector3 at)
         {
             var p = Player.Instance;
@@ -560,7 +651,8 @@ namespace DarkwoodMP.World
             d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
-                p.transform.rotation = Quaternion.LookRotation(Vector3.down, d.normalized);
+                p.transform.rotation =
+                    Quaternion.LookRotation(Vector3.down, d.normalized);
             }
         }
 
@@ -570,7 +662,8 @@ namespace DarkwoodMP.World
             public int Frames, Dark, Audits, BadAudits;
             public float WorstMismatch;
             public string WorstAt = "";
-            public readonly Dictionary<string, int> DarkBy = new Dictionary<string, int>();
+            public readonly Dictionary<string, int> DarkBy =
+                new Dictionary<string, int>();
             public readonly HashSet<string> Ghosts = new HashSet<string>();
             public readonly HashSet<string> BadDark = new HashSet<string>();
 
@@ -588,16 +681,20 @@ namespace DarkwoodMP.World
                 }
                 Frames++;
                 var mr = light.GetComponent<MeshRenderer>();
-                if (light.gameObject.activeInHierarchy && mr != null && !mr.enabled)
+                if (light.gameObject.activeInHierarchy && mr != null
+                    && !mr.enabled)
                 {
                     Dark++;
-                    foreach (var h in Physics.RaycastAll(light.transform.position + new Vector3(0f, 100f, 0f), Vector3.down, 200f, Sync.ViewWatch.HideMask))
+                    foreach (var h in Physics.RaycastAll(
+                        light.transform.position + new Vector3(0f, 100f, 0f),
+                        Vector3.down, 200f, Sync.ViewWatch.HideMask))
                     {
                         if (h.collider == null)
                         {
                             continue;
                         }
-                        string k = Sync.ViewWatch.Path(h.collider.transform) + $" [layer {h.collider.gameObject.layer}]";
+                        string k = Sync.ViewWatch.Path(h.collider.transform)
+                            + $" [layer {h.collider.gameObject.layer}]";
                         if (DarkBy.TryGetValue(k, out int n))
                         {
                             DarkBy[k] = n + 1;
@@ -612,8 +709,10 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
-                // A light switched off isn't redrawn (Light2D.LateUpdate returns first), so its mesh is the one from
-                // before: walking straight through scenery a player can't cross (roots) switches it off, as alone.
+                // A light switched off isn't redrawn (Light2D.LateUpdate
+                // returns first), so its mesh is the one from before: walking
+                // straight through scenery a player can't cross (roots)
+                // switches it off, as alone.
                 if (!audit || (mr != null && !mr.enabled))
                 {
                     return;
@@ -640,7 +739,8 @@ namespace DarkwoodMP.World
                 string causes = "";
                 if (DarkBy.Count != 0)
                 {
-                    causes = $" (by {string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
+                    causes =
+                        $" (by {string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
                 }
                 string place = "";
                 if (WorstAt != "")
@@ -681,7 +781,10 @@ namespace DarkwoodMP.World
 
         private const float MaxMismatch = 0.25f;
 
-        /// <summary>About how fast a player runs (world units a second; Player.runSpeed is in other units).</summary>
+        /// <summary>
+        /// About how fast a player runs (world units a second; Player.runSpeed
+        /// is in other units).
+        /// </summary>
         private const float RunSpeed = 450f;
 
         private static IEnumerator Approach(string[] a, Result r)
@@ -706,7 +809,8 @@ namespace DarkwoodMP.World
             {
                 speed = RunSpeed;
             }
-            // Down the line from where we stand towards the mark, LEN long (not past the mark).
+            // Down the line from where we stand towards the mark, LEN long (not
+            // past the mark).
             var from = p.transform.position;
             var dir = _mark.Value - from;
             dir.y = 0f;
@@ -729,14 +833,16 @@ namespace DarkwoodMP.World
                 }
                 w.Frame(audit);
             }
-            // A moment at the end, standing still: the view settles where we arrived.
+            // A moment at the end, standing still: the view settles where we
+            // arrived.
             float until = Time.time + 2f;
             while (Time.time < until)
             {
                 yield return eof;
                 w.Frame(true);
             }
-            r.Info = $"{Me()} walked {gone:0} at {speed:0}/s in {Time.time - t0:0.0} s to {Fmt(p.transform.position)}, " +
+            r.Info =
+                $"{Me()} walked {gone:0} at {speed:0}/s in {Time.time - t0:0.0} s to {Fmt(p.transform.position)}, " +
                      $"{StateDump.Flat(p.transform.position - _mark.Value):0} from the mark; {w}";
             Plugin.Log.LogInfo($"[view] vw-approach: {r.Info}");
             var bad = w.Problem();
@@ -786,7 +892,8 @@ namespace DarkwoodMP.World
             string distance = "";
             if (_mark != null)
             {
-                distance = $", {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark";
+                distance =
+                    $", {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark";
             }
             r.Info = $"{who} at {spot}{distance}: " +
                      $"cone {light.LightConeAngle:0} (currentFOV {CurrentFov(p):0}), radius {light.LightRadius:0}; {Sides(p, light)}; mesh {audit1}; " +
@@ -797,7 +904,8 @@ namespace DarkwoodMP.World
             {
                 bad = $"our view is black here (by {string.Join("; ", w.DarkBy.Keys)})";
             }
-            if (bad == null && !MapScenarioLights.ViewSource().StartsWith("view: ours"))
+            if (bad == null
+                && !MapScenarioLights.ViewSource().StartsWith("view: ours"))
             {
                 bad = "the view lights aren't our own";
             }
@@ -807,7 +915,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- the checks -------------------------------------------------------------------------------------
+        // ---- the checks -----------------------------------------------------
 
         private static bool IsOurs(Collider c)
         {
@@ -822,9 +930,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// A collider whose saved object is switched off in the save (it shouldn't be there at all). Not inside a
-        /// separate location: the game leaves Active off on many of a location's objects it shows (the village's
-        /// border roots and trees, in every game alike), so there it says nothing.
+        /// A collider whose saved object is switched off in the save (it
+        /// shouldn't be there at all). Not inside a separate location: the game
+        /// leaves Active off on many of a location's objects it shows (the
+        /// village's border roots and trees, in every game alike), so there it
+        /// says nothing.
         /// </summary>
         private static bool IsGhost(Collider c)
         {
@@ -853,7 +963,8 @@ namespace DarkwoodMP.World
         private static List<string> GhostBlockers(Light2D light)
         {
             var list = new List<string>();
-            foreach (var c in Physics.OverlapSphere(light.transform.position, light.LightRadius, light.ShadowLayer))
+            foreach (var c in Physics.OverlapSphere(
+                light.transform.position, light.LightRadius, light.ShadowLayer))
             {
                 if (c != null && (IsGhost(c) || IsOurs(c)))
                 {
@@ -875,10 +986,12 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// How much of the cone's mesh disagrees with rays cast from the light now: each vertex is a ray's end
-        /// (UpdateRadialMesh), either where it hit (inside the radius) or the radius itself. A hit vertex wants our
-        /// ray to hit there too; a free one wants our ray to reach (nearly) the radius. Rounding and shadow edges
-        /// give a few disagreements; a mesh drawn somewhere else disagrees almost everywhere.
+        /// How much of the cone's mesh disagrees with rays cast from the light
+        /// now: each vertex is a ray's end (UpdateRadialMesh), either where it
+        /// hit (inside the radius) or the radius itself. A hit vertex wants our
+        /// ray to hit there too; a free one wants our ray to reach (nearly) the
+        /// radius. Rounding and shadow edges give a few disagreements; a mesh
+        /// drawn somewhere else disagrees almost everywhere.
         /// </summary>
         private static float Mismatch(Light2D light, out string info)
         {
@@ -903,11 +1016,14 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 n++;
-                bool hit = Physics.Raycast(o, d / dist, out var h, R, light.ShadowLayer);
+                bool hit = Physics.Raycast(
+                    o, d / dist, out var h, R, light.ShadowLayer);
                 if (dist < R - 3f)
                 {
                     hits++;
-                    if (!hit || Mathf.Abs(h.distance - dist) > Mathf.Max(20f, dist * 0.15f))
+                    if (!hit
+                        || Mathf.Abs(h.distance - dist) > Mathf.Max(
+                            20f, dist * 0.15f))
                     {
                         bad++;
                     }
@@ -927,7 +1043,10 @@ namespace DarkwoodMP.World
             return m;
         }
 
-        /// <summary>How far our view reaches on each side of where our player faces (rays across the cone), and what stops it.</summary>
+        /// <summary>
+        /// How far our view reaches on each side of where our player faces
+        /// (rays across the cone), and what stops it.
+        /// </summary>
         private static string Sides(Player p, Light2D light)
         {
             var o = light.transform.position;
@@ -938,16 +1057,19 @@ namespace DarkwoodMP.World
                 return "no facing";
             }
             f.Normalize();
-            float cone = Mathf.Clamp(light.LightConeAngle, 0f, 360f), R = light.LightRadius;
+            float cone = Mathf.Clamp(light.LightConeAngle, 0f, 360f),
+                R = light.LightRadius;
             float left = 0f, right = 0f;
             int nl = 0, nr = 0;
             var stopL = new Dictionary<string, int>();
             var stopR = new Dictionary<string, int>();
             for (int i = 0; i <= 40; i++)
             {
-                float ang = -cone / 2f + cone * i / 40f; // negative: to the left (counter-clockwise seen from above)
+                // negative: to the left (counter-clockwise seen from above)
+                float ang = -cone / 2f + cone * i / 40f;
                 var dir = Quaternion.AngleAxis(ang, Vector3.up) * f;
-                bool hit = Physics.Raycast(o, dir, out var h, R, light.ShadowLayer);
+                bool hit =
+                    Physics.Raycast(o, dir, out var h, R, light.ShadowLayer);
                 float reach = 1f;
                 if (hit)
                 {
@@ -991,7 +1113,8 @@ namespace DarkwoodMP.World
                 {
                     return "nothing";
                 }
-                return string.Join(", ", s.OrderByDescending(x => x.Value).Take(3).Select(x => $"{x.Key} x{x.Value}"));
+                return string.Join(", ", s.OrderByDescending(x => x.Value)
+                        .Take(3).Select(x => $"{x.Key} x{x.Value}"));
             }
             float leftReach = 0f;
             if (nl > 0)

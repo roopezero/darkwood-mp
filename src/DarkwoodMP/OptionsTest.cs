@@ -11,23 +11,31 @@ using UnityEngine;
 namespace DarkwoodMP
 {
     /// <summary>
-    /// "--dwmp-test-options DIR" (Plugin): the Options window opened from the menu's list, in the main menu or (with
-    /// --dwmp-continue) the pause menu. It changes the music volume and applies it, and checks the game's stored
-    /// value (GameSettings, which is Unity's PlayerPrefs, and the prefs file on disk); it listens for a key and
-    /// cancels with Escape, then puts F9 (or another free key) on an action and checks it was stored by reading the
-    /// key maps back from the store. Then screenshots of every tab, an open list, a key being listened for, the
-    /// "Keep these settings?" question and the "Apply the changes?" question, at 1920x1080 and 1280x720.
+    /// "--dwmp-test-options DIR" (Plugin): the Options window opened from the
+    /// menu's list, in the main menu or (with --dwmp-continue) the pause menu.
+    /// It changes the music volume and applies it, and checks the game's stored
+    /// value (GameSettings, which is Unity's PlayerPrefs, and the prefs file on
+    /// disk); it listens for a key and cancels with Escape, then puts F9 (or
+    /// another free key) on an action and checks it was stored by reading the
+    /// key maps back from the store. Then screenshots of every tab, an open
+    /// list, a key being listened for, the "Keep these settings?" question and
+    /// the "Apply the changes?" question, at 1920x1080 and 1280x720.
     ///
-    /// These are the player's real game settings, so everything is put back: the key on the action, and every
-    /// setting in the prefs file as it was before the test (read from the file, written back through PlayerPrefs,
-    /// with keys the test added deleted), then compared with the file from before. On Linux the file is
-    /// ~/.config/unity3d/Acid Wizard Studio/Darkwood/prefs; on Windows PlayerPrefs are in the registry
-    /// (HKCU\Software\Acid Wizard Studio\Darkwood), which this test can't read, so it doesn't run there.
+    /// These are the player's real game settings, so everything is put back:
+    /// the key on the action, and every setting in the prefs file as it was
+    /// before the test (read from the file, written back through PlayerPrefs,
+    /// with keys the test added deleted), then compared with the file from
+    /// before. On Linux the file is ~/.config/unity3d/Acid Wizard
+    /// Studio/Darkwood/prefs; on Windows PlayerPrefs are in the registry
+    /// (HKCU\Software\Acid Wizard Studio\Darkwood), which this test can't read,
+    /// so it doesn't run there.
     /// </summary>
     internal static class OptionsTest
     {
-        private static string PrefsPath => Path.Combine(Application.persistentDataPath, "prefs");
-        private static void Log(string s) => Plugin.Log.LogInfo("[options] " + s);
+        private static string PrefsPath =>
+            Path.Combine(Application.persistentDataPath, "prefs");
+        private static void Log(string s) =>
+            Plugin.Log.LogInfo("[options] " + s);
         private static int _fails;
 
         private static void Check(bool ok, string what)
@@ -55,7 +63,8 @@ namespace DarkwoodMP
             }
             if (!File.Exists(PrefsPath))
             {
-                Log($"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run");
+                Log(
+                    $"FAIL no prefs file at {PrefsPath} (only Linux keeps them in a file): not run");
                 Log("done");
                 yield break;
             }
@@ -79,17 +88,22 @@ namespace DarkwoodMP
             }
             var before = ReadPrefs();
             string beforeText = File.ReadAllText(PrefsPath);
-            File.WriteAllText(Path.Combine(dir, $"prefs-before-{where}.xml"), beforeText);
-            var sizeBefore = (w: Screen.width, h: Screen.height, mode: Screen.fullScreenMode);
+            File.WriteAllText(
+                Path.Combine(dir, $"prefs-before-{where}.xml"), beforeText);
+            var sizeBefore =
+                (w: Screen.width, h: Screen.height, mode: Screen.fullScreenMode);
             _before = before;
             _sizeBefore = sizeBefore;
-            Log($"{where} menu, screen {Screen.width}x{Screen.height}; prefs file {PrefsPath} with {before.Count} settings");
+            Log(
+                $"{where} menu, screen {Screen.width}x{Screen.height}; prefs file {PrefsPath} with {before.Count} settings");
 
             // Through the menu's entry, as a click on it.
             bool took = MenuList.Click("Options");
             yield return null;
             yield return null;
-            Check(took && OptionsWindow.IsOpen, $"the menu's Options opens the window (entry taken {took}, open {OptionsWindow.IsOpen})");
+            Check(
+                took && OptionsWindow.IsOpen,
+                $"the menu's Options opens the window (entry taken {took}, open {OptionsWindow.IsOpen})");
             if (!OptionsWindow.IsOpen)
             {
                 OptionsWindow.Open();
@@ -111,23 +125,34 @@ namespace DarkwoodMP
             OptionsWindow.SetVolume(music: true, m1);
             bool pending = OptionsWindow.Pending;
             var slider = Singleton<MainMenu>.Instance.AudioMenu.musicSlider;
-            bool heard = slider == null || Mathf.Approximately(slider.Magnitude, m1);
+            bool heard =
+                slider == null || Mathf.Approximately(slider.Magnitude, m1);
             bool applied = OptionsWindow.Apply();
             yield return null;
             var after = ReadPrefs();
             float onDisk = -1f;
-            if (after.TryGetValue("MusicVolume", out var mv) && float.TryParse(mv.value, NumberStyles.Float, CultureInfo.InvariantCulture, out float d))
+            if (after.TryGetValue("MusicVolume", out var mv)
+                && float.TryParse(
+                    mv.value, NumberStyles.Float, CultureInfo.InvariantCulture,
+                    out float d))
             {
                 onDisk = d;
             }
-            Check(pending && heard && applied && Mathf.Abs(GameSettings.GetFloat("MusicVolume") - m1) < 0.001f && Mathf.Abs(onDisk - m1) < 0.001f,
+            Check(
+                pending && heard && applied
+                    && Mathf.Abs(GameSettings.GetFloat("MusicVolume") - m1)
+                        < 0.001f && Mathf.Abs(onDisk - m1) < 0.001f,
                 $"music volume {m0:0.00} -> {m1:0.00}: waited for Apply {pending}, the game's slider at it {heard}, stored {GameSettings.GetFloat("MusicVolume"):0.00}, in the file {onDisk:0.00}");
-            // Back at once, so nothing after this can leave the player's volume changed.
+            // Back at once, so nothing after this can leave the player's volume
+            // changed.
             OptionsWindow.SetVolume(music: true, m0);
             OptionsWindow.Apply();
-            Check(Mathf.Approximately(GameSettings.GetFloat("MusicVolume"), m0), $"music volume back at {GameSettings.GetFloat("MusicVolume"):0.00}");
+            Check(
+                Mathf.Approximately(GameSettings.GetFloat("MusicVolume"), m0),
+                $"music volume back at {GameSettings.GetFloat("MusicVolume"):0.00}");
 
-            // A key: listened for and cancelled with Escape, then put on an action and stored.
+            // A key: listened for and cancelled with Escape, then put on an
+            // action and stored.
             OptionsWindow.TestTab(3);
             yield return null;
             yield return null;
@@ -152,7 +177,15 @@ namespace DarkwoodMP
                 }
             }
             KeyCode free = KeyCode.None;
-            foreach (var k in new[] { KeyCode.F9, KeyCode.F10, KeyCode.F11, KeyCode.F8, KeyCode.Insert, KeyCode.Home })
+            foreach (var k in new[]
+            {
+                KeyCode.F9,
+                KeyCode.F10,
+                KeyCode.F11,
+                KeyCode.F8,
+                KeyCode.Insert,
+                KeyCode.Home
+            })
             {
                 if (!OptionsWindow.TestKeyUsed(k))
                 {
@@ -166,15 +199,19 @@ namespace DarkwoodMP
                 KeyCode orig = OptionsWindow.TestKeyOf(label);
                 OptionsWindow.TestBeginMapping(label);
                 float until = Time.realtimeSinceStartup + 3f;
-                while (OptionsWindow.TestMapperStatus != "Listening" && Time.realtimeSinceStartup < until)
+                while (OptionsWindow.TestMapperStatus != "Listening"
+                    && Time.realtimeSinceStartup < until)
                 {
                     yield return null;
                 }
                 bool listened = OptionsWindow.TestMapperStatus == "Listening";
-                bool gameHeld = Singleton<MainMenu>.Instance.ControlsMenu.assigningMapping;
+                bool gameHeld =
+                    Singleton<MainMenu>.Instance.ControlsMenu.assigningMapping;
                 OptionsWindow.TestEscape();
                 yield return null;
-                bool ok = listened && gameHeld && !OptionsWindow.TestMapping && OptionsWindow.TestMapperStatus == "Idle" && OptionsWindow.TestKeyOf(label) == orig;
+                bool ok = listened && gameHeld && !OptionsWindow.TestMapping
+                    && OptionsWindow.TestMapperStatus == "Idle"
+                    && OptionsWindow.TestKeyOf(label) == orig;
                 string mapper = "not listening";
                 if (listened)
                 {
@@ -188,22 +225,31 @@ namespace DarkwoodMP
                 bool keyStored = false;
                 foreach (var kv in afterKey)
                 {
-                    if (kv.Key.Contains("dataType=ControllerMap|") && kv.Key.Contains("KeyboardMap") && (!before.TryGetValue(kv.Key, out var old) || old.value != kv.Value.value))
+                    if (kv.Key.Contains("dataType=ControllerMap|")
+                        && kv.Key.Contains("KeyboardMap")
+                        && (!before.TryGetValue(kv.Key, out var old)
+                            || old.value != kv.Value.value))
                     {
                         keyStored = true;
                     }
                 }
                 OptionsWindow.TestReloadControls();
                 KeyCode loaded = OptionsWindow.TestKeyOf(label);
-                Check(set && keyStored && loaded == free, $"{label} put on {free}: the keyboard map in the prefs file changed {keyStored}, read back from the store as {loaded}");
+                Check(
+                    set && keyStored && loaded == free,
+                    $"{label} put on {free}: the keyboard map in the prefs file changed {keyStored}, read back from the store as {loaded}");
 
-                // Back as it was, in the player's map too (the store is put back below).
+                // Back as it was, in the player's map too (the store is put
+                // back below).
                 OptionsWindow.TestAssign(label, orig);
-                Check(OptionsWindow.TestKeyOf(label) == orig, $"{label} back on {orig}");
+                Check(
+                    OptionsWindow.TestKeyOf(label) == orig,
+                    $"{label} back on {orig}");
             }
             else
             {
-                Check(false, "no keyboard row with a key, or no free key to try");
+                Check(
+                    false, "no keyboard row with a key, or no free key to try");
             }
 
             // Screenshots of every tab at both sizes.
@@ -211,13 +257,16 @@ namespace DarkwoodMP
             {
                 Screen.SetResolution(w, h, FullScreenMode.Windowed);
                 yield return new WaitForSecondsRealtime(2.5f);
-                Log($"screen asked {w}x{h}, got {Screen.width}x{Screen.height}");
-                string P(string n) => Path.Combine(dir, $"{where}-{w}x{h}-{n}.png");
+                Log(
+                    $"screen asked {w}x{h}, got {Screen.width}x{Screen.height}");
+                string P(string n) =>
+                    Path.Combine(dir, $"{where}-{w}x{h}-{n}.png");
                 var names = OptionsWindow.TestTabNames;
                 for (int t = 0; t < names.Length; t++)
                 {
                     OptionsWindow.TestTab(t);
-                    yield return Shot(P($"{t + 1}-{names[t].ToLowerInvariant()}"));
+                    yield return Shot(
+                        P($"{t + 1}-{names[t].ToLowerInvariant()}"));
                 }
                 OptionsWindow.TestTab(0);
                 OptionsWindow.TestOpenDrop("res");
@@ -234,7 +283,8 @@ namespace DarkwoodMP
                     OptionsWindow.TestEscape();
                 }
                 OptionsWindow.TestTab(0);
-                OptionsWindow.AskKeep($"The screen is now {Screen.width}x{Screen.height}, in a window.", () =>
+                OptionsWindow
+                    .AskKeep($"The screen is now {Screen.width}x{Screen.height}, in a window.", () =>
                 {
                 }, () =>
                 {
@@ -250,10 +300,13 @@ namespace DarkwoodMP
                 OptionsWindow.SetVolume(music: false, v);
                 OptionsWindow.RequestClose();
                 yield return Shot(P("audio-apply-question"));
-                ConfirmDialog.Choose(false); // Discard: the sound volume back, the window closed
+                // Discard: the sound volume back, the window closed
+                ConfirmDialog.Choose(false);
                 yield return null;
                 yield return null;
-                Check(!OptionsWindow.IsOpen && !OptionsWindow.Pending, $"Discard closes the window with nothing left to apply (open {OptionsWindow.IsOpen})");
+                Check(
+                    !OptionsWindow.IsOpen && !OptionsWindow.Pending,
+                    $"Discard closes the window with nothing left to apply (open {OptionsWindow.IsOpen})");
                 OptionsWindow.Open();
                 yield return null;
             }
@@ -274,7 +327,8 @@ namespace DarkwoodMP
             }
             else
             {
-                what = $"the prefs file differs from before: {string.Join("; ", diffs)}";
+                what =
+                    $"the prefs file differs from before: {string.Join("; ", diffs)}";
             }
             Check(diffs.Count == 0, what);
             if (inWorld)
@@ -293,12 +347,16 @@ namespace DarkwoodMP
             Log($"done: {text}");
         }
 
-        // What Run changed, kept until it has put it back, so a run cut short (an exception, a reset's StopTests,
-        // the game quitting) still restores the player's settings.
+        // What Run changed, kept until it has put it back, so a run cut short
+        // (an exception, a reset's StopTests, the game quitting) still restores
+        // the player's settings.
         private static Dictionary<string, (string type, string value)> _before;
         private static (int w, int h, FullScreenMode mode) _sizeBefore;
 
-        /// <summary>Plugin.StopTests and quitting: put the settings back if a run stopped before it did.</summary>
+        /// <summary>
+        /// Plugin.StopTests and quitting: put the settings back if a run
+        /// stopped before it did.
+        /// </summary>
         internal static void RestoreIfCutShort()
         {
             var before = _before;
@@ -310,7 +368,8 @@ namespace DarkwoodMP
             Log("cut short: putting the settings back");
             try
             {
-                Screen.SetResolution(_sizeBefore.w, _sizeBefore.h, _sizeBefore.mode);
+                Screen.SetResolution(
+                    _sizeBefore.w, _sizeBefore.h, _sizeBefore.mode);
             }
             catch (Exception e)
             {
@@ -343,12 +402,17 @@ namespace DarkwoodMP
             Log($"shot {Path.GetFileName(path)}");
         }
 
-        // ---- the prefs file ------------------------------------------------------------------------
+        // ---- the prefs file -------------------------------------------------
 
-        private static readonly Regex PrefRx = new Regex("<pref name=\"([^\"]*)\" type=\"([a-z]+)\">([^<]*)</pref>");
+        private static readonly Regex PrefRx = new Regex(
+            "<pref name=\"([^\"]*)\" type=\"([a-z]+)\">([^<]*)</pref>");
 
-        /// <summary>Unity's own entries, which it changes itself (the window's size and place, sessions).</summary>
-        private static bool Unity(string name) => name.StartsWith("unity.") || name.StartsWith("Screenmanager") || name == "UnitySelectMonitor";
+        /// <summary>
+        /// Unity's own entries, which it changes itself (the window's size and
+        /// place, sessions).
+        /// </summary>
+        private static bool Unity(string name) => name.StartsWith("unity.")
+            || name.StartsWith("Screenmanager") || name == "UnitySelectMonitor";
 
         private static Dictionary<string, (string type, string value)> ReadPrefs()
         {
@@ -356,17 +420,21 @@ namespace DarkwoodMP
             var d = new Dictionary<string, (string, string)>();
             foreach (Match m in PrefRx.Matches(File.ReadAllText(PrefsPath)))
             {
-                d[System.Net.WebUtility.HtmlDecode(m.Groups[1].Value)] = (m.Groups[2].Value, m.Groups[3].Value);
+                d[System.Net.WebUtility.HtmlDecode(m.Groups[1].Value)] =
+                    (m.Groups[2].Value, m.Groups[3].Value);
             }
             return d;
         }
 
-        private static void RestorePrefs(Dictionary<string, (string type, string value)> before)
+        private static void RestorePrefs(
+            Dictionary<string, (string type, string value)> before)
         {
             var now = ReadPrefs();
             foreach (var kv in before)
             {
-                if (Unity(kv.Key) || (now.TryGetValue(kv.Key, out var cur) && cur == kv.Value))
+                if (Unity(kv.Key)
+                    || (now.TryGetValue(kv.Key, out var cur)
+                        && cur == kv.Value))
                 {
                     continue;
                 }
@@ -375,13 +443,24 @@ namespace DarkwoodMP
                     switch (kv.Value.type)
                     {
                         case "int":
-                            PlayerPrefs.SetInt(kv.Key, int.Parse(kv.Value.value, CultureInfo.InvariantCulture));
+                            PlayerPrefs.SetInt(
+                                kv.Key,
+                                int.Parse(
+                                    kv.Value.value,
+                                    CultureInfo.InvariantCulture));
                             break;
                         case "float":
-                            PlayerPrefs.SetFloat(kv.Key, float.Parse(kv.Value.value, CultureInfo.InvariantCulture));
+                            PlayerPrefs.SetFloat(
+                                kv.Key,
+                                float.Parse(
+                                    kv.Value.value,
+                                    CultureInfo.InvariantCulture));
                             break;
                         default:
-                            PlayerPrefs.SetString(kv.Key, Encoding.UTF8.GetString(Convert.FromBase64String(kv.Value.value)));
+                            PlayerPrefs.SetString(
+                                kv.Key,
+                                Encoding.UTF8.GetString(
+                                    Convert.FromBase64String(kv.Value.value)));
                             break;
                     }
                     Log($"put back {Short(kv.Key)}");
@@ -402,12 +481,15 @@ namespace DarkwoodMP
             PlayerPrefs.Save();
         }
 
-        private static List<string> Compare(Dictionary<string, (string type, string value)> a, Dictionary<string, (string type, string value)> b)
+        private static List<string> Compare(
+            Dictionary<string, (string type, string value)> a,
+            Dictionary<string, (string type, string value)> b)
         {
             var diffs = new List<string>();
             foreach (var kv in a)
             {
-                if (!Unity(kv.Key) && (!b.TryGetValue(kv.Key, out var v) || v != kv.Value))
+                if (!Unity(kv.Key)
+                    && (!b.TryGetValue(kv.Key, out var v) || v != kv.Value))
                 {
                     string now = "gone";
                     if (b.ContainsKey(kv.Key))

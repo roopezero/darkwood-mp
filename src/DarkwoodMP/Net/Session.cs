@@ -4,12 +4,16 @@ using System.Collections.Generic;
 namespace DarkwoodMP.Net
 {
     /// <summary>
-    /// Multiplayer session, independent of how players are connected (Steam or direct TCP).
-    /// Star topology: the host is authoritative, clients only talk to the host, and the host relays.
+    /// Multiplayer session, independent of how players are connected (Steam or
+    /// direct TCP).
+    /// Star topology: the host is authoritative, clients only talk to the host,
+    /// and the host relays.
     ///
-    /// The handshake follows goasis: the client sends Hello (protocol version, game, player key, password,
-    /// save hash); the host answers Refused and closes, or Welcome with the client's id. Ids are the host's
-    /// transport ids for its peers; names and keys travel in the handshake, so Steam and GOG players mix.
+    /// The handshake follows goasis: the client sends Hello (protocol version,
+    /// game, player key, password, save hash); the host answers Refused and
+    /// closes, or Welcome with the client's id. Ids are the host's transport
+    /// ids for its peers; names and keys travel in the handshake, so Steam and
+    /// GOG players mix.
     /// </summary>
     public sealed class Session : IDisposable
     {
@@ -20,7 +24,9 @@ namespace DarkwoodMP.Net
         public bool Active => Backend != null && Backend.InSession;
         public bool IsHost => Active && Backend.IsHost;
         public bool IsClient => Active && !Backend.IsHost;
-        /// <summary>Handshake done (always true for the host while hosting).</summary>
+        /// <summary>
+        /// Handshake done (always true for the host while hosting).
+        /// </summary>
         public bool Connected { get; private set; }
         public ulong LocalId { get; private set; }
         public ulong HostId
@@ -59,50 +65,82 @@ namespace DarkwoodMP.Net
 
         /// <summary>Host: clients that completed the handshake.</summary>
         public readonly HashSet<ulong> Peers = new HashSet<ulong>();
-        /// <summary>Everyone in the session we know a name for (including ourselves once connected).</summary>
-        public readonly Dictionary<ulong, string> Names = new Dictionary<ulong, string>();
-        /// <summary>Host: each peer's player key, which the host knows them by.</summary>
-        public readonly Dictionary<ulong, string> Keys = new Dictionary<ulong, string>();
+        /// <summary>
+        /// Everyone in the session we know a name for (including ourselves once
+        /// connected).
+        /// </summary>
+        public readonly Dictionary<ulong, string> Names =
+            new Dictionary<ulong, string>();
+        /// <summary>
+        /// Host: each peer's player key, which the host knows them by.
+        /// </summary>
+        public readonly Dictionary<ulong, string> Keys =
+            new Dictionary<ulong, string>();
 
         public event Action<ulong> OnPeerConnected;
         public event Action<ulong> OnPeerDisconnected;
         public event Action OnSessionEnded;
-        /// <summary>Client: the host went away (stopped its server, quit, or the connection broke); the reason to show.</summary>
+        /// <summary>
+        /// Client: the host went away (stopped its server, quit, or the
+        /// connection broke); the reason to show.
+        /// </summary>
         public event Action<string> OnHostLost;
         /// <summary>Client: the host refused us (reason).</summary>
         public event Action<string> OnRefused;
         /// <summary>Client: the host let us in (after Welcome).</summary>
         public event Action OnWelcomed;
-        /// <summary>Someone else joined or left the game (their name), for the in-game notices.</summary>
+        /// <summary>
+        /// Someone else joined or left the game (their name), for the in-game
+        /// notices.
+        /// </summary>
         public event Action<string> OnPlayerJoined, OnPlayerLeft;
-        /// <summary>Someone's Hello was let in and they're getting the world (host: anyone; client: told by JoinNotice), or they stopped before getting in.</summary>
+        /// <summary>
+        /// Someone's Hello was let in and they're getting the world (host:
+        /// anyone; client: told by JoinNotice), or they stopped before getting
+        /// in.
+        /// </summary>
         public event Action<string> OnPlayerJoining, OnPlayerStoppedJoining;
-        /// <summary>Client: joining gave up because the host went quiet (the reason); the session is left after it.</summary>
+        /// <summary>
+        /// Client: joining gave up because the host went quiet (the reason);
+        /// the session is left after it.
+        /// </summary>
         public event Action<string> OnJoinTimedOut;
 
-        /// <summary>Client: the hash of the world it has for Hello (null: none).</summary>
+        /// <summary>
+        /// Client: the hash of the world it has for Hello (null: none).
+        /// </summary>
         public Func<byte[]> ClientWorldHash;
         /// <summary>
-        /// Host: called once a Hello passes the checks, with the client's world hash. Return true to let the client
-        /// in, or false after answering it yourself (a SaveOffer, or Refuse).
+        /// Host: called once a Hello passes the checks, with the client's world
+        /// hash. Return true to let the client in, or false after answering it
+        /// yourself (a SaveOffer, or Refuse).
         /// </summary>
         public Func<ulong, byte[], bool> BeforeWelcome;
-        /// <summary>Host: whether a client's message may be handled (false drops it). Authority sets it.</summary>
+        /// <summary>
+        /// Host: whether a client's message may be handled (false drops it).
+        /// Authority sets it.
+        /// </summary>
         public Func<ulong, MsgType, bool> AllowBare;
 
-        private readonly Dictionary<MsgType, Action<ulong, PacketReader>> _handlers = new Dictionary<MsgType, Action<ulong, PacketReader>>();
+        private readonly Dictionary<MsgType, Action<ulong, PacketReader>> _handlers =
+            new Dictionary<MsgType, Action<ulong, PacketReader>>();
         private readonly PacketWriter _pw = new PacketWriter();
         private readonly List<INetBackend> _backends = new List<INetBackend>();
         private float _welcomedAt;
-        // Client: when the last Hello went, until anything comes back from the host (-1: nothing outstanding).
+        // Client: when the last Hello went, until anything comes back from the
+        // host (-1: nothing outstanding).
         private float _helloAt = -1f;
         private const float HelloRetry = 5f;
-        // Client: when the host last sent anything while we're joining. Every stage of joining hears from the host at
-        // least every few seconds (JoinWait, SaveOffer, SaveData, Welcome), so this long without a word means it's gone.
+        // Client: when the host last sent anything while we're joining. Every
+        // stage of joining hears from the host at least every few seconds
+        // (JoinWait, SaveOffer, SaveData, Welcome), so this long without a word
+        // means it's gone.
         private float _heardHostAt = -1f;
         private const float JoinSilence = 60f;
-        // Host: those whose Hello passed the checks but who aren't in yet, by id: announced once (JoinNotice).
-        private readonly Dictionary<ulong, string> _joining = new Dictionary<ulong, string>();
+        // Host: those whose Hello passed the checks but who aren't in yet, by
+        // id: announced once (JoinNotice).
+        private readonly Dictionary<ulong, string> _joining =
+            new Dictionary<ulong, string>();
 
         private static float Now => UnityEngine.Time.realtimeSinceStartup;
 
@@ -122,8 +160,10 @@ namespace DarkwoodMP.Net
                 string name = r.ReadStr();
                 bool isNew = !Names.ContainsKey(id);
                 Names[id] = name;
-                // Not the host, nor whoever was already in when we joined (they're listed right after Welcome).
-                if (isNew && Connected && id != LocalId && id != HostId && Now - _welcomedAt > 3f)
+                // Not the host, nor whoever was already in when we joined
+                // (they're listed right after Welcome).
+                if (isNew && Connected && id != LocalId && id != HostId
+                    && Now - _welcomedAt > 3f)
                 {
                     Action<string> handler = OnPlayerJoined;
                     if (handler != null)
@@ -182,8 +222,9 @@ namespace DarkwoodMP.Net
         }
 
         /// <summary>
-        /// Register a backend. Whichever backend starts a session becomes the active one (e.g. accepting a
-        /// Steam invite while idle on direct); only one session runs at a time.
+        /// Register a backend. Whichever backend starts a session becomes the
+        /// active one (e.g. accepting a Steam invite while idle on direct);
+        /// only one session runs at a time.
         /// </summary>
         public void Add(INetBackend b)
         {
@@ -234,9 +275,11 @@ namespace DarkwoodMP.Net
         }
 
         // ---- test lag: DWMP_LAG_MS=N in the game's environment holds every message that arrives N ms ---------------
-        // (in order) before it's handled, as a link over the internet does. Tests only; a localhost run has none.
+        // (in order) before it's handled, as a link over the internet does.
+        // Tests only; a localhost run has none.
         private static readonly float LagSecs = ReadLag();
-        private readonly Queue<(float at, ulong from, byte[] data)> _late = new Queue<(float, ulong, byte[])>();
+        private readonly Queue<(float at, ulong from, byte[] data)> _late =
+            new Queue<(float, ulong, byte[])>();
 
         private static float ReadLag()
         {
@@ -257,7 +300,8 @@ namespace DarkwoodMP.Net
             }
             var copy = new byte[length];
             Buffer.BlockCopy(data, 0, copy, 0, length);
-            _late.Enqueue((UnityEngine.Time.unscaledTime + LagSecs, from, copy));
+            _late.Enqueue(
+                (UnityEngine.Time.unscaledTime + LagSecs, from, copy));
         }
 
         private void DeliverLate()
@@ -270,7 +314,8 @@ namespace DarkwoodMP.Net
             }
         }
 
-        public void Register(MsgType type, Action<ulong, PacketReader> handler) => _handlers[type] = handler;
+        public void Register(MsgType type, Action<ulong, PacketReader> handler) =>
+            _handlers[type] = handler;
 
         public string NameOf(ulong id)
         {
@@ -306,7 +351,8 @@ namespace DarkwoodMP.Net
             }
         }
 
-        public void SendTo(ulong peer, PacketWriter pw, int channel, bool reliable)
+        public void SendTo(
+            ulong peer, PacketWriter pw, int channel, bool reliable)
         {
             INetBackend backend = Backend;
             if (backend != null)
@@ -315,8 +361,12 @@ namespace DarkwoodMP.Net
             }
         }
 
-        /// <summary>Host: send to every connected client, optionally skipping one (e.g. the originator).</summary>
-        public void Broadcast(PacketWriter pw, int channel, bool reliable, ulong except = 0)
+        /// <summary>
+        /// Host: send to every connected client, optionally skipping one (e.g.
+        /// the originator).
+        /// </summary>
+        public void Broadcast(
+            PacketWriter pw, int channel, bool reliable, ulong except = 0)
         {
             if (!IsHost)
             {
@@ -351,7 +401,9 @@ namespace DarkwoodMP.Net
             SendHello();
         }
 
-        /// <summary>Client: (re)send Hello, e.g. after downloading the host's world.</summary>
+        /// <summary>
+        /// Client: (re)send Hello, e.g. after downloading the host's world.
+        /// </summary>
         public void SendHello()
         {
             if (!IsClient)
@@ -385,7 +437,8 @@ namespace DarkwoodMP.Net
             _helloAt = Now;
             if (_heardHostAt < 0f)
             {
-                _heardHostAt = _helloAt; // the silence counts from the first Hello
+                // the silence counts from the first Hello
+                _heardHostAt = _helloAt;
             }
             Plugin.Log.LogInfo("Sent Hello to host");
         }
@@ -396,11 +449,14 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
-            // Hello from someone already playing: over Steam a peer's id stays the same when it leaves and joins
-            // again (Rejoin), and its new Hello can come before the lobby says it left. Treat it as a new join.
+            // Hello from someone already playing: over Steam a peer's id stays
+            // the same when it leaves and joins again (Rejoin), and its new
+            // Hello can come before the lobby says it left. Treat it as a new
+            // join.
             if (Peers.Contains(from))
             {
-                Plugin.Log.LogInfo($"{NameOf(from)} sent Hello again: joining them anew");
+                Plugin.Log.LogInfo(
+                    $"{NameOf(from)} sent Hello again: joining them anew");
                 OnPeerLost(from);
             }
             ushort version;
@@ -418,7 +474,10 @@ namespace DarkwoodMP.Net
             }
             catch (Exception)
             {
-                Refuse(from, "This isn't a DarkwoodMP client, or it's a very different version.");
+                Refuse(
+                    from,
+                    "This isn't a DarkwoodMP client, or it's a very different "
+                        + "version.");
                 return;
             }
 
@@ -431,7 +490,8 @@ namespace DarkwoodMP.Net
             {
                 why = $"The host has DarkwoodMP {PluginInfo.Version}, you have {modVersion}. Use the same version.";
             }
-            else if (Backend.HostPassword.Length > 0 && password != Backend.HostPassword)
+            else if (Backend.HostPassword.Length > 0
+                && password != Backend.HostPassword)
             {
                 if (password.Length == 0)
                 {
@@ -446,7 +506,8 @@ namespace DarkwoodMP.Net
             {
                 why = "Bad player key.";
             }
-            else if (Keys.TryGetValue(LocalId, out var hostKey) && hostKey == key)
+            else if (Keys.TryGetValue(LocalId, out var hostKey)
+                && hostKey == key)
             {
                 why = "You're already playing on this server.";
             }
@@ -455,8 +516,9 @@ namespace DarkwoodMP.Net
                 Refuse(from, why);
                 return;
             }
-            // The same player on a new connection: their old one broke without closing (Wi-Fi dropped, a crash).
-            // The new one wins, so they don't wait for the old one to time out.
+            // The same player on a new connection: their old one broke without
+            // closing (Wi-Fi dropped, a crash). The new one wins, so they don't
+            // wait for the old one to time out.
             ulong old = 0;
             foreach (var kv in Keys)
             {
@@ -468,7 +530,8 @@ namespace DarkwoodMP.Net
             }
             if (old != 0)
             {
-                Plugin.Log.LogInfo($"{NameOf(old)} (#{old}) joined again as #{from}: dropping the old connection");
+                Plugin.Log.LogInfo(
+                    $"{NameOf(old)} (#{old}) joined again as #{from}: dropping the old connection");
                 Backend.Kick(old);
                 OnPeerLost(old);
             }
@@ -477,7 +540,8 @@ namespace DarkwoodMP.Net
                 Refuse(from, "The server is full.");
                 return;
             }
-            // Tell everyone at once that someone is on the way in: getting the world to them can take a while.
+            // Tell everyone at once that someone is on the way in: getting the
+            // world to them can take a while.
             if (!_joining.ContainsKey(from))
             {
                 _joining[from] = name;
@@ -499,14 +563,19 @@ namespace DarkwoodMP.Net
             w.W.Write(from); // your id
             SendTo(from, w, Channel.Control, reliable: true);
 
-            // Tell the newcomer about everyone, then everyone about the newcomer.
+            // Tell the newcomer about everyone, then everyone about the
+            // newcomer.
             foreach (var kv in Names)
             {
-                SendTo(from, WritePlayerInfo(kv.Key, kv.Value), Channel.Control, reliable: true);
+                SendTo(
+                    from, WritePlayerInfo(kv.Key, kv.Value), Channel.Control,
+                    reliable: true);
             }
             Names[from] = name;
             Keys[from] = key;
-            Broadcast(WritePlayerInfo(from, name), Channel.Control, reliable: true, except: from);
+            Broadcast(
+                WritePlayerInfo(from, name), Channel.Control, reliable: true,
+                except: from);
 
             Peers.Add(from);
             Plugin.Log.LogInfo($"Player connected: {name} (#{from})");
@@ -529,15 +598,20 @@ namespace DarkwoodMP.Net
             w.WriteStr(reason);
             SendTo(peer, w, Channel.Control, reliable: true);
             Backend.Kick(peer);
-            // Refused while joining (BeforeWelcome): the kick raises no peer-lost, so tell everyone they stopped joining.
+            // Refused while joining (BeforeWelcome): the kick raises no
+            // peer-lost, so tell everyone they stopped joining.
             if (IsHost && _joining.ContainsKey(peer))
             {
                 OnPeerLost(peer);
             }
         }
 
-        /// <summary>Host: tell the clients someone is joining (what 0) or stopped joining (what 1).</summary>
-        private void BroadcastJoinNotice(string name, byte what, ulong except = 0)
+        /// <summary>
+        /// Host: tell the clients someone is joining (what 0) or stopped
+        /// joining (what 1).
+        /// </summary>
+        private void BroadcastJoinNotice(
+            string name, byte what, ulong except = 0)
         {
             var w = Begin(MsgType.JoinNotice);
             w.WriteStr(name);
@@ -653,8 +727,12 @@ namespace DarkwoodMP.Net
             }
         }
 
-        /// <summary>Handle a message as if it had just come from this peer (a Request's inner message).</summary>
-        public void Handle(ulong from, byte[] data, int length) => Dispatch(from, data, length);
+        /// <summary>
+        /// Handle a message as if it had just come from this peer (a Request's
+        /// inner message).
+        /// </summary>
+        public void Handle(ulong from, byte[] data, int length) =>
+            Dispatch(from, data, length);
 
         private void Dispatch(ulong from, byte[] data, int length)
         {
@@ -667,8 +745,10 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
-            // Only the handshake (and fetching the world it offers) may come from someone not yet admitted.
-            if (IsHost && r.Type != MsgType.Hello && r.Type != MsgType.NeedSave && !Peers.Contains(from))
+            // Only the handshake (and fetching the world it offers) may come
+            // from someone not yet admitted.
+            if (IsHost && r.Type != MsgType.Hello
+                && r.Type != MsgType.NeedSave && !Peers.Contains(from))
             {
                 return;
             }
@@ -676,7 +756,8 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
-            if (!IsHost && from == HostId) // anything from the host answers our Hello
+            // anything from the host answers our Hello
+            if (!IsHost && from == HostId)
             {
                 _helloAt = -1f;
                 _heardHostAt = Now;
@@ -689,12 +770,14 @@ namespace DarkwoodMP.Net
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Error handling {r.Type} from #{from}: {e}");
+                    Plugin.Log.LogError(
+                        $"Error handling {r.Type} from #{from}: {e}");
                 }
             }
             else
             {
-                Plugin.Log.LogWarning($"Unhandled message {r.Type} from #{from}");
+                Plugin.Log.LogWarning(
+                    $"Unhandled message {r.Type} from #{from}");
             }
         }
 
@@ -726,15 +809,20 @@ namespace DarkwoodMP.Net
             {
                 DeliverLate();
             }
-            // A Hello the host never answered (lost, or turned away by a race over Steam): send it again.
-            if (IsClient && !Connected && _helloAt >= 0f && Now - _helloAt > HelloRetry)
+            // A Hello the host never answered (lost, or turned away by a race
+            // over Steam): send it again.
+            if (IsClient && !Connected && _helloAt >= 0f
+                && Now - _helloAt > HelloRetry)
             {
-                Plugin.Log.LogInfo($"No answer to Hello in {HelloRetry:0} s: sending it again");
+                Plugin.Log.LogInfo(
+                    $"No answer to Hello in {HelloRetry:0} s: sending it again");
                 SendHello();
             }
-            if (IsClient && !Connected && _heardHostAt >= 0f && Now - _heardHostAt > JoinSilence)
+            if (IsClient && !Connected && _heardHostAt >= 0f
+                && Now - _heardHostAt > JoinSilence)
             {
-                string why = $"The host hasn't answered for {JoinSilence:0} s, so joining stopped.";
+                string why =
+                    $"The host hasn't answered for {JoinSilence:0} s, so joining stopped.";
                 Plugin.Log.LogWarning(why);
                 _heardHostAt = -1f;
                 Action<string> handler = OnJoinTimedOut;

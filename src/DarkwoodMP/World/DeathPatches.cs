@@ -4,10 +4,11 @@ using HarmonyLib;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Dying, with others in the world. Darkwood's death (Player.onDeath) takes the player home, leaves half their
-    /// items in a bag where they fell (shared: see Containers.SharedPrefabs), and then resets the world: every enemy
-    /// is respawned, and on a hard night the rest of it is skipped. With others playing, that's not one player's
-    /// to decide:
+    /// Dying, with others in the world. Darkwood's death (Player.onDeath) takes
+    /// the player home, leaves half their items in a bag where they fell
+    /// (shared: see Containers.SharedPrefabs), and then resets the world: every
+    /// enemy is respawned, and on a hard night the rest of it is skipped. With
+    /// others playing, that's not one player's to decide:
     ///
     ///   a client's death never does it (the host runs the enemies and the clock; doing it here would only tear
     ///   down the host's enemies it's showing);
@@ -30,7 +31,10 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        /// <summary>Whether we're inside Player.onDeath (a coroutine: its body is a nested type's MoveNext).</summary>
+        /// <summary>
+        /// Whether we're inside Player.onDeath (a coroutine: its body is a
+        /// nested type's MoveNext).
+        /// </summary>
         private static bool InPlayerDeath()
         {
             var st = new System.Diagnostics.StackTrace(2, false);
@@ -46,7 +50,8 @@ namespace DarkwoodMP.World
                         t = method.DeclaringType;
                     }
                 }
-                if (t != null && t.DeclaringType == typeof(Player) && t.Name.Contains("onDeath"))
+                if (t != null && t.DeclaringType == typeof(Player)
+                    && t.Name.Contains("onDeath"))
                 {
                     return true;
                 }
@@ -55,7 +60,8 @@ namespace DarkwoodMP.World
         }
     }
 
-    [HarmonyPatch(typeof(WorldGenerator), nameof(WorldGenerator.respawnAllEnemies))]
+    [HarmonyPatch(
+        typeof(WorldGenerator), nameof(WorldGenerator.respawnAllEnemies))]
     static class RespawnAllEnemiesPatch
     {
         static bool Prefix()
@@ -63,13 +69,16 @@ namespace DarkwoodMP.World
             bool ok = DeathRules.WorldResetAllowed();
             if (!ok)
             {
-                Plugin.Log.LogInfo("A death didn't respawn the world's enemies: others are playing in it");
+                Plugin.Log.LogInfo(
+                    "A death didn't respawn the world's enemies: others are "
+                        + "playing in it");
             }
             return ok;
         }
     }
 
-    [HarmonyPatch(typeof(CharacterSpawner), nameof(CharacterSpawner.despawnCharacters))]
+    [HarmonyPatch(
+        typeof(CharacterSpawner), nameof(CharacterSpawner.despawnCharacters))]
     static class DespawnCharactersPatch
     {
         static bool Prefix() => DeathRules.WorldResetAllowed();
@@ -83,7 +92,8 @@ namespace DarkwoodMP.World
             bool ok = DeathRules.WorldResetAllowed();
             if (!ok)
             {
-                Plugin.Log.LogInfo("A death didn't skip the night: others are playing in it");
+                Plugin.Log.LogInfo(
+                    "A death didn't skip the night: others are playing in it");
             }
             return ok;
         }

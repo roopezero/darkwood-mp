@@ -11,13 +11,16 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for windows kept up to date while open (World.UiRefresh). One player has a window open and
-    /// gives it no input; the other changes what it shows; the viewer's check step reads what the window has drawn
-    /// (the slots' icon objects, their sprites and amount labels, the recipes' red tint, the saw's fuel label) and
-    /// compares it with the object's data. The list is tools/tests/map_scenario_ui.py.
+    /// Map test steps for windows kept up to date while open (World.UiRefresh).
+    /// One player has a window open and gives it no input; the other changes
+    /// what it shows; the viewer's check step reads what the window has drawn
+    /// (the slots' icon objects, their sprites and amount labels, the recipes'
+    /// red tint, the saw's fuel label) and compares it with the object's data.
+    /// The list is tools/tests/map_scenario_ui.py.
     ///
-    /// Storage slots are named by index; a negative one counts from the end (-1 is the last slot), which is empty
-    /// in the test save. A type "-" is an empty slot.
+    /// Storage slots are named by index; a negative one counts from the end (-1
+    /// is the last slot), which is empty in the test save. A type "-" is an
+    /// empty slot.
     /// </summary>
     public static class MapScenarioUi
     {
@@ -56,7 +59,10 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        private static Workbench Bench() => Nearest(Object.FindObjectsOfType<Workbench>().Where(w => w.normalInventory != null), Centre);
+        private static Workbench Bench() => Nearest(
+            Object.FindObjectsOfType<Workbench>().Where(
+                w => w.normalInventory != null),
+            Centre);
 
         private static int Index(Inventory inv, string s)
         {
@@ -83,10 +89,14 @@ namespace DarkwoodMP.World
             {
                 return InvItemClass.isNull(s.invItem);
             }
-            return !InvItemClass.isNull(s.invItem) && s.invItem.type == type && s.invItem.amount == amount;
+            return !InvItemClass.isNull(s.invItem) && s.invItem.type == type
+                && s.invItem.amount == amount;
         }
 
-        /// <summary>Make slot i hold this as our player (a client's change goes to the host as ContainerSlots).</summary>
+        /// <summary>
+        /// Make slot i hold this as our player (a client's change goes to the
+        /// host as ContainerSlots).
+        /// </summary>
         private static void Put(Inventory inv, int i, string type, int amount)
         {
             var s = inv.slots[i];
@@ -99,17 +109,20 @@ namespace DarkwoodMP.World
                     s.createItem(type, amount);
                 }
             });
-            // Things made or removed from nothing change what the player has to craft with, as a drop or a craft
-            // does; the game redraws the recipes after those (Player.refreshRecipes), so this does too.
+            // Things made or removed from nothing change what the player has to
+            // craft with, as a drop or a craft does; the game redraws the
+            // recipes after those (Player.refreshRecipes), so this does too.
             P.refreshRecipes();
         }
 
-        // ---- what a window has drawn -------------------------------------------------------------------------
+        // ---- what a window has drawn ----------------------------------------
 
         /// <summary>
-        /// Differences between what an open inventory's window has drawn and what its slots hold: each filled slot
-        /// has a live icon (UIInvItem) with its item's sprite and amount, its frame is the filled or empty one, and
-        /// there are no icons left over from things no longer there. Null when they agree.
+        /// Differences between what an open inventory's window has drawn and
+        /// what its slots hold: each filled slot has a live icon (UIInvItem)
+        /// with its item's sprite and amount, its frame is the filled or empty
+        /// one, and there are no icons left over from things no longer there.
+        /// Null when they agree.
         /// </summary>
         internal static string Drawn(Inventory inv)
         {
@@ -127,7 +140,8 @@ namespace DarkwoodMP.World
             {
                 var s = inv.slots[i];
                 bool full = !InvItemClass.isNull(s.invItem);
-                if (s.UIInvSlot != null && s.UIInvSlot.sprite != null && s.UIInvSlot.sprite.CurrentSprite != null && !s.inHotbar)
+                if (s.UIInvSlot != null && s.UIInvSlot.sprite != null
+                    && s.UIInvSlot.sprite.CurrentSprite != null && !s.inHotbar)
                 {
                     string frame = s.UIInvSlot.sprite.CurrentSprite.name;
                     string wrongFrame = "fullInv";
@@ -165,12 +179,15 @@ namespace DarkwoodMP.World
                 {
                     bad.Add($"slot {i} ({Slot(s)}): icon {got}, not {want}");
                 }
-                if (ui.amount != null && ui.amount.text != s.invItem.amount.ToString())
+                if (ui.amount != null
+                    && ui.amount.text != s.invItem.amount.ToString())
                 {
-                    bad.Add($"slot {i} ({Slot(s)}): amount drawn {ui.amount.text}");
+                    bad.Add(
+                        $"slot {i} ({Slot(s)}): amount drawn {ui.amount.text}");
                 }
             }
-            int icons = inv.thisUI.GetComponentsInChildren<UIInvItem>(false).Length;
+            int icons =
+                inv.thisUI.GetComponentsInChildren<UIInvItem>(false).Length;
             if (icons != filled)
             {
                 bad.Add($"{icons} icons drawn for {filled} filled slots");
@@ -182,12 +199,15 @@ namespace DarkwoodMP.World
             return string.Join("; ", bad);
         }
 
-        private static readonly AccessTools.FieldRef<UIInvItem, Color> Red = AccessTools.FieldRefAccess<UIInvItem, Color>("redColor");
+        private static readonly AccessTools.FieldRef<UIInvItem, Color> Red =
+            AccessTools.FieldRefAccess<UIInvItem, Color>("redColor");
 
         /// <summary>
-        /// Differences between the workbench recipes' tint (red: can't be made) and whether they can be made now, by
-        /// what the player carries and the storage holds (worked out here, not from the game's cached
-        /// CraftingRequirement.met). Null when they agree. met: how many can be made.
+        /// Differences between the workbench recipes' tint (red: can't be made)
+        /// and whether they can be made now, by what the player carries and the
+        /// storage holds (worked out here, not from the game's cached
+        /// CraftingRequirement.met). Null when they agree. met: how many can be
+        /// made.
         /// </summary>
         internal static string Recipes(Workbench wb, out int met, out int total)
         {
@@ -202,12 +222,14 @@ namespace DarkwoodMP.World
             var have = P.Inventory;
             foreach (var s in inv.slots)
             {
-                if (InvItemClass.isNull(s.invItem) || s.invItem.baseClass == null)
+                if (InvItemClass.isNull(s.invItem)
+                    || s.invItem.baseClass == null)
                 {
                     continue;
                 }
                 var cr = s.invItem.baseClass.GetComponent<CraftingRecipes>();
-                if (cr == null || s.invItem.usedRecipe < 0 || s.invItem.usedRecipe >= cr.recipes.Count)
+                if (cr == null || s.invItem.usedRecipe < 0
+                    || s.invItem.usedRecipe >= cr.recipes.Count)
                 {
                     continue;
                 }
@@ -220,11 +242,17 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    if (q.amount > 0 && have.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true) < q.amount)
+                    if (q.amount > 0
+                        && have.haveItemAmountInPlayer(
+                            q.item.type,
+                            includeAdditionalInventory: true) < q.amount)
                     {
                         can = false;
                     }
-                    if (q.durabilityAmount > 0f && have.haveItemDurabilityInPlayer(q.item.type, includeAdditionalInventory: true, relativeToMaxDurability: true) < q.durabilityAmount)
+                    if (q.durabilityAmount > 0f
+                        && have.haveItemDurabilityInPlayer(
+                            q.item.type, includeAdditionalInventory: true,
+                            relativeToMaxDurability: true) < q.durabilityAmount)
                     {
                         can = false;
                     }
@@ -241,7 +269,9 @@ namespace DarkwoodMP.World
                 }
                 var c = ui.sprite.color;
                 var red = Red(ui);
-                bool drawnRed = Mathf.Abs(c.r - red.r) < 0.02f && Mathf.Abs(c.g - red.g) < 0.02f && Mathf.Abs(c.b - red.b) < 0.02f;
+                bool drawnRed = Mathf.Abs(c.r - red.r) < 0.02f
+                    && Mathf.Abs(c.g - red.g) < 0.02f
+                    && Mathf.Abs(c.b - red.b) < 0.02f;
                 if (drawnRed == can)
                 {
                     string text = "makeable";
@@ -254,7 +284,8 @@ namespace DarkwoodMP.World
                     {
                         makeable = "makeable";
                     }
-                    bad.Add($"{s.invItem.type} drawn {text}, is {makeable} ({Needs(recipe)})");
+                    bad.Add(
+                        $"{s.invItem.type} drawn {text}, is {makeable} ({Needs(recipe)})");
                 }
             }
             if (bad.Count == 0)
@@ -265,7 +296,8 @@ namespace DarkwoodMP.World
         }
 
         private static string Needs(CraftingRecipes.Recipe recipe) =>
-            string.Join(",", recipe.requirements.Where(q => q.item != null).Select(q =>
+            string.Join(",",
+                recipe.requirements.Where(q => q.item != null).Select(q =>
             {
                 if (q.amount > 0)
                 {
@@ -274,11 +306,13 @@ namespace DarkwoodMP.World
                 return $"{q.item.type} dur {q.durabilityAmount:0.##}";
             }));
 
-        // ---- the pause menu over open windows (R08, R10) ------------------------------------------------------
+        // ---- the pause menu over open windows (R08, R10) --------------------
 
-        /// <summary>"ui-pause": with the workbench open, open the pause menu: the HUD (the backpack, the hotbar, the
-        /// storage's window, the bars, the clock) is hidden and so are world overlays (UiState); close it: the same
-        /// HUD is back as before and the storage's window draws its slots.</summary>
+        /// <summary>"ui-pause": with the workbench open, open the pause menu:
+        /// the HUD (the backpack, the hotbar, the storage's window, the bars,
+        /// the clock) is hidden and so are world overlays (UiState); close it:
+        /// the same HUD is back as before and the storage's window draws its
+        /// slots.</summary>
         private static IEnumerator Pause(string[] a, Result r)
         {
             var wb = Bench();
@@ -309,7 +343,8 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSecondsRealtime(1f);
             string after = PauseHud.Shown();
-            r.Info = $"HUD before: {before}; under the menu: {under} (overlays hidden {hidden}, {why}); after: {after}";
+            r.Info =
+                $"HUD before: {before}; under the menu: {under} (overlays hidden {hidden}, {why}); after: {after}";
             if (under != "none")
             {
                 r.Fail($"HUD shown under the pause menu: {under}");
@@ -324,7 +359,8 @@ namespace DarkwoodMP.World
             }
             else if (UiState.WorldOverlaysHidden)
             {
-                r.Fail($"world overlays still hidden after the menu ({UiState.Reason})");
+                r.Fail(
+                    $"world overlays still hidden after the menu ({UiState.Reason})");
             }
             else if (Drawn(st) is string bad)
             {
@@ -332,9 +368,12 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- the workbench ---------------------------------------------------------------------------------------
+        // ---- the workbench --------------------------------------------------
 
-        /// <summary>"ui-wb-open": open the workbench as the player does (Workbench.open) and leave it open.</summary>
+        /// <summary>
+        /// "ui-wb-open": open the workbench as the player does (Workbench.open)
+        /// and leave it open.
+        /// </summary>
         private static IEnumerator WbOpen(string[] a, Result r)
         {
             var wb = Bench();
@@ -348,7 +387,8 @@ namespace DarkwoodMP.World
             {
                 AsPlayer(() => wb.open());
             }
-            // A client asks the host for the storage as it opens it, and its window takes the answer.
+            // A client asks the host for the storage as it opens it, and its
+            // window takes the answer.
             float seconds = 1f;
             if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
             {
@@ -361,10 +401,17 @@ namespace DarkwoodMP.World
                 r.Fail("the workbench's storage didn't open");
                 yield break;
             }
-            string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
-            var known = wb.workbenchInventory.slots.Where(s => !InvItemClass.isNull(s.invItem) && s.invItem.baseClass != null && s.invItem.baseClass.GetComponent<CraftingRecipes>() != null)
-                .Select(s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
-            r.Info = $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, {st.getAllItems().Count} filled; {met}/{total} recipes makeable: {string.Join(" ", known)}";
+            string drawn = Drawn(st),
+                rec = Recipes(wb, out int met, out int total);
+            var known = wb.workbenchInventory.slots.Where(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.baseClass != null
+                    && s.invItem.baseClass.GetComponent<CraftingRecipes>()
+                        != null)
+                .Select(
+                    s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
+            r.Info =
+                $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, {st.getAllItems().Count} filled; {met}/{total} recipes makeable: {string.Join(" ", known)}";
             if (drawn != null)
             {
                 r.Fail($"drawn wrong as it opened: {drawn}");
@@ -395,8 +442,9 @@ namespace DarkwoodMP.World
             r.Info = "closed";
         }
 
-        /// <summary>"ui-wb-set IDX TYPE AMOUNT [IDX TYPE AMOUNT...] [--at EPOCH]": change storage slots as our player,
-        /// in our open window (at that epoch second, for both players at once).</summary>
+        /// <summary>"ui-wb-set IDX TYPE AMOUNT [IDX TYPE AMOUNT...]
+        /// [--at EPOCH]": change storage slots as our player, in our open
+        /// window (at that epoch second, for both players at once).</summary>
         private static IEnumerator WbSet(string[] a, Result r)
         {
             var args = a.ToList();
@@ -404,7 +452,8 @@ namespace DarkwoodMP.World
             double epoch = 0;
             if (at >= 0)
             {
-                epoch = double.Parse(args[at + 1], CultureInfo.InvariantCulture);
+                epoch =
+                    double.Parse(args[at + 1], CultureInfo.InvariantCulture);
                 args.RemoveRange(at, 2);
             }
             var wb = Bench();
@@ -426,18 +475,23 @@ namespace DarkwoodMP.World
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
                 int i = Index(st, args[k]);
-                Put(st, i, args[k + 1], int.Parse(args[k + 2], CultureInfo.InvariantCulture));
+                Put(
+                    st, i, args[k + 1],
+                    int.Parse(args[k + 2], CultureInfo.InvariantCulture));
                 did.Add($"{i}={Slot(st.slots[i])}");
             }
-            yield return new WaitForSeconds(0.8f); // Containers looks at the open storage four times a second
+            // Containers looks at the open storage four times a second
+            yield return new WaitForSeconds(0.8f);
             r.Info = string.Join(", ", did);
         }
 
-        /// <summary>"ui-wb-race EPOCH" (host and client at once): at that epoch second the host puts bandages x2 in
-        /// slot -7 and the client wire x6 in slot -8.</summary>
+        /// <summary>"ui-wb-race EPOCH" (host and client at once): at that epoch
+        /// second the host puts bandages x2 in slot -7 and the client wire x6
+        /// in slot -8.</summary>
         private static IEnumerator WbRace(string[] a, Result r)
         {
-            bool host = Net.Session.Instance == null || !Net.Session.Instance.IsClient;
+            bool host =
+                Net.Session.Instance == null || !Net.Session.Instance.IsClient;
             string[] args;
             if (host)
             {
@@ -447,10 +501,14 @@ namespace DarkwoodMP.World
             {
                 args = new[] { "-8", "wire", "6" };
             }
-            yield return WbSet(args.Concat(new[] { "--at", a[0] }).ToArray(), r);
+            yield return WbSet(
+                args.Concat(new[] { "--at", a[0] }).ToArray(), r);
         }
 
-        /// <summary>"ui-wb-burst IDX TYPE N": N changes to one slot 0.12 s apart (TYPE x1, x2 .. xN).</summary>
+        /// <summary>
+        /// "ui-wb-burst IDX TYPE N": N changes to one slot 0.12 s apart (TYPE
+        /// x1, x2 .. xN).
+        /// </summary>
         private static IEnumerator WbBurst(string[] a, Result r)
         {
             var wb = Bench();
@@ -464,7 +522,8 @@ namespace DarkwoodMP.World
                 r.Fail("the workbench isn't open here");
                 yield break;
             }
-            int i = Index(st, a[0]), n = int.Parse(a[2], CultureInfo.InvariantCulture);
+            int i = Index(st, a[0]),
+                n = int.Parse(a[2], CultureInfo.InvariantCulture);
             for (int k = 1; k <= n; k++)
             {
                 Put(st, i, a[1], k);
@@ -475,9 +534,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "ui-wb-check [IDX TYPE AMOUNT...] [--makeable N]": with no input from us, the open storage comes to hold
-        /// these (within 4 s), and then what its window has drawn matches its slots and the recipes' tint matches what
-        /// can be made. --makeable N: at least N recipes can be made (the storage's contents count for them).
+        /// "ui-wb-check [IDX TYPE AMOUNT...] [--makeable N]": with no input
+        /// from us, the open storage comes to hold these (within 4 s), and then
+        /// what its window has drawn matches its slots and the recipes' tint
+        /// matches what can be made. --makeable N: at least N recipes can be
+        /// made (the storage's contents count for them).
         /// </summary>
         private static IEnumerator WbCheck(string[] a, Result r)
         {
@@ -486,7 +547,8 @@ namespace DarkwoodMP.World
             int wantMakeable = -1;
             if (mk >= 0)
             {
-                wantMakeable = int.Parse(args[mk + 1], CultureInfo.InvariantCulture);
+                wantMakeable =
+                    int.Parse(args[mk + 1], CultureInfo.InvariantCulture);
                 args.RemoveRange(mk, 2);
             }
             var wb = Bench();
@@ -503,19 +565,24 @@ namespace DarkwoodMP.World
             var want = new List<(int i, string type, int n)>();
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
-                want.Add((Index(st, args[k]), args[k + 1], int.Parse(args[k + 2], CultureInfo.InvariantCulture)));
+                want.Add(
+                    (Index(st, args[k]), args[k + 1], int.Parse(
+                        args[k + 2], CultureInfo.InvariantCulture)));
             }
             int redraws0 = UiRefresh.Redraws;
             float until = Time.realtimeSinceStartup + 4f;
-            while (want.Any(w => !Matches(st.slots[w.i], w.type, w.n)) && Time.realtimeSinceStartup < until)
+            while (want.Any(w => !Matches(st.slots[w.i], w.type, w.n))
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
             // icons removed this frame are destroyed at its end
             yield return null;
             yield return null;
-            string slots = string.Join(", ", want.Select(w => $"{w.i}={Slot(st.slots[w.i])}"));
-            var wrong = want.Where(w => !Matches(st.slots[w.i], w.type, w.n)).Select(w =>
+            string slots = string.Join(
+                ", ", want.Select(w => $"{w.i}={Slot(st.slots[w.i])}"));
+            var wrong = want.Where(w =>
+                !Matches(st.slots[w.i], w.type, w.n)).Select(w =>
             {
                 string expected;
                 if (w.type == "-")
@@ -528,11 +595,14 @@ namespace DarkwoodMP.World
                 }
                 return $"slot {w.i} is {Slot(st.slots[w.i])}, not {expected}";
             }).ToList();
-            string drawn = Drawn(st), rec = Recipes(wb, out int met, out int total);
-            r.Info = $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, tint ok={rec == null}; redraws {UiRefresh.Redraws} (total)";
+            string drawn = Drawn(st),
+                rec = Recipes(wb, out int met, out int total);
+            r.Info =
+                $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, tint ok={rec == null}; redraws {UiRefresh.Redraws} (total)";
             if (wrong.Count > 0)
             {
-                r.Fail($"{string.Join("; ", wrong)} (the other player's change didn't arrive)");
+                r.Fail(
+                    $"{string.Join("; ", wrong)} (the other player's change didn't arrive)");
             }
             else if (drawn != null)
             {
@@ -548,11 +618,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- the saw ------------------------------------------------------------------------------------------
+        // ---- the saw --------------------------------------------------------
 
         private static Saw _saw;
 
-        /// <summary>"ui-saw-open NAME": open the saw's window as the player does (Item.openInventory) and leave it open.</summary>
+        /// <summary>
+        /// "ui-saw-open NAME": open the saw's window as the player does
+        /// (Item.openInventory) and leave it open.
+        /// </summary>
         private static IEnumerator SawOpen(string[] a, Result r)
         {
             var saw = MapScenarioWorld.Find<Saw>(a[0]);
@@ -577,7 +650,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             _saw = saw;
-            r.Info = $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
+            r.Info =
+                $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
         }
 
         private static string Label(Inventory inv)
@@ -589,8 +663,10 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>"ui-saw-check [MINFUEL]": with no input from us, the open saw's "Fuel: N" label shows its fuel
-        /// (within 4 s), which is at least MINFUEL, and its Convert button is enabled exactly when it can cut a log.</summary>
+        /// <summary>"ui-saw-check [MINFUEL]": with no input from us, the open
+        /// saw's "Fuel: N" label shows its fuel (within 4 s), which is at least
+        /// MINFUEL, and its Convert button is enabled exactly when it can cut a
+        /// log.</summary>
         private static IEnumerator SawCheck(string[] a, Result r)
         {
             var saw = _saw;
@@ -611,7 +687,8 @@ namespace DarkwoodMP.World
             }
             string Want() => Language.Get("Fuel", "UI") + ": " + saw.fuel;
             float until = Time.realtimeSinceStartup + 4f;
-            while ((saw.fuel < min || Label(inv) != Want()) && Time.realtimeSinceStartup < until)
+            while ((saw.fuel < min || Label(inv) != Want())
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
@@ -620,9 +697,11 @@ namespace DarkwoodMP.World
             {
                 btn = saw.convertFuelBtn.GetComponent<global::Button>();
             }
-            bool enabled = btn != null && btn.background != null && btn.background.activeSelf;
+            bool enabled = btn != null && btn.background != null
+                && btn.background.activeSelf;
             bool can = saw.canConvert();
-            r.Info = $"fuel {saw.fuel:0.0}, label '{Label(inv)}', convert enabled={enabled} can={can}";
+            r.Info =
+                $"fuel {saw.fuel:0.0}, label '{Label(inv)}', convert enabled={enabled} can={can}";
             if (saw.fuel < min)
             {
                 r.Fail($"{r.Info}: the fuel didn't arrive (wanted {min:0})");
@@ -660,13 +739,14 @@ namespace DarkwoodMP.World
             r.Info = "closed";
         }
 
-        // ---- the trader ----------------------------------------------------------------------------------------
+        // ---- the trader -----------------------------------------------------
 
         private static NPC _trader;
         private static int _traderMark;
 
-        /// <summary>"ui-trader-show": stand at the trader with his stock's window shown, as the trade window shows it
-        /// (DialogueWindow: npc's Inventory.show, Player.inShop).</summary>
+        /// <summary>"ui-trader-show": stand at the trader with his stock's
+        /// window shown, as the trade window shows it (DialogueWindow: npc's
+        /// Inventory.show, Player.inShop).</summary>
         private static IEnumerator TraderShow(string[] a, Result r)
         {
             var npc = MapScenarioWorld.Trader();
@@ -683,14 +763,18 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             _traderMark = MapScenarioIssues.LogMark();
             string drawn = Drawn(npc.inventory);
-            r.Info = $"{npc.name}: {npc.inventory.slots.Count} slots, {npc.inventory.getAllItems().Count} items shown";
+            r.Info =
+                $"{npc.name}: {npc.inventory.slots.Count} slots, {npc.inventory.getAllItems().Count} items shown";
             if (drawn != null)
             {
                 r.Fail($"drawn wrong as shown: {drawn}");
             }
         }
 
-        /// <summary>"ui-trader-check": the host's new stock reached the shown window (still open) and it draws it.</summary>
+        /// <summary>
+        /// "ui-trader-check": the host's new stock reached the shown window
+        /// (still open) and it draws it.
+        /// </summary>
         private static IEnumerator TraderCheck(string[] a, Result r)
         {
             var npc = _trader;
@@ -703,7 +787,8 @@ namespace DarkwoodMP.World
             string line = null;
             while (line == null && Time.realtimeSinceStartup < until)
             {
-                line = MapScenarioIssues.LogLines().Skip(_traderMark).FirstOrDefault(l => l.Contains("has the host's stock"));
+                line = MapScenarioIssues.LogLines().Skip(_traderMark)
+                    .FirstOrDefault(l => l.Contains("has the host's stock"));
                 if (line == null)
                 {
                     yield return new WaitForSecondsRealtime(0.5f);
@@ -712,7 +797,8 @@ namespace DarkwoodMP.World
             yield return null;
             yield return null;
             string drawn = Drawn(npc.inventory);
-            r.Info = $"{npc.name}: {npc.inventory.getAllItems().Count} items, open={npc.inventory.open}; {line}";
+            r.Info =
+                $"{npc.name}: {npc.inventory.getAllItems().Count} items, open={npc.inventory.open}; {line}";
             if (line == null)
             {
                 r.Fail("no new stock from the host");
@@ -729,7 +815,8 @@ namespace DarkwoodMP.World
 
         private static IEnumerator TraderHide(string[] a, Result r)
         {
-            if (_trader != null && _trader.inventory != null && _trader.inventory.open)
+            if (_trader != null && _trader.inventory != null
+                && _trader.inventory.open)
             {
                 _trader.inventory.hide();
             }

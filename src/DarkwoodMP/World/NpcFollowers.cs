@@ -7,23 +7,33 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// An NPC that follows a player (aggressiveness "follower", behaviour "following") follows whoever its sight
-    /// check gives it as its target. NPCs run in every game and clients keep their copies where the host has them
-    /// (NpcSync), so the host's copy decides where it goes, and on the host a friendly NPC sees only the host's own
-    /// player (Threat.BeforeSightCheck). Without more, a follower a joiner recruited would follow the host.
+    /// An NPC that follows a player (aggressiveness "follower", behaviour
+    /// "following") follows whoever its sight check gives it as its target.
+    /// NPCs run in every game and clients keep their copies where the host has
+    /// them (NpcSync), so the host's copy decides where it goes, and on the
+    /// host a friendly NPC sees only the host's own player
+    /// (Threat.BeforeSightCheck). Without more, a follower a joiner recruited
+    /// would follow the host.
     ///
-    /// So the host remembers who recruited each follower: the joiner whose event (ScriptedEvents.By, from their
-    /// EventFired) made it a follower, by a modifyCharacter step that sets aggressiveness follower or behaviour
-    /// following, or by a gameObject step that switches on a character that is a follower. On the host such a
-    /// follower sees only that joiner's stand-in (NetPlayerProxy), and is pointed at it whenever it has none or the
-    /// host's player as its target. Followers the host's own player recruited, or that were followers from the start,
-    /// follow the host's player as before. The record isn't saved: after the host reloads, or once the recruiter has
-    /// left, the follower goes back to following the host's player.
+    /// So the host remembers who recruited each follower: the joiner whose
+    /// event (ScriptedEvents.By, from their EventFired) made it a follower, by
+    /// a modifyCharacter step that sets aggressiveness follower or behaviour
+    /// following, or by a gameObject step that switches on a character that is
+    /// a follower. On the host such a follower sees only that joiner's stand-in
+    /// (NetPlayerProxy), and is pointed at it whenever it has none or the
+    /// host's player as its target. Followers the host's own player recruited,
+    /// or that were followers from the start, follow the host's player as
+    /// before. The record isn't saved: after the host reloads, or once the
+    /// recruiter has left, the follower goes back to following the host's
+    /// player.
     /// </summary>
     public static class NpcFollowers
     {
-        /// <summary>Host: follower -> the peer id of the joiner who recruited it.</summary>
-        private static readonly Dictionary<Character, ulong> Recruiter = new Dictionary<Character, ulong>();
+        /// <summary>
+        /// Host: follower -> the peer id of the joiner who recruited it.
+        /// </summary>
+        private static readonly Dictionary<Character, ulong> Recruiter =
+            new Dictionary<Character, ulong>();
         private static bool _hooked;
 
         private static void Hook()
@@ -51,7 +61,10 @@ namespace DarkwoodMP.World
             };
         }
 
-        /// <summary>Host: note that this joiner recruited this character, if it's a follower now or about to be.</summary>
+        /// <summary>
+        /// Host: note that this joiner recruited this character, if it's a
+        /// follower now or about to be.
+        /// </summary>
         internal static void Recruited(GameObject go, ulong by)
         {
             Character c = null;
@@ -67,7 +80,8 @@ namespace DarkwoodMP.World
             Recruiter[c] = by;
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] {c.name} follows {NameOf(by)}, who recruited it");
+                Plugin.Log.LogInfo(
+                    $"[world] {c.name} follows {NameOf(by)}, who recruited it");
             }
         }
 
@@ -80,18 +94,24 @@ namespace DarkwoodMP.World
             return id.ToString();
         }
 
-        /// <summary>Host: the stand-in of the joiner a follower follows, or null (it follows the host's player).</summary>
+        /// <summary>
+        /// Host: the stand-in of the joiner a follower follows, or null (it
+        /// follows the host's player).
+        /// </summary>
         public static NetPlayerProxy LeaderOf(Character c)
         {
-            if (c == null || Recruiter.Count == 0 || !Recruiter.TryGetValue(c, out var id))
+            if (c == null || Recruiter.Count == 0
+                || !Recruiter.TryGetValue(c, out var id))
             {
                 return null;
             }
-            if (c.aggressiveness != Aggressiveness.follower && c.behaviour != Character.Behaviour.following)
+            if (c.aggressiveness != Aggressiveness.follower
+                && c.behaviour != Character.Behaviour.following)
             {
                 return null;
             }
-            if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null && p.alive)
+            if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null
+                && p.alive)
             {
                 return p;
             }
@@ -99,8 +119,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host, before a friendly NPC's sight check: a recruited follower sees only its leader among the players, and
-        /// goes after it. Returns false if it isn't one (the caller does as for any friendly NPC).
+        /// Host, before a friendly NPC's sight check: a recruited follower sees
+        /// only its leader among the players, and goes after it. Returns false
+        /// if it isn't one (the caller does as for any friendly NPC).
         /// </summary>
         public static bool BeforeSightCheck(Character c)
         {
@@ -118,20 +139,29 @@ namespace DarkwoodMP.World
                 }
                 return cb != null && cb != leader && Proxies.IsPlayer(cb);
             });
-            if (c.target == null || c.target != leader.transform && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
+            if (c.target == null
+                || c.target != leader.transform
+                    && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
             {
                 c.target = leader.transform;
             }
             return true;
         }
 
-        /// <summary>Whether a scripted step makes its targets followers.</summary>
+        /// <summary>
+        /// Whether a scripted step makes its targets followers.
+        /// </summary>
         internal static bool MakesFollowers(GameEvent ge)
         {
             if (ge.type == GameEvent.Type.modifyCharacter)
             {
-                return ge.characterModifyType == GameEvent.CharacterModify.aggressiveness && ge.destAggressiveness == Aggressiveness.follower
-                    || ge.characterModifyType == GameEvent.CharacterModify.behaviour && ge.destCharacterBehaviour == Character.Behaviour.following;
+                return ge.characterModifyType
+                            == GameEvent.CharacterModify.aggressiveness
+                        && ge.destAggressiveness == Aggressiveness.follower
+                    || ge.characterModifyType
+                            == GameEvent.CharacterModify.behaviour
+                        && ge.destCharacterBehaviour
+                            == Character.Behaviour.following;
             }
             return ge.type == GameEvent.Type.gameObject;
         }
@@ -161,14 +191,18 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Host: a joiner's event step that makes characters followers records the joiner as their recruiter.</summary>
+    /// <summary>
+    /// Host: a joiner's event step that makes characters followers records the
+    /// joiner as their recruiter.
+    /// </summary>
     [HarmonyPatch(typeof(GameEvent), nameof(GameEvent.fire))]
     static class FollowerRecruitPatch
     {
         static void Prefix(GameEvent __instance)
         {
             var by = ScriptedEvents.By;
-            if (by == 0 || __instance == null || Session.Instance == null || !Session.Instance.IsHost)
+            if (by == 0 || __instance == null || Session.Instance == null
+                || !Session.Instance.IsHost)
             {
                 return;
             }
@@ -184,8 +218,10 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                // A gameObject step counts only for a character that is a follower already (switched on to follow).
-                if (gameObjectStep && c.aggressiveness != Aggressiveness.follower)
+                // A gameObject step counts only for a character that is a
+                // follower already (switched on to follow).
+                if (gameObjectStep
+                    && c.aggressiveness != Aggressiveness.follower)
                 {
                     continue;
                 }

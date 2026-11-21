@@ -6,13 +6,15 @@ using UnityEngine;
 namespace DarkwoodMP
 {
     /// <summary>
-    /// The mod's part in the game's main menu and pause menu, besides their entries (MenuList draws those): the
-    /// mod's version under the game's, the layout of the logo and the versions (MenuLayout), the options pages' words
-    /// in the game's font (MenuWords), and the pause menu over the world.
+    /// The mod's part in the game's main menu and pause menu, besides their
+    /// entries (MenuList draws those): the mod's version under the game's, the
+    /// layout of the logo and the versions (MenuLayout), the options pages'
+    /// words in the game's font (MenuWords), and the pause menu over the world.
     ///
-    /// The pause menu doesn't hide the world: instead of the menu's painted backdrop the world shows through, dimmed
-    /// by the menu's own black overlay. Alone the world is paused behind it as before; in co-op it goes on
-    /// (World.CoopPause) and the menu's music doesn't start.
+    /// The pause menu doesn't hide the world: instead of the menu's painted
+    /// backdrop the world shows through, dimmed by the menu's own black
+    /// overlay. Alone the world is paused behind it as before; in co-op it goes
+    /// on (World.CoopPause) and the menu's music doesn't start.
     /// </summary>
     public static class MenuEntry
     {
@@ -25,9 +27,11 @@ namespace DarkwoodMP
                 return;
             }
             MenuWords.Update(mm);
-            // The mod's version under the game's, both in the bottom right corner (MenuLayout).
+            // The mod's version under the game's, both in the bottom right
+            // corner (MenuLayout).
             var v = mm.CurrentVersion;
-            if (v != null && !string.IsNullOrEmpty(v.text) && !v.text.Contains(PluginInfo.Name))
+            if (v != null && !string.IsNullOrEmpty(v.text)
+                && !v.text.Contains(PluginInfo.Name))
             {
                 v.text += $"\n{PluginInfo.Name} {PluginInfo.Version}";
                 v.Commit();
@@ -35,7 +39,7 @@ namespace DarkwoodMP
             MenuLayout.Apply(mm);
         }
 
-        // ---- the pause menu in co-op ---------------------------------------------------------------
+        // ---- the pause menu in co-op ----------------------------------------
 
         private static GameObject _hiddenBackdrop;
         private static bool _dimmed;
@@ -46,7 +50,8 @@ namespace DarkwoodMP
             {
                 return;
             }
-            // The world stays drawn behind the menu, playing alone too (the game turns its camera off).
+            // The world stays drawn behind the menu, playing alone too (the
+            // game turns its camera off).
             var cam = Singleton<CamMain>.Instance;
             if (cam != null && !cam.gameObject.activeSelf)
             {
@@ -64,7 +69,8 @@ namespace DarkwoodMP
                 _dimmed = true;
             }
             PauseHud.Hide(); // the HUD would show through with the world
-            // In co-op the game goes on, with its own sound; alone it's paused and the menu's music plays as before.
+            // In co-op the game goes on, with its own sound; alone it's paused
+            // and the menu's music plays as before.
             if (World.CoopPause.InCoop && mm.menuMusic != null)
             {
                 mm.menuMusic.Stop(0.3f);
@@ -89,31 +95,40 @@ namespace DarkwoodMP
     }
 
     /// <summary>
-    /// The menu's own words (the options pages' tabs; the first page's entries, which MenuList hides and draws itself)
-    /// are pictures of words in one typeface. For one look with the rest of the menu, each picture is hidden and its word, from the
-    /// game's own translations (the UI sheet), is drawn in that font instead. The picture stays (hidden), so the game's code that swaps it on hover or fades it still works; the
-    /// word follows its fading and the button's hover. A language the font has no letters for keeps the pictures.
+    /// The menu's own words (the options pages' tabs; the first page's entries,
+    /// which MenuList hides and draws itself) are pictures of words in one
+    /// typeface. For one look with the rest of the menu, each picture is hidden
+    /// and its word, from the game's own translations (the UI sheet), is drawn
+    /// in that font instead. The picture stays (hidden), so the game's code
+    /// that swaps it on hover or fades it still works; the word follows its
+    /// fading and the button's hover. A language the font has no letters for
+    /// keeps the pictures.
     /// </summary>
     public static class MenuWords
     {
         private const string LabelName = "DarkwoodMP_Label";
         private static readonly Vector3 Scale = new Vector3(2.5f, 2.5f, 2.5f);
-        private static readonly Color Grey = new Color(0.6f, 0.6f, 0.6f, 1f); // as the pictures' words
+        // as the pictures' words
+        private static readonly Color Grey = new Color(0.6f, 0.6f, 0.6f, 1f);
 
-        /// <summary>The picture's name (without its "_0_EN" ending) and the UI sheet's key for its word.</summary>
-        private static readonly Dictionary<string, string> Keys = new Dictionary<string, string>
-        {
-            ["play"] = "Play",
-            ["options"] = "Options",
-            ["credits"] = "Credits",
-            ["exit"] = "Quit",
-            ["continue"] = "Resume",
-            ["help"] = "Help",
-            ["mainMenu"] = "Main_menu",
-            ["controls"] = "Controls",
-            ["graphics"] = "Video",
-            ["sound"] = "Sound",
-        };
+        /// <summary>
+        /// The picture's name (without its "_0_EN" ending) and the UI sheet's
+        /// key for its word.
+        /// </summary>
+        private static readonly Dictionary<string, string> Keys =
+            new Dictionary<string, string>
+            {
+                ["play"] = "Play",
+                ["options"] = "Options",
+                ["credits"] = "Credits",
+                ["exit"] = "Quit",
+                ["continue"] = "Resume",
+                ["help"] = "Help",
+                ["mainMenu"] = "Main_menu",
+                ["controls"] = "Controls",
+                ["graphics"] = "Video",
+                ["sound"] = "Sound",
+            };
 
         private sealed class Word
         {
@@ -193,7 +208,8 @@ namespace DarkwoodMP
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't redraw the menu's {b.name}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't redraw the menu's {b.name}: {e.Message}");
                 }
             }
         }
@@ -201,7 +217,9 @@ namespace DarkwoodMP
         private static void Redraw(global::Button b, tk2dFontData font)
         {
             var pic = b.GetComponent<tk2dBaseSprite>();
-            if (pic == null || pic.Collection == null || !pic.Collection.spriteCollectionName.StartsWith("MainMenuButtons"))
+            if (pic == null || pic.Collection == null
+                || !pic.Collection.spriteCollectionName.StartsWith(
+                    "MainMenuButtons"))
             {
                 return;
             }
@@ -216,7 +234,8 @@ namespace DarkwoodMP
                 sprite = "";
             }
             int cut = sprite.IndexOf('_');
-            if (cut <= 0 || !Keys.TryGetValue(sprite.Substring(0, cut), out var key))
+            if (cut <= 0
+                || !Keys.TryGetValue(sprite.Substring(0, cut), out var key))
             {
                 return;
             }
@@ -249,7 +268,13 @@ namespace DarkwoodMP
                 tr.sortingOrder = pr.sortingOrder;
                 pr.enabled = false;
             }
-            _words.Add(new Word { Button = b, Picture = pic, PictureRenderer = pr, Text = text });
+            _words.Add(new Word
+            {
+                Button = b,
+                Picture = pic,
+                PictureRenderer = pr,
+                Text = text
+            });
         }
 
         private static bool HasLetters(tk2dFontData font, string word)
@@ -263,11 +288,14 @@ namespace DarkwoodMP
                 bool condition;
                 if (font.useDictionary)
                 {
-                    condition = font.charDict == null || !font.charDict.ContainsKey(ch);
+                    condition =
+                        font.charDict == null || !font.charDict.ContainsKey(ch);
                 }
                 else
                 {
-                    condition = font.chars == null || ch >= font.chars.Length || font.chars[ch] == null || font.chars[ch].advance <= 0f;
+                    condition = font.chars == null || ch >= font.chars.Length
+                        || font.chars[ch] == null
+                        || font.chars[ch].advance <= 0f;
                 }
                 if (condition)
                 {
@@ -281,17 +309,22 @@ namespace DarkwoodMP
     [HarmonyPatch(typeof(MainMenu), "OnEnable")]
     static class MenuEntryLayoutPatch
     {
-        static void Postfix(MainMenu __instance) => MenuEntry.PauseMenuOpened(__instance);
+        static void Postfix(MainMenu __instance) =>
+            MenuEntry.PauseMenuOpened(__instance);
     }
 
-    /// <summary>The game placed one of the menu's things (PositionMe): lay the menu out again at once, so it never shows in the game's place.</summary>
+    /// <summary>
+    /// The game placed one of the menu's things (PositionMe): lay the menu out
+    /// again at once, so it never shows in the game's place.
+    /// </summary>
     [HarmonyPatch(typeof(PositionMe), nameof(PositionMe.init))]
     static class MenuLayoutPatch
     {
         static void Postfix(PositionMe __instance)
         {
             var mm = Singleton<MainMenu>.Instance;
-            if (mm == null || mm.Menu0 == null || !__instance.transform.IsChildOf(mm.Menu0.transform))
+            if (mm == null || mm.Menu0 == null
+                || !__instance.transform.IsChildOf(mm.Menu0.transform))
             {
                 return;
             }
@@ -300,22 +333,30 @@ namespace DarkwoodMP
     }
 
     /// <summary>
-    /// The main menu and the pause menu laid out as Half-Life's and Counter-Strike 1.6's: the logo in the top left,
-    /// the entries in a column in the lower left (MenuList, from the same left edge) and the versions in the bottom
-    /// right corner. The game places the logo and the versions with PositionMe (from the screen's middle and an
-    /// offset); this moves them after it, in screen pixels through the UI camera, so it fits any screen shape.
+    /// The main menu and the pause menu laid out as Half-Life's and
+    /// Counter-Strike 1.6's: the logo in the top left, the entries in a column
+    /// in the lower left (MenuList, from the same left edge) and the versions
+    /// in the bottom right corner. The game places the logo and the versions
+    /// with PositionMe (from the screen's middle and an offset); this moves
+    /// them after it, in screen pixels through the UI camera, so it fits any
+    /// screen shape.
     /// </summary>
     public static class MenuLayout
     {
-        internal const float Left = 0.065f;     // the logo's left edge (and MenuList's), as a share of the screen's width
-        private const float LogoTop = 0.12f;    // the logo's word's top below the screen's top, as a share of its height
-        private const float Corner = 0.016f;    // the versions' distance from the right and bottom edges, as a share of the height
+        // the logo's left edge (and MenuList's), as a share of the screen's
+        // width the logo's word's top below the screen's top, as a share of its
+        // height the versions' distance from the right and bottom edges, as a
+        // share of the height
+        internal const float Left = 0.065f;
+        private const float LogoTop = 0.12f;
+        private const float Corner = 0.016f;
 
         private static bool _busy;
 
         public static void Apply(MainMenu mm)
         {
-            if (_busy || mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy)
+            if (_busy || mm == null || mm.Menu0 == null
+                || !mm.Menu0.activeInHierarchy)
             {
                 return;
             }
@@ -335,7 +376,8 @@ namespace DarkwoodMP
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't lay out the menu: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't lay out the menu: {e.Message}");
             }
             finally
             {
@@ -347,9 +389,12 @@ namespace DarkwoodMP
         {
             float W = Screen.width, H = Screen.height;
             float left = W * Left;
-            // The menu's vignette (Background/Overlay) darkens the screen's edges and is drawn over the logo, which the
-            // game keeps in the middle. In the corner it'd be dimmed, so it's brought to the version line's depth, in
-            // front of it (the UI camera is orthographic and looks along -Y, so depth doesn't move it on the screen).
+            // The menu's vignette (Background/Overlay) darkens the screen's
+            // edges and is drawn over the logo, which the game keeps in the
+            // middle. In the corner it'd be dimmed, so it's brought to the
+            // version line's depth, in front of it (the UI camera is
+            // orthographic and looks along -Y, so depth doesn't move it on the
+            // screen).
             float? front;
             if (mm.CurrentVersion != null && cam.orthographic)
             {
@@ -369,13 +414,17 @@ namespace DarkwoodMP
             if (logoR != null)
             {
                 var rect = ScreenRect(cam, logoR.bounds);
-                // The picture has a wide clear margin round the word (its glow): the word starts 23% in from its left
-                // and 35% down from its top (measured: 810 x 336 pixels, the word 447 x 105, at 1080 lines).
-                float wordLeft = rect.xMin + rect.width * 0.232f, wordTop = rect.yMax - rect.height * 0.348f;
+                // The picture has a wide clear margin round the word (its
+                // glow): the word starts 23% in from its left and 35% down from
+                // its top (measured: 810 x 336 pixels, the word 447 x 105, at
+                // 1080 lines).
+                float wordLeft = rect.xMin + rect.width * 0.232f,
+                    wordTop = rect.yMax - rect.height * 0.348f;
                 MoveBy(cam, logo, left - wordLeft, (H - H * LogoTop) - wordTop);
                 ToFront(logo, front);
             }
-            // The versions: right-aligned in the bottom right corner, the player ID line above them.
+            // The versions: right-aligned in the bottom right corner, the
+            // player ID line above them.
             float margin = H * Corner, bottom = margin;
             Transform idLine = mm.Menu0.transform.Find("playerID");
             tk2dTextMesh idText = null;
@@ -385,7 +434,8 @@ namespace DarkwoodMP
             }
             foreach (var t in new[] { mm.CurrentVersion, idText })
             {
-                if (t == null || !t.gameObject.activeInHierarchy || string.IsNullOrEmpty(t.text))
+                if (t == null || !t.gameObject.activeInHierarchy
+                    || string.IsNullOrEmpty(t.text))
                 {
                     continue;
                 }
@@ -404,7 +454,9 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
-                MoveBy(cam, t.transform, (W - margin) - rect.xMax, bottom - rect.yMin);
+                MoveBy(
+                    cam, t.transform, (W - margin) - rect.xMax,
+                    bottom - rect.yMin);
                 bottom += rect.height + margin * 0.5f;
             }
         }
@@ -419,7 +471,10 @@ namespace DarkwoodMP
             t.position = new Vector3(p.x, y.Value, p.z);
         }
 
-        /// <summary>Move a thing by this many screen pixels (whole pixels, so the bitmap font stays sharp).</summary>
+        /// <summary>
+        /// Move a thing by this many screen pixels (whole pixels, so the bitmap
+        /// font stays sharp).
+        /// </summary>
         private static void MoveBy(Camera cam, Transform t, float dx, float dy)
         {
             if (Mathf.Abs(dx) < 0.5f && Mathf.Abs(dy) < 0.5f)
@@ -427,24 +482,36 @@ namespace DarkwoodMP
                 return;
             }
             var at = cam.WorldToScreenPoint(t.position);
-            t.position = cam.ScreenToWorldPoint(new Vector3(at.x + Mathf.Round(dx), at.y + Mathf.Round(dy), at.z));
+            t.position = cam.ScreenToWorldPoint(
+                new Vector3(
+                    at.x + Mathf.Round(dx), at.y + Mathf.Round(dy), at.z));
         }
 
-        /// <summary>A renderer's bounds as a rectangle in screen pixels (from the bottom left).</summary>
+        /// <summary>
+        /// A renderer's bounds as a rectangle in screen pixels (from the bottom
+        /// left).
+        /// </summary>
         private static Rect ScreenRect(Camera cam, Bounds b)
         {
-            Vector3 a = cam.WorldToScreenPoint(b.min), c = cam.WorldToScreenPoint(b.max);
-            return Rect.MinMaxRect(Mathf.Min(a.x, c.x), Mathf.Min(a.y, c.y), Mathf.Max(a.x, c.x), Mathf.Max(a.y, c.y));
+            Vector3 a = cam.WorldToScreenPoint(b.min),
+                c = cam.WorldToScreenPoint(b.max);
+            return Rect.MinMaxRect(
+                Mathf.Min(a.x, c.x), Mathf.Min(a.y, c.y), Mathf.Max(a.x, c.x),
+                Mathf.Max(a.y, c.y));
         }
     }
 
     [HarmonyPatch(typeof(MainMenu), nameof(MainMenu.close))]
     static class MenuEntryClosePatch
     {
-        static void Postfix(MainMenu __instance) => MenuEntry.PauseMenuClosed(__instance);
+        static void Postfix(MainMenu __instance) =>
+            MenuEntry.PauseMenuClosed(__instance);
     }
 
-    /// <summary>The menu went away without close (the game turned it off): the HUD comes back too.</summary>
+    /// <summary>
+    /// The menu went away without close (the game turned it off): the HUD comes
+    /// back too.
+    /// </summary>
     [HarmonyPatch(typeof(MainMenu), "OnDisable")]
     static class MenuEntryDisablePatch
     {
@@ -452,14 +519,18 @@ namespace DarkwoodMP
     }
 
     /// <summary>
-    /// The player's HUD under the pause menu in a world. The menu shows the world dimmed behind it (MenuEntry), and
-    /// without this the HUD would show through as well: the backpack, the hotbar, the crafting window, an open
-    /// container's windows, the bars, the clock, the upgrade menu, the progress bar and the messages over the
-    /// player. As the menu opens, the ones that are on are switched off and noted; as it goes, exactly those are
-    /// switched back on (a container's window only if that container is still open: in co-op the world goes on
-    /// behind the menu). Not UI.showPlayerUI, which would show the bars during a cutscene. The windows are
-    /// deactivated, as the game's UI.hidePlayerUI does; the progress bar, the messages and the clock only have
-    /// their renderers off, so their timers go on. Playing alone too: the world shows through there as well.
+    /// The player's HUD under the pause menu in a world. The menu shows the
+    /// world dimmed behind it (MenuEntry), and without this the HUD would show
+    /// through as well: the backpack, the hotbar, the crafting window, an open
+    /// container's windows, the bars, the clock, the upgrade menu, the progress
+    /// bar and the messages over the player. As the menu opens, the ones that
+    /// are on are switched off and noted; as it goes, exactly those are
+    /// switched back on (a container's window only if that container is still
+    /// open: in co-op the world goes on behind the menu). Not UI.showPlayerUI,
+    /// which would show the bars during a cutscene. The windows are
+    /// deactivated, as the game's UI.hidePlayerUI does; the progress bar, the
+    /// messages and the clock only have their renderers off, so their timers go
+    /// on. Playing alone too: the world shows through there as well.
     /// </summary>
     public static class PauseHud
     {
@@ -469,7 +540,8 @@ namespace DarkwoodMP
             public Func<bool> Still;
         }
         private static readonly List<Off> _off = new List<Off>();
-        private static readonly List<Renderer> _renderers = new List<Renderer>();
+        private static readonly List<Renderer> _renderers =
+            new List<Renderer>();
         private static bool _hidden;
 
         public static void Hide()
@@ -490,8 +562,14 @@ namespace DarkwoodMP
             Window(p.Crafting, null);
             var c1 = p.openedItemInventory;
             var c2 = p.openedItemInventory2;
-            Window(c1, () => p.openedItemInventory == c1 || p.openedItemInventory2 == c1);
-            Window(c2, () => p.openedItemInventory == c2 || p.openedItemInventory2 == c2);
+            Window(
+                c1,
+                () => p.openedItemInventory == c1
+                    || p.openedItemInventory2 == c1);
+            Window(
+                c2,
+                () => p.openedItemInventory == c2
+                    || p.openedItemInventory2 == c2);
             var up = ui.upgradeItemMenu;
             if (up != null && up.opened)
             {
@@ -513,7 +591,8 @@ namespace DarkwoodMP
                     Renderers(go, self: false);
                 }
             }
-            Plugin.Log.LogInfo($"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} renderers");
+            Plugin.Log.LogInfo(
+                $"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} renderers");
         }
 
         public static void Restore()
@@ -552,7 +631,8 @@ namespace DarkwoodMP
                     r.enabled = true;
                 }
             }
-            Plugin.Log.LogInfo($"[pause hud] restored: {back} of {_off.Count} windows, {_renderers.Count} renderers");
+            Plugin.Log.LogInfo(
+                $"[pause hud] restored: {back} of {_off.Count} windows, {_renderers.Count} renderers");
             _off.Clear();
             _renderers.Clear();
         }
@@ -596,7 +676,10 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>For the tests: the parts of the HUD shown now, by name ("none" if none).</summary>
+        /// <summary>
+        /// For the tests: the parts of the HUD shown now, by name ("none" if
+        /// none).
+        /// </summary>
         public static string Shown()
         {
             var p = Player.Instance;

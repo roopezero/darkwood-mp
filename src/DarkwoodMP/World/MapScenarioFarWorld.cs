@@ -9,11 +9,13 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Steps of the two-game map test for players far apart (tools/tests/map_scenario_far.py): things done where
-    /// the other game has the area switched off by its own culling.
+    /// Steps of the two-game map test for players far apart
+    /// (tools/tests/map_scenario_far.py): things done where the other game has
+    /// the area switched off by its own culling.
     ///
-    /// Spots are offsets from the centre, given as "off:DX,DZ" (or "centre"), so both games pick the same door or
-    /// object: the one nearest that spot, inactive ones too (FindObjectsOfType(true)).
+    /// Spots are offsets from the centre, given as "off:DX,DZ" (or "centre"),
+    /// so both games pick the same door or object: the one nearest that spot,
+    /// inactive ones too (FindObjectsOfType(true)).
     /// </summary>
     public static class MapScenarioFarWorld
     {
@@ -27,10 +29,12 @@ namespace DarkwoodMP.World
             MapScenario.Add("far-door", FarDoor, timeout: 60f);
             MapScenario.Add("far-door-check", FarDoorCheck, timeout: 60f);
             MapScenario.Add("far-doors-info", FarDoorsInfo);
-            // Item 5: an object dragged where the other game has it switched off.
+            // Item 5: an object dragged where the other game has it switched
+            // off.
             MapScenario.Add("far-drag", FarDrag, timeout: 60f);
             MapScenario.Add("far-obj-shown", FarObjShown, timeout: 60f);
-            // Item 1: the host's enemy whose copy the client's culling switched off.
+            // Item 1: the host's enemy whose copy the client's culling switched
+            // off.
             MapScenario.Add("far-dog", FarDog);
             MapScenario.Add("far-dog-active", FarDogActive, timeout: 30f);
             MapScenario.Add("far-dog-to-client", FarDogToClient);
@@ -51,7 +55,8 @@ namespace DarkwoodMP.World
                 var p = s.Substring(4).Split(',');
                 return Centre + new Vector3(F(p[0]), 0f, F(p[1]));
             }
-            throw new ArgumentException($"not a spot: {s} (off:DX,DZ or centre)");
+            throw new ArgumentException(
+                $"not a spot: {s} (off:DX,DZ or centre)");
         }
 
         private static bool _locationsLogged;
@@ -62,9 +67,11 @@ namespace DarkwoodMP.World
             if (!_locationsLogged)
             {
                 _locationsLogged = true;
-                foreach (var l in Object.FindObjectsOfType<Location>(true).Where(l => l != null && !l.isSubLocation))
+                foreach (var l in Object.FindObjectsOfType<Location>(true)
+                    .Where(l => l != null && !l.isSubLocation))
                 {
-                    Plugin.Log.LogInfo($"[map] location {Core.getTrueLocationName(l.name)} at {Fmt(l.transform.position)} ({Fmt(l.transform.position - Centre)} from the centre)");
+                    Plugin.Log.LogInfo(
+                        $"[map] location {Core.getTrueLocationName(l.name)} at {Fmt(l.transform.position)} ({Fmt(l.transform.position - Centre)} from the centre)");
                 }
             }
             string s = "centre";
@@ -78,9 +85,15 @@ namespace DarkwoodMP.World
         }
 
         private static Door DoorAt(Vector3 at) =>
-            Nearest(Object.FindObjectsOfType<Door>(true).Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), at);
+            Nearest(
+                Object.FindObjectsOfType<Door>(true).Where(
+                    d => !d.destroyed && ObjRef.Of(d.gameObject).Valid),
+                at);
 
-        /// <summary>"far-door SPOT open|close": the door nearest the spot, walked to and opened or closed as our player.</summary>
+        /// <summary>
+        /// "far-door SPOT open|close": the door nearest the spot, walked to and
+        /// opened or closed as our player.
+        /// </summary>
         private static IEnumerator FarDoor(string[] a, Result r)
         {
             var door = DoorAt(Spot(a[0]));
@@ -106,7 +119,8 @@ namespace DarkwoodMP.World
                 });
             }
             yield return new WaitForSeconds(1f);
-            r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
+            r.Info =
+                $"{door.name} {ObjRef.Of(door.gameObject)} at {Fmt(door.transform.position)} open={door.opened} leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open)
             {
                 string text = "shut";
@@ -119,8 +133,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "far-door-check SPOT open|close": walk to the door nearest the spot; once it's switched on here, its leaf
-        /// must be drawn as it is (open: turned from shut).
+        /// "far-door-check SPOT open|close": walk to the door nearest the spot;
+        /// once it's switched on here, its leaf must be drawn as it is (open:
+        /// turned from shut).
         /// </summary>
         private static IEnumerator FarDoorCheck(string[] a, Result r)
         {
@@ -132,12 +147,15 @@ namespace DarkwoodMP.World
             }
             bool open = a.Length < 2 || a[1] == "open";
             yield return Walk(door.transform.position);
-            for (float t = 0f; t < 5f && (!door.gameObject.activeInHierarchy || DoorLeaf.Turned(door) != open); t += 0.25f)
+            for (float t = 0f; t < 5f
+                && (!door.gameObject.activeInHierarchy
+                    || DoorLeaf.Turned(door) != open); t += 0.25f)
             {
                 yield return new WaitForSeconds(0.25f);
             }
             yield return new WaitForSeconds(1f); // let the swing end
-            r.Info = $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
+            r.Info =
+                $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened} on={door.gameObject.activeInHierarchy} leaf {DoorLeaf.Angle(door):0} degrees";
             if (door.opened != open || DoorLeaf.Turned(door) != open)
             {
                 string text = "shut";
@@ -149,7 +167,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"far-doors-info SPOT": each door within 1000 of the spot: open, drawn open, its leaf's angle, switched on.</summary>
+        /// <summary>
+        /// "far-doors-info SPOT": each door within 1000 of the spot: open,
+        /// drawn open, its leaf's angle, switched on.
+        /// </summary>
         private static IEnumerator FarDoorsInfo(string[] a, Result r)
         {
             string s = "centre";
@@ -158,33 +179,37 @@ namespace DarkwoodMP.World
                 s = a[0];
             }
             var at = Spot(s);
-            r.Info = string.Join("; ", Object.FindObjectsOfType<Door>(true).Where(d => StateDump.Flat(d.transform.position - at) < 1000f)
-                .Select(d =>
-                {
-                    ObjRef id = ObjRef.Of(d.gameObject);
-                    string spot = Fmt(d.transform.position);
-                    bool opened = d.opened;
-                    float angle = DoorLeaf.Angle(d);
-                    Transform body = d.body;
-                    float? turn = null;
-                    if (body != null)
+            r.Info = string.Join("; ",
+                Object.FindObjectsOfType<Door>(true).Where(
+                    d => StateDump.Flat(d.transform.position - at) < 1000f)
+                    .Select(d =>
                     {
-                        turn = body.localEulerAngles.z;
-                    }
-                    return $"{id} at {spot} open={opened} leaf {angle:0} (z {turn:0}) on={d.gameObject.activeInHierarchy}";
-                }));
+                        ObjRef id = ObjRef.Of(d.gameObject);
+                        string spot = Fmt(d.transform.position);
+                        bool opened = d.opened;
+                        float angle = DoorLeaf.Angle(d);
+                        Transform body = d.body;
+                        float? turn = null;
+                        if (body != null)
+                        {
+                            turn = body.localEulerAngles.z;
+                        }
+                        return $"{id} at {spot} open={opened} leaf {angle:0} (z {turn:0}) on={d.gameObject.activeInHierarchy}";
+                    }));
             yield break;
         }
 
         /// <summary>
-        /// "far-drag FROM TO": the draggable object nearest FROM dragged to TO (both spots) by our player, the way
-        /// MapScenarioWorld's drag does it, over a few seconds.
+        /// "far-drag FROM TO": the draggable object nearest FROM dragged to TO
+        /// (both spots) by our player, the way MapScenarioWorld's drag does it,
+        /// over a few seconds.
         /// </summary>
         private static IEnumerator FarDrag(string[] a, Result r)
         {
             var from = Spot(a[0]);
             var to = Spot(a[1]);
-            // One on the culling grid (a node of its own), not one switched on and off with its location's objects.
+            // One on the culling grid (a node of its own), not one switched on
+            // and off with its location's objects.
             var it = Nearest(Object.FindObjectsOfType<Item>(true).Where(i =>
             {
                 if (i.draggable && i.GetComponent<Rigidbody>() != null)
@@ -192,7 +217,9 @@ namespace DarkwoodMP.World
                     CullableObject cull = i.GetComponent<CullableObject>();
                     if (cull != null && cull.node != null)
                     {
-                        return ObjRef.Of(i.gameObject).Valid && StateDump.Flat(i.transform.position - from) < 2500f;
+                        return ObjRef.Of(i.gameObject).Valid
+                            && StateDump.Flat(i.transform.position - from)
+                                < 2500f;
                     }
                 }
                 return false;
@@ -212,7 +239,8 @@ namespace DarkwoodMP.World
             {
                 if (P.itemBeingDragged != it)
                 {
-                    r.Fail($"{it.name}: our drag was let go of (another player has it)");
+                    r.Fail(
+                        $"{it.name}: our drag was let go of (another player has it)");
                     yield break;
                 }
                 var at = start + by * (t / secs);
@@ -221,7 +249,8 @@ namespace DarkwoodMP.World
                 {
                     rb.position = at;
                 }
-                P.transform.position = new Vector3(at.x, P.transform.position.y, at.z) - by.normalized * 70f;
+                P.transform.position = new Vector3(
+                    at.x, P.transform.position.y, at.z) - by.normalized * 70f;
                 yield return null;
             }
             it.transform.position = start + by;
@@ -232,21 +261,30 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.3f);
             P.itemBeingDragged = null;
-            yield return new WaitForSeconds(2.5f); // where it came to rest goes out once settled
-            r.Info = $"{it.name} {ObjRef.Of(it.gameObject)} from {Fmt(start)} to {Fmt(it.transform.position)}";
+            // where it came to rest goes out once settled
+            yield return new WaitForSeconds(2.5f);
+            r.Info =
+                $"{it.name} {ObjRef.Of(it.gameObject)} from {Fmt(start)} to {Fmt(it.transform.position)}";
             if (StateDump.Flat(it.transform.position - to) > 300f)
             {
                 r.Fail($"{r.Info}: it didn't get to {Fmt(to)}");
             }
         }
 
-        /// <summary>"far-obj-shown SPOT": walk to the spot; the draggable object nearest it must be there and switched on.</summary>
+        /// <summary>
+        /// "far-obj-shown SPOT": walk to the spot; the draggable object nearest
+        /// it must be there and switched on.
+        /// </summary>
         private static IEnumerator FarObjShown(string[] a, Result r)
         {
             var at = Spot(a[0]);
             yield return Walk(at, 150f);
-            yield return new WaitForSeconds(3f); // the culling enters a node a frame, every half second
-            var it = Nearest(Object.FindObjectsOfType<Item>(true).Where(i => i.draggable && i.GetComponent<Rigidbody>() != null), at);
+            // the culling enters a node a frame, every half second
+            yield return new WaitForSeconds(3f);
+            var it = Nearest(
+                Object.FindObjectsOfType<Item>(true).Where(
+                    i => i.draggable && i.GetComponent<Rigidbody>() != null),
+                at);
             if (it == null)
             {
                 r.Fail("nothing draggable");
@@ -258,11 +296,13 @@ namespace DarkwoodMP.World
             {
                 node = co.node;
             }
-            string state = $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
+            string state =
+                $"{it.name} {ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
             string culling = " no node";
             if (node != null)
             {
-                culling = $" node {node.position.x:0},{node.position.y:0} entered={node.entered}";
+                culling =
+                    $" node {node.position.x:0},{node.position.y:0} entered={node.entered}";
             }
             r.Info = state + culling;
             if (StateDump.Flat(it.transform.position - at) > 300f)
@@ -275,12 +315,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- the host's enemy whose copy our culling switched off --------------------------------------------------
+        // ---- the host's enemy whose copy our culling switched off -----------
 
-        private static Character _dog;     // host: the dog far-dog made
-        private static Character _copy;    // client: our copy of it, as far-dog-shown found it
+        // host: the dog far-dog made
+        private static Character _dog;
+        // client: our copy of it, as far-dog-shown found it
+        private static Character _copy;
 
-        /// <summary>"far-dog SPOT" (host, before the client joins, so it's in the save the client loads): a dog there.</summary>
+        /// <summary>
+        /// "far-dog SPOT" (host, before the client joins, so it's in the save
+        /// the client loads): a dog there.
+        /// </summary>
         private static IEnumerator FarDog(string[] a, Result r)
         {
             string s = "off:0,2400";
@@ -289,8 +334,9 @@ namespace DarkwoodMP.World
                 s = a[0];
             }
             var spot = Spot(s);
-            // Run again at the far steps: the dog made before the join may have wandered off or died in the meantime, so
-            // a living one is put back on its spot and a dead one is made again.
+            // Run again at the far steps: the dog made before the join may have
+            // wandered off or died in the meantime, so a living one is put back
+            // on its spot and a dead one is made again.
             if (_dog != null && _dog.alive)
             {
                 spot.y = _dog.transform.position.y;
@@ -312,7 +358,9 @@ namespace DarkwoodMP.World
                 r.Info = $"{name} back at {at}, save id {id}";
                 yield break;
             }
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
+            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                P.gameObject, spot, 1f, "Dog", nocturnal: false,
+                attackPlayer: false);
             if (c == null)
             {
                 r.Fail("couldn't spawn a dog");
@@ -339,16 +387,21 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return Object.FindObjectsOfType<Character>(true).Where(c => c != null && c.alive && ne.IsPuppet(c, out _)
-                && StateDump.Flat(c.transform.position - at) < within).OrderBy(c => StateDump.Flat(c.transform.position - at)).FirstOrDefault();
+            return Object.FindObjectsOfType<Character>(true).Where(
+                c => c != null && c.alive && ne.IsPuppet(c, out _)
+                    && StateDump.Flat(c.transform.position - at) < within)
+                .OrderBy(c => StateDump.Flat(c.transform.position - at))
+                .FirstOrDefault();
         }
 
         private static bool Shown(Character c) =>
-            c != null && c.gameObject.activeInHierarchy && c.GetComponentsInChildren<Renderer>().Any(x => x.enabled);
+            c != null && c.gameObject.activeInHierarchy
+                && c.GetComponentsInChildren<Renderer>().Any(x => x.enabled);
 
         private static string Describe(Character c)
         {
-            string state = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}";
+            string state =
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)} on={c.gameObject.activeInHierarchy} (self {c.gameObject.activeSelf}) shown={Shown(c)}";
             string origin = "our copy from the save";
             SaveableObject save = c.GetComponent<SaveableObject>();
             if (save != null && save.dontSave)
@@ -359,9 +412,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "far-dog-active" (client): every living copy of the host's enemies outside our own culling's rect (more
-        /// than 1700 from us along z or 2500 along x, so our culling has its node off) is switched on and shown. The
-        /// host's dog 2400 north of the centre is one, when the host is by it; at least one must be found.
+        /// "far-dog-active" (client): every living copy of the host's enemies
+        /// outside our own culling's rect (more than 1700 from us along z or
+        /// 2500 along x, so our culling has its node off) is switched on and
+        /// shown. The host's dog 2400 north of the centre is one, when the host
+        /// is by it; at least one must be found.
         /// </summary>
         private static IEnumerator FarDogActive(string[] a, Result r)
         {
@@ -374,7 +429,10 @@ namespace DarkwoodMP.World
             Character[] far = new Character[0];
             for (float t = 0f; t < 15f; t += 0.5f)
             {
-                far = Object.FindObjectsOfType<Character>(true).Where(c => c != null && c.alive && ne.IsPuppet(c, out _) && Outside(c)).ToArray();
+                far = Object.FindObjectsOfType<Character>(true)
+                    .Where(
+                        c => c != null && c.alive && ne.IsPuppet(c, out _)
+                            && Outside(c)).ToArray();
                 if (far.Length > 0 && far.All(Shown))
                 {
                     break;
@@ -383,7 +441,8 @@ namespace DarkwoodMP.World
             }
             if (far.Length == 0)
             {
-                r.Fail("no copy of the host's enemies outside our culling's rect");
+                r.Fail(
+                    "no copy of the host's enemies outside our culling's rect");
                 yield break;
             }
             var hidden = far.Where(c => !Shown(c)).ToArray();
@@ -394,14 +453,18 @@ namespace DarkwoodMP.World
             {
                 example = far[0];
             }
-            r.Info = $"{total} outside our rect, {unseen} not shown; e.g. {Describe(example)}";
+            r.Info =
+                $"{total} outside our rect, {unseen} not shown; e.g. {Describe(example)}";
             if (hidden.Length > 0)
             {
                 r.Fail(r.Info);
             }
         }
 
-        /// <summary>"far-dog-to-client" (host): put the dog 250 from the client's player (its proxy here).</summary>
+        /// <summary>
+        /// "far-dog-to-client" (host): put the dog 250 from the client's player
+        /// (its proxy here).
+        /// </summary>
         private static IEnumerator FarDogToClient(string[] a, Result r)
         {
             if (_dog == null)
@@ -409,16 +472,19 @@ namespace DarkwoodMP.World
                 r.Fail("no dog (far-dog first)");
                 yield break;
             }
-            var other = NetPlayerProxy.All.Values.FirstOrDefault(p => p != null);
+            var other =
+                NetPlayerProxy.All.Values.FirstOrDefault(p => p != null);
             if (other == null)
             {
                 r.Fail("no other player here");
                 yield break;
             }
-            // It goes for a player by itself, and the test world has bear traps on the way (Saved:21368, 21369). A bear
-            // trap kills a character outright (Trigger.checkCollision calls die()), so health doesn't save it: it died
-            // there twice before the client could look for it. The step is about it being shown, not about the fight,
-            // so it's held on its spot until far-dog-gone (or 30 s).
+            // It goes for a player by itself, and the test world has bear traps
+            // on the way (Saved:21368, 21369). A bear trap kills a character
+            // outright (Trigger.checkCollision calls die()), so health doesn't
+            // save it: it died there twice before the client could look for it.
+            // The step is about it being shown, not about the fight, so it's
+            // held on its spot until far-dog-gone (or 30 s).
             _dog.maxHealth = 100000f;
             _dog.health = 100000f;
             var to = other.transform.position + new Vector3(250f, 0f, 0f);
@@ -431,13 +497,18 @@ namespace DarkwoodMP.World
             }
             Plugin.Instance.StartCoroutine(HoldDog(_dog, to));
             yield return new WaitForSeconds(2f);
-            r.Info = $"{_dog.name} at {Fmt(_dog.transform.position)}, on={_dog.gameObject.activeInHierarchy}";
+            r.Info =
+                $"{_dog.name} at {Fmt(_dog.transform.position)}, on={_dog.gameObject.activeInHierarchy}";
         }
 
-        /// <summary>Host: keeps the dog on its spot (see far-dog-to-client) while it's still the test's dog, for up to 30 s.</summary>
+        /// <summary>
+        /// Host: keeps the dog on its spot (see far-dog-to-client) while it's
+        /// still the test's dog, for up to 30 s.
+        /// </summary>
         private static IEnumerator HoldDog(Character dog, Vector3 at)
         {
-            for (float t = 0f; t < 30f && dog != null && dog == _dog && dog.alive; t += Time.deltaTime)
+            for (float t = 0f; t < 30f && dog != null && dog == _dog
+                && dog.alive; t += Time.deltaTime)
             {
                 dog.transform.position = at;
                 var rb = dog.GetComponent<Rigidbody>();
@@ -450,11 +521,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"far-dog-shown" (client): the host's dog, now beside us, is shown.</summary>
+        /// <summary>
+        /// "far-dog-shown" (client): the host's dog, now beside us, is shown.
+        /// </summary>
         private static IEnumerator FarDogShown(string[] a, Result r)
         {
             Character c = null;
-            for (float t = 0f; t < 10f && !Shown(c = CopyNear(P.transform.position, 500f)); t += 0.5f)
+            for (float t = 0f; t < 10f
+                && !Shown(c = CopyNear(P.transform.position, 500f)); t += 0.5f)
             {
                 yield return new WaitForSeconds(0.5f);
             }
@@ -471,7 +545,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"far-dog-gone" (host): the dog removed (the client is told to despawn its copy).</summary>
+        /// <summary>
+        /// "far-dog-gone" (host): the dog removed (the client is told to
+        /// despawn its copy).
+        /// </summary>
         private static IEnumerator FarDogGone(string[] a, Result r)
         {
             if (_dog == null)
@@ -497,7 +574,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
         }
 
-        /// <summary>"far-dog-hidden" (client): our copy is no longer shown, and no longer the host's.</summary>
+        /// <summary>
+        /// "far-dog-hidden" (client): our copy is no longer shown, and no
+        /// longer the host's.
+        /// </summary>
         private static IEnumerator FarDogHidden(string[] a, Result r)
         {
             if (_copy == null)
@@ -505,7 +585,9 @@ namespace DarkwoodMP.World
                 r.Info = "the copy was made from its prefab and is gone";
                 yield break;
             }
-            for (float t = 0f; t < 10f && (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _)); t += 0.5f)
+            for (float t = 0f; t < 10f
+                && (Shown(_copy)
+                    || NetEnemies.Instance.IsPuppet(_copy, out _)); t += 0.5f)
             {
                 yield return new WaitForSeconds(0.5f);
                 if (_copy == null)

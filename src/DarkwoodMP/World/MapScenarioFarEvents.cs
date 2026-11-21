@@ -11,49 +11,66 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Steps of the two-game map test for players far apart (the order they run in is
-    /// tools/tests/map_scenario_farevents.py): the client jumps to a far world location, and the host checks how it
-    /// ran that location's enter and exit events (World.FarEvents) and that its culling didn't make locations flicker
-    /// (Combat.SharedCullingPatch).
+    /// Steps of the two-game map test for players far apart (the order they run
+    /// in is tools/tests/map_scenario_farevents.py): the client jumps to a far
+    /// world location, and the host checks how it ran that location's enter and
+    /// exit events (World.FarEvents) and that its culling didn't make locations
+    /// flicker (Combat.SharedCullingPatch).
     /// </summary>
     public static class MapScenarioFarEvents
     {
-        private static float _since;          // fe-reset
-        private static float _hostArrived;    // host: fe-jump to-client
-        private static string _shared;        // host: the location both players were at
-        internal static bool WatchSteps;      // host: record the player steps run here
-        internal static readonly List<string> PlayerStepsRun = new List<string>();
+        // fe-reset
+        private static float _since;
+        // host: fe-jump to-client
+        private static float _hostArrived;
+        // host: the location both players were at
+        private static string _shared;
+        // host: record the player steps run here
+        internal static bool WatchSteps;
+        internal static readonly List<string> PlayerStepsRun =
+            new List<string>();
         internal static int Dialogues;
 
         public static void Register()
         {
-            // "fe-reset": start counting (enter and exit events, location switches, player steps run, dialogues).
+            // "fe-reset": start counting (enter and exit events, location
+            // switches, player steps run, dialogues).
             MapScenario.Add("fe-reset", Reset);
-            // "fe-jump loc:auto|loc:NAME|off:DX,DZ|gen:far|to-client": our player is put there at once (a jump, as a respawn or
-            // a trip to a place does).
+            // "fe-jump loc:auto|loc:NAME|off:DX,DZ|gen:far|to-client": our
+            // player is put there at once (a jump, as a respawn or a trip to a
+            // place does).
             MapScenario.Add("fe-jump", Jump, timeout: 10f);
-            // "fe-check-host" (host): the location by the client was entered here for them, its enter events run
-            // without our player's part; none of our player's steps ran, and no dialogue opened.
+            // "fe-check-host" (host): the location by the client was entered
+            // here for them, its enter events run without our player's part;
+            // none of our player's steps ran, and no dialogue opened.
             MapScenario.Add("fe-check-host", CheckHost, timeout: 15f);
-            // "fe-check-client" (client): the location by our player ran its enter events as our player's and the
-            // shared part.
+            // "fe-check-client" (client): the location by our player ran its
+            // enter events as our player's and the shared part.
             MapScenario.Add("fe-check-client", CheckClient, timeout: 15f);
-            // "fe-churn" (host): over 5 s, the locations by the client don't switch, and since fe-reset no location
-            // was left and entered again within a second (an older culling pass leaving what a newer one entered).
+            // "fe-churn" (host): over 5 s, the locations by the client don't
+            // switch, and since fe-reset no location was left and entered again
+            // within a second (an older culling pass leaving what a newer one
+            // entered).
             MapScenario.Add("fe-churn", Churn, timeout: 15f);
-            // "fe-hostin" (host): we came to the client's location: our player's part of its enter events ran.
+            // "fe-hostin" (host): we came to the client's location: our
+            // player's part of its enter events ran.
             MapScenario.Add("fe-hostin", HostIn, timeout: 15f);
-            // "fe-stay" (host): the client went: the location stays entered (we're there), no exit events ran.
+            // "fe-stay" (host): the client went: the location stays entered
+            // (we're there), no exit events ran.
             MapScenario.Add("fe-stay", Stay, timeout: 15f);
-            // "fe-left" (host): we went too: the location is left and its exit events ran in full.
+            // "fe-left" (host): we went too: the location is left and its exit
+            // events ran in full.
             MapScenario.Add("fe-left", Left, timeout: 20f);
-            // "fe-generator" (host): the generator nearest the client drains by the client's skill, not ours.
+            // "fe-generator" (host): the generator nearest the client drains by
+            // the client's skill, not ours.
             MapScenario.Add("fe-generator", GeneratorSkill, timeout: 10f);
-            // "fe-loading" (host): while our player was taken to a place, the culling round the client was refreshed.
+            // "fe-loading" (host): while our player was taken to a place, the
+            // culling round the client was refreshed.
             MapScenario.Add("fe-loading", Loading, timeout: 10f);
         }
 
-        private static string Name(Location l) => Core.getTrueLocationName(l.name);
+        private static string Name(Location l) =>
+            Core.getTrueLocationName(l.name);
 
         private static int _refreshesAtReset;
 
@@ -62,10 +79,14 @@ namespace DarkwoodMP.World
             _since = Time.realtimeSinceStartup;
             PlayerStepsRun.Clear();
             Dialogues = 0;
-            WatchSteps = Sync.PlayerSync.Instance != null && Net.Session.Instance != null && Net.Session.Instance.IsHost;
+            WatchSteps = Sync.PlayerSync.Instance != null
+                && Net.Session.Instance != null && Net.Session.Instance.IsHost;
             _refreshesAtReset = SharedCullingPatch.LoadingRefreshes;
-            var locs = WorldLocations().OrderBy(l => StateDump.Flat(l.transform.position - Centre)).ToList();
-            Plugin.Log.LogInfo($"[map] fe-reset: {locs.Count} world locations: " +
+            var locs = WorldLocations()
+                .OrderBy(l => StateDump.Flat(l.transform.position - Centre))
+                .ToList();
+            Plugin.Log
+                .LogInfo($"[map] fe-reset: {locs.Count} world locations: " +
                 string.Join(", ", locs.Select(l =>
                 {
                     string name = Name(l);
@@ -82,33 +103,55 @@ namespace DarkwoodMP.World
         }
 
         private static IEnumerable<Location> WorldLocations() =>
-            Object.FindObjectsOfType<Location>(true).Where(FarEvents.WorldLocation);
+            Object.FindObjectsOfType<Location>(true).Where(
+                FarEvents.WorldLocation);
 
-        private static IEnumerable<global::EventTrigger> LocationTriggers(Location l) =>
-            l.events.Where(e => e != null).SelectMany(e => e.eventTriggers).Where(t => t != null &&
-                (t.type == global::EventTrigger.Type.onEnterLocation || t.type == global::EventTrigger.Type.onExitLocation));
+        private static IEnumerable<global::EventTrigger> LocationTriggers(
+            Location l) =>
+            l.events.Where(e => e != null).SelectMany(e => e.eventTriggers)
+                .Where(t => t != null &&
+                (t.type == global::EventTrigger.Type.onEnterLocation
+                    || t.type == global::EventTrigger.Type.onExitLocation));
 
-        private static int EventCount(Location l) => LocationTriggers(l).Count();
+        private static int EventCount(Location l) =>
+            LocationTriggers(l).Count();
 
-        private static readonly HashSet<GameEvent.Type> Unsafe = new HashSet<GameEvent.Type>
+        private static readonly HashSet<GameEvent.Type> Unsafe =
+            new HashSet<GameEvent.Type>
         {
-            GameEvent.Type.openDialogue, GameEvent.Type.startDream, GameEvent.Type.endDream, GameEvent.Type.returnToWorld,
-            GameEvent.Type.transportToOutsideLocation, GameEvent.Type.transportPlayerToObject, GameEvent.Type.forbidInputs,
-            GameEvent.Type.timeScale, GameEvent.Type.endGame, GameEvent.Type.moveInventory, GameEvent.Type.tweenTime,
+            GameEvent.Type.openDialogue, GameEvent.Type.startDream,
+            GameEvent.Type.endDream, GameEvent.Type.returnToWorld,
+            GameEvent.Type.transportToOutsideLocation,
+            GameEvent.Type.transportPlayerToObject, GameEvent.Type.forbidInputs,
+            GameEvent.Type.timeScale, GameEvent.Type.endGame,
+            GameEvent.Type.moveInventory, GameEvent.Type.tweenTime,
         };
 
-        /// <summary>No enter or exit step that would take the player somewhere, stop the test or end the game.</summary>
+        /// <summary>
+        /// No enter or exit step that would take the player somewhere, stop the
+        /// test or end the game.
+        /// </summary>
         private static bool Safe(Location l)
         {
-            if (l.name.IndexOf("hideout", StringComparison.OrdinalIgnoreCase) >= 0)
+            if (l.name.IndexOf("hideout", StringComparison.OrdinalIgnoreCase)
+                >= 0)
             {
                 return false;
             }
             foreach (var t in LocationTriggers(l))
             {
-                foreach (var g in new[] { t.gameEvents, t.gameEventsExit, t.gameEventsElse })
+                foreach (var g in new[]
                 {
-                    if (g != null && g.events != null && g.events.Any(e => e != null && (Unsafe.Contains(e.type) || Chapters.IsStoryStep(e))))
+                    t.gameEvents,
+                    t.gameEventsExit,
+                    t.gameEventsElse
+                })
+                {
+                    if (g != null && g.events != null
+                        && g.events.Any(
+                            e => e != null
+                                && (Unsafe.Contains(e.type)
+                                    || Chapters.IsStoryStep(e))))
                     {
                         return false;
                     }
@@ -117,11 +160,17 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        /// <summary>The far location the client goes to: the nearest safe one with enter or exit triggers 5000 or more from the centre.</summary>
+        /// <summary>
+        /// The far location the client goes to: the nearest safe one with enter
+        /// or exit triggers 5000 or more from the centre.
+        /// </summary>
         private static Location Auto()
         {
-            var far = WorldLocations().Where(l => StateDump.Flat(l.transform.position - Centre) >= 5000f && Safe(l))
-                .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).ToList();
+            var far = WorldLocations().Where(
+                l => StateDump.Flat(l.transform.position - Centre) >= 5000f
+                    && Safe(l))
+                .OrderBy(l => StateDump.Flat(l.transform.position - Centre))
+                .ToList();
             Location location = far.FirstOrDefault(l => EventCount(l) > 0);
             if (location == null)
             {
@@ -131,11 +180,15 @@ namespace DarkwoodMP.World
         }
 
         private static NetPlayerProxy Joiner() =>
-            NetPlayerProxy.All.Values.FirstOrDefault(p => p != null && !p.Away && p.Owner != Sync.PlayerSync.DummyId);
+            NetPlayerProxy.All.Values.FirstOrDefault(
+                p => p != null && !p.Away
+                    && p.Owner != Sync.PlayerSync.DummyId);
 
         private static Location NearestTo(Vector3 at, float within) =>
-            WorldLocations().Where(l => StateDump.Flat(l.transform.position - at) <= within)
-                .OrderBy(l => StateDump.Flat(l.transform.position - at)).FirstOrDefault();
+            WorldLocations().Where(
+                l => StateDump.Flat(l.transform.position - at) <= within)
+                .OrderBy(l => StateDump.Flat(l.transform.position - at))
+                .FirstOrDefault();
 
         private static IEnumerator Jump(string[] a, Result r)
         {
@@ -157,7 +210,8 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    l = WorldLocations().FirstOrDefault(x => Name(x) == t.Substring(4));
+                    l = WorldLocations().FirstOrDefault(
+                        x => Name(x) == t.Substring(4));
                 }
                 if (l == null)
                 {
@@ -175,14 +229,18 @@ namespace DarkwoodMP.World
             }
             else if (t == "gen:far")
             {
-                var g = FuelSync.Generators.Where(x => x != null && !x.isSaw).OrderByDescending(x => StateDump.Flat(x.transform.position - Centre)).FirstOrDefault();
+                var g = FuelSync.Generators.Where(x => x != null && !x.isSaw)
+                    .OrderByDescending(
+                        x => StateDump.Flat(x.transform.position
+                                - Centre)).FirstOrDefault();
                 if (g == null)
                 {
                     r.Fail("no generator");
                     yield break;
                 }
                 to = g.transform.position + new Vector3(100f, 0f, 0f);
-                what = $"by {g.name}, {StateDump.Flat(g.transform.position - Centre):0} from the centre";
+                what =
+                    $"by {g.name}, {StateDump.Flat(g.transform.position - Centre):0} from the centre";
             }
             else if (t == "to-client")
             {
@@ -210,17 +268,21 @@ namespace DarkwoodMP.World
                 r.Fail($"unknown target {t}");
                 yield break;
             }
-            WatchSteps = false; // our own player moves: what it sets off from here on is its own
+            // our own player moves: what it sets off from here on is its own
+            WatchSteps = false;
             float jumped = StateDump.Flat(to - p.transform.position);
             Place(to);
             yield return null;
             r.Info = $"at {Fmt(to)}, {what}, jumped {jumped:0}";
         }
 
-        private static List<FarEvents.Entry> Since(List<FarEvents.Entry> list, float t, string loc = null) =>
-            list.Where(e => e.At >= t && (loc == null || e.Location == loc)).ToList();
+        private static List<FarEvents.Entry> Since(
+            List<FarEvents.Entry> list, float t, string loc = null) =>
+            list.Where(e => e.At >= t
+                    && (loc == null || e.Location == loc)).ToList();
 
-        private static string Show(IEnumerable<FarEvents.Entry> es) => string.Join(", ", es.Select(e => $"{e.Kind} {e.Part}"));
+        private static string Show(IEnumerable<FarEvents.Entry> es) =>
+            string.Join(", ", es.Select(e => $"{e.Kind} {e.Part}"));
 
         private static IEnumerator CheckHost(string[] a, Result r)
         {
@@ -232,11 +294,14 @@ namespace DarkwoodMP.World
             }
             Location l = null;
             float until = Time.realtimeSinceStartup + 10f;
-            // The location by the client is entered, and its enter events have run.
+            // The location by the client is entered, and its enter events have
+            // run.
             while (Time.realtimeSinceStartup < until)
             {
                 l = NearestTo(j.transform.position, 2500f);
-                if (l != null && l.entered && l.finishedLoading && Since(FarEvents.Log, _since, Name(l)).Any(e => e.Kind == "enter"))
+                if (l != null && l.entered && l.finishedLoading
+                    && Since(FarEvents.Log, _since, Name(l)).Any(
+                        e => e.Kind == "enter"))
                 {
                     break;
                 }
@@ -244,26 +309,36 @@ namespace DarkwoodMP.World
             }
             if (l == null)
             {
-                r.Fail($"no world location within 2500 of the client at {Fmt(j.transform.position)}");
+                r.Fail(
+                    $"no world location within 2500 of the client at {Fmt(j.transform.position)}");
                 yield break;
             }
             var es = Since(FarEvents.Log, _since, Name(l));
-            string info = $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}], our player's steps run [{string.Join(", ", PlayerStepsRun)}], dialogues {Dialogues}";
+            string info =
+                $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}], our player's steps run [{string.Join(", ", PlayerStepsRun)}], dialogues {Dialogues}";
             if (!l.entered)
             {
                 r.Fail("not entered here for the client: " + info);
             }
-            else if (es.Any(e => e.Part == ScriptedEvents.Part.All || e.Part == ScriptedEvents.Part.PlayerOnly))
+            else if (es.Any(
+                e => e.Part == ScriptedEvents.Part.All
+                    || e.Part == ScriptedEvents.Part.PlayerOnly))
             {
                 r.Fail("its events ran for our player: " + info);
             }
-            else if (!es.Any(e => e.Kind == "enter" && e.Part == ScriptedEvents.Part.HostAndShared))
+            else if (!es.Any(
+                e => e.Kind == "enter"
+                    && e.Part == ScriptedEvents.Part.HostAndShared))
             {
-                r.Fail("its enter events didn't run (as the host's and shared part): " + info);
+                r.Fail(
+                    "its enter events didn't run (as the host's and shared "
+                        + "part): " + info);
             }
             else if (PlayerStepsRun.Count > 0 || Dialogues > 0)
             {
-                r.Fail("our player got steps of an event it didn't set off: " + info);
+                r.Fail(
+                    "our player got steps of an event it didn't set off: "
+                        + info);
             }
             r.Info = info;
         }
@@ -276,7 +351,9 @@ namespace DarkwoodMP.World
             while (Time.realtimeSinceStartup < until)
             {
                 l = NearestTo(p.transform.position, 2500f);
-                if (l != null && l.entered && Since(FarEvents.Log, _since, Name(l)).Any(e => e.Kind == "enter"))
+                if (l != null && l.entered
+                    && Since(FarEvents.Log, _since, Name(l)).Any(
+                        e => e.Kind == "enter"))
                 {
                     break;
                 }
@@ -288,10 +365,15 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var es = Since(FarEvents.Log, _since, Name(l));
-            r.Info = $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}]";
-            if (!es.Any(e => e.Kind == "enter" && e.Part == ScriptedEvents.Part.PlayerAndShared))
+            r.Info =
+                $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}]";
+            if (!es.Any(
+                e => e.Kind == "enter"
+                    && e.Part == ScriptedEvents.Part.PlayerAndShared))
             {
-                r.Fail("its enter events didn't run as our player's and the shared part: " + r.Info);
+                r.Fail(
+                    "its enter events didn't run as our player's and the "
+                        + "shared part: " + r.Info);
             }
             else if (es.Any(e => e.Part != ScriptedEvents.Part.PlayerAndShared))
             {
@@ -299,16 +381,20 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Locations left and entered again within a second, since t.</summary>
+        /// <summary>
+        /// Locations left and entered again within a second, since t.
+        /// </summary>
         private static List<string> Flickers(float t)
         {
             var list = new List<string>();
-            foreach (var g in Since(FarEvents.Switches, t).GroupBy(e => e.Location))
+            foreach (var g in Since(FarEvents.Switches, t).GroupBy(
+                e => e.Location))
             {
                 var es = g.OrderBy(e => e.At).ToList();
                 for (int i = 1; i < es.Count; i++)
                 {
-                    if (es[i - 1].Kind == "leave" && es[i].Kind == "enter" && es[i].At - es[i - 1].At < 1f)
+                    if (es[i - 1].Kind == "leave" && es[i].Kind == "enter"
+                        && es[i].At - es[i - 1].At < 1f)
                     {
                         list.Add($"{g.Key} ({es[i].At - es[i - 1].At:0.00} s)");
                     }
@@ -319,7 +405,8 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Churn(string[] a, Result r)
         {
-            // The host watches round the client's stand-in; the client round its own player.
+            // The host watches round the client's stand-in; the client round
+            // its own player.
             Component j;
             if (Net.Session.Instance != null && Net.Session.Instance.IsHost)
             {
@@ -336,15 +423,23 @@ namespace DarkwoodMP.World
             }
             float t0 = Time.realtimeSinceStartup;
             yield return new WaitForSeconds(5f);
-            var near = new HashSet<string>(WorldLocations().Where(l => StateDump.Flat(l.transform.position - j.transform.position) <= 2000f).Select(Name));
-            var switched = Since(FarEvents.Switches, t0).Where(e => near.Contains(e.Location)).ToList();
+            var near = new HashSet<string>(WorldLocations()
+                    .Where(
+                        l => StateDump.Flat(
+                            l.transform.position - j.transform.position)
+                            <= 2000f).Select(Name));
+            var switched = Since(FarEvents.Switches, t0)
+                .Where(e => near.Contains(e.Location)).ToList();
             var flickers = Flickers(_since);
             var all = Since(FarEvents.Switches, _since);
-            r.Info = $"since fe-reset {all.Count(e => e.Kind == "enter")} location enters, {all.Count(e => e.Kind == "leave")} leaves; " +
+            r.Info =
+                $"since fe-reset {all.Count(e => e.Kind == "enter")} location enters, {all.Count(e => e.Kind == "leave")} leaves; " +
                      $"by the client ({string.Join(", ", near)}) in the last 5 s: [{string.Join(", ", switched.Select(e => e.Location + " " + e.Kind))}]; flickers [{string.Join(", ", flickers)}]";
             if (switched.Count > 0)
             {
-                r.Fail("a location by the client switched while it stood still: " + r.Info);
+                r.Fail(
+                    "a location by the client switched while it stood still: "
+                        + r.Info);
             }
             else if (flickers.Count > 0)
             {
@@ -371,9 +466,13 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
             r.Info = $"{_shared}: its events since we came [{Show(es)}]";
-            if (!es.Any(e => e.Kind == "enter" && e.Part == ScriptedEvents.Part.PlayerOnly))
+            if (!es.Any(
+                e => e.Kind == "enter"
+                    && e.Part == ScriptedEvents.Part.PlayerOnly))
             {
-                r.Fail("our player's part of its enter events didn't run: " + r.Info);
+                r.Fail(
+                    "our player's part of its enter events didn't run: "
+                        + r.Info);
             }
             else if (es.Any(e => e.Part != ScriptedEvents.Part.PlayerOnly))
             {
@@ -391,14 +490,16 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(2f);
             var es = Since(FarEvents.Log, _hostArrived, _shared);
-            r.Info = $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
+            r.Info =
+                $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
             if (!l.entered)
             {
                 r.Fail("left while our player is in it: " + r.Info);
             }
             else if (es.Any(e => e.Kind == "exit"))
             {
-                r.Fail("its exit events ran while our player is in it: " + r.Info);
+                r.Fail(
+                    "its exit events ran while our player is in it: " + r.Info);
             }
         }
 
@@ -416,12 +517,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
             var es = Since(FarEvents.Log, _hostArrived, _shared);
-            r.Info = $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
+            r.Info =
+                $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
             if (l.entered)
             {
                 r.Fail("still entered after everyone went: " + r.Info);
             }
-            else if (!es.Any(e => e.Kind == "exit" && e.Part == ScriptedEvents.Part.All))
+            else if (!es.Any(
+                e => e.Kind == "exit" && e.Part == ScriptedEvents.Part.All))
             {
                 r.Fail("its exit events didn't run in full: " + r.Info);
             }
@@ -440,13 +543,20 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var gen = FuelSync.Generators.Where(g => g != null && !g.isSaw)
-                .OrderBy(g => StateDump.Flat(g.transform.position - j.transform.position)).FirstOrDefault();
+                .OrderBy(
+                    g => StateDump.Flat(
+                        g.transform.position
+                            - j.transform.position)).FirstOrDefault();
             if (gen == null)
             {
                 r.Info = "no generator in this world";
                 yield break;
             }
-            bool clientNearer = StateDump.Flat(gen.transform.position - j.transform.position) < StateDump.Flat(gen.transform.position - Player.Instance.transform.position);
+            bool clientNearer = StateDump.Flat(
+                gen.transform.position - j.transform.position)
+                < StateDump.Flat(
+                    gen.transform.position
+                        - Player.Instance.transform.position);
             float fuel = gen.fuel;
             gen.drainFuel();
             float used = fuel - gen.fuel;
@@ -465,8 +575,11 @@ namespace DarkwoodMP.World
             {
                 skillText = skill.Value.ToString();
             }
-            r.Info = $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {skillText})";
-            if (clientNearer && skill.HasValue && GeneratorDrainSkillPatch.Last != null && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))
+            r.Info =
+                $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {skillText})";
+            if (clientNearer && skill.HasValue
+                && GeneratorDrainSkillPatch.Last != null
+                && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))
             {
                 r.Fail("drained by our skill: " + r.Info);
             }
@@ -474,24 +587,35 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Loading(string[] a, Result r)
         {
-            int refreshes = SharedCullingPatch.LoadingRefreshes - _refreshesAtReset;
-            r.Info = $"{refreshes} culling refreshes round the others while our player was taken to a place, since fe-reset";
+            int refreshes =
+                SharedCullingPatch.LoadingRefreshes - _refreshesAtReset;
+            r.Info =
+                $"{refreshes} culling refreshes round the others while our player was taken to a place, since fe-reset";
             if (refreshes == 0)
             {
-                r.Fail("the others' areas weren't refreshed while we loaded: " + r.Info);
+                r.Fail(
+                    "the others' areas weren't refreshed while we loaded: "
+                        + r.Info);
             }
             yield break;
         }
     }
 
-    /// <summary>For the map test (fe-check-host): our player's steps that ran, and dialogues opened, while fe-reset watches.</summary>
+    /// <summary>
+    /// For the map test (fe-check-host): our player's steps that ran, and
+    /// dialogues opened, while fe-reset watches.
+    /// </summary>
     [HarmonyPatch]
     static class FarEventsTestCountPatch
     {
-        [HarmonyPostfix, HarmonyPatch(typeof(GameEvent), nameof(GameEvent.fire))]
-        static void Step(GameEvent __instance, bool __runOriginal, GameObject thisGO)
+        [HarmonyPostfix, HarmonyPatch(
+            typeof(GameEvent), nameof(GameEvent.fire))]
+        static void Step(
+            GameEvent __instance, bool __runOriginal, GameObject thisGO)
         {
-            if (!MapScenarioFarEvents.WatchSteps || !__runOriginal || __instance == null || !ScriptedEvents.IsPlayerStep(__instance.type))
+            if (!MapScenarioFarEvents.WatchSteps || !__runOriginal
+                || __instance == null
+                || !ScriptedEvents.IsPlayerStep(__instance.type))
             {
                 return;
             }
@@ -502,11 +626,13 @@ namespace DarkwoodMP.World
                 {
                     objectName = thisGO.name;
                 }
-                MapScenarioFarEvents.PlayerStepsRun.Add($"{__instance.type} ({objectName})");
+                MapScenarioFarEvents.PlayerStepsRun.Add(
+                    $"{__instance.type} ({objectName})");
             }
         }
 
-        [HarmonyPrefix, HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.show))]
+        [HarmonyPrefix, HarmonyPatch(
+            typeof(DialogueWindow), nameof(DialogueWindow.show))]
         static void Dialogue()
         {
             if (MapScenarioFarEvents.WatchSteps)

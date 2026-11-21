@@ -6,9 +6,11 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// An enemy's attack is a short-lived MeleeSensor trigger; the game applies it to a Character or a Player it
-    /// touches. A proxy is neither, so its hits are handled here: the same checks the game makes for a player
-    /// (not ignored, the attacker can see it), then the damage and effects go to the proxy's player.
+    /// An enemy's attack is a short-lived MeleeSensor trigger; the game applies
+    /// it to a Character or a Player it touches. A proxy is neither, so its
+    /// hits are handled here: the same checks the game makes for a player (not
+    /// ignored, the attacker can see it), then the damage and effects go to the
+    /// proxy's player.
     /// </summary>
     [HarmonyPatch(typeof(MeleeSensor), "OnTriggerEnter")]
     public static class MeleeSensorProxyPatch
@@ -26,28 +28,34 @@ namespace DarkwoodMP.Combat
             }
 
             var s = __instance;
-            if (s.type != MeleeSensor.MeleeSensorType.character || s.attackerTransform == null)
+            if (s.type != MeleeSensor.MeleeSensorType.character
+                || s.attackerTransform == null)
             {
                 return false; // players don't hit players
             }
-            // Only the colliders: the game clears them as the pooled sensor is spawned again (MeleeSensor.OnSpawned),
-            // but never its gameObjectsToIgnore, so a pooled sensor would never hit the same stand-in twice.
+            // Only the colliders: the game clears them as the pooled sensor is
+            // spawned again (MeleeSensor.OnSpawned), but never its
+            // gameObjectsToIgnore, so a pooled sensor would never hit the same
+            // stand-in twice.
             if (s.collidersToIgnore.Contains(_collider))
             {
                 return false;
             }
             s.collidersToIgnore.Add(_collider);
-            if (!s.doesNotNeedLineOfSight && !Core.canSeeAttack(s.attackerTransform, proxy.transform))
+            if (!s.doesNotNeedLineOfSight
+                && !Core.canSeeAttack(s.attackerTransform, proxy.transform))
             {
                 if (World.MapScenarioDogWatch.On)
                 {
-                    Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name}'s hit on {proxy.OwnerName}'s stand-in blocked: no line of sight");
+                    Plugin.Log.LogInfo(
+                        $"[dogwatch] {s.attackerTransform.name}'s hit on {proxy.OwnerName}'s stand-in blocked: no line of sight");
                 }
                 return false;
             }
             if (World.MapScenarioDogWatch.On)
             {
-                Plugin.Log.LogInfo($"[dogwatch] {s.attackerTransform.name} hit {proxy.OwnerName}'s stand-in for {s.damage:0}");
+                Plugin.Log.LogInfo(
+                    $"[dogwatch] {s.attackerTransform.name} hit {proxy.OwnerName}'s stand-in for {s.damage:0}");
             }
 
             var attacker = s.attackerTransform.GetComponent<CharBase>();
@@ -62,28 +70,49 @@ namespace DarkwoodMP.Combat
             {
                 handler();
             }
-            PlayerDamage.Send(proxy.Owner, damage, s.attackerTransform, s.shadowSensor, s.effects);
+            PlayerDamage.Send(
+                proxy.Owner, damage, s.attackerTransform, s.shadowSensor,
+                s.effects);
             return false;
         }
     }
 
-    /// <summary>Damage a player deals to an enemy is threat for that player.</summary>
+    /// <summary>
+    /// Damage a player deals to an enemy is threat for that player.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.getHit),
-        new[] { typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
+        new[]
+        {
+            typeof(float),
+            typeof(Transform),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool)
+        })]
     public static class CharacterGetHitThreatPatch
     {
-        private static void Prefix(Character __instance, out float __state) => __state = __instance.health;
+        private static void Prefix(Character __instance, out float __state) =>
+            __state = __instance.health;
 
-        private static void Postfix(Character __instance, Transform attackerTransform, bool normalHit, float __state)
+        private static void Postfix(
+            Character __instance, Transform attackerTransform, bool normalHit,
+            float __state)
         {
             float dealt = __state - __instance.health;
-            // The game splats blood for a normal hit that took health (not the night trader); show it to the clients too.
-            if (normalHit && dealt > 0f && !__instance.isNightTrader && Net.Session.Instance != null && Net.Session.Instance.IsHost)
+            // The game splats blood for a normal hit that took health (not the
+            // night trader); show it to the clients too.
+            if (normalHit && dealt > 0f && !__instance.isNightTrader
+                && Net.Session.Instance != null && Net.Session.Instance.IsHost)
             {
                 float y;
                 if (attackerTransform != null)
                 {
-                    y = (attackerTransform.rotation * Quaternion.Euler(90f, 180f, 0f)).eulerAngles.y;
+                    y = (attackerTransform.rotation * Quaternion.Euler(
+                        90f, 180f, 0f)).eulerAngles.y;
                 }
                 else
                 {
@@ -101,24 +130,32 @@ namespace DarkwoodMP.Combat
             }
             if (dealt > 0f)
             {
-                Threat.OnDamaged(__instance, attackerTransform.GetComponent<CharBase>(), dealt);
+                Threat.OnDamaged(
+                    __instance, attackerTransform.GetComponent<CharBase>(),
+                    dealt);
             }
         }
     }
 
-    /// <summary>Around each sight check: order the candidates by threat before it, credit being seen after it.</summary>
+    /// <summary>
+    /// Around each sight check: order the candidates by threat before it,
+    /// credit being seen after it.
+    /// </summary>
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
     public static class CharacterSightThreatPatch
     {
-        private static void Prefix(Character __instance) => Threat.BeforeSightCheck(__instance);
-        private static void Postfix(Character __instance) => Threat.AfterSightCheck(__instance);
+        private static void Prefix(Character __instance) =>
+            Threat.BeforeSightCheck(__instance);
+        private static void Postfix(Character __instance) =>
+            Threat.AfterSightCheck(__instance);
     }
 
     /// <summary>Noise is threat for the player who made it.</summary>
     [HarmonyPatch(typeof(Character), nameof(Character.heardSound))]
     public static class CharacterHearingThreatPatch
     {
-        private static void Prefix(Character __instance, Vector3 Position, float volume)
+        private static void Prefix(
+            Character __instance, Vector3 Position, float volume)
         {
             if (Threat.Enabled && !__instance.deaf && __instance.alive)
             {
@@ -128,31 +165,43 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// The game shows (and runs) only the part of the world near the player: WorldGrid enters the grid's nodes
-    /// near the player and leaves the rest. With other players in the host's world, the nodes near each of them
-    /// are kept entered too, so the enemies near them are there and awake. While the host's own player is in a
-    /// separate location or a dream, WorldGrid.currentGrid is that location's grid (OutsideLocations.transportToLocation
-    /// leaves every node of the world's grid and calls setGrid), so the world's grid is also walked, around the other
-    /// players only, and the enemies near them keep running. In the same way, the grid of each separate location the
-    /// host runs for a joiner in it (NetPlayerProxy.InLocation, World.Locations.KeepRunning) is walked around the
-    /// joiners there, whether or not the host's player is in it.
+    /// The game shows (and runs) only the part of the world near the player:
+    /// WorldGrid enters the grid's nodes near the player and leaves the rest.
+    /// With other players in the host's world, the nodes near each of them are
+    /// kept entered too, so the enemies near them are there and awake. While
+    /// the host's own player is in a separate location or a dream,
+    /// WorldGrid.currentGrid is that location's grid
+    /// (OutsideLocations.transportToLocation leaves every node of the world's
+    /// grid and calls setGrid), so the world's grid is also walked, around the
+    /// other players only, and the enemies near them keep running. In the same
+    /// way, the grid of each separate location the host runs for a joiner in it
+    /// (NetPlayerProxy.InLocation, World.Locations.KeepRunning) is walked
+    /// around the joiners there, whether or not the host's player is in it.
     ///
-    /// One pass runs per grid at a time: a new refresh stops the grid's pass still running (one that entered one node
-    /// a frame round a centre that has since jumped would otherwise leave, with the old centres, nodes the new one had
-    /// just entered, and the locations there would flicker out and in again, running their exit and enter events).
-    /// The nodes it entered stay entered, so the next pass goes on from there. The area kept round another player is
-    /// what their own game keeps round them (ViewRects: their screen may be another shape than ours). While the host's own
-    /// player is being taken to a place (OutsideLocations.loading, when the game's refreshPlayerPos skips its
-    /// refresh), the others' areas are still entered round them (RefreshWhileLoading).
+    /// One pass runs per grid at a time: a new refresh stops the grid's pass
+    /// still running (one that entered one node a frame round a centre that has
+    /// since jumped would otherwise leave, with the old centres, nodes the new
+    /// one had just entered, and the locations there would flicker out and in
+    /// again, running their exit and enter events).
+    /// The nodes it entered stay entered, so the next pass goes on from there.
+    /// The area kept round another player is what their own game keeps round
+    /// them (ViewRects: their screen may be another shape than ours). While the
+    /// host's own player is being taken to a place (OutsideLocations.loading,
+    /// when the game's refreshPlayerPos skips its refresh), the others' areas
+    /// are still entered round them (RefreshWhileLoading).
     /// </summary>
     [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.refreshPosition))]
     public static class SharedCullingPatch
     {
         private static bool _wasAway;
-        /// <summary>Host: our own player is in a separate location or a dream (the world's grid isn't the current one).</summary>
+        /// <summary>
+        /// Host: our own player is in a separate location or a dream (the
+        /// world's grid isn't the current one).
+        /// </summary>
         public static bool HostAway => _wasAway;
 
-        private static readonly Dictionary<WorldGrid.Grid, Coroutine> _running = new Dictionary<WorldGrid.Grid, Coroutine>();
+        private static readonly Dictionary<WorldGrid.Grid, Coroutine> _running =
+            new Dictionary<WorldGrid.Grid, Coroutine>();
         private static float _loadingRefreshAt;
 
         private struct Centre
@@ -161,7 +210,8 @@ namespace DarkwoodMP.Combat
             public int Dx, Dy;
         }
 
-        private static bool Prefix(WorldGrid __instance, Vector3 pos, bool instant, bool force)
+        private static bool Prefix(
+            WorldGrid __instance, Vector3 pos, bool instant, bool force)
         {
             if (__instance.currentGrid == null)
             {
@@ -169,15 +219,20 @@ namespace DarkwoodMP.Combat
             }
             if (!Proxies.Any)
             {
-                // Alone (or a joiner): the game's own refresh, except that its passes don't overlap either. A jump (a
-                // respawn, a trip back from a place) otherwise has an older pass leave what the newer one entered.
+                // Alone (or a joiner): the game's own refresh, except that its
+                // passes don't overlap either. A jump (a respawn, a trip back
+                // from a place) otherwise has an older pass leave what the
+                // newer one entered.
                 var s = Net.Session.Instance;
                 if (instant || s == null || !s.Active)
                 {
                     return true;
                 }
                 Distances(out int dx, out int dy);
-                Run(__instance, __instance.currentGrid, new List<Centre> { new Centre { Pos = pos, Dx = dx, Dy = dy } }, false, force);
+                Run(__instance, __instance.currentGrid, new List<Centre>
+                {
+                    new Centre { Pos = pos, Dx = dx, Dy = dy }
+                }, false, force);
                 return false;
             }
             RefreshAll(__instance, __instance.currentGrid, pos, instant, force);
@@ -186,11 +241,14 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Host, every frame: while our own player is taken to a place (OutsideLocations.loading: the loading screen,
-        /// a few seconds), the game's refreshPlayerPos skips its refresh. The others' areas are still entered round
-        /// them as they move: the world's grid round the players in the world, and the grid of each location run for
-        /// a joiner round the joiners there. Nothing is left meanwhile (the game is switching our own grids over);
-        /// the first refresh after the load leaves what's too far.
+        /// Host, every frame: while our own player is taken to a place
+        /// (OutsideLocations.loading: the loading screen, a few seconds), the
+        /// game's refreshPlayerPos skips its refresh. The others' areas are
+        /// still entered round them as they move: the world's grid round the
+        /// players in the world, and the grid of each location run for a joiner
+        /// round the joiners there. Nothing is left meanwhile (the game is
+        /// switching our own grids over); the first refresh after the load
+        /// leaves what's too far.
         /// </summary>
         public static void RefreshWhileLoading()
         {
@@ -200,7 +258,9 @@ namespace DarkwoodMP.Combat
             }
             var o = Singleton<OutsideLocations>.Instance;
             var wg = Singleton<WorldGrid>.Instance;
-            if (o == null || !o.loading || wg == null || wg.disableRefresh || Player.Instance == null || Core.loadingGame || !Core.worldGenFinished())
+            if (o == null || !o.loading || wg == null || wg.disableRefresh
+                || Player.Instance == null || Core.loadingGame
+                || !Core.worldGenFinished())
             {
                 return;
             }
@@ -234,7 +294,8 @@ namespace DarkwoodMP.Combat
                 {
                     wg.StopCoroutine(old);
                 }
-                _running[kv.Key] = wg.StartCoroutine(EnterSpread(kv.Key, kv.Value));
+                _running[kv.Key] =
+                    wg.StartCoroutine(EnterSpread(kv.Key, kv.Value));
             }
             if (grids.Count > 0)
             {
@@ -242,7 +303,8 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        private static IEnumerator EnterSpread(WorldGrid.Grid g, List<Centre> centres)
+        private static IEnumerator EnterSpread(
+            WorldGrid.Grid g, List<Centre> centres)
         {
             var nodes = g.nodes;
             for (int i = 0; i < nodes.Count; i++)
@@ -255,13 +317,19 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>For the tests: refreshes done while our player was being taken to a place.</summary>
+        /// <summary>
+        /// For the tests: refreshes done while our player was being taken to a
+        /// place.
+        /// </summary>
         public static int LoadingRefreshes;
 
-        private static void RefreshAll(WorldGrid wg, WorldGrid.Grid current, Vector3 pos, bool instant, bool force)
+        private static void RefreshAll(
+            WorldGrid wg, WorldGrid.Grid current, Vector3 pos, bool instant,
+            bool force)
         {
             Distances(out int hx, out int hy);
-            var centres = new List<Centre> { new Centre { Pos = pos, Dx = hx, Dy = hy } };
+            var centres =
+                new List<Centre> { new Centre { Pos = pos, Dx = hx, Dy = hy } };
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p != null)
@@ -271,8 +339,8 @@ namespace DarkwoodMP.Combat
             }
             var world = wg.getGrid("World");
             bool away = world != null && world != current;
-            // The other grids, each with the players in it: the world's (only while we're away), and the locations
-            // run for joiners.
+            // The other grids, each with the players in it: the world's (only
+            // while we're away), and the locations run for joiners.
             var others = new Dictionary<WorldGrid.Grid, List<Centre>>();
             if (away)
             {
@@ -308,7 +376,8 @@ namespace DarkwoodMP.Combat
                     {
                         count = w.Count;
                     }
-                    message = $"The host is away ({name}): the world is kept running around {count} other player(s)";
+                    message =
+                        $"The host is away ({name}): the world is kept running around {count} other player(s)";
                 }
                 log.LogInfo(message);
             }
@@ -319,8 +388,12 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>Refresh a grid, stopping the pass still running on it first.</summary>
-        private static void Run(WorldGrid wg, WorldGrid.Grid g, List<Centre> centres, bool instant, bool force)
+        /// <summary>
+        /// Refresh a grid, stopping the pass still running on it first.
+        /// </summary>
+        private static void Run(
+            WorldGrid wg, WorldGrid.Grid g, List<Centre> centres, bool instant,
+            bool force)
         {
             if (_running.TryGetValue(g, out var old))
             {
@@ -336,20 +409,26 @@ namespace DarkwoodMP.Combat
             }
             else
             {
-                _running[g] = wg.StartCoroutine(RefreshSpread(g, centres, force));
+                _running[g] =
+                    wg.StartCoroutine(RefreshSpread(g, centres, force));
             }
         }
 
         internal static void Distances(out int dx, out int dy)
         {
-            float m = Mathf.Max(Core.ResolutionWidthModifier, Core.ResolutionHeightModifier);
+            float m = Mathf.Max(
+                Core.ResolutionWidthModifier, Core.ResolutionHeightModifier);
             float zoom = Singleton<Controller>.Instance.cameraZoom;
             dx = (int)((Screen.width + 500f * m) / zoom);
             dy = (int)((Screen.height + 500f * m) / zoom);
         }
 
-        /// <summary>The grid a player is in: their separate location's, the world's, or none (away in a place the host doesn't run).</summary>
-        private static WorldGrid.Grid GridOf(WorldGrid wg, WorldGrid.Grid world, NetPlayerProxy p)
+        /// <summary>
+        /// The grid a player is in: their separate location's, the world's, or
+        /// none (away in a place the host doesn't run).
+        /// </summary>
+        private static WorldGrid.Grid GridOf(
+            WorldGrid wg, WorldGrid.Grid world, NetPlayerProxy p)
         {
             if (p.InLocation != null)
             {
@@ -362,7 +441,10 @@ namespace DarkwoodMP.Combat
             return world;
         }
 
-        /// <summary>Another player's centre, with the rect their own game keeps running (ViewRects).</summary>
+        /// <summary>
+        /// Another player's centre, with the rect their own game keeps running
+        /// (ViewRects).
+        /// </summary>
         private static Centre Of(NetPlayerProxy p)
         {
             ViewRects.For(p.Owner, out int dx, out int dy);
@@ -373,7 +455,8 @@ namespace DarkwoodMP.Combat
         {
             foreach (var c in centres)
             {
-                if (Mathf.Abs(c.Pos.x - node.x) <= c.Dx && Mathf.Abs(c.Pos.z - node.y) <= c.Dy)
+                if (Mathf.Abs(c.Pos.x - node.x) <= c.Dx
+                    && Mathf.Abs(c.Pos.z - node.y) <= c.Dy)
                 {
                     return true;
                 }
@@ -381,7 +464,8 @@ namespace DarkwoodMP.Combat
             return false;
         }
 
-        private static void Refresh(WorldGrid.Grid g, List<Centre> centres, bool force)
+        private static void Refresh(
+            WorldGrid.Grid g, List<Centre> centres, bool force)
         {
             foreach (var n in g.nodes)
             {
@@ -399,11 +483,14 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        // As the game's refreshNodes: enter one node a frame, so showing a region doesn't stall a frame. The nodes to
-        // enter go first and the ones to leave after: a location (a large cullable) spans several nodes and is left
-        // when none of them is entered, so leaving its far node before entering its near one would switch it off and
-        // on again (its exit and enter events, its characters sent home).
-        private static IEnumerator RefreshSpread(WorldGrid.Grid g, List<Centre> centres, bool force)
+        // As the game's refreshNodes: enter one node a frame, so showing a
+        // region doesn't stall a frame. The nodes to enter go first and the
+        // ones to leave after: a location (a large cullable) spans several
+        // nodes and is left when none of them is entered, so leaving its far
+        // node before entering its near one would switch it off and on again
+        // (its exit and enter events, its characters sent home).
+        private static IEnumerator RefreshSpread(
+            WorldGrid.Grid g, List<Centre> centres, bool force)
         {
             var nodes = g.nodes;
             var leave = new List<WorldGrid.Node>();
@@ -432,7 +519,10 @@ namespace DarkwoodMP.Combat
 
 namespace DarkwoodMP.Combat
 {
-    /// <summary>Client: its own enemies never start; the host's are driven by the host (see NetEnemies).</summary>
+    /// <summary>
+    /// Client: its own enemies never start; the host's are driven by the host
+    /// (see NetEnemies).
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.Start))]
     public static class ClientFreezeCharacterPatch
     {
@@ -441,33 +531,42 @@ namespace DarkwoodMP.Combat
 
         private static bool Prefix(Character __instance)
         {
-            if (Starting || !NetEnemies.ClientMode || !NetEnemies.Eligible(__instance) || NetEnemies.LocalOnly(__instance))
+            if (Starting || !NetEnemies.ClientMode
+                || !NetEnemies.Eligible(__instance)
+                || NetEnemies.LocalOnly(__instance))
             {
                 return true;
             }
-            bool puppet = NetEnemies.Instance != null && NetEnemies.Instance.IsPuppet(__instance, out _);
+            bool puppet = NetEnemies.Instance != null
+                && NetEnemies.Instance.IsPuppet(__instance, out _);
             NetEnemies.Freeze(__instance, hide: !puppet);
             return false;
         }
     }
 
     /// <summary>
-    /// Client: a frozen character stays frozen when the game switches its area on again (Location.activateCharacters
-    /// as a separate location is entered, a culling node shown: Character.enableComponents(true) would turn its AI,
-    /// pathfinding and animator back on and start its idle sound). NetEnemies.Thaw unfreezes the ones that are ours.
+    /// Client: a frozen character stays frozen when the game switches its area
+    /// on again (Location.activateCharacters as a separate location is entered,
+    /// a culling node shown: Character.enableComponents(true) would turn its
+    /// AI, pathfinding and animator back on and start its idle sound).
+    /// NetEnemies.Thaw unfreezes the ones that are ours.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.enableComponents))]
     public static class ClientFrozenStaysPatch
     {
         private static bool Prefix(Character __instance, bool enable)
         {
-            if (!enable || !NetEnemies.ClientMode || !NetEnemies.Frozen.Contains(__instance))
+            if (!enable || !NetEnemies.ClientMode
+                || !NetEnemies.Frozen.Contains(__instance))
             {
                 return true;
             }
-            // A copy of the host's enemy plays the host's clips on its sprite animator, which enableComponents(false)
-            // (Location.activateCharacters as its area was left) switched off: that one is switched back on.
-            if (NetEnemies.Instance != null && NetEnemies.Instance.IsPuppet(__instance, out _))
+            // A copy of the host's enemy plays the host's clips on its sprite
+            // animator, which enableComponents(false)
+            // (Location.activateCharacters as its area was left) switched off:
+            // that one is switched back on.
+            if (NetEnemies.Instance != null
+                && NetEnemies.Instance.IsPuppet(__instance, out _))
             {
                 var a = __instance.animator;
                 if (a != null)
@@ -480,16 +579,21 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Client: a hidden character of ours (NetEnemies.Hidden) starts no loop. Switching its GameObject on again (its
-    /// culling node entered, Location.activateCharacters) runs CharacterSounds.OnEnable, which starts its idle loop
-    /// before anything else of ours runs; stopping a loop ("") still works.
+    /// Client: a hidden character of ours (NetEnemies.Hidden) starts no loop.
+    /// Switching its GameObject on again (its culling node entered,
+    /// Location.activateCharacters) runs CharacterSounds.OnEnable, which starts
+    /// its idle loop before anything else of ours runs; stopping a loop ("")
+    /// still works.
     /// </summary>
-    [HarmonyPatch(typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop), new[] { typeof(string), typeof(bool) })]
+    [HarmonyPatch(
+        typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop),
+        new[] { typeof(string), typeof(bool) })]
     public static class ClientHiddenSilentPatch
     {
         private static bool Prefix(CharacterSounds __instance, string loopName)
         {
-            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0 || !NetEnemies.ClientMode)
+            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0
+                || !NetEnemies.ClientMode)
             {
                 return true;
             }
@@ -499,32 +603,42 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Client: a location's spawn points make no characters of our own where the host runs the world. The host spawns
-    /// the location's characters as a player comes near and sends them (NetEnemies.OnSpawn); ours would only be frozen,
-    /// hidden copies that live on beside them (a dog camp's dogs barking after the host's had been killed). A dream, or
-    /// a separate location only we are in (NetEnemies.LocalOnly), spawns its own as in single player.
+    /// Client: a location's spawn points make no characters of our own where
+    /// the host runs the world. The host spawns the location's characters as a
+    /// player comes near and sends them (NetEnemies.OnSpawn); ours would only
+    /// be frozen, hidden copies that live on beside them (a dog camp's dogs
+    /// barking after the host's had been killed). A dream, or a separate
+    /// location only we are in (NetEnemies.LocalOnly), spawns its own as in
+    /// single player.
     /// </summary>
-    [HarmonyPatch(typeof(CharacterSpawnPoint), nameof(CharacterSpawnPoint.actuallySpawn))]
+    [HarmonyPatch(
+        typeof(CharacterSpawnPoint), nameof(CharacterSpawnPoint.actuallySpawn))]
     public static class ClientNoOwnSpawnsPatch
     {
         private static bool Prefix(CharacterSpawnPoint __instance)
         {
-            if (!NetEnemies.ClientMode || NetEnemies.LocalOnly(__instance.gameObject))
+            if (!NetEnemies.ClientMode
+                || NetEnemies.LocalOnly(__instance.gameObject))
             {
                 return true;
             }
-            Plugin.Log.LogInfo($"[enemy] {__instance.type} at {__instance.transform.position}: not spawned here, the host's comes from the host");
+            Plugin.Log.LogInfo(
+                $"[enemy] {__instance.type} at {__instance.transform.position}: not spawned here, the host's comes from the host");
             return false;
         }
     }
 
     /// <summary>
-    /// Host: a corpse lying outside its own location isn't switched off as that location is left. Location.activateCharacters(false)
-    /// switches off every dead character in its list; a living one that chased our player out is disconnected first, but in
-    /// co-op the location stays entered while any player is near it (SharedCullingPatch), so a savage can chase someone
-    /// far out of it, die there still connected, and vanish from beside the host once everyone has left the location
-    /// (clients kept showing it). Such a corpse is let go of the location, as the game does with a character that left
-    /// it (disconnectFromLocation), and culled by the world's grid like any other object from then on.
+    /// Host: a corpse lying outside its own location isn't switched off as that
+    /// location is left. Location.activateCharacters(false) switches off every
+    /// dead character in its list; a living one that chased our player out is
+    /// disconnected first, but in co-op the location stays entered while any
+    /// player is near it (SharedCullingPatch), so a savage can chase someone
+    /// far out of it, die there still connected, and vanish from beside the
+    /// host once everyone has left the location (clients kept showing it). Such
+    /// a corpse is let go of the location, as the game does with a character
+    /// that left it (disconnectFromLocation), and culled by the world's grid
+    /// like any other object from then on.
     /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.activateCharacters))]
     public static class HostCorpsesOutsideLocationPatch
@@ -532,7 +646,8 @@ namespace DarkwoodMP.Combat
         private static void Prefix(Location __instance, bool active)
         {
             var s = Net.Session.Instance;
-            if (active || s == null || !s.IsHost || !s.Active || __instance.isOutsideLocation || SharedCullingPatch.HostAway)
+            if (active || s == null || !s.IsHost || !s.Active
+                || __instance.isOutsideLocation || SharedCullingPatch.HostAway)
             {
                 return;
             }
@@ -540,7 +655,9 @@ namespace DarkwoodMP.Combat
             for (int i = list.Count - 1; i >= 0; i--)
             {
                 var c = list[i];
-                if (c == null || c.alive || c.dummy || c.npc != null || Core.withinLocation(c.transform.position, 0f, __instance))
+                if (c == null || c.alive || c.dummy || c.npc != null
+                    || Core.withinLocation(
+                        c.transform.position, 0f, __instance))
                 {
                     continue;
                 }
@@ -555,17 +672,22 @@ namespace DarkwoodMP.Combat
                         co = c.gameObject.AddComponent<CullableObject>();
                     }
                     co.registerMe();
-                    Plugin.Log.LogInfo($"[enemy] {c.name}'s corpse at {c.transform.position} lies outside {Core.getTrueLocationName(__instance.name)}: kept as that location is left");
+                    Plugin.Log.LogInfo(
+                        $"[enemy] {c.name}'s corpse at {c.transform.position} lies outside {Core.getTrueLocationName(__instance.name)}: kept as that location is left");
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't keep {c.name}'s corpse out of {__instance.name}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't keep {c.name}'s corpse out of {__instance.name}: {e.Message}");
                 }
             }
         }
     }
 
-    /// <summary>Client: copies of the host's dead enemies made from their prefab are switched off and on with their location (NetEnemies.LocationCharacters).</summary>
+    /// <summary>
+    /// Client: copies of the host's dead enemies made from their prefab are
+    /// switched off and on with their location (NetEnemies.LocationCharacters).
+    /// </summary>
     [HarmonyPatch(typeof(Location), nameof(Location.activateCharacters))]
     public static class ClientCorpsesWithLocationPatch
     {
@@ -582,13 +704,28 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Client: damage to a host's enemy is the host's to apply.</summary>
+    /// <summary>
+    /// Client: damage to a host's enemy is the host's to apply.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.getHit),
-        new[] { typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
+        new[]
+        {
+            typeof(float),
+            typeof(Transform),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool)
+        })]
     public static class ClientForwardHitPatch
     {
         [HarmonyPriority(Priority.First)]
-        private static bool Prefix(Character __instance, float Damage, Transform attackerTransform, bool canCutInHalf, bool byPlayer, bool canInterrupt, bool normalHit)
+        private static bool Prefix(
+            Character __instance, float Damage, Transform attackerTransform,
+            bool canCutInHalf, bool byPlayer, bool canInterrupt, bool normalHit)
         {
             var ne = NetEnemies.Instance;
             if (ne == null || !NetEnemies.ClientMode)
@@ -601,45 +738,63 @@ namespace DarkwoodMP.Combat
                 {
                     return false; // a frozen one isn't really there
                 }
-                // A friendly NPC our player hits: the host's copy takes it, and turns on us there.
-                return !HostileNpcs.ClientHit(__instance, Damage, attackerTransform, canCutInHalf, byPlayer, canInterrupt, normalHit);
+                // A friendly NPC our player hits: the host's copy takes it, and
+                // turns on us there.
+                return !HostileNpcs.ClientHit(
+                    __instance, Damage, attackerTransform, canCutInHalf,
+                    byPlayer, canInterrupt, normalHit);
             }
-            // A flame of no damage can still set it alight (its burn goes with the hit).
-            if (Damage <= 0f && (NetEnemies.HitEffects == null || NetEnemies.HitEffects.Count == 0))
+            // A flame of no damage can still set it alight (its burn goes with
+            // the hit).
+            if (Damage <= 0f
+                && (NetEnemies.HitEffects == null
+                    || NetEnemies.HitEffects.Count == 0))
             {
                 return false;
             }
-            // Something thrown (its impact, explosion or the fire it left) hits the enemy in the host's copy of the throw.
+            // Something thrown (its impact, explosion or the fire it left) hits
+            // the enemy in the host's copy of the throw.
             if (World.ThrownHits.Now())
             {
                 return false;
             }
-            // Of flames, only our own weapon's are ours to send (Flame calls every hit byPlayer); any other fire burns on the host.
+            // Of flames, only our own weapon's are ours to send (Flame calls
+            // every hit byPlayer); any other fire burns on the host.
             var flame = World.ThrownHits.CurrentFlame;
             if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame))
             {
                 return false;
             }
-            // Only what our own player does to it is ours to send. Anything else here (a trap, fire, an explosion)
-            // happened on the host too, where it hurt the enemy already.
-            bool fromPlayer = byPlayer || (attackerTransform != null && attackerTransform.GetComponent<Player>() != null);
+            // Only what our own player does to it is ours to send. Anything
+            // else here (a trap, fire, an explosion) happened on the host too,
+            // where it hurt the enemy already.
+            bool fromPlayer = byPlayer
+                || (attackerTransform != null
+                    && attackerTransform.GetComponent<Player>() != null);
             if (!fromPlayer)
             {
                 return false;
             }
-            ne.ClientHit(id, Damage, canCutInHalf, fromPlayer, canInterrupt, normalHit, NetEnemies.HitEffects);
+            ne.ClientHit(
+                id, Damage, canCutInHalf, fromPlayer, canInterrupt, normalHit,
+                NetEnemies.HitEffects);
             return false;
         }
     }
 
-    /// <summary>Host: sounds the host's enemies make are played on the clients that see them.</summary>
+    /// <summary>
+    /// Host: sounds the host's enemies make are played on the clients that see
+    /// them.
+    /// </summary>
     [HarmonyPatch(typeof(AudioController), "_PlayAsSound")]
     public static class HostEnemySoundPatch
     {
-        private static void Postfix(string audioID, float volume, Transform parentObj)
+        private static void Postfix(
+            string audioID, float volume, Transform parentObj)
         {
             var s = Net.Session.Instance;
-            if (parentObj == null || s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null)
+            if (parentObj == null || s == null || !s.IsHost
+                || s.Peers.Count == 0 || NetEnemies.Instance == null)
             {
                 return;
             }
@@ -648,23 +803,30 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Host: an enemy's loop that stops without another taking its place (CharacterSounds.playIdleLoop with no loop:
-    /// a dog's aggressive loop is none, so its defensive one stops as it starts chasing) plays nothing, so
-    /// HostEnemySoundPatch doesn't see it: the clients are sent an empty EnemySound, and their copy's loop stops too.
+    /// Host: an enemy's loop that stops without another taking its place
+    /// (CharacterSounds.playIdleLoop with no loop: a dog's aggressive loop is
+    /// none, so its defensive one stops as it starts chasing) plays nothing, so
+    /// HostEnemySoundPatch doesn't see it: the clients are sent an empty
+    /// EnemySound, and their copy's loop stops too.
     /// </summary>
-    [HarmonyPatch(typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop))]
+    [HarmonyPatch(
+        typeof(CharacterSounds), nameof(CharacterSounds.playIdleLoop))]
     public static class HostLoopStopPatch
     {
-        private static void Prefix(CharacterSounds __instance, out bool __state) => __state = __instance.idleAudioObject != null;
+        private static void Prefix(CharacterSounds __instance, out bool __state) =>
+            __state = __instance.idleAudioObject != null;
 
-        private static void Postfix(CharacterSounds __instance, string loopName, bool __state)
+        private static void Postfix(
+            CharacterSounds __instance, string loopName, bool __state)
         {
-            if (!__state || !string.IsNullOrEmpty(loopName) || __instance.idleAudioObject != null)
+            if (!__state || !string.IsNullOrEmpty(loopName)
+                || __instance.idleAudioObject != null)
             {
                 return;
             }
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0 || NetEnemies.Instance == null)
+            if (s == null || !s.IsHost || s.Peers.Count == 0
+                || NetEnemies.Instance == null)
             {
                 return;
             }
@@ -676,14 +838,18 @@ namespace DarkwoodMP.Combat
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// Character.alertInArea is how the game makes noise enemies hear. Raised from the Player's own code (steps,
-    /// running, shots), it's that player's noise: on the host it's threat for them; on a client it's also sent to
-    /// the host, which raises it there for that player's proxy, so the host's enemies hear remote players too.
+    /// Character.alertInArea is how the game makes noise enemies hear. Raised
+    /// from the Player's own code (steps, running, shots), it's that player's
+    /// noise: on the host it's threat for them; on a client it's also sent to
+    /// the host, which raises it there for that player's proxy, so the host's
+    /// enemies hear remote players too.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.alertInArea))]
     public static class PlayerNoisePatch
     {
-        private static void Prefix(Vector3 _pos, float range, bool dangerousSound, float volume, bool gunshot, out CharBase __state)
+        private static void Prefix(
+            Vector3 _pos, float range, bool dangerousSound, float volume,
+            bool gunshot, out CharBase __state)
         {
             __state = Threat.NoiseSource;
             if (Threat.NoiseSource != null)
@@ -716,9 +882,12 @@ namespace DarkwoodMP.Combat
             Threat.NoiseSource = Player.Instance;
         }
 
-        // A Finalizer rather than a Postfix: it runs when a listener's heardSound throws too, which would otherwise
-        // leave NoiseSource set and every later noise counted as this player's (and a client's never sent).
-        private static System.Exception Finalizer(System.Exception __exception, CharBase __state)
+        // A Finalizer rather than a Postfix: it runs when a listener's
+        // heardSound throws too, which would otherwise leave NoiseSource set
+        // and every later noise counted as this player's (and a client's never
+        // sent).
+        private static System.Exception Finalizer(
+            System.Exception __exception, CharBase __state)
         {
             Threat.NoiseSource = __state;
             return __exception;
@@ -739,22 +908,28 @@ namespace DarkwoodMP.Combat
                         t = method.DeclaringType;
                     }
                 }
-                if (t == null || t == typeof(PlayerNoisePatch) || t == typeof(Character))
+                if (t == null || t == typeof(PlayerNoisePatch)
+                    || t == typeof(Character))
                 {
                     continue;
                 }
-                return t == typeof(Player) || (t.DeclaringType == typeof(Player)); // Player's methods, or its lambdas/iterators
+                // Player's methods, or its lambdas/iterators
+                return t == typeof(Player)
+                    || (t.DeclaringType == typeof(Player));
             }
             return false;
         }
 
         /// <summary>
-        /// Above zero inside the game's code that makes noise only for this game's own player (PlayerNoiseSourcePatch):
-        /// those methods are patched too, so their stack frames can't be told apart by type.
+        /// Above zero inside the game's code that makes noise only for this
+        /// game's own player (PlayerNoiseSourcePatch): those methods are
+        /// patched too, so their stack frames can't be told apart by type.
         /// </summary>
         public static int OwnNoise;
 
-        /// <summary>Host: a client's character made noise; raise it here, as theirs.</summary>
+        /// <summary>
+        /// Host: a client's character made noise; raise it here, as theirs.
+        /// </summary>
         public static void OnRemoteNoise(ulong from, Net.PacketReader r)
         {
             var s = Net.Session.Instance;
@@ -766,7 +941,8 @@ namespace DarkwoodMP.Combat
             float range = Mathf.Clamp(r.R.ReadSingle(), 0f, 2000f);
             float volume = Mathf.Clamp(r.R.ReadSingle(), 0f, 5f);
             byte f = r.R.ReadByte();
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null)
+            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
+                || proxy == null)
             {
                 return;
             }
@@ -778,7 +954,8 @@ namespace DarkwoodMP.Combat
             Threat.NoiseSource = proxy;
             try
             {
-                Character.alertInArea(pos, range, (f & 1) != 0, volume, (f & 2) != 0);
+                Character.alertInArea(
+                    pos, range, (f & 1) != 0, volume, (f & 2) != 0);
             }
             finally
             {
@@ -788,20 +965,27 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Noise the game makes only for its own player, outside Player's code: a door the player opens or closes
-    /// (Door alerts only with a Player as the opener), the player's melee hit on a door, window or barricade
-    /// (MeleeSensor alerts only for type player), and furniture the player pushes or drags (ItemSounds checks
-    /// Player.Instance). Counted as the player's noise; on a client it's sent to the host like their steps.
+    /// Noise the game makes only for its own player, outside Player's code: a
+    /// door the player opens or closes (Door alerts only with a Player as the
+    /// opener), the player's melee hit on a door, window or barricade
+    /// (MeleeSensor alerts only for type player), and furniture the player
+    /// pushes or drags (ItemSounds checks Player.Instance). Counted as the
+    /// player's noise; on a client it's sent to the host like their steps.
     /// </summary>
     [HarmonyPatch]
     static class PlayerNoiseSourcePatch
     {
         static IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(Door), nameof(Door.open), new[] { typeof(Vector3), typeof(Transform), typeof(float) });
-            yield return AccessTools.Method(typeof(Door), nameof(Door.close), new[] { typeof(Transform) });
-            yield return AccessTools.Method(typeof(MeleeSensor), "OnTriggerEnter");
-            yield return AccessTools.Method(typeof(ItemSounds), nameof(ItemSounds.alertCharactersInArea));
+            yield return AccessTools.Method(
+                typeof(Door), nameof(Door.open),
+                new[] { typeof(Vector3), typeof(Transform), typeof(float) });
+            yield return AccessTools.Method(
+                typeof(Door), nameof(Door.close), new[] { typeof(Transform) });
+            yield return AccessTools.Method(
+                typeof(MeleeSensor), "OnTriggerEnter");
+            yield return AccessTools.Method(
+                typeof(ItemSounds), nameof(ItemSounds.alertCharactersInArea));
         }
 
         static void Prefix(object __instance, object[] __args, out bool __state)
@@ -822,7 +1006,8 @@ namespace DarkwoodMP.Combat
                         {
                             index = 1;
                         }
-                        __state = __args[index] is Transform t && t != null && t.GetComponent<Player>() != null;
+                        __state = __args[index] is Transform t && t != null
+                            && t.GetComponent<Player>() != null;
                     }
                     else
                     {
@@ -842,7 +1027,8 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        static System.Exception Finalizer(System.Exception __exception, bool __state)
+        static System.Exception Finalizer(
+            System.Exception __exception, bool __state)
         {
             if (__state)
             {
@@ -852,24 +1038,31 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Client: frozen and host-driven characters don't hear anything here.</summary>
+    /// <summary>
+    /// Client: frozen and host-driven characters don't hear anything here.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.heardSound))]
     public static class ClientDeafPatch
     {
         [HarmonyPriority(Priority.First)]
-        private static bool Prefix(Character __instance) => !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+        private static bool Prefix(Character __instance) =>
+            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
     }
 }
 
 namespace DarkwoodMP.Combat
 {
-    /// <summary>Client: note the weapon's effects while our player's melee hit lands, to send them with it.</summary>
+    /// <summary>
+    /// Client: note the weapon's effects while our player's melee hit lands, to
+    /// send them with it.
+    /// </summary>
     [HarmonyPatch(typeof(MeleeSensor), "OnTriggerEnter")]
     static class ClientHitEffectsPatch
     {
         static void Prefix(MeleeSensor __instance)
         {
-            if (NetEnemies.ClientMode && __instance.type == MeleeSensor.MeleeSensorType.player)
+            if (NetEnemies.ClientMode
+                && __instance.type == MeleeSensor.MeleeSensorType.player)
             {
                 NetEnemies.HitEffects = __instance.effects;
             }
@@ -888,15 +1081,18 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Client: effects don't run on the host's enemies here; the host runs them (they came with the hit). Nor do a
-    /// weapon's effects on a friendly NPC whose hit just went to the host (HostileNpcs.EffectsForwarded).
+    /// Client: effects don't run on the host's enemies here; the host runs them
+    /// (they came with the hit). Nor do a weapon's effects on a friendly NPC
+    /// whose hit just went to the host (HostileNpcs.EffectsForwarded).
     /// </summary>
     [HarmonyPatch]
     static class ClientNoPuppetEffectsPatch
     {
-        // Every overload: weapons use the InvItemEffect one, fire and others the ones taking an effect type.
+        // Every overload: weapons use the InvItemEffect one, fire and others
+        // the ones taking an effect type.
         static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
-            AccessTools.GetDeclaredMethods(typeof(CharacterEffects)).FindAll(m => m.Name == nameof(CharacterEffects.activate));
+            AccessTools.GetDeclaredMethods(typeof(CharacterEffects)).FindAll(
+                m => m.Name == nameof(CharacterEffects.activate));
 
         static bool Prefix(CharacterEffects __instance)
         {
@@ -905,14 +1101,20 @@ namespace DarkwoodMP.Combat
                 return true;
             }
             var c = __instance.GetComponent<Character>();
-            return c == null || (!NetEnemies.Instance.IsPuppet(c, out _) && !NetEnemies.Frozen.Contains(c) && !HostileNpcs.EffectsForwarded(c));
+            return c == null
+                || (!NetEnemies.Instance.IsPuppet(c, out _)
+                    && !NetEnemies.Frozen.Contains(c)
+                    && !HostileNpcs.EffectsForwarded(c));
         }
     }
 }
 
 namespace DarkwoodMP.Combat
 {
-    /// <summary>"Attack the player" (scripted attacks, spawns that come for the player) means the player with the most threat.</summary>
+    /// <summary>
+    /// "Attack the player" (scripted attacks, spawns that come for the player)
+    /// means the player with the most threat.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.attackPlayer))]
     static class AttackPlayerThreatPatch
     {
@@ -922,7 +1124,8 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
-            // An NPC a joiner's event sends after "the player" (a dialogue's outcome, run here for them) goes for them.
+            // An NPC a joiner's event sends after "the player" (a dialogue's
+            // outcome, run here for them) goes for them.
             NetPlayerProxy requester = null;
             if (__instance.npc != null)
             {
@@ -941,101 +1144,148 @@ namespace DarkwoodMP.Combat
             JoinerAi.GoFor(__instance, best.transform);
             if (Threat.Debug)
             {
-                Plugin.Log.LogInfo($"[threat] {__instance.name} sent after the player: goes for {((NetPlayerProxy)best).OwnerName}");
+                Plugin.Log.LogInfo(
+                    $"[threat] {__instance.name} sent after the player: goes for {((NetPlayerProxy)best).OwnerName}");
             }
             return false;
         }
     }
 
     /// <summary>
-    /// Enemies that pursue the player constantly aim at Player.Instance.transform in their sight check. With others
-    /// in the world, that's the player they have the most threat for: the transpiler swaps exactly that
-    /// (Player.Instance followed by .transform) for Threat.PursuitTarget(this). The check's other uses of the
-    /// host's player (its wards) are about the host's player and stay.
+    /// Enemies that pursue the player constantly aim at
+    /// Player.Instance.transform in their sight check. With others in the
+    /// world, that's the player they have the most threat for: the transpiler
+    /// swaps exactly that (Player.Instance followed by .transform) for
+    /// Threat.PursuitTarget(this). The check's other uses of the host's player
+    /// (its wards) are about the host's player and stay.
     /// </summary>
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
     static class ThreatPursuitTranspiler
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            JoinerAi.Swap(instructions, JoinerAi.HostThen(AccessTools.PropertyGetter(typeof(Component), nameof(Component.transform))),
-                          AccessTools.Method(typeof(Threat), nameof(Threat.PursuitTarget)), "Character.canSeeEnemy",
-                          none: "ThreatPursuitTranspiler: no Player.Instance.transform in canSeeEnemy (game changed?)");
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            JoinerAi.Swap(
+                instructions, JoinerAi.HostThen(
+                    AccessTools.PropertyGetter(
+                        typeof(Component), nameof(Component.transform))),
+                AccessTools.Method(
+                    typeof(Threat), nameof(Threat.PursuitTarget)),
+                "Character.canSeeEnemy",
+                none: "ThreatPursuitTranspiler: no Player.Instance.transform "
+                    + "in canSeeEnemy (game changed?)");
     }
 }
 
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// The game's enemy code measures "the player" as Player.Instance._transform.position: on the host that's only
-    /// the host's own player. These transpilers swap exactly that read (Player.Instance, ._transform, .position)
-    /// for a helper that knows the other players, in the methods listed below. With nobody else in the world the
-    /// helpers return the host's player, so single player is unchanged.
+    /// The game's enemy code measures "the player" as
+    /// Player.Instance._transform.position: on the host that's only the host's
+    /// own player. These transpilers swap exactly that read (Player.Instance,
+    /// ._transform, .position) for a helper that knows the other players, in
+    /// the methods listed below. With nobody else in the world the helpers
+    /// return the host's player, so single player is unchanged.
     /// </summary>
     static class PlayerPositionTranspiler
     {
-        /// <param name="characterArg">The argument that holds the Character: 0 (`this`) in Character's own methods.</param>
-        public static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, System.Reflection.MethodInfo helper, string where, int characterArg = 0) =>
-            JoinerAi.Swap(instructions, HostPosition, helper, where, arg: characterArg,
-                          none: $"PlayerPositionTranspiler: no Player.Instance._transform.position in {where} (game changed?); it still uses the host's player");
+        /// <param name="characterArg">The argument that holds the Character: 0
+        /// (`this`) in Character's own methods.</param>
+        public static IEnumerable<CodeInstruction> Swap(
+            IEnumerable<CodeInstruction> instructions,
+            System.Reflection.MethodInfo helper, string where,
+            int characterArg = 0) =>
+            JoinerAi.Swap(
+                instructions, HostPosition, helper, where, arg: characterArg,
+                none: $"PlayerPositionTranspiler: no Player.Instance._transform.position in {where} (game changed?); it still uses the host's player");
 
-        private static readonly System.Reflection.FieldInfo PlayerTransform = AccessTools.Field(typeof(Player), "_transform");
-        private static readonly System.Reflection.MethodInfo GetPosition = AccessTools.PropertyGetter(typeof(Transform), nameof(Transform.position));
+        private static readonly System.Reflection.FieldInfo PlayerTransform =
+            AccessTools.Field(typeof(Player), "_transform");
+        private static readonly System.Reflection.MethodInfo GetPosition =
+            AccessTools.PropertyGetter(
+                typeof(Transform), nameof(Transform.position));
 
         /// <summary>Player.Instance._transform.position</summary>
         private static int HostPosition(List<CodeInstruction> l, int i)
         {
-            if (i + 2 < l.Count && l[i].Calls(JoinerAi.GetInstance) && l[i + 1].LoadsField(PlayerTransform) && l[i + 2].Calls(GetPosition))
+            if (i + 2 < l.Count && l[i].Calls(JoinerAi.GetInstance)
+                && l[i + 1].LoadsField(PlayerTransform)
+                && l[i + 2].Calls(GetPosition))
             {
                 return 3;
             }
             return 0;
         }
 
-        public static System.Reflection.MethodInfo Nearest => AccessTools.Method(typeof(Threat), nameof(Threat.NearestPlayerPos));
-        public static System.Reflection.MethodInfo Flee => AccessTools.Method(typeof(Threat), nameof(Threat.FleeFrom));
+        public static System.Reflection.MethodInfo Nearest =>
+            AccessTools.Method(typeof(Threat), nameof(Threat.NearestPlayerPos));
+        public static System.Reflection.MethodInfo Flee =>
+            AccessTools.Method(typeof(Threat), nameof(Threat.FleeFrom));
     }
 
     /// <summary>
-    /// Host: a spawned enemy (temporarySpawned, beyond 3500) or one on its way out (wantToDespawn, beyond 1500) is
-    /// removed by its distance to the nearest player, not to the host's, so one chasing a far-off joiner stays.
+    /// Host: a spawned enemy (temporarySpawned, beyond 3500) or one on its way
+    /// out (wantToDespawn, beyond 1500) is removed by its distance to the
+    /// nearest player, not to the host's, so one chasing a far-off joiner
+    /// stays.
     /// </summary>
     [HarmonyPatch(typeof(Character), "checkStuff")]
     static class DespawnByNearestPlayerPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(instructions, PlayerPositionTranspiler.Nearest, "Character.checkStuff");
-    }
-
-    /// <summary>Host: a stalker told to flee (stalkerRunaway_onAttack starts setToFlee) runs from the player it was chasing.</summary>
-    [HarmonyPatch(typeof(Character), "setToFlee")]
-    static class FleeFromTargetPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(instructions, PlayerPositionTranspiler.Flee, "Character.setToFlee");
-    }
-
-    /// <summary>Host: an enemy that runs away after an attack (runAwayAfterAttacking) runs from the player it attacked.</summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.attacking), MethodType.Setter)]
-    static class RunAwayAfterAttackPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(instructions, PlayerPositionTranspiler.Flee, "Character.attacking (setter)");
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            PlayerPositionTranspiler.Swap(
+                instructions, PlayerPositionTranspiler.Nearest,
+                "Character.checkStuff");
     }
 
     /// <summary>
-    /// Host: a scripted runAway activity with no target (Character.Activity.run: "run from the player") runs from
-    /// the player the character is after, or the nearest one, not always from the host's.
+    /// Host: a stalker told to flee (stalkerRunaway_onAttack starts setToFlee)
+    /// runs from the player it was chasing.
+    /// </summary>
+    [HarmonyPatch(typeof(Character), "setToFlee")]
+    static class FleeFromTargetPatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            PlayerPositionTranspiler.Swap(
+                instructions, PlayerPositionTranspiler.Flee,
+                "Character.setToFlee");
+    }
+
+    /// <summary>
+    /// Host: an enemy that runs away after an attack (runAwayAfterAttacking)
+    /// runs from the player it attacked.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Character), nameof(Character.attacking), MethodType.Setter)]
+    static class RunAwayAfterAttackPatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            PlayerPositionTranspiler.Swap(
+                instructions, PlayerPositionTranspiler.Flee,
+                "Character.attacking (setter)");
+    }
+
+    /// <summary>
+    /// Host: a scripted runAway activity with no target
+    /// (Character.Activity.run: "run from the player") runs from the player the
+    /// character is after, or the nearest one, not always from the host's.
     /// </summary>
     [HarmonyPatch(typeof(Character.Activity), nameof(Character.Activity.run))]
     static class RunAwayActivityPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(instructions, PlayerPositionTranspiler.Flee, "Character.Activity.run", characterArg: 1);
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            PlayerPositionTranspiler.Swap(
+                instructions, PlayerPositionTranspiler.Flee,
+                "Character.Activity.run", characterArg: 1);
     }
 
     /// <summary>
-    /// Host, with other players in the world: an escaping enemy runs from whichever player comes within 500 of it
-    /// (the game checks only the host's), and one on its way out runs from the player it was after or the
+    /// Host, with other players in the world: an escaping enemy runs from
+    /// whichever player comes within 500 of it (the game checks only the
+    /// host's), and one on its way out runs from the player it was after or the
     /// nearest. Otherwise the game's own method runs.
     /// </summary>
     [HarmonyPatch(typeof(Character), "checkIfBeingChased")]
@@ -1064,7 +1314,8 @@ namespace DarkwoodMP.Combat
                 return false;
             }
             Vector3 me = c.transform.position;
-            int n = Physics.OverlapSphereNonAlloc(me, 500f, _near, 2099200); // the game's radius and layers
+            // the game's radius and layers
+            int n = Physics.OverlapSphereNonAlloc(me, 500f, _near, 2099200);
             CharBase nearest = null;
             float best = float.MaxValue;
             for (int i = 0; i < n; i++)
@@ -1074,7 +1325,8 @@ namespace DarkwoodMP.Combat
                 {
                     cb = _near[i].GetComponent<CharBase>();
                 }
-                if (!Proxies.IsPlayer(cb) || (cb is NetPlayerProxy && !cb.alive))
+                if (!Proxies.IsPlayer(cb)
+                    || (cb is NetPlayerProxy && !cb.alive))
                 {
                     continue;
                 }
@@ -1093,17 +1345,23 @@ namespace DarkwoodMP.Combat
         }
     }
     /// <summary>
-    /// The game's own Character.cutMeInHalf (a chomper cut by a blade) destroys the upper half's Rigidbody but leaves
-    /// it active until its Cut_half animation ends, so Character.Update reads the destroyed body's position every frame
-    /// of that animation and throws (about 40 NullReferenceExceptions per cut, in the game without the mod too). The
-    /// exception only ended that frame's Update early; it's dropped for a character being cut in half.
+    /// The game's own Character.cutMeInHalf (a chomper cut by a blade) destroys
+    /// the upper half's Rigidbody but leaves it active until its Cut_half
+    /// animation ends, so Character.Update reads the destroyed body's position
+    /// every frame of that animation and throws (about 40
+    /// NullReferenceExceptions per cut, in the game without the mod too). The
+    /// exception only ended that frame's Update early; it's dropped for a
+    /// character being cut in half.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.Update))]
     static class CutInHalfUpdatePatch
     {
-        static System.Exception Finalizer(Character __instance, System.Exception __exception)
+        static System.Exception Finalizer(
+            Character __instance, System.Exception __exception)
         {
-            if (__exception is System.NullReferenceException && __instance != null && __instance.cuttingInHalf && __instance.GetComponent<Rigidbody>() == null)
+            if (__exception is System.NullReferenceException
+                && __instance != null && __instance.cuttingInHalf
+                && __instance.GetComponent<Rigidbody>() == null)
             {
                 return null;
             }

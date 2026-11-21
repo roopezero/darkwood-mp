@@ -11,22 +11,27 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for items used on the world: a trap placed the game's own way (Player.progressBarCompleted)
-    /// and the host's checks on what a client places, doors opened with a key (the host checks the journal), and
-    /// the porter whistle (the host calls the porter in every game). The list is tools/tests/map_scenario_items1.py.
+    /// Map test steps for items used on the world: a trap placed the game's own
+    /// way (Player.progressBarCompleted) and the host's checks on what a client
+    /// places, doors opened with a key (the host checks the journal), and the
+    /// porter whistle (the host calls the porter in every game). The list is
+    /// tools/tests/map_scenario_items1.py.
     /// </summary>
     public static class MapScenarioItems1
     {
         private static Player P => Player.Instance;
         private static Session S => Session.Instance;
-        private static readonly System.Reflection.MethodInfo ShowProxyItem = AccessTools.Method(typeof(Player), "showProxyItem");
+        private static readonly System.Reflection.MethodInfo ShowProxyItem =
+            AccessTools.Method(typeof(Player), "showProxyItem");
 
         public static void Register()
         {
             Add("trap-place-far", TrapPlaceFar, timeout: 30f);
             Add("place-forged", PlaceForged);
             Add("door-lock-key", DoorLockKey);
-            Add("door-key", DoorKey, timeout: 40f); // the walk back from trap-place-far is 1400 long, then up to 8 s for the refusal
+            // the walk back from trap-place-far is 1400 long, then up to 8 s
+            // for the refusal
+            Add("door-key", DoorKey, timeout: 40f);
             Add("door-locked", DoorLocked);
             Add("door-block", DoorBlock);
             Add("door-story-unblock", DoorStoryUnblock);
@@ -39,13 +44,17 @@ namespace DarkwoodMP.World
             Add("porter-forged", PorterForged);
         }
 
-        // ---- placing ------------------------------------------------------------------------------------------
+        // ---- placing --------------------------------------------------------
 
-        /// <summary>The item type whose placed prefab (InvItem.item) is named so ("beartrap"), or null.</summary>
+        /// <summary>
+        /// The item type whose placed prefab (InvItem.item) is named so
+        /// ("beartrap"), or null.
+        /// </summary>
         private static string PlaceableType(string prefab)
         {
             var db = Singleton<ItemsDatabase>.Instance;
-            foreach (var kv in db.itemsDict.OrderBy(k => k.Key, StringComparer.Ordinal))
+            foreach (var kv in db.itemsDict.OrderBy(
+                k => k.Key, StringComparer.Ordinal))
             {
                 GameObject gameObject = Resources.Load(kv.Value) as GameObject;
                 InvItem item = null;
@@ -53,7 +62,8 @@ namespace DarkwoodMP.World
                 {
                     item = gameObject.GetComponent<InvItem>();
                 }
-                if (item != null && item.canBePlaced && item.item != null && item.item.name == prefab)
+                if (item != null && item.canBePlaced && item.item != null
+                    && item.item.name == prefab)
                 {
                     return kv.Key;
                 }
@@ -61,14 +71,19 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>TYPE in a hotbar slot, that slot selected and in our hands (as MapScenarioIssues' "hold").</summary>
+        /// <summary>
+        /// TYPE in a hotbar slot, that slot selected and in our hands (as
+        /// MapScenarioIssues' "hold").
+        /// </summary>
         private static IEnumerator HoldItem(string type, Result r)
         {
             var p = P;
-            int slot = p.Hotbar.slots.FindIndex(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
+            int slot = p.Hotbar.slots.FindIndex(
+                s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
             if (slot < 0)
             {
-                slot = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
+                slot = p.Hotbar.slots.FindIndex(
+                    s => InvItemClass.isNull(s.invItem));
                 if (slot < 0)
                 {
                     slot = 0;
@@ -86,11 +101,14 @@ namespace DarkwoodMP.World
                 p.Hotbar.selectSlot(slot, noiseless: true, force: true);
             }
             float giveUp = Time.realtimeSinceStartup + 8f;
-            while ((p.switchingItem || InvItemClass.isNull(p.currentItem) || p.currentItem.type != type) && Time.realtimeSinceStartup < giveUp)
+            while ((p.switchingItem || InvItemClass.isNull(p.currentItem)
+                    || p.currentItem.type != type)
+                && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            if (InvItemClass.isNull(p.currentItem)
+                || p.currentItem.type != type)
             {
                 string holding;
                 if (InvItemClass.isNull(p.currentItem))
@@ -101,16 +119,20 @@ namespace DarkwoodMP.World
                 {
                     holding = p.currentItem.type;
                 }
-                r.Fail($"couldn't take {type} in our hands (holding {holding})");
+                r.Fail(
+                    $"couldn't take {type} in our hands (holding {holding})");
             }
         }
 
         /// <summary>
-        /// Our player places PREFAB at `at` the game's own way: the item in our hands, its proxy (Player.showProxyItem)
-        /// moved there, and Player.progressBarCompleted with placingItem, as the placing progress bar ends. made gets
-        /// what was placed and shared (a new ObjRef.Spawned entry), or null.
+        /// Our player places PREFAB at `at` the game's own way: the item in our
+        /// hands, its proxy (Player.showProxyItem) moved there, and
+        /// Player.progressBarCompleted with placingItem, as the placing
+        /// progress bar ends. made gets what was placed and shared (a new
+        /// ObjRef.Spawned entry), or null.
         /// </summary>
-        internal static IEnumerator PlaceReal(string prefab, Vector3 at, Result r, Action<GameObject> made)
+        internal static IEnumerator PlaceReal(
+            string prefab, Vector3 at, Result r, Action<GameObject> made)
         {
             string type = PlaceableType(prefab);
             if (type == null)
@@ -127,7 +149,8 @@ namespace DarkwoodMP.World
             var before = new HashSet<long>(ObjRef.Spawned.Keys);
             AsPlayer(() =>
             {
-                ShowProxyItem.Invoke(p, new object[] { p.currentItem.baseClass.item });
+                ShowProxyItem.Invoke(
+                    p, new object[] { p.currentItem.baseClass.item });
                 p.proxyItem.transform.localPosition = at;
                 p.placingItem = true;
                 try
@@ -139,7 +162,8 @@ namespace DarkwoodMP.World
                     p.placingItem = false;
                 }
             });
-            var id = ObjRef.Spawned.Keys.FirstOrDefault(k => !before.Contains(k));
+            var id =
+                ObjRef.Spawned.Keys.FirstOrDefault(k => !before.Contains(k));
             GameObject obj = null;
             if (id != 0 && ObjRef.Spawned.TryGetValue(id, out var go))
             {
@@ -149,8 +173,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "trap-place-far PREFAB" (client): place one the game's way 1500 from our player. The host refuses it (out
-        /// of reach): ours goes again and the item comes back.
+        /// "trap-place-far PREFAB" (client): place one the game's way 1500 from
+        /// our player. The host refuses it (out of reach): ours goes again and
+        /// the item comes back.
         /// </summary>
         private static IEnumerator TrapPlaceFar(string[] a, Result r)
         {
@@ -170,7 +195,8 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            int had = MapScenarioWorld.CarriedOf(type), refused = Authority.RolledBack;
+            int had = MapScenarioWorld.CarriedOf(type),
+                refused = Authority.RolledBack;
             var at = P.transform.position + new Vector3(1500f, 0f, 0f);
             GameObject go = null;
             yield return PlaceReal(prefab, at, r, g => go = g);
@@ -185,7 +211,8 @@ namespace DarkwoodMP.World
             }
             int after = MapScenarioWorld.CarriedOf(type);
             float giveUp = Time.realtimeSinceStartup + 8f;
-            while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
+            while (Authority.RolledBack == refused
+                && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
@@ -197,7 +224,8 @@ namespace DarkwoodMP.World
             {
                 ours = "removed";
             }
-            r.Info = $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours {ours}";
+            r.Info =
+                $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours {ours}";
             if (Authority.RolledBack == refused)
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");
@@ -213,9 +241,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "place-forged PREFAB DX DZ [--none]" (client): send the host a placed ObjSpawn our game didn't make (centre +
-        /// offset): one out of reach, or a prefab no player can place. --none: in reach, but our player carries nothing
-        /// that places it (all of it taken away, and our character sent, as placing does first). The host must refuse it.
+        /// "place-forged PREFAB DX DZ [--none]" (client): send the host a
+        /// placed ObjSpawn our game didn't make (centre + offset): one out of
+        /// reach, or a prefab no player can place. --none: in reach, but our
+        /// player carries nothing that places it (all of it taken away, and our
+        /// character sent, as placing does first). The host must refuse it.
         /// </summary>
         private static IEnumerator PlaceForged(string[] a, Result r)
         {
@@ -242,7 +272,8 @@ namespace DarkwoodMP.World
                     }
                     for (int i = 0; i < P.Hotbar.slots.Count; i++)
                     {
-                        if (!InvItemClass.isNull(P.Hotbar.slots[i].invItem) && P.Hotbar.slots[i].invItem.type == type)
+                        if (!InvItemClass.isNull(P.Hotbar.slots[i].invItem)
+                            && P.Hotbar.slots[i].invItem.type == type)
                         {
                             P.Hotbar.slots[i].removeItem();
                         }
@@ -264,7 +295,9 @@ namespace DarkwoodMP.World
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             at.y = P.transform.position.y;
             var w = S.Begin(MsgType.ObjSpawn);
-            w.W.Write(((long)UnityEngine.Random.Range(1, int.MaxValue) << 31) | 12345L);
+            w.W.Write(
+                ((long)UnityEngine.Random.Range(1, int.MaxValue) << 31)
+                    | 12345L);
             w.W.Write((byte)1);
             w.WriteStr(a[0]);
             w.Write(at);
@@ -306,15 +339,19 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: the host didn't refuse it");
             }
-            else if (a.Contains("--none") && (why == null || !why.Contains("carry")))
+            else if (a.Contains("--none")
+                && (why == null || !why.Contains("carry")))
             {
                 r.Fail($"{r.Info}: refused, but not for what we carry");
             }
         }
 
-        // ---- keys ---------------------------------------------------------------------------------------------
+        // ---- keys -----------------------------------------------------------
 
-        /// <summary>"door-lock-key N" (host): lock door N with a key our journal hasn't got (the first by name).</summary>
+        /// <summary>
+        /// "door-lock-key N" (host): lock door N with a key our journal hasn't
+        /// got (the first by name).
+        /// </summary>
         private static IEnumerator DoorLockKey(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
@@ -324,8 +361,10 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var j = Singleton<UI>.Instance.journal;
-            string key = Singleton<JournalDatabase>.Instance.keysDict.Keys.Where(k => !string.IsNullOrEmpty(k) && !j.keysDict.ContainsKey(k))
-                .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
+            string key =
+                Singleton<JournalDatabase>.Instance.keysDict.Keys.Where(
+                    k => !string.IsNullOrEmpty(k) && !j.keysDict.ContainsKey(k))
+                    .OrderBy(k => k, StringComparer.Ordinal).FirstOrDefault();
             if (key == null)
             {
                 r.Fail("no key our journal hasn't got");
@@ -339,7 +378,8 @@ namespace DarkwoodMP.World
             d.lockMe(key);
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
-            r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked} key {key}";
+            r.Info =
+                $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked} key {key}";
             if (l == null || !l.locked)
             {
                 r.Fail($"{r.Info}: not locked");
@@ -347,9 +387,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "door-key N [--forged]" (client): open door N's lock with its key, as the player does: the key picked up
-        /// (into the journal) and Locked.tryToOpenWithKey in the same frame. --forged: without the key, a key unlock
-        /// sent anyway (LockShare), which the host must refuse.
+        /// "door-key N [--forged]" (client): open door N's lock with its key,
+        /// as the player does: the key picked up (into the journal) and
+        /// Locked.tryToOpenWithKey in the same frame. --forged: without the
+        /// key, a key unlock sent anyway (LockShare), which the host must
+        /// refuse.
         /// </summary>
         private static IEnumerator DoorKey(string[] a, Result r)
         {
@@ -376,12 +418,14 @@ namespace DarkwoodMP.World
                 }
                 AsPlayer(() => LockShare.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
-                while (Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
+                while (Authority.RolledBack == refused
+                    && Time.realtimeSinceStartup < giveUp)
                 {
                     yield return null;
                 }
                 yield return new WaitForSeconds(0.5f);
-                r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: locked={l.locked}";
+                r.Info =
+                    $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: locked={l.locked}";
                 if (Authority.RolledBack == refused)
                 {
                     r.Fail($"{r.Info}: the host didn't refuse it");
@@ -392,11 +436,14 @@ namespace DarkwoodMP.World
                 }
                 yield break;
             }
-            j.keysDict[l.keyType] = new Journal.Key { type = l.keyType }; // as KeyReference.pickup
+            // as KeyReference.pickup
+            j.keysDict[l.keyType] = new Journal.Key { type = l.keyType };
             bool opened = false;
             AsPlayer(() => opened = l.tryToOpenWithKey());
-            yield return new WaitForSeconds(2f); // a refusal would lock it again
-            r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: opened={opened} locked={l.locked}";
+            // a refusal would lock it again
+            yield return new WaitForSeconds(2f);
+            r.Info =
+                $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: opened={opened} locked={l.locked}";
             if (!opened || l.locked)
             {
                 r.Fail($"{r.Info}: still locked");
@@ -407,7 +454,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"door-locked N yes|no": door N's lock as expected here.</summary>
+        /// <summary>
+        /// "door-locked N yes|no": door N's lock as expected here.
+        /// </summary>
         private static IEnumerator DoorLocked(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
@@ -418,7 +467,8 @@ namespace DarkwoodMP.World
             }
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
-            while ((l != null && l.locked) != want && Time.realtimeSinceStartup < giveUp)
+            while ((l != null && l.locked) != want
+                && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
@@ -428,7 +478,8 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
+                r.Info =
+                    $"{d.name} {MapScenarioWorld.Ref(d)} locked={l != null && l.locked}";
             }
             if ((l != null && l.locked) != want)
             {
@@ -441,11 +492,12 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- doors the story blocks ----------------------------------------------------------------------------
+        // ---- doors the story blocks -----------------------------------------
 
         /// <summary>
-        /// "door-block N": door N closed and blocked here, as a story door is in the save until the story clears it
-        /// (Piotrek's house). Only the field is set, so nothing is sent: run it in each game.
+        /// "door-block N": door N closed and blocked here, as a story door is
+        /// in the save until the story clears it (Piotrek's house). Only the
+        /// field is set, so nothing is sent: run it in each game.
         /// </summary>
         private static IEnumerator DoorBlock(string[] a, Result r)
         {
@@ -458,7 +510,8 @@ namespace DarkwoodMP.World
             var l = d.GetComponent<Locked>();
             if (d.destroyed || d.barricaded || (l != null && l.locked))
             {
-                r.Fail($"door {a[0]} ({d.name}) is broken, barricaded or locked");
+                r.Fail(
+                    $"door {a[0]} ({d.name}) is broken, barricaded or locked");
                 yield break;
             }
             if (d.opened)
@@ -467,7 +520,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.5f);
             }
             d.blocked = true;
-            r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked, open={d.opened}";
+            r.Info =
+                $"{d.name} {MapScenarioWorld.Ref(d)} blocked, open={d.opened}";
             if (d.opened)
             {
                 r.Fail($"{r.Info}: didn't close");
@@ -475,8 +529,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "door-story-unblock N" (host): the story clears door N's block the way a scripted event does (GameEvent
-        /// modifyDoor unblock, the host's step, as in an event set off by a death).
+        /// "door-story-unblock N" (host): the story clears door N's block the
+        /// way a scripted event does (GameEvent modifyDoor unblock, the host's
+        /// step, as in an event set off by a death).
         /// </summary>
         private static IEnumerator DoorStoryUnblock(string[] a, Result r)
         {
@@ -506,13 +561,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"door-blocked N yes|no": door N blocked here as expected (waiting up to 5 s).</summary>
+        /// <summary>
+        /// "door-blocked N yes|no": door N blocked here as expected (waiting up
+        /// to 5 s).
+        /// </summary>
         private static IEnumerator DoorBlocked(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
-            while (d != null && d.blocked != want && Time.realtimeSinceStartup < giveUp)
+            while (d != null && d.blocked != want
+                && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
@@ -522,7 +581,8 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
+                r.Info =
+                    $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
             }
             if (d == null || d.blocked != want)
             {
@@ -536,9 +596,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "door-use N": our player walks to door N and opens it as the player does (Player.openCloseDoor, which the
-        /// game reaches only for a door that isn't blocked: Player.itemDefaultAction). A client's open is a request,
-        /// and the step fails if the host refused it.
+        /// "door-use N": our player walks to door N and opens it as the player
+        /// does (Player.openCloseDoor, which the game reaches only for a door
+        /// that isn't blocked: Player.itemDefaultAction). A client's open is a
+        /// request, and the step fails if the host refused it.
         /// </summary>
         private static IEnumerator DoorUse(string[] a, Result r)
         {
@@ -551,7 +612,8 @@ namespace DarkwoodMP.World
             yield return Walk(d.transform.position);
             if (d.blocked)
             {
-                r.Fail($"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the player can't open it");
+                r.Fail(
+                    $"{d.name} {MapScenarioWorld.Ref(d)} is blocked here: the player can't open it");
                 yield break;
             }
             if (d.opened)
@@ -561,7 +623,8 @@ namespace DarkwoodMP.World
             }
             int refused = Authority.RolledBack;
             AsPlayer(() => P.openCloseDoor(d, false));
-            yield return new WaitForSeconds(2f); // a refusal would close it again
+            // a refusal would close it again
+            yield return new WaitForSeconds(2f);
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
             if (Authority.RolledBack != refused)
             {
@@ -573,13 +636,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"door-opened N yes|no": door N open here as expected (waiting up to 5 s).</summary>
+        /// <summary>
+        /// "door-opened N yes|no": door N open here as expected (waiting up to
+        /// 5 s).
+        /// </summary>
         private static IEnumerator DoorOpened(string[] a, Result r)
         {
             var d = MapScenarioWorld.Nth<Door>(a[0]);
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
-            while (d != null && d.opened != want && Time.realtimeSinceStartup < giveUp)
+            while (d != null && d.opened != want
+                && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
@@ -602,15 +669,26 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- the porter whistle -------------------------------------------------------------------------------
+        // ---- the porter whistle ---------------------------------------------
 
-        /// <summary>The nearest big location to the centre where the porter can come.</summary>
+        /// <summary>
+        /// The nearest big location to the centre where the porter can come.
+        /// </summary>
         private static Location PorterPlace() =>
-            Object.FindObjectsOfType<Location>().Where(l => l != null && l.porterPosition != null && !l.isSubLocation)
-                .OrderBy(l => StateDump.Flat(l.porterPosition.transform.position - Centre)).FirstOrDefault();
+            Object.FindObjectsOfType<Location>().Where(
+                l => l != null && l.porterPosition != null && !l.isSubLocation)
+                .OrderBy(
+                    l => StateDump.Flat(
+                        l.porterPosition.transform.position
+                            - Centre)).FirstOrDefault();
 
         private static bool PorterThere(Location loc) =>
-            loc.porter != null || Object.FindObjectsOfType<PorterSpawner>().Any(s => s != null && StateDump.Flat(s.transform.position - loc.porterPosition.transform.position) < 50f);
+            loc.porter != null
+                || Object.FindObjectsOfType<PorterSpawner>().Any(
+                    s => s != null
+                        && StateDump.Flat(
+                            s.transform.position
+                                - loc.porterPosition.transform.position) < 50f);
 
         private static string PorterInfo(Location loc)
         {
@@ -631,7 +709,10 @@ namespace DarkwoodMP.World
             return $"at {name}: porter {state}";
         }
 
-        /// <summary>"porter-ready" (host): daytime, the porter neither on the way nor there, so a whistle calls it.</summary>
+        /// <summary>
+        /// "porter-ready" (host): daytime, the porter neither on the way nor
+        /// there, so a whistle calls it.
+        /// </summary>
         private static IEnumerator PorterReady(string[] a, Result r)
         {
             var loc = PorterPlace();
@@ -655,14 +736,18 @@ namespace DarkwoodMP.World
                 loc.porter = null;
             }
             yield return new WaitForSeconds(1f);
-            r.Info = $"{loc.name} porter at {Fmt(loc.porterPosition.transform.position)}; day={Core.isDay()} killed={flags.isFlagTrue("porter_killed")}";
+            r.Info =
+                $"{loc.name} porter at {Fmt(loc.porterPosition.transform.position)}; day={Core.isDay()} killed={flags.isFlagTrue("porter_killed")}";
             if (!Core.isDay() || flags.isFlagTrue("porter_killed"))
             {
                 r.Fail($"{r.Info}: the porter can't come");
             }
         }
 
-        /// <summary>"whistle" (client): our player blows the porter whistle at the porter's place; the host calls it, here too.</summary>
+        /// <summary>
+        /// "whistle" (client): our player blows the porter whistle at the
+        /// porter's place; the host calls it, here too.
+        /// </summary>
         private static IEnumerator Whistle(string[] a, Result r)
         {
             var loc = PorterPlace();
@@ -696,7 +781,8 @@ namespace DarkwoodMP.World
             int refused = Authority.RolledBack;
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
-            while (!PorterThere(loc) && Authority.RolledBack == refused && Time.realtimeSinceStartup < giveUp)
+            while (!PorterThere(loc) && Authority.RolledBack == refused
+                && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
@@ -711,7 +797,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"porter-came": the porter (or its spawner, which waits until our player looks away) is at the place.</summary>
+        /// <summary>
+        /// "porter-came": the porter (or its spawner, which waits until our
+        /// player looks away) is at the place.
+        /// </summary>
         private static IEnumerator PorterCame(string[] a, Result r)
         {
             var loc = PorterPlace();
@@ -732,12 +821,20 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"porter-forged" (client): ask for the porter at another place for it, where our player isn't. Refused.</summary>
+        /// <summary>
+        /// "porter-forged" (client): ask for the porter at another place for
+        /// it, where our player isn't. Refused.
+        /// </summary>
         private static IEnumerator PorterForged(string[] a, Result r)
         {
             var near = PorterPlace();
-            var far = Object.FindObjectsOfType<Location>().Where(l => l != null && l.porterPosition != null && !l.isSubLocation && l != near)
-                .OrderByDescending(l => StateDump.Flat(l.porterPosition.transform.position - P.transform.position)).FirstOrDefault();
+            var far = Object.FindObjectsOfType<Location>().Where(
+                l => l != null && l.porterPosition != null && !l.isSubLocation
+                    && l != near)
+                .OrderByDescending(
+                    l => StateDump.Flat(
+                        l.porterPosition.transform.position
+                            - P.transform.position)).FirstOrDefault();
             if (far == null)
             {
                 r.Fail("only one place for the porter");
@@ -747,7 +844,8 @@ namespace DarkwoodMP.World
             w.Write(far.porterPosition.transform.position);
             bool? ok = null;
             string why = null;
-            Authority.Request(w, $"forged porter call at {far.name}", (o, reason, res) =>
+            Authority.Request(w, $"forged porter call at {far.name}",
+                (o, reason, res) =>
             {
                 ok = o;
                 why = reason;

@@ -11,40 +11,54 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// A JSON dump of the shared world as this game has it, for the two-game test (tools/run-test.sh map): the
-    /// host and the client each write one ("dump PATH" on the test control), and tools/tests/mapcompare.py
-    /// compares them. Every entry is keyed by its ObjRef string ("Saved:123", "Spawned:...", "Placed:..."), the
-    /// name both games use for it on the wire, so the same thing lines up in both dumps. Each also carries
-    /// "name" and "pos" (x, z rounded), which the comparer uses to pair Placed entries whose key moved a little.
+    /// A JSON dump of the shared world as this game has it, for the two-game
+    /// test (tools/run-test.sh map): the host and the client each write one
+    /// ("dump PATH" on the test control), and tools/tests/mapcompare.py
+    /// compares them. Every entry is keyed by its ObjRef string ("Saved:123",
+    /// "Spawned:...", "Placed:..."), the name both games use for it on the
+    /// wire, so the same thing lines up in both dumps. Each also carries "name"
+    /// and "pos" (x, z rounded), which the comparer uses to pair Placed entries
+    /// whose key moved a little.
     ///
-    /// The dump is a list of sections. To add one: <c>StateDump.AddSection("name", ctx => { ... })</c>, where the
-    /// function finds its objects (<c>ctx.Near(pos)</c> keeps to the test area) and adds them with
-    /// <c>var e = ctx.Add(gameObject); e["field"] = value;</c> (values: bool, int, long, float, string, a
-    /// <c>List&lt;object&gt;</c> or a <c>Dictionary&lt;string, object&gt;</c>), or <c>ctx.Set(key, entry)</c> for something
-    /// with no object. Floats are rounded where they're written: use <c>StateDump.R(x, step)</c>. Per-player things
-    /// that needn't match (what the local player holds) go under "local" (<c>AddLocal</c>), which the comparer
-    /// prints but doesn't compare.
+    /// The dump is a list of sections. To add one:
+    /// <c>StateDump.AddSection("name", ctx => { ... })</c>, where the function
+    /// finds its objects (<c>ctx.Near(pos)</c> keeps to the test area) and adds
+    /// them with <c>var e = ctx.Add(gameObject); e["field"] = value;</c>
+    /// (values: bool, int, long, float, string, a <c>List&lt;object&gt;</c> or
+    /// a <c>Dictionary&lt;string, object&gt;</c>), or
+    /// <c>ctx.Set(key, entry)</c> for something with no object. Floats are
+    /// rounded where they're written: use <c>StateDump.R(x, step)</c>.
+    /// Per-player things that needn't match (what the local player holds) go
+    /// under "local" (<c>AddLocal</c>), which the comparer prints but doesn't
+    /// compare.
     ///
-    /// Only what lies within the radius of the test area's centre is dumped (TestWorld's area, or where the host
-    /// player stands): the client only knows the enemies near it, and only loads the world around it.
+    /// Only what lies within the radius of the test area's centre is dumped
+    /// (TestWorld's area, or where the host player stands): the client only
+    /// knows the enemies near it, and only loads the world around it.
     /// </summary>
     public static class StateDump
     {
-        /// <summary>Every T in the loaded scenes, inactive ones included. The game switches off things far from
-        /// its player, and that differs between games, so FindObjectsOfType (active only) would make the
+        /// <summary>Every T in the loaded scenes, inactive ones included. The
+        /// game switches off things far from its player, and that differs
+        /// between games, so FindObjectsOfType (active only) would make the
         /// dumps differ for objects that are the same in both.</summary>
         public static IEnumerable<T> All<T>() where T : Component =>
-            Resources.FindObjectsOfTypeAll<T>().Where(c => c != null && c.gameObject.scene.IsValid());
+            Resources.FindObjectsOfTypeAll<T>().Where(
+                c => c != null && c.gameObject.scene.IsValid());
 
         public sealed class Ctx
         {
             public Vector3 Centre;
             public float Radius;
-            public readonly SortedDictionary<string, object> Entries = new SortedDictionary<string, object>(StringComparer.Ordinal);
+            public readonly SortedDictionary<string, object> Entries =
+                new SortedDictionary<string, object>(StringComparer.Ordinal);
 
             public bool Near(Vector3 p) => Flat(p - Centre) <= Radius;
 
-            /// <summary>An entry for this object, keyed by its ObjRef; "name" and "pos" are filled in.</summary>
+            /// <summary>
+            /// An entry for this object, keyed by its ObjRef; "name" and "pos"
+            /// are filled in.
+            /// </summary>
             public Dictionary<string, object> Add(GameObject go)
             {
                 var e = new Dictionary<string, object>
@@ -56,7 +70,10 @@ namespace DarkwoodMP.World
                 return e;
             }
 
-            /// <summary>An entry under this key (made unique with "#2", "#3"... if it's taken).</summary>
+            /// <summary>
+            /// An entry under this key (made unique with "#2", "#3"... if it's
+            /// taken).
+            /// </summary>
             public void Set(string key, object entry)
             {
                 string k = key;
@@ -77,17 +94,34 @@ namespace DarkwoodMP.World
         private static readonly List<Section> _sections = new List<Section>();
         private static readonly List<Section> _local = new List<Section>();
 
-        /// <summary>Add a section of the shared world (compared between the games).</summary>
-        public static void AddSection(string name, Action<Ctx> fill) => _sections.Add(new Section { Name = name, Fill = fill });
-        /// <summary>Add a section of per-player things (reported, not compared).</summary>
-        public static void AddLocal(string name, Action<Ctx> fill) => _local.Add(new Section { Name = name, Fill = fill });
+        /// <summary>
+        /// Add a section of the shared world (compared between the games).
+        /// </summary>
+        public static void AddSection(string name, Action<Ctx> fill) =>
+            _sections.Add(new Section { Name = name, Fill = fill });
+        /// <summary>
+        /// Add a section of per-player things (reported, not compared).
+        /// </summary>
+        public static void AddLocal(string name, Action<Ctx> fill) =>
+            _local.Add(new Section { Name = name, Fill = fill });
 
-        public static float Flat(Vector3 d) => Mathf.Sqrt(d.x * d.x + d.z * d.z);
-        /// <summary>Rounded to a multiple of step (0.25 for hours, 1 for health...).</summary>
-        public static double R(float x, float step) => Math.Round(Math.Round(x / step) * step, 3);
-        public static List<object> Pos(Vector3 p) => new List<object> { (double)Mathf.Round(p.x), (double)Mathf.Round(p.z) };
+        public static float Flat(Vector3 d) =>
+            Mathf.Sqrt(d.x * d.x + d.z * d.z);
+        /// <summary>
+        /// Rounded to a multiple of step (0.25 for hours, 1 for health...).
+        /// </summary>
+        public static double R(float x, float step) =>
+            Math.Round(Math.Round(x / step) * step, 3);
+        public static List<object> Pos(Vector3 p) => new List<object>
+        {
+            (double)Mathf.Round(p.x),
+            (double)Mathf.Round(p.z)
+        };
 
-        /// <summary>Where the test area is: TestWorld's centre, else where our player stands.</summary>
+        /// <summary>
+        /// Where the test area is: TestWorld's centre, else where our player
+        /// stands.
+        /// </summary>
         public static Vector3 DefaultCentre()
         {
             Vector3? centre = TestWorld.Center();
@@ -103,7 +137,9 @@ namespace DarkwoodMP.World
         }
         public const float DefaultRadius = 2000f;
 
-        /// <summary>Write the dump to path. centre/radius default to the test area's.</summary>
+        /// <summary>
+        /// Write the dump to path. centre/radius default to the test area's.
+        /// </summary>
         public static string Write(string path, Vector3? centre, float radius)
         {
             Vector3 c;
@@ -128,7 +164,8 @@ namespace DarkwoodMP.World
             {
                 role = "client";
             }
-            var root = new SortedDictionary<string, object>(StringComparer.Ordinal)
+            var root = new SortedDictionary<string, object>(
+                StringComparer.Ordinal)
             {
                 ["role"] = role,
                 ["centre"] = Pos(c),
@@ -136,12 +173,15 @@ namespace DarkwoodMP.World
             };
             root["sections"] = Run(_sections, c, radius);
             root["local"] = Run(_local, c, radius);
-            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path)));
+            Directory.CreateDirectory(
+                Path.GetDirectoryName(Path.GetFullPath(path)));
             var sb = new StringBuilder();
             Json(sb, root, 0);
             sb.Append('\n');
             File.WriteAllText(path, sb.ToString());
-            int n = ((SortedDictionary<string, object>)root["sections"]).Values.Sum(s =>
+            int n =
+                ((SortedDictionary<string, object>)root["sections"]).Values
+                    .Sum(s =>
             {
                 if (s is SortedDictionary<string, object> d)
                 {
@@ -152,9 +192,11 @@ namespace DarkwoodMP.World
             return $"{n} entries";
         }
 
-        private static SortedDictionary<string, object> Run(List<Section> list, Vector3 c, float radius)
+        private static SortedDictionary<string, object> Run(
+            List<Section> list, Vector3 c, float radius)
         {
-            var all = new SortedDictionary<string, object>(StringComparer.Ordinal);
+            var all =
+                new SortedDictionary<string, object>(StringComparer.Ordinal);
             foreach (var s in list)
             {
                 var ctx = new Ctx { Centre = c, Radius = radius };
@@ -172,7 +214,7 @@ namespace DarkwoodMP.World
             return all;
         }
 
-        // ---- the sections --------------------------------------------------------------------------------------
+        // ---- the sections ---------------------------------------------------
 
         static StateDump()
         {
@@ -191,7 +233,9 @@ namespace DarkwoodMP.World
                     e["health"] = d.health;
                     e["broken"] = d.destroyed;
                     e["blocked"] = d.blocked;
-                    e["leafTurned"] = !d.destroyed && DoorLeaf.Turned(d); // drawn open (Door.open pushes the leaf; lost on a switched-off door)
+                    // drawn open (Door.open pushes the leaf; lost on a
+                    // switched-off door)
+                    e["leafTurned"] = !d.destroyed && DoorLeaf.Turned(d);
                     e["barricaded"] = d.barricaded;
                     e["barricadeHealth"] = d.barricadeHealth;
                     e["burning"] = d.GetComponent<Burn>() != null;
@@ -221,7 +265,8 @@ namespace DarkwoodMP.World
                     }
                     var e = ctx.Add(inv.gameObject);
                     e["workbench"] = inv.isWorkbench;
-                    var l = inv.GetComponentInParent<Locked>(true); // switched off here too (far from our player)
+                    // switched off here too (far from our player)
+                    var l = inv.GetComponentInParent<Locked>(true);
                     if (l != null)
                     {
                         e["locked"] = l.locked;
@@ -243,20 +288,29 @@ namespace DarkwoodMP.World
             });
             AddSection("items", ctx =>
             {
-                // Things with a state of their own: health, broken, switched on, searched, dragged to a spot.
+                // Things with a state of their own: health, broken, switched
+                // on, searched, dragged to a spot.
                 foreach (var it in All<Item>())
                 {
-                    if (!ctx.Near(it.transform.position) || it.GetComponent<Door>() != null || it.GetComponent<Window>() != null)
+                    if (!ctx.Near(it.transform.position)
+                        || it.GetComponent<Door>() != null
+                        || it.GetComponent<Window>() != null)
                     {
                         continue;
                     }
-                    if (it.GetComponentInParent<Player>() != null || it.GetComponent<Inventory>() is Inventory inv && IsDropped(inv))
+                    if (it.GetComponentInParent<Player>() != null
+                        || it.GetComponent<Inventory>() is Inventory inv
+                            && IsDropped(inv))
                     {
                         continue;
                     }
-                    // A client's own copy of a character the host runs (a searchable corpse prop in the shared dream) is
-                    // frozen with its renderers and colliders off: nobody sees or searches it; the host's copy is listed.
-                    if (it.GetComponent<Character>() is Character ch && NetEnemies.Frozen.Contains(ch) && NetEnemies.Instance != null
+                    // A client's own copy of a character the host runs (a
+                    // searchable corpse prop in the shared dream) is frozen
+                    // with its renderers and colliders off: nobody sees or
+                    // searches it; the host's copy is listed.
+                    if (it.GetComponent<Character>() is Character ch
+                        && NetEnemies.Frozen.Contains(ch)
+                        && NetEnemies.Instance != null
                         && !NetEnemies.Instance.NetIdOf(ch, out _))
                     {
                         continue;
@@ -286,10 +340,13 @@ namespace DarkwoodMP.World
             });
             AddSection("traps", ctx =>
             {
-                // Traps (a trigger with an Item; one that went off loses its Item, so those are kept by name too).
+                // Traps (a trigger with an Item; one that went off loses its
+                // Item, so those are kept by name too).
                 foreach (var t in All<Trigger>())
                 {
-                    if (!ctx.Near(t.transform.position) || (t.GetComponent<Item>() == null && !t.setByPlayer && !TrapNames.Contains(Clean(t.name))))
+                    if (!ctx.Near(t.transform.position)
+                        || (t.GetComponent<Item>() == null && !t.setByPlayer
+                            && !TrapNames.Contains(Clean(t.name))))
                     {
                         continue;
                     }
@@ -326,8 +383,9 @@ namespace DarkwoodMP.World
             });
             AddSection("built", ctx =>
             {
-                // Things built or repaired (a Constructible removes itself once built, unless it's kept), and the
-                // switches shown in their own window.
+                // Things built or repaired (a Constructible removes itself once
+                // built, unless it's kept), and the switches shown in their own
+                // window.
                 foreach (var c in All<Constructible>())
                 {
                     if (!ctx.Near(c.transform.position))
@@ -350,16 +408,24 @@ namespace DarkwoodMP.World
             });
             AddSection("traders", ctx =>
             {
-                // NPCs live in each game separately, so traders go by name (TraderSync), and those from the shared
-                // save by name and ref; the reputation is the story's. Other copies can share a name (the morning
-                // trader in each hideout); they're numbered in the order of their stock, the same in both games.
-                var traders = All<NPC>().Where(n => n != null && n.trader && TraderSync.Inv(n) != null)
-                    .Select(n => (n, key: StockKey(TraderSync.Inv(n)), rep: n.reputation))
-                    .OrderBy(t => t.n.name, StringComparer.Ordinal).ThenBy(t => t.key, StringComparer.Ordinal).ThenBy(t => t.rep);
+                // NPCs live in each game separately, so traders go by name
+                // (TraderSync), and those from the shared save by name and ref;
+                // the reputation is the story's. Other copies can share a name
+                // (the morning trader in each hideout); they're numbered in the
+                // order of their stock, the same in both games.
+                var traders = All<NPC>().Where(
+                    n => n != null && n.trader && TraderSync.Inv(n) != null)
+                    .Select(
+                        n => (n, key: StockKey(TraderSync
+                                    .Inv(n)), rep: n.reputation))
+                    .OrderBy(t => t.n.name, StringComparer.Ordinal)
+                    .ThenBy(t => t.key, StringComparer.Ordinal)
+                    .ThenBy(t => t.rep);
                 foreach (var (n, _, _) in traders)
                 {
                     var ch = n.GetComponent<Character>();
-                    // One from the shared save is that one (TraderSync names him by his ref): keyed by it.
+                    // One from the shared save is that one (TraderSync names
+                    // him by his ref): keyed by it.
                     var who = ObjRef.Of(n.gameObject);
                     string label = "trader:" + n.name;
                     if (who.K == ObjRef.Kind.Saved)
@@ -376,7 +442,8 @@ namespace DarkwoodMP.World
             });
             AddSection("npcpos", ctx =>
             {
-                // Where the NPCs that every game has (a shared save id) stand: the host's place them all (NpcSync).
+                // Where the NPCs that every game has (a shared save id) stand:
+                // the host's place them all (NpcSync).
                 foreach (var n in All<NPC>())
                 {
                     Character ch = null;
@@ -389,11 +456,15 @@ namespace DarkwoodMP.World
                     {
                         save = n.GetComponent<SaveableObject>();
                     }
-                    if (ch == null || !ch.alive || save == null || save.uniqueId <= 0 || save.uniqueId >= SharedIds.ResolveLimit)
+                    if (ch == null || !ch.alive || save == null
+                        || save.uniqueId <= 0
+                        || save.uniqueId >= SharedIds.ResolveLimit)
                     {
                         continue;
                     }
-                    if (!ctx.Near(ch.transform.position) || (NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(ch, out _)))
+                    if (!ctx.Near(ch.transform.position)
+                        || (NetEnemies.Instance != null
+                            && NetEnemies.Instance.NetIdOf(ch, out _)))
                     {
                         continue;
                     }
@@ -413,8 +484,13 @@ namespace DarkwoodMP.World
                 }
                 void Keys(string what, IEnumerable<string> keys)
                 {
-                    var list = keys.Where(k => k != null).OrderBy(k => k, StringComparer.Ordinal).ToList();
-                    ctx.Set(what, new Dictionary<string, object> { ["count"] = list.Count, ["hash"] = Hash(list) });
+                    var list = keys.Where(k => k != null)
+                        .OrderBy(k => k, StringComparer.Ordinal).ToList();
+                    ctx.Set(what, new Dictionary<string, object>
+                    {
+                        ["count"] = list.Count,
+                        ["hash"] = Hash(list)
+                    });
                 }
                 Keys("entries", j.journalEntriesDict.Keys);
                 Keys("notes", j.notesDict.Keys);
@@ -427,7 +503,8 @@ namespace DarkwoodMP.World
                 var ne = NetEnemies.Instance;
                 foreach (var c in All<Character>())
                 {
-                    if (!NetEnemies.Eligible(c) || !ctx.Near(c.transform.position))
+                    if (!NetEnemies.Eligible(c)
+                        || !ctx.Near(c.transform.position))
                     {
                         continue;
                     }
@@ -435,16 +512,22 @@ namespace DarkwoodMP.World
                     {
                         continue; // not one of the host's shared enemies
                     }
-                    // A living one switched off by the host's culling isn't sent (NetEnemies sends the active ones), so
-                    // no client has it; a client's copy of one is hidden and forgotten.
-                    if (NetEnemies.InPlay(c) && !c.gameObject.activeInHierarchy && !NetEnemies.ClientMode)
+                    // A living one switched off by the host's culling isn't
+                    // sent (NetEnemies sends the active ones), so no client has
+                    // it; a client's copy of one is hidden and forgotten.
+                    if (NetEnemies.InPlay(c)
+                        && !c.gameObject.activeInHierarchy
+                        && !NetEnemies.ClientMode)
                     {
                         continue;
                     }
-                    // A client's copy switched off by its own culling (far from its player, near another player) is still the host's, kept up to date.
+                    // A client's copy switched off by its own culling (far from
+                    // its player, near another player) is still the host's,
+                    // kept up to date.
                     var e = ctx.Add(c.gameObject);
                     e["alive"] = c.alive;
-                    // A hostile NPC's health is the host's (Combat.HostileNpcs): every player's hits add up.
+                    // A hostile NPC's health is the host's
+                    // (Combat.HostileNpcs): every player's hits add up.
                     if (c.npc != null && c.alive)
                     {
                         e["health"] = Mathf.Round(c.health);
@@ -465,13 +548,21 @@ namespace DarkwoodMP.World
                     }
                     if (!c.alive)
                     {
-                        // A corpse can be searched in every game (the host's loot came with it).
+                        // A corpse can be searched in every game (the host's
+                        // loot came with it).
                         e["searchable"] = c.GetComponent<Item>() != null;
-                        // A settled corpse is walked through (setDeathCollider makes its body a trigger).
-                        e["walkThrough"] = c.collider == null || c.collider.isTrigger || !c.collider.enabled;
-                        // What of it cuts the player's view (Player.FOVLight's shadow layers): a client's copy had
-                        // colliders switched on that the host's corpse has off or destroyed (a black screen beside it).
-                        e["viewBlockers"] = string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()));
+                        // A settled corpse is walked through (setDeathCollider
+                        // makes its body a trigger).
+                        e["walkThrough"] = c.collider == null
+                            || c.collider.isTrigger || !c.collider.enabled;
+                        // What of it cuts the player's view (Player.FOVLight's
+                        // shadow layers): a client's copy had colliders
+                        // switched on that the host's corpse has off or
+                        // destroyed (a black screen beside it).
+                        e["viewBlockers"] = string.Join(
+                            ", ",
+                            NetEnemies.FovBlockers(
+                                c, NetEnemies.FovShadowMask()));
                         var inv = c.GetComponent<Inventory>();
                         if (inv != null)
                         {
@@ -488,19 +579,34 @@ namespace DarkwoodMP.World
                     return;
                 }
                 var dict = FlagsDict(flags);
-                // Not the flags about this game's own player (FlagsSync.PlayersOwn: where it is, the help popups it
-                // has seen): those are under "local", since each game keeps its own.
-                var shared = dict.Values.Where(f => f != null && !FlagsSync.PlayersOwn(f.name)).ToList();
-                var lines = shared.Select(f => f.name + "=" + f.isTrue).OrderBy(s => s, StringComparer.Ordinal).ToList();
-                var section = new Dictionary<string, object> { ["count"] = lines.Count, ["true"] = shared.Count(f => f.isTrue), ["hash"] = Hash(lines) };
+                // Not the flags about this game's own player
+                // (FlagsSync.PlayersOwn: where it is, the help popups it has
+                // seen): those are under "local", since each game keeps its
+                // own.
+                var shared = dict.Values.Where(
+                    f => f != null && !FlagsSync.PlayersOwn(f.name)).ToList();
+                var lines = shared.Select(f => f.name + "=" + f.isTrue)
+                    .OrderBy(s => s, StringComparer.Ordinal).ToList();
+                var section = new Dictionary<string, object>
+                {
+                    ["count"] = lines.Count,
+                    ["true"] = shared.Count(f => f.isTrue),
+                    ["hash"] = Hash(lines)
+                };
                 // A short list is given whole, so a difference names the flag.
                 if (lines.Count <= 40)
                 {
                     section["list"] = string.Join(" ", lines);
                 }
                 ctx.Set("flags", section);
-                var npcs = flags.npcStates.Where(n => n != null).Select(n => $"{n.name}:{n.reputation}:{n.dead}").OrderBy(s => s, StringComparer.Ordinal).ToList();
-                ctx.Set("npcs", new Dictionary<string, object> { ["count"] = npcs.Count, ["hash"] = Hash(npcs) });
+                var npcs = flags.npcStates.Where(n => n != null)
+                    .Select(n => $"{n.name}:{n.reputation}:{n.dead}")
+                    .OrderBy(s => s, StringComparer.Ordinal).ToList();
+                ctx.Set("npcs", new Dictionary<string, object>
+                {
+                    ["count"] = npcs.Count,
+                    ["hash"] = Hash(npcs)
+                });
             });
             AddSection("time", ctx =>
             {
@@ -509,7 +615,11 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                ctx.Set("clock", new Dictionary<string, object> { ["day"] = ctl.day, ["hour"] = R(ctl.CurrentTime / 60f, 0.25f) });
+                ctx.Set("clock", new Dictionary<string, object>
+                {
+                    ["day"] = ctl.day,
+                    ["hour"] = R(ctl.CurrentTime / 60f, 0.25f)
+                });
             });
 
             AddLocal("where", ctx =>
@@ -531,7 +641,8 @@ namespace DarkwoodMP.World
             });
             AddLocal("popups", ctx =>
             {
-                // The one-time help popups this game's player has seen (FlagsSync.PlayersPopup): each game's own.
+                // The one-time help popups this game's player has seen
+                // (FlagsSync.PlayersPopup): each game's own.
                 var flags = Singleton<Flags>.Instance;
                 if (flags == null)
                 {
@@ -571,18 +682,22 @@ namespace DarkwoodMP.World
             });
         }
 
-        /// <summary>The world's item inventories in the area: containers, the workbench's storage, dropped items,
-        /// corpses; not the player's own bags, hotbar or the UI's.</summary>
+        /// <summary>The world's item inventories in the area: containers, the
+        /// workbench's storage, dropped items, corpses; not the player's own
+        /// bags, hotbar or the UI's.</summary>
         private static IEnumerable<Inventory> WorldInventories(Ctx ctx)
         {
             var p = Player.Instance;
             foreach (var inv in All<Inventory>())
             {
-                if (inv.invType != Inventory.InvType.itemInv || !ctx.Near(inv.transform.position))
+                if (inv.invType != Inventory.InvType.itemInv
+                    || !ctx.Near(inv.transform.position))
                 {
                     continue;
                 }
-                if (p != null && (inv == p.Inventory || inv == p.Hotbar || inv.transform.IsChildOf(p.transform)))
+                if (p != null
+                    && (inv == p.Inventory || inv == p.Hotbar
+                        || inv.transform.IsChildOf(p.transform)))
                 {
                     continue;
                 }
@@ -590,15 +705,26 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static readonly HashSet<string> TrapNames = new HashSet<string> { "beartrap", "chainTrap", "barrelExploding", "gasBottle_01", "broken_glass" };
+        private static readonly HashSet<string> TrapNames = new HashSet<string>
+        {
+            "beartrap",
+            "chainTrap",
+            "barrelExploding",
+            "gasBottle_01",
+            "broken_glass"
+        };
         /// <summary>A game object's name without Unity's "(Clone)".</summary>
-        internal static string Clean(string n) => n.Replace("(Clone)", "").Trim();
+        internal static string Clean(string n) =>
+            n.Replace("(Clone)", "").Trim();
 
         /// <summary>The story flags that are set (Flags.flagsDict).</summary>
         internal static readonly HarmonyLib.AccessTools.FieldRef<Flags, Dictionary<string, Flags.Flag>> FlagsDict =
-            HarmonyLib.AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict");
+            HarmonyLib.AccessTools
+                .FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
+                    "flagsDict");
 
-        private static bool IsDropped(Inventory inv) => inv.name.StartsWith("DroppedItem", StringComparison.Ordinal);
+        private static bool IsDropped(Inventory inv) =>
+            inv.name.StartsWith("DroppedItem", StringComparison.Ordinal);
 
         private static List<object> Slots(Inventory inv)
         {
@@ -611,7 +737,8 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 var it = s.invItem;
-                // A gun's count is its ammo (InvItemClass.SaveState saves that, not its amount, which means nothing for it).
+                // A gun's count is its ammo (InvItemClass.SaveState saves that,
+                // not its amount, which means nothing for it).
                 int amount;
                 if (it.baseClass != null && it.baseClass.hasAmmo)
                 {
@@ -621,9 +748,15 @@ namespace DarkwoodMP.World
                 {
                     amount = it.amount;
                 }
-                list.Add(new Dictionary<string, object> { ["type"] = it.type, ["amount"] = amount, ["durability"] = R(it.durability, 0.05f) });
+                list.Add(new Dictionary<string, object>
+                {
+                    ["type"] = it.type,
+                    ["amount"] = amount,
+                    ["durability"] = R(it.durability, 0.05f)
+                });
             }
-            // Trailing empty slots don't matter (a workbench's level adds some).
+            // Trailing empty slots don't matter (a workbench's level adds
+            // some).
             while (list.Count > 0 && list[list.Count - 1] == null)
             {
                 list.RemoveAt(list.Count - 1);
@@ -631,7 +764,10 @@ namespace DarkwoodMP.World
             return list;
         }
 
-        /// <summary>A trader's stock as one string ("type x amount" per slot), for ordering traders.</summary>
+        /// <summary>
+        /// A trader's stock as one string ("type x amount" per slot), for
+        /// ordering traders.
+        /// </summary>
         private static string StockKey(Inventory inv) =>
             string.Join(",", inv.slots.Select(s =>
             {
@@ -646,11 +782,14 @@ namespace DarkwoodMP.World
         {
             using (var sha = System.Security.Cryptography.SHA256.Create())
             {
-                return BitConverter.ToString(sha.ComputeHash(Encoding.UTF8.GetBytes(string.Join("\n", lines)))).Replace("-", "").Substring(0, 16).ToLowerInvariant();
+                return BitConverter.ToString(
+                    sha.ComputeHash(
+                        Encoding.UTF8.GetBytes(string.Join("\n", lines))))
+                    .Replace("-", "").Substring(0, 16).ToLowerInvariant();
             }
         }
 
-        // ---- a small JSON writer (sorted keys, so the dumps diff cleanly) ------------------------------------------
+        // ---- a small JSON writer (sorted keys, so the dumps diff cleanly) ---
 
         private static void Json(StringBuilder sb, object v, int indent)
         {
@@ -680,14 +819,17 @@ namespace DarkwoodMP.World
                     sb.Append(l);
                     break;
                 case float f:
-                    sb.Append(((double)f).ToString("R", CultureInfo.InvariantCulture));
+                    sb.Append(
+                        ((double)f).ToString(
+                            "R", CultureInfo.InvariantCulture));
                     break;
                 case double d:
                     sb.Append(d.ToString("R", CultureInfo.InvariantCulture));
                     break;
                 case System.Collections.IDictionary dict:
                     {
-                        var keys = dict.Keys.Cast<string>().OrderBy(k => k, StringComparer.Ordinal).ToList();
+                        var keys = dict.Keys.Cast<string>()
+                            .OrderBy(k => k, StringComparer.Ordinal).ToList();
                         if (keys.Count == 0)
                         {
                             sb.Append("{}");

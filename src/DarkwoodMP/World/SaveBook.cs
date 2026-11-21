@@ -9,18 +9,22 @@ using Newtonsoft.Json;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// What the mod knows about your save slots, beside the game's own profiles: a name you gave the save, and who
-    /// has played it with you (each player who joined while you hosted it, by name and player key, with when they
-    /// last did). The Start Game window shows it.
+    /// What the mod knows about your save slots, beside the game's own
+    /// profiles: a name you gave the save, and who has played it with you (each
+    /// player who joined while you hosted it, by name and player key, with when
+    /// they last did). The Start Game window shows it.
     ///
-    /// It's kept in the mod's own file, BepInEx/config/DarkwoodMP.saves.json, never in the save folder. While the
-    /// saves are a test copy (--dwmp-sandbox DIR) it's DIR/darkwoodmp-saves.json instead, so tests never touch the
-    /// real one. A client's copy of a host's world (and the test world) has no record.
+    /// It's kept in the mod's own file, BepInEx/config/DarkwoodMP.saves.json,
+    /// never in the save folder. While the saves are a test copy
+    /// (--dwmp-sandbox DIR) it's DIR/darkwoodmp-saves.json instead, so tests
+    /// never touch the real one. A client's copy of a host's world (and the
+    /// test world) has no record.
     ///
-    /// A record belongs to one game in one slot: it's started empty when a new game starts in that slot
-    /// (UI.initNewGame with a profile that isn't active yet) and dropped when the game deletes the slot
-    /// (SaveManager.deleteCurrentProfile: Delete, a permadeath, a new game over it). Each record notes when it
-    /// was started.
+    /// A record belongs to one game in one slot: it's started empty when a new
+    /// game starts in that slot (UI.initNewGame with a profile that isn't
+    /// active yet) and dropped when the game deletes the slot
+    /// (SaveManager.deleteCurrentProfile: Delete, a permadeath, a new game over
+    /// it). Each record notes when it was started.
     /// </summary>
     public static class SaveBook
     {
@@ -40,21 +44,26 @@ namespace DarkwoodMP.World
 
         private sealed class FileData
         {
-            public Dictionary<string, Record> Slots = new Dictionary<string, Record>();
+            public Dictionary<string, Record> Slots =
+                new Dictionary<string, Record>();
         }
 
         private static FileData _data;
         private static string _loadedFrom;
         private static DateTime _stamp;
 
-        /// <summary>The file for the saves the game uses now, or null when there's none (a host's world in the cache).</summary>
+        /// <summary>
+        /// The file for the saves the game uses now, or null when there's none
+        /// (a host's world in the cache).
+        /// </summary>
         public static string FilePath
         {
             get
             {
                 if (!SaveRedirect.Active)
                 {
-                    return Path.Combine(BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
+                    return Path.Combine(
+                        BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
                 }
                 WorldShare instance = WorldShare.Instance;
                 if (instance == null || instance.PlayingHostCopy)
@@ -91,7 +100,8 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            // Read again when the file changed or went away underneath (a test's fresh copy of the saves).
+            // Read again when the file changed or went away underneath (a
+            // test's fresh copy of the saves).
             DateTime stamp;
             if (File.Exists(path))
             {
@@ -112,7 +122,8 @@ namespace DarkwoodMP.World
             {
                 if (File.Exists(path))
                 {
-                    FileData data = JsonConvert.DeserializeObject<FileData>(File.ReadAllText(path));
+                    FileData data = JsonConvert.DeserializeObject<FileData>(
+                        File.ReadAllText(path));
                     if (data == null)
                     {
                         data = new FileData();
@@ -126,7 +137,8 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[saves] couldn't read {path}: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[saves] couldn't read {path}: {e.Message}");
             }
             return _data;
         }
@@ -142,7 +154,9 @@ namespace DarkwoodMP.World
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
                 string tmp = path + ".tmp";
-                File.WriteAllText(tmp, JsonConvert.SerializeObject(_data, Formatting.Indented));
+                File.WriteAllText(
+                    tmp,
+                    JsonConvert.SerializeObject(_data, Formatting.Indented));
                 if (File.Exists(path))
                 {
                     File.Delete(path);
@@ -152,11 +166,15 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[saves] couldn't write {path}: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[saves] couldn't write {path}: {e.Message}");
             }
         }
 
-        /// <summary>The record for slot <paramref name="slot"/>, or null if there's none.</summary>
+        /// <summary>
+        /// The record for slot <paramref name="slot"/>, or null if there's
+        /// none.
+        /// </summary>
         private static Record Get(int slot)
         {
             var d = Data();
@@ -181,9 +199,13 @@ namespace DarkwoodMP.World
             return r;
         }
 
-        private static string Now() => DateTime.Now.ToString("yyyy-MM-dd HH:mm");
+        private static string Now() =>
+            DateTime.Now.ToString("yyyy-MM-dd HH:mm");
 
-        /// <summary>The name you gave the save in slot <paramref name="slot"/> ("" for none).</summary>
+        /// <summary>
+        /// The name you gave the save in slot <paramref name="slot"/> ("" for
+        /// none).
+        /// </summary>
         public static string NameOf(int slot)
         {
             Record record = Get(slot);
@@ -221,16 +243,20 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The names of those who've played slot <paramref name="slot"/> with you, most recent first. A save hosted
-        /// before the mod kept these records has none: then the names come from the characters the host kept for
-        /// the players who joined it (prof&lt;id&gt;/darkwoodmp_players).
+        /// The names of those who've played slot <paramref name="slot"/> with
+        /// you, most recent first. A save hosted before the mod kept these
+        /// records has none: then the names come from the characters the host
+        /// kept for the players who joined it
+        /// (prof&lt;id&gt;/darkwoodmp_players).
         /// </summary>
         public static List<string> PlayedWith(int slot)
         {
             var r = Get(slot);
             if (r != null)
             {
-                return r.Players.OrderByDescending(p => p.Last, StringComparer.Ordinal).Select(p => p.Name).ToList();
+                return r.Players.OrderByDescending(
+                    p => p.Last, StringComparer.Ordinal).Select(p => p.Name)
+                    .ToList();
             }
             var names = new List<string>();
             try
@@ -247,10 +273,14 @@ namespace DarkwoodMP.World
                 }
                 if (FilePath != null && dir != null && Directory.Exists(dir))
                 {
-                    foreach (var f in Directory.GetFiles(dir, "*.json").OrderByDescending(File.GetLastWriteTimeUtc))
+                    foreach (var f in Directory.GetFiles(dir, "*.json")
+                        .OrderByDescending(File.GetLastWriteTimeUtc))
                     {
-                        var c = JsonConvert.DeserializeObject<Characters.Record>(File.ReadAllText(f));
-                        if (c != null && !string.IsNullOrEmpty(c.Name) && !names.Contains(c.Name))
+                        var c =
+                            JsonConvert.DeserializeObject<Characters.Record>(
+                                File.ReadAllText(f));
+                        if (c != null && !string.IsNullOrEmpty(c.Name)
+                            && !names.Contains(c.Name))
                         {
                             names.Add(c.Name);
                         }
@@ -259,7 +289,8 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[saves] couldn't read slot {slot}'s players' characters: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[saves] couldn't read slot {slot}'s players' characters: {e.Message}");
             }
             return names;
         }
@@ -289,26 +320,40 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo($"[saves] slot {slot}: played with {name}");
         }
 
-        /// <summary>The folder where the host keeps the characters of the players who joined slot <paramref name="slot"/>.</summary>
-        private static string PlayersDir(string baseDir, int slot) => Path.Combine(Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
+        /// <summary>
+        /// The folder where the host keeps the characters of the players who
+        /// joined slot <paramref name="slot"/>.
+        /// </summary>
+        private static string PlayersDir(string baseDir, int slot) =>
+            Path.Combine(
+                Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
 
-        /// <summary>Delete slot <paramref name="slot"/>'s players' characters; <paramref name="why"/> ends the log line.</summary>
-        internal static void DeletePlayersDir(string baseDir, int slot, string why)
+        /// <summary>
+        /// Delete slot <paramref name="slot"/>'s players' characters;
+        /// <paramref name="why"/> ends the log line.
+        /// </summary>
+        internal static void DeletePlayersDir(
+            string baseDir, int slot, string why)
         {
             try
             {
                 if (WorldFiles.DeletePlayersFolder(baseDir, slot))
                 {
-                    Plugin.Log.LogInfo($"[saves] slot {slot}'s players' characters deleted {why}");
+                    Plugin.Log.LogInfo(
+                        $"[saves] slot {slot}'s players' characters deleted {why}");
                 }
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}");
             }
         }
 
-        /// <summary>A new game in slot <paramref name="slot"/>, or the slot deleted: its record goes.</summary>
+        /// <summary>
+        /// A new game in slot <paramref name="slot"/>, or the slot deleted: its
+        /// record goes.
+        /// </summary>
         public static void Forget(int slot, string why)
         {
             var d = Data();
@@ -321,7 +366,10 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>A new game starts in a slot (the profile isn't active yet): its record starts empty.</summary>
+    /// <summary>
+    /// A new game starts in a slot (the profile isn't active yet): its record
+    /// starts empty.
+    /// </summary>
     [HarmonyPatch(typeof(UI), nameof(UI.initNewGame))]
     static class SaveBookNewGamePatch
     {
@@ -333,9 +381,11 @@ namespace DarkwoodMP.World
                 return;
             }
             SaveBook.Forget(p.id, "a new game");
-            // The characters the host kept for the players who joined the slot's last world: the game writes the new
-            // world over the old save and leaves them, so a joiner would get their old character (dead, if it died
-            // for good). They go with the old world, as when the slot is deleted.
+            // The characters the host kept for the players who joined the
+            // slot's last world: the game writes the new world over the old
+            // save and leaves them, so a joiner would get their old character
+            // (dead, if it died for good). They go with the old world, as when
+            // the slot is deleted.
             Characters instance = Characters.Instance;
             if (instance != null)
             {
@@ -347,18 +397,22 @@ namespace DarkwoodMP.World
                 WorldShare share = WorldShare.Instance;
                 if (share == null || !share.PlayingHostCopy)
                 {
-                    SaveBook.DeletePlayersDir(sm.baseSaveDirectory, p.id, "(a new game)");
+                    SaveBook.DeletePlayersDir(
+                        sm.baseSaveDirectory, p.id, "(a new game)");
                 }
             }
         }
     }
 
     /// <summary>
-    /// The game deletes a slot's save: its record goes too, and so do the characters the host kept for the players
-    /// who joined it (prof&lt;id&gt;/darkwoodmp_players, World.Characters), which the game's deleteSave leaves behind:
-    /// otherwise a new game in that slot would hand them their old characters.
+    /// The game deletes a slot's save: its record goes too, and so do the
+    /// characters the host kept for the players who joined it
+    /// (prof&lt;id&gt;/darkwoodmp_players, World.Characters), which the game's
+    /// deleteSave leaves behind: otherwise a new game in that slot would hand
+    /// them their old characters.
     /// </summary>
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.deleteCurrentProfile))]
+    [HarmonyPatch(
+        typeof(SaveManager), nameof(SaveManager.deleteCurrentProfile))]
     static class SaveBookDeletePatch
     {
         static void Prefix(SaveManager __instance)
@@ -379,7 +433,8 @@ namespace DarkwoodMP.World
             {
                 instance.Forget("the slot deleted");
             }
-            SaveBook.DeletePlayersDir(__instance.baseSaveDirectory, p.id, "with it");
+            SaveBook.DeletePlayersDir(
+                __instance.baseSaveDirectory, p.id, "with it");
         }
     }
 }

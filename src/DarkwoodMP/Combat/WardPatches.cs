@@ -7,17 +7,23 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// The host's enemies check a few things about "the player" that belong to one player: the shadow ward and the
-    /// forest spirit ward (Character.canSeeEnemy: an enemy afraid of them runs away), and the Friend / Enemy of the
-    /// Forest skills (processAnims, onSeeEnemyNear: how an aggressive animal treats the player it's after). The game
-    /// reads them from Player.Instance, the host's player. These transpilers make them read the player the enemy is
-    /// after: its target's proxy, with the joiner's own state from their PlayerState (NetPlayerProxy), or the host's
-    /// player when the target is the host or not a player at all. With nobody else in the world that is the host's
-    /// player, as in the game.
+    /// The host's enemies check a few things about "the player" that belong to
+    /// one player: the shadow ward and the forest spirit ward
+    /// (Character.canSeeEnemy: an enemy afraid of them runs away), and the
+    /// Friend / Enemy of the Forest skills (processAnims, onSeeEnemyNear: how
+    /// an aggressive animal treats the player it's after). The game reads them
+    /// from Player.Instance, the host's player. These transpilers make them
+    /// read the player the enemy is after: its target's proxy, with the
+    /// joiner's own state from their PlayerState (NetPlayerProxy), or the
+    /// host's player when the target is the host or not a player at all. With
+    /// nobody else in the world that is the host's player, as in the game.
     /// </summary>
     public static class Wards
     {
-        /// <summary>The joiner whose proxy the enemy is after, or null (then the host's player counts, as in the game).</summary>
+        /// <summary>
+        /// The joiner whose proxy the enemy is after, or null (then the host's
+        /// player counts, as in the game).
+        /// </summary>
         private static NetPlayerProxy TargetProxy(Character c)
         {
             if (NetPlayerProxy.All.Count == 0 || c == null || c.target == null)
@@ -27,7 +33,9 @@ namespace DarkwoodMP.Combat
             return c.target.GetComponent<NetPlayerProxy>();
         }
 
-        /// <summary>For Player.Instance.effects.hasEffectType(type) in canSeeEnemy.</summary>
+        /// <summary>
+        /// For Player.Instance.effects.hasEffectType(type) in canSeeEnemy.
+        /// </summary>
         public static bool HasEffect(Character c, CharacterEffectType type)
         {
             var p = TargetProxy(c);
@@ -37,13 +45,18 @@ namespace DarkwoodMP.Combat
                 {
                     return p.ShadowWard;
                 }
-                return type == CharacterEffectType.forestSpiritWard && p.ForestSpiritWard;
+                return type == CharacterEffectType.forestSpiritWard
+                    && p.ForestSpiritWard;
             }
             var host = Player.Instance;
-            return host != null && host.effects != null && host.effects.hasEffectType(type);
+            return host != null && host.effects != null
+                && host.effects.hasEffectType(type);
         }
 
-        /// <summary>For "target == Player.Instance._transform" before a forest skill check: the target, when it is a joiner.</summary>
+        /// <summary>
+        /// For "target == Player.Instance._transform" before a forest skill
+        /// check: the target, when it is a joiner.
+        /// </summary>
         public static Transform PlayerTarget(Character c)
         {
             var p = TargetProxy(c);
@@ -74,19 +87,28 @@ namespace DarkwoodMP.Combat
             return Player.Instance.skills.EnemyOfTheForest;
         }
 
-        private static MethodInfo GetInstance => AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));
+        private static MethodInfo GetInstance =>
+            AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));
 
-        /// <summary>Player.Instance.effects.hasEffectType(X) becomes Wards.HasEffect(this, X).</summary>
-        public static IEnumerable<CodeInstruction> SwapEffects(IEnumerable<CodeInstruction> instructions)
+        /// <summary>
+        /// Player.Instance.effects.hasEffectType(X) becomes
+        /// Wards.HasEffect(this, X).
+        /// </summary>
+        public static IEnumerable<CodeInstruction> SwapEffects(
+            IEnumerable<CodeInstruction> instructions)
         {
             var effects = AccessTools.Field(typeof(CharBase), "effects");
-            var has = AccessTools.Method(typeof(CharacterEffects), nameof(CharacterEffects.hasEffectType));
+            var has = AccessTools.Method(
+                typeof(CharacterEffects),
+                nameof(CharacterEffects.hasEffectType));
             var mine = AccessTools.Method(typeof(Wards), nameof(HasEffect));
             var list = new List<CodeInstruction>(instructions);
             int swapped = 0;
             for (int i = 0; i < list.Count - 3; i++)
             {
-                if (!list[i].Calls(GetInstance) || !list[i + 1].LoadsField(effects) || !list[i + 3].Calls(has))
+                if (!list[i].Calls(GetInstance)
+                    || !list[i + 1].LoadsField(effects)
+                    || !list[i + 3].Calls(has))
                 {
                     continue;
                 }
@@ -114,21 +136,29 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Player.Instance.skills.FriendOfTheForest / EnemyOfTheForest becomes Wards.X(this), and the
-        /// "target == Player.Instance._transform" just before it (within the same condition) becomes
-        /// "target == Wards.PlayerTarget(this)". Other comparisons with the host's player are left alone.
+        /// Player.Instance.skills.FriendOfTheForest / EnemyOfTheForest becomes
+        /// Wards.X(this), and the "target == Player.Instance._transform" just
+        /// before it (within the same condition) becomes
+        /// "target == Wards.PlayerTarget(this)". Other comparisons with the
+        /// host's player are left alone.
         /// </summary>
-        public static IEnumerable<CodeInstruction> SwapForestSkills(IEnumerable<CodeInstruction> instructions, string where)
+        public static IEnumerable<CodeInstruction> SwapForestSkills(
+            IEnumerable<CodeInstruction> instructions, string where)
         {
-            var skills = AccessTools.Field(typeof(Player), nameof(Player.skills));
-            var friend = AccessTools.Field(typeof(PlayerSkills), nameof(PlayerSkills.FriendOfTheForest));
-            var enemy = AccessTools.Field(typeof(PlayerSkills), nameof(PlayerSkills.EnemyOfTheForest));
-            var playerTransform = AccessTools.Field(typeof(Player), "_transform");
+            var skills =
+                AccessTools.Field(typeof(Player), nameof(Player.skills));
+            var friend = AccessTools.Field(
+                typeof(PlayerSkills), nameof(PlayerSkills.FriendOfTheForest));
+            var enemy = AccessTools.Field(
+                typeof(PlayerSkills), nameof(PlayerSkills.EnemyOfTheForest));
+            var playerTransform =
+                AccessTools.Field(typeof(Player), "_transform");
             var list = new List<CodeInstruction>(instructions);
             int swapped = 0, targets = 0;
             for (int i = 0; i < list.Count - 2; i++)
             {
-                if (!list[i].Calls(GetInstance) || !list[i + 1].LoadsField(skills))
+                if (!list[i].Calls(GetInstance)
+                    || !list[i + 1].LoadsField(skills))
                 {
                     continue;
                 }
@@ -151,14 +181,16 @@ namespace DarkwoodMP.Combat
                 swapped++;
                 for (int j = i - 1; j >= 0 && j >= i - 16; j--)
                 {
-                    if (!list[j].Calls(GetInstance) || !list[j + 1].LoadsField(playerTransform))
+                    if (!list[j].Calls(GetInstance)
+                        || !list[j + 1].LoadsField(playerTransform))
                     {
                         continue;
                     }
                     list[j].opcode = OpCodes.Ldarg_0;
                     list[j].operand = null;
                     list[j + 1].opcode = OpCodes.Call;
-                    list[j + 1].operand = AccessTools.Method(typeof(Wards), nameof(PlayerTarget));
+                    list[j + 1].operand =
+                        AccessTools.Method(typeof(Wards), nameof(PlayerTarget));
                     targets++;
                     break;
                 }
@@ -181,39 +213,58 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
     static class WardSightPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) => Wards.SwapEffects(instructions);
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) => Wards.SwapEffects(
+                instructions);
     }
 
-    /// <summary>An enemy afraid of a ward runs from the player it was after (who has it), not from the host's.</summary>
+    /// <summary>
+    /// An enemy afraid of a ward runs from the player it was after (who has
+    /// it), not from the host's.
+    /// </summary>
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
     static class WardFleePatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(instructions, PlayerPositionTranspiler.Flee, "Character.canSeeEnemy");
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            PlayerPositionTranspiler.Swap(
+                instructions, PlayerPositionTranspiler.Flee,
+                "Character.canSeeEnemy");
     }
 
     [HarmonyPatch(typeof(Character), "processAnims")]
     static class ForestSkillsAnimsPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) => Wards.SwapForestSkills(instructions, "Character.processAnims");
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+                Wards.SwapForestSkills(instructions, "Character.processAnims");
     }
 
     [HarmonyPatch(typeof(Character), "onSeeEnemyNear")]
     static class ForestSkillsNearPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) => Wards.SwapForestSkills(instructions, "Character.onSeeEnemyNear");
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+                Wards.SwapForestSkills(
+                    instructions, "Character.onSeeEnemyNear");
     }
 
     /// <summary>
-    /// The game lights the path-finding nodes under each player light every 0.3 s (Controller.updateLogicLights), and
-    /// shadow creatures and shadow armour check those nodes (Core.isInLight). A puppet's torch or lantern is the
-    /// item's own light prefab, which lights nodes as the game's do. A puppet's flashlight beam is a copy of the host's
-    /// "Flashlight", which the game clips to the host's player's flashlight collider, so it would light nothing where
-    /// the puppet is. That collider is sized and placed only by the host's own flashlight (Player.processFlashlight,
-    /// from the host's cursor), so it isn't used: the clip box is a square 1000 a side centred 500 ahead of the
-    /// puppet, which covers the beam from the puppet out to 1000 ahead (we don't know where its player aims).
+    /// The game lights the path-finding nodes under each player light every
+    /// 0.3 s (Controller.updateLogicLights), and shadow creatures and shadow
+    /// armour check those nodes (Core.isInLight). A puppet's torch or lantern
+    /// is the item's own light prefab, which lights nodes as the game's do. A
+    /// puppet's flashlight beam is a copy of the host's "Flashlight", which the
+    /// game clips to the host's player's flashlight collider, so it would light
+    /// nothing where the puppet is. That collider is sized and placed only by
+    /// the host's own flashlight (Player.processFlashlight, from the host's
+    /// cursor), so it isn't used: the clip box is a square 1000 a side centred
+    /// 500 ahead of the puppet, which covers the beam from the puppet out to
+    /// 1000 ahead (we don't know where its player aims).
     /// </summary>
-    [HarmonyPatch(typeof(Light2D), nameof(Light2D.lightGraphNodes), new[] { typeof(Bounds) })]
+    [HarmonyPatch(
+        typeof(Light2D), nameof(Light2D.lightGraphNodes),
+        new[] { typeof(Bounds) })]
     static class PuppetBeamLightPatch
     {
         private const float Ahead = 500f, Side = 1000f;
@@ -233,7 +284,9 @@ namespace DarkwoodMP.Combat
                 return;
             }
             float side = Side * 1.42f; // covers the box turned any way
-            _bounds = new Bounds(parent.position + fwd.normalized * Ahead, new Vector3(side, 10000f, side));
+            _bounds = new Bounds(
+                parent.position + fwd.normalized * Ahead,
+                new Vector3(side, 10000f, side));
         }
     }
 }

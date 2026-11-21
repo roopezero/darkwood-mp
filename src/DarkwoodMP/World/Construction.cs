@@ -6,24 +6,36 @@ using HarmonyLib;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Building and repairing (Constructible.construct): a repaired stove or generator, a built option (a
-    /// barricade, a trap spot), an enabled feeder. The builder's game builds it with the ingredients (manual); the
-    /// others build their copy with construct(manual: false, option), which takes no ingredients and plays no sound.
-    /// A joiner's build is a request: the joiner's game takes the ingredients at once and builds nothing until the
-    /// host says yes (the game has no way to un-build: a built option's events show and hide objects, and the
-    /// Constructible removes itself). The host checks reach and that it can still be built, builds its copy and passes
-    /// it on; then the joiner builds its copy (construct(manual: false, option) and the build sound). Refused, the
-    /// ingredients come back (InventoryWatch) and there's nothing to take down. The option's GameEvents runs by
-    /// ScriptedEvents' parts: the builder's own steps only for the builder.
+    /// Building and repairing (Constructible.construct): a repaired stove or
+    /// generator, a built option (a barricade, a trap spot), an enabled feeder.
+    /// The builder's game builds it with the ingredients (manual); the others
+    /// build their copy with construct(manual: false, option), which takes no
+    /// ingredients and plays no sound.
+    /// A joiner's build is a request: the joiner's game takes the ingredients
+    /// at once and builds nothing until the host says yes (the game has no way
+    /// to un-build: a built option's events show and hide objects, and the
+    /// Constructible removes itself). The host checks reach and that it can
+    /// still be built, builds its copy and passes it on; then the joiner builds
+    /// its copy (construct(manual: false, option) and the build sound).
+    /// Refused, the ingredients come back (InventoryWatch) and there's
+    /// nothing to take down. The option's GameEvents runs by ScriptedEvents'
+    /// parts: the builder's own steps only for the builder.
     /// </summary>
     public static class Construction
     {
         private static Session S => Session.Instance;
 
-        /// <summary>Joiner: builds waiting for the host's answer (one at a time per thing).</summary>
-        private static readonly HashSet<Constructible> Waiting = new HashSet<Constructible>();
+        /// <summary>
+        /// Joiner: builds waiting for the host's answer (one at a time per
+        /// thing).
+        /// </summary>
+        private static readonly HashSet<Constructible> Waiting =
+            new HashSet<Constructible>();
 
-        /// <summary>Joiner: true while building our copy after the host said yes (not sent again).</summary>
+        /// <summary>
+        /// Joiner: true while building our copy after the host said yes (not
+        /// sent again).
+        /// </summary>
         internal static bool Confirming;
 
         public static void Register(Session s)
@@ -42,7 +54,10 @@ namespace DarkwoodMP.World
             return w;
         }
 
-        /// <summary>Sends our build (nothing if it can't be named): the host's to everyone, a joiner's as a request.</summary>
+        /// <summary>
+        /// Sends our build (nothing if it can't be named): the host's to
+        /// everyone, a joiner's as a request.
+        /// </summary>
         internal static void Send(Constructible c, int option)
         {
             var r = ObjRef.Of(c.gameObject);
@@ -72,7 +87,8 @@ namespace DarkwoodMP.World
                 Waiting.Remove(c);
                 if (!ok)
                 {
-                    Plugin.Log.LogInfo($"[world] {what} not built here: the host refused it ({reason})");
+                    Plugin.Log.LogInfo(
+                        $"[world] {what} not built here: the host refused it ({reason})");
                     return;
                 }
                 if (c == null)
@@ -83,19 +99,23 @@ namespace DarkwoodMP.World
                 try
                 {
                     c.chosenOption = option;
-                    ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerAndShared, replaying: false, () => c.construct(manual: false, option));
+                    ScriptedEvents.RunAs(
+                        ScriptedEvents.Part.PlayerAndShared, replaying: false,
+                        () => c.construct(manual: false, option));
                     if (!string.IsNullOrEmpty(sound))
                     {
                         AudioController.Play(sound);
                     }
                     if (WorldActions.Debug)
                     {
-                        Plugin.Log.LogInfo($"[world] {what}: the host agreed, built it here");
+                        Plugin.Log.LogInfo(
+                            $"[world] {what}: the host agreed, built it here");
                     }
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't build {what}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't build {what}: {e.Message}");
                 }
                 finally
                 {
@@ -129,7 +149,8 @@ namespace DarkwoodMP.World
                 {
                     name = c.name;
                 }
-                Plugin.Log.LogInfo($"[world] got build {obj} option {option}: " + name);
+                Plugin.Log.LogInfo(
+                    $"[world] got build {obj} option {option}: " + name);
             }
             if (c != null && option >= 0 && option < c.options.Count)
             {
@@ -155,16 +176,21 @@ namespace DarkwoodMP.World
             }
             if (s.IsHost)
             {
-                s.Broadcast(Write(obj, option), Channel.Control, reliable: true, except: from);
+                s.Broadcast(
+                    Write(obj, option), Channel.Control, reliable: true,
+                    except: from);
             }
         }
 
-        /// <summary>Host: a joiner's build is one this world can still take, near them.</summary>
+        /// <summary>
+        /// Host: a joiner's build is one this world can still take, near them.
+        /// </summary>
         private static bool Allowed(Constructible c, int option)
         {
             if (c == null)
             {
-                Authority.Refuse("there's nothing to build there (built already?)");
+                Authority.Refuse(
+                    "there's nothing to build there (built already?)");
                 return false;
             }
             if (option < 0 || option >= c.options.Count)
@@ -184,24 +210,34 @@ namespace DarkwoodMP.World
                 Authority.Refuse("it's built already");
                 return false;
             }
-            return Authority.InReach(c.transform.position, WorldActions.Reach, c.name);
+            return Authority.InReach(
+                c.transform.position, WorldActions.Reach, c.name);
         }
     }
 
-    /// <summary>Our player built or repaired something (manual: with the ingredients): the others build it too.</summary>
-    [HarmonyPatch(typeof(Constructible), nameof(Constructible.construct), new[] { typeof(bool), typeof(int) })]
+    /// <summary>
+    /// Our player built or repaired something (manual: with the ingredients):
+    /// the others build it too.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Constructible), nameof(Constructible.construct),
+        new[] { typeof(bool), typeof(int) })]
     static class ConstructPatch
     {
-        static bool Prefix(Constructible __instance, bool manual, int forceOption, out bool __state)
+        static bool Prefix(
+            Constructible __instance, bool manual, int forceOption,
+            out bool __state)
         {
             __state = false;
-            if (Construction.Confirming || !WorldActions.Sharing || !(manual || WorldActions.TestAsPlayer))
+            if (Construction.Confirming || !WorldActions.Sharing
+                || !(manual || WorldActions.TestAsPlayer))
             {
                 return true;
             }
             if (Session.Instance.IsClient)
             {
-                // A joiner asks first: the ingredients go now (to come back if refused), the build once the host agrees.
+                // A joiner asks first: the ingredients go now (to come back if
+                // refused), the build once the host agrees.
                 if (Construction.IsWaiting(__instance))
                 {
                     return false;
@@ -211,12 +247,15 @@ namespace DarkwoodMP.World
                 {
                     if (manual)
                     {
-                        __instance.getSelectedOption(); // sets chosenOption from the construction menu
+                        // sets chosenOption from the construction menu
+                        __instance.getSelectedOption();
                     }
                     option = __instance.chosenOption;
                 }
-                // Not one we can name to the host, or no such option: built here alone, as the game would.
-                if (option < 0 || option >= __instance.options.Count || !ObjRef.Of(__instance.gameObject).Valid)
+                // Not one we can name to the host, or no such option: built
+                // here alone, as the game would.
+                if (option < 0 || option >= __instance.options.Count
+                    || !ObjRef.Of(__instance.gameObject).Valid)
                 {
                     return true;
                 }
@@ -244,7 +283,8 @@ namespace DarkwoodMP.World
             return true;
         }
 
-        static void Postfix(Constructible __instance, int forceOption, bool __state)
+        static void Postfix(
+            Constructible __instance, int forceOption, bool __state)
         {
             if (!__state || !WorldActions.Outermost())
             {

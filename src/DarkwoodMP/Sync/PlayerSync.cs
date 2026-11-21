@@ -5,14 +5,16 @@ using UnityEngine;
 namespace DarkwoodMP.Sync
 {
     /// <summary>
-    /// Sends the local player's snapshot at a fixed rate and drives puppets for everyone else.
-    /// Clients send to the host; the host applies and relays to the other clients.
+    /// Sends the local player's snapshot at a fixed rate and drives puppets for
+    /// everyone else. Clients send to the host; the host applies and relays to
+    /// the other clients.
     /// </summary>
     public sealed class PlayerSync
     {
         public static PlayerSync Instance { get; private set; }
 
-        public readonly Dictionary<ulong, RemotePlayer> Remotes = new Dictionary<ulong, RemotePlayer>();
+        public readonly Dictionary<ulong, RemotePlayer> Remotes =
+            new Dictionary<ulong, RemotePlayer>();
         /// <summary>Another player died (their name).</summary>
         public event System.Action<string> OnRemoteDied;
 
@@ -22,13 +24,16 @@ namespace DarkwoodMP.Sync
         private readonly PlayerSnapshot _incoming = new PlayerSnapshot();
         private readonly MoveCheck _moves;
         private float _nextSend;
-        // Players who left, and when. Over Steam a PlayerState sent before PlayerLeft can arrive after it (they go on
-        // different channels, which Steam doesn't order), and would bring back a frozen puppet.
-        private readonly Dictionary<ulong, float> _left = new Dictionary<ulong, float>();
+        // Players who left, and when. Over Steam a PlayerState sent before
+        // PlayerLeft can arrive after it (they go on different channels, which
+        // Steam doesn't order), and would bring back a frozen puppet.
+        private readonly Dictionary<ulong, float> _left =
+            new Dictionary<ulong, float>();
         private const float LeftIgnore = 5f;
         /// <summary>
-        /// The tests' dummy (--dwmp-dummy): a copy of you left standing where you were, which the AI treats as
-        /// another player. Never a real peer id.
+        /// The tests' dummy (--dwmp-dummy): a copy of you left standing where
+        /// you were, which the AI treats as another player. Never a real peer
+        /// id.
         /// </summary>
         public const ulong DummyId = ulong.MaxValue - 1;
         public bool HasDummy => Remotes.ContainsKey(DummyId);
@@ -96,11 +101,14 @@ namespace DarkwoodMP.Sync
         }
 
         /// <summary>
-        /// Client: send where our player is now, reliably on Control, ahead of a request the host checks against our
-        /// position (a trigger set off the moment we arrived somewhere). Control is ordered, so the host has handled
-        /// this (through its MoveCheck, as every PlayerState) before the request. The State channel's updates are
-        /// unreliable and can come later, so without it the host's stand-in could still be where we were before a
-        /// teleport, and the request would be refused as too far away.
+        /// Client: send where our player is now, reliably on Control, ahead of
+        /// a request the host checks against our position (a trigger set off
+        /// the moment we arrived somewhere). Control is ordered, so the host
+        /// has handled this (through its MoveCheck, as every PlayerState)
+        /// before the request. The State channel's updates are unreliable and
+        /// can come later, so without it the host's stand-in could still be
+        /// where we were before a teleport, and the request would be refused as
+        /// too far away.
         /// </summary>
         public void FlushNow()
         {
@@ -121,7 +129,8 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
-            // A joiner isn't shown until its character is placed (World.Characters.Placing), off the others.
+            // A joiner isn't shown until its character is placed
+            // (World.Characters.Placing), off the others.
             var characters = World.Characters.Instance;
             if (characters != null && characters.Placing)
             {
@@ -148,11 +157,19 @@ namespace DarkwoodMP.Sync
             }
         }
 
-        /// <summary>Host: where this client's player last said it was, as MoveCheck let it be (false if not known).</summary>
-        public bool TryChecked(ulong from, out Vector3 pos) => _moves.TryGood(from, out pos);
+        /// <summary>
+        /// Host: where this client's player last said it was, as MoveCheck let
+        /// it be (false if not known).
+        /// </summary>
+        public bool TryChecked(ulong from, out Vector3 pos) =>
+            _moves.TryGood(from, out pos);
 
-        /// <summary>Host: an event it agreed to takes this client's player to `to` (MoveCheck.ExpectTrip).</summary>
-        public void ExpectTrip(ulong from, Vector3 to, float seconds) => _moves.ExpectTrip(from, to, seconds);
+        /// <summary>
+        /// Host: an event it agreed to takes this client's player to `to`
+        /// (MoveCheck.ExpectTrip).
+        /// </summary>
+        public void ExpectTrip(ulong from, Vector3 to, float seconds) =>
+            _moves.ExpectTrip(from, to, seconds);
 
         private void OnPlayerState(ulong from, PacketReader r)
         {
@@ -172,10 +189,12 @@ namespace DarkwoodMP.Sync
             }
             if (_session.IsHost)
             {
-                // Never trust the owner field from a client, nor a place it couldn't have got to.
+                // Never trust the owner field from a client, nor a place it
+                // couldn't have got to.
                 _incoming.Owner = from;
-                // A spectator (dead for good, World.Spectator) goes along with whoever it watches and can't touch
-                // anything: it's not checked, and starts afresh if it ever plays again.
+                // A spectator (dead for good, World.Spectator) goes along with
+                // whoever it watches and can't touch anything: it's not
+                // checked, and starts afresh if it ever plays again.
                 if (_incoming.Spectating)
                 {
                     _moves.Forget(from);
@@ -186,7 +205,8 @@ namespace DarkwoodMP.Sync
                 }
                 var w = _session.Begin(MsgType.PlayerState);
                 _incoming.Write(w);
-                _session.Broadcast(w, Channel.State, reliable: false, except: from);
+                _session.Broadcast(
+                    w, Channel.State, reliable: false, except: from);
             }
             else if (from != _session.HostId)
             {
@@ -197,7 +217,8 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
-            var remote = GetOrCreate(_incoming.Owner, _session.NameOf(_incoming.Owner));
+            var remote =
+                GetOrCreate(_incoming.Owner, _session.NameOf(_incoming.Owner));
             remote.Push(_incoming);
         }
 
@@ -245,11 +266,15 @@ namespace DarkwoodMP.Sync
             }
         }
 
-        /// <summary>Draw name tags above puppets (IMGUI; avoids depending on a font asset).</summary>
+        /// <summary>
+        /// Draw name tags above puppets (IMGUI; avoids depending on a font
+        /// asset).
+        /// </summary>
         public void DrawNameTags()
         {
-            // Not over the pause menu or the mod's windows; on the map, beside the players' markers; not over a
-            // cutscene, a game menu or anything else that isn't the world in play (UiState).
+            // Not over the pause menu or the mod's windows; on the map, beside
+            // the players' markers; not over a cutscene, a game menu or
+            // anything else that isn't the world in play (UiState).
             if (World.UiState.MenuOver)
             {
                 return;
@@ -279,10 +304,12 @@ namespace DarkwoodMP.Sync
                 {
                     continue;
                 }
-                var rect = new Rect(sp.x - 100, Screen.height - sp.y - 60, 200, 22);
+                var rect =
+                    new Rect(sp.x - 100, Screen.height - sp.y - 60, 200, 22);
                 if (r.Owner != DummyId)
                 {
-                    r.Name = _session.NameOf(r.Owner); // names can arrive after the first snapshot
+                    // names can arrive after the first snapshot
+                    r.Name = _session.NameOf(r.Owner);
                 }
                 string label = r.Name;
                 var last = r.Last;

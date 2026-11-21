@@ -7,13 +7,18 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for a story NPC's corpse (tools/tests/map_scenario_corpse.py): the chicken lady, killed by
-    /// the client, must lie dead and be searchable in every game, and what she carries is taken once.
+    /// Map test steps for a story NPC's corpse
+    /// (tools/tests/map_scenario_corpse.py): the chicken lady, killed by the
+    /// client, must lie dead and be searchable in every game, and what she
+    /// carries is taken once.
     /// </summary>
     public static class MapScenarioCorpse
     {
         private static Player P => Player.Instance;
-        /// <summary>The story name (NPC.name) of the NPC the steps found alive, for its state once its corpse lost its NPC part.</summary>
+        /// <summary>
+        /// The story name (NPC.name) of the NPC the steps found alive, for its
+        /// state once its corpse lost its NPC part.
+        /// </summary>
         private static string _story;
 
         private static Flags.NPCState State(string name)
@@ -53,10 +58,17 @@ namespace DarkwoodMP.World
             Add("cw-closed", CwClosed, timeout: 15f);
         }
 
-        /// <summary>Every copy of the NPC called NAME (its NPC.name), on or off.</summary>
+        /// <summary>
+        /// Every copy of the NPC called NAME (its NPC.name), on or off.
+        /// </summary>
         private static Character[] Copies(string name) =>
             Resources.FindObjectsOfTypeAll<Character>()
-                .Where(c => c != null && c.gameObject.scene.IsValid() && ((c.npc != null && c.npc.name == name) || c.name.StartsWith(name, System.StringComparison.OrdinalIgnoreCase)))
+                .Where(
+                    c => c != null && c.gameObject.scene.IsValid()
+                        && ((c.npc != null && c.npc.name == name)
+                            || c.name.StartsWith(
+                                name,
+                                System.StringComparison.OrdinalIgnoreCase)))
                 .ToArray();
 
         private static string Props(Character c)
@@ -76,7 +88,8 @@ namespace DarkwoodMP.World
                 }
                 text = c.npc.name + oneNote;
             }
-            string head = $"{c.name} (npc {text}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), ";
+            string head =
+                $"{c.name} (npc {text}) at {Fmt(c.transform.position)} ({Fmt(c.transform.position - Centre)} from the centre), ";
             bool on = c.gameObject.activeInHierarchy;
             bool alive = c.alive;
             int saveId = -1;
@@ -93,7 +106,8 @@ namespace DarkwoodMP.World
             int carried = -1;
             if (c.inventory != null)
             {
-                carried = c.inventory.slots.Count(s => s != null && !InvItemClass.isNull(s.invItem));
+                carried = c.inventory.slots.Count(
+                    s => s != null && !InvItemClass.isNull(s.invItem));
             }
             string enemy = "no";
             if (net)
@@ -107,23 +121,33 @@ namespace DarkwoodMP.World
         }
 
         private static Character Nearest(string name) =>
-            Copies(name).OrderBy(c => (c.transform.position - P.transform.position).sqrMagnitude).FirstOrDefault();
+            Copies(name)
+                .OrderBy(
+                    c => (c.transform.position
+                            - P.transform.position).sqrMagnitude)
+                .FirstOrDefault();
 
-        /// <summary>"sn-info NAME": every copy of the NPC, and its story state.</summary>
+        /// <summary>
+        /// "sn-info NAME": every copy of the NPC, and its story state.
+        /// </summary>
         private static IEnumerator SnInfo(string[] a, Result r)
         {
             var st = State(a[0]);
             string text = "none";
             if (st != null)
             {
-                text = $"dead {st.dead} deadID {st.deadID} attackedID {st.attackedID}";
+                text =
+                    $"dead {st.dead} deadID {st.deadID} attackedID {st.attackedID}";
             }
             r.Info = $"state {text}; " +
                      string.Join("; ", Copies(a[0]).Select(Props));
             yield break;
         }
 
-        /// <summary>"sn-goto NAME [DIST]": our player walks to DIST (default 250) from the NPC.</summary>
+        /// <summary>
+        /// "sn-goto NAME [DIST]": our player walks to DIST (default 250) from
+        /// the NPC.
+        /// </summary>
         private static IEnumerator SnGoto(string[] a, Result r)
         {
             var c = Nearest(a[0]);
@@ -143,7 +167,10 @@ namespace DarkwoodMP.World
             r.Info = $"at {Fmt(P.transform.position)}; {Props(c)}";
         }
 
-        /// <summary>"sn-kill NAME": our player hits the NPC until it's dead (a client's hits go to the host).</summary>
+        /// <summary>
+        /// "sn-kill NAME": our player hits the NPC until it's dead (a client's
+        /// hits go to the host).
+        /// </summary>
         private static IEnumerator SnKill(string[] a, Result r)
         {
             var c = Nearest(a[0]);
@@ -157,10 +184,14 @@ namespace DarkwoodMP.World
             {
                 yield return Walk(c.transform.position, 80f);
                 hits++;
-                AsPlayer(() => c.getHit(60f, P.transform, false, true, true, true, false, false, false));
+                AsPlayer(
+                    () => c.getHit(
+                        60f, P.transform, false, true, true, true, false, false,
+                        false));
                 yield return new WaitForSecondsRealtime(0.4f);
             }
-            yield return new WaitForSecondsRealtime(4f); // a client settles the corpse 2 s after it dies
+            // a client settles the corpse 2 s after it dies
+            yield return new WaitForSecondsRealtime(4f);
             if (c != null)
             {
                 r.Info = $"{hits} hits: {Props(c)}";
@@ -176,16 +207,21 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "sn-corpse NAME": the NPC's corpse is here near our player: dead, switched on and searchable, and it has
-        /// the loot its death put in it (Character.setDeathCollider: NPC.deathInventory).
+        /// "sn-corpse NAME": the NPC's corpse is here near our player: dead,
+        /// switched on and searchable, and it has the loot its death put in it
+        /// (Character.setDeathCollider: NPC.deathInventory).
         /// </summary>
         private static IEnumerator SnCorpse(string[] a, Result r)
         {
             Character c = null;
             for (float t = 0f; t < 8f; t += 0.25f)
             {
-                c = Copies(a[0]).Where(x => !x.alive && x.gameObject.activeInHierarchy)
-                    .OrderBy(x => (x.transform.position - P.transform.position).sqrMagnitude).FirstOrDefault();
+                c = Copies(a[0]).Where(
+                    x => !x.alive && x.gameObject.activeInHierarchy)
+                    .OrderBy(
+                        x => (x.transform.position
+                                - P.transform.position).sqrMagnitude)
+                    .FirstOrDefault();
                 if (c != null && c.GetComponent<Item>() != null)
                 {
                     break;
@@ -206,7 +242,8 @@ namespace DarkwoodMP.World
                 {
                     deadID = st.deadID;
                 }
-                r.Fail($"no corpse shown here (state dead {dead} deadID {deadID}): {all}");
+                r.Fail(
+                    $"no corpse shown here (state dead {dead} deadID {deadID}): {all}");
                 yield break;
             }
             bool? stateDead = null;
@@ -226,19 +263,24 @@ namespace DarkwoodMP.World
             }
             else if (Combat.NetEnemies.Hidden.Contains(c))
             {
-                r.Fail($"hidden (a frozen copy of ours, not shown as the host's): {r.Info}");
+                r.Fail(
+                    $"hidden (a frozen copy of ours, not shown as the host's): {r.Info}");
             }
             else if (Combat.NetEnemies.ClientMode)
             {
                 Combat.NetEnemies enemies = Combat.NetEnemies.Instance;
                 if (enemies == null || !enemies.NetIdOf(c, out _))
                 {
-                    r.Fail($"not the host's corpse (its loot wouldn't be the host's): {r.Info}");
+                    r.Fail(
+                        $"not the host's corpse (its loot wouldn't be the host's): {r.Info}");
                 }
             }
         }
 
-        /// <summary>"sn-away NAME DIST": our player walks DIST away from the NPC and back (its area switched off and on).</summary>
+        /// <summary>
+        /// "sn-away NAME DIST": our player walks DIST away from the NPC and
+        /// back (its area switched off and on).
+        /// </summary>
         private static IEnumerator SnAway(string[] a, Result r)
         {
             var c = Nearest(a[0]);
@@ -257,19 +299,24 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "sn-spawn-own NAME DX DZ": the NPC prefab Characters/NPC/NAME at the centre plus (DX, DZ), made by this game
-        /// alone, with a save id from its own counter (a client's counter is moved on first, so the ids differ): as a
-        /// location each game loads for itself while playing together gives its NPCs ids of each game's own.
+        /// "sn-spawn-own NAME DX DZ": the NPC prefab Characters/NPC/NAME at the
+        /// centre plus (DX, DZ), made by this game alone, with a save id from
+        /// its own counter (a client's counter is moved on first, so the ids
+        /// differ): as a location each game loads for itself while playing
+        /// together gives its NPCs ids of each game's own.
         /// </summary>
         private static IEnumerator SnSpawnOwn(string[] a, Result r)
         {
             var sm = Singleton<SaveManager>.Instance;
-            if (Net.Session.Instance != null && !Net.Session.Instance.IsHost && sm != null)
+            if (Net.Session.Instance != null && !Net.Session.Instance.IsHost
+                && sm != null)
             {
                 sm.currentUniqueID += 5000;
             }
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
-            var go = Core.AddPrefab("Characters/NPC/" + a[0], at, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
+            var go = Core.AddPrefab(
+                "Characters/NPC/" + a[0], at, Quaternion.Euler(90f, 0f, 0f),
+                null, worldSpace: true);
             if (go == null)
             {
                 r.Fail($"no prefab Characters/NPC/{a[0]}");
@@ -292,12 +339,21 @@ namespace DarkwoodMP.World
         }
 
         private static Character Corpse(string name) =>
-            Copies(name).Where(x => !x.alive && x.gameObject.activeInHierarchy && x.GetComponent<Item>() != null && x.inventory != null)
-                .OrderBy(x => (x.transform.position - P.transform.position).sqrMagnitude).FirstOrDefault();
+            Copies(name).Where(
+                x => !x.alive && x.gameObject.activeInHierarchy
+                    && x.GetComponent<Item>() != null && x.inventory != null)
+                .OrderBy(
+                    x => (x.transform.position
+                            - P.transform.position).sqrMagnitude)
+                .FirstOrDefault();
 
-        private static int Things(Inventory inv) => inv.slots.Count(s => s != null && !InvItemClass.isNull(s.invItem));
+        private static int Things(Inventory inv) =>
+            inv.slots.Count(s => s != null && !InvItemClass.isNull(s.invItem));
 
-        /// <summary>"sn-loot NAME": our player takes everything from the NPC's corpse, as from any container.</summary>
+        /// <summary>
+        /// "sn-loot NAME": our player takes everything from the NPC's corpse,
+        /// as from any container.
+        /// </summary>
         private static IEnumerator SnLoot(string[] a, Result r)
         {
             var c = Corpse(a[0]);
@@ -311,13 +367,15 @@ namespace DarkwoodMP.World
             P.openedItemInventory = inv; // as if its window were open
             yield return new WaitForSeconds(0.6f);
             var took = new System.Collections.Generic.List<string>();
-            foreach (var slot in inv.slots.Where(s => s != null && !InvItemClass.isNull(s.invItem)).ToList())
+            foreach (var slot in inv.slots.Where(
+                s => s != null && !InvItemClass.isNull(s.invItem)).ToList())
             {
                 var item = new InvItemClass(slot.invItem);
                 AsPlayer(() =>
                 {
                     slot.removeItem();
-                    P.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true);
+                    P.Inventory.addItemTypeToPlayer(
+                        item.type, item.amount, dropIfNoRoom: true);
                 });
                 took.Add($"{item.type} x{item.amount}");
                 yield return new WaitForSeconds(0.3f);
@@ -336,7 +394,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"sn-looted NAME": the NPC's corpse here is searchable and empty (another player took what it had).</summary>
+        /// <summary>
+        /// "sn-looted NAME": the NPC's corpse here is searchable and empty
+        /// (another player took what it had).
+        /// </summary>
         private static IEnumerator SnLooted(string[] a, Result r)
         {
             Character c = null;
@@ -363,12 +424,16 @@ namespace DarkwoodMP.World
 
         // ---- R03: a container's window when the container goes while it's open -------------------------------------
 
-        private static Character _cwDog;      // host: the dog killed by cw-dog
-        private static Inventory _cwInv;      // client: the corpse's inventory our player opened (cw-open)
-        private static GameObject _cwWindow;  // client: its window (Inventory.thisUI, under the UI)
+        // host: the dog killed by cw-dog
+        private static Character _cwDog;
+        // client: the corpse's inventory our player opened (cw-open)
+        private static Inventory _cwInv;
+        // client: its window (Inventory.thisUI, under the UI)
+        private static GameObject _cwWindow;
 
-        /// <summary>"cw-dog" (host): a dog 250 from the client's player, killed by our player; its corpse is the
-        /// client's to keep once it has lain a few seconds (NetEnemies.CorpseLinger).</summary>
+        /// <summary>"cw-dog" (host): a dog 250 from the client's player, killed
+        /// by our player; its corpse is the client's to keep once it has lain a
+        /// few seconds (NetEnemies.CorpseLinger).</summary>
         private static IEnumerator CwDog(string[] a, Result r)
         {
             var proxy = MapScenarioEnemies.ClientProxy();
@@ -377,7 +442,8 @@ namespace DarkwoodMP.World
                 r.Fail("no client player");
                 yield break;
             }
-            var c = MapScenarioFixChecks.SpawnAt(proxy.transform.position + new Vector3(250f, 0f, 0f));
+            var c = MapScenarioFixChecks.SpawnAt(
+                proxy.transform.position + new Vector3(250f, 0f, 0f));
             if (c == null)
             {
                 r.Fail("couldn't spawn a dog");
@@ -386,19 +452,27 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             yield return MapScenarioItems2.KillAsPlayer(c, r, 1.5f);
             _cwDog = c;
-            r.Info = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, alive {c.alive}";
+            r.Info =
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, alive {c.alive}";
         }
 
-        /// <summary>The newest of the host's dead dogs here whose corpses the host told us to keep (the highest net
-        /// id: cw-dog's; the story NPCs' kept corpses of the earlier steps aren't dogs).</summary>
+        /// <summary>The newest of the host's dead dogs here whose corpses the
+        /// host told us to keep (the highest net id: cw-dog's; the story NPCs'
+        /// kept corpses of the earlier steps aren't dogs).</summary>
         private static Character KeptCorpse() =>
             Object.FindObjectsOfType<Character>()
-                .Where(c => c != null && !c.alive && c.name.StartsWith("Dog") && Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.KeptCorpse(c)
-                            && c.GetComponent<Item>() != null && c.GetComponentInChildren<Inventory>(true) != null)
-                .OrderByDescending(c => MapScenarioFixChecks.IdOf(c)).FirstOrDefault();
+                .Where(
+                    c => c != null && !c.alive && c.name.StartsWith("Dog")
+                        && Combat.NetEnemies.Instance != null
+                        && Combat.NetEnemies.Instance.KeptCorpse(c)
+                        && c.GetComponent<Item>() != null
+                        && c.GetComponentInChildren<Inventory>(true) != null)
+                .OrderByDescending(c => MapScenarioFixChecks.IdOf(c))
+                .FirstOrDefault();
 
-        /// <summary>"cw-open" (client): the nearest kept corpse of the host's enemies, opened as the player opens it
-        /// (Item.openInventory), and left open.</summary>
+        /// <summary>"cw-open" (client): the nearest kept corpse of the host's
+        /// enemies, opened as the player opens it (Item.openInventory), and
+        /// left open.</summary>
         private static IEnumerator CwOpen(string[] a, Result r)
         {
             Character c = null;
@@ -432,14 +506,17 @@ namespace DarkwoodMP.World
             }
             r.Info = $"{name} at {spot}: open {open}, window {window}, " +
                      $"ours open {ReferenceEquals(P.openedItemInventory, inv)}, windows [{string.Join(", ", Windows())}]";
-            if (!inv.open || inv.thisUI == null || !ReferenceEquals(P.openedItemInventory, inv))
+            if (!inv.open || inv.thisUI == null
+                || !ReferenceEquals(P.openedItemInventory, inv))
             {
                 r.Fail($"its window didn't open: {r.Info}");
             }
         }
 
-        /// <summary>"cw-break" (client): the open corpse's Inventory destroyed directly, with no window closed first
-        /// (the safety net's case, Containers.DropOrphanedWindows: a way of going that CloseIfOpen doesn't cover).</summary>
+        /// <summary>"cw-break" (client): the open corpse's Inventory destroyed
+        /// directly, with no window closed first (the safety net's case,
+        /// Containers.DropOrphanedWindows: a way of going that CloseIfOpen
+        /// doesn't cover).</summary>
         private static IEnumerator CwBreak(string[] a, Result r)
         {
             if (_cwInv == null || !_cwInv.open)
@@ -452,7 +529,10 @@ namespace DarkwoodMP.World
             r.Info = "destroyed its Inventory";
         }
 
-        /// <summary>"cw-remove" (host): the dog's corpse removed from the world (the client's copy goes too).</summary>
+        /// <summary>
+        /// "cw-remove" (host): the dog's corpse removed from the world (the
+        /// client's copy goes too).
+        /// </summary>
         private static IEnumerator CwRemove(string[] a, Result r)
         {
             if (_cwDog == null)
@@ -460,13 +540,17 @@ namespace DarkwoodMP.World
                 r.Fail("no dog of cw-dog's");
                 yield break;
             }
-            r.Info = $"{_cwDog.name} #{MapScenarioFixChecks.IdOf(_cwDog)} removed";
+            r.Info =
+                $"{_cwDog.name} #{MapScenarioFixChecks.IdOf(_cwDog)} removed";
             Object.Destroy(_cwDog.gameObject);
             _cwDog = null;
             yield return new WaitForSeconds(1.5f);
         }
 
-        /// <summary>The container windows under the UI (Inventory.show names them ItemInv and DeathDrop).</summary>
+        /// <summary>
+        /// The container windows under the UI (Inventory.show names them
+        /// ItemInv and DeathDrop).
+        /// </summary>
         private static System.Collections.Generic.List<string> Windows()
         {
             var list = new System.Collections.Generic.List<string>();
@@ -485,8 +569,9 @@ namespace DarkwoodMP.World
             return list;
         }
 
-        /// <summary>"cw-closed" (client): the container our player had open is gone, its window with it, no
-        /// container window is left under the UI, and the player's open container is a real null (not a destroyed
+        /// <summary>"cw-closed" (client): the container our player had open is
+        /// gone, its window with it, no container window is left under the UI,
+        /// and the player's open container is a real null (not a destroyed
         /// object, which Player.closeInventory skips).</summary>
         private static IEnumerator CwClosed(string[] a, Result r)
         {
@@ -494,7 +579,8 @@ namespace DarkwoodMP.World
             for (float t = 0f; t < 8f && !ok; t += 0.25f)
             {
                 ok = _cwInv == null && _cwWindow == null && Windows().Count == 0
-                     && ReferenceEquals(P.openedItemInventory, null) && ReferenceEquals(P.openedItemInventory2, null);
+                    && ReferenceEquals(P.openedItemInventory, null)
+                    && ReferenceEquals(P.openedItemInventory2, null);
                 if (!ok)
                 {
                     yield return new WaitForSeconds(0.25f);
@@ -513,13 +599,15 @@ namespace DarkwoodMP.World
             {
                 opened = P.openedItemInventory.name;
             }
-            string head = $"container gone {_cwInv == null}, its window gone {_cwWindow == null}, windows under the UI [{string.Join(", ", Windows())}], ";
+            string head =
+                $"container gone {_cwInv == null}, its window gone {_cwWindow == null}, windows under the UI [{string.Join(", ", Windows())}], ";
             string second = "set";
             if (ReferenceEquals(P.openedItemInventory2, null))
             {
                 second = "null";
             }
-            r.Info = head + $"openedItemInventory {opened}, openedItemInventory2 {second}";
+            r.Info = head
+                + $"openedItemInventory {opened}, openedItemInventory2 {second}";
             if (!ok)
             {
                 r.Fail($"a window was left: {r.Info}");

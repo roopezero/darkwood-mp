@@ -9,8 +9,9 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Makes loading a saved world faster without changing what it loads. Measured with --dwmp-profile-load, most
-    /// of the time went to three things the game does slowly, not to work it has to do:
+    /// Makes loading a saved world faster without changing what it loads.
+    /// Measured with --dwmp-profile-load, most of the time went to three things
+    /// the game does slowly, not to work it has to do:
     ///
     /// 1. After making the saved objects, SaveManager.Load walks its 21,000-entry loadedObjects dictionary with
     ///    Values.ElementAt(i) and Keys.ElementAt(i). Those can't index a dictionary, so each call counts from the
@@ -27,15 +28,17 @@ namespace DarkwoodMP.World
     /// 4. Core.AddPrefab(path) calls Resources.Load for each of about 19,000 saved objects, though there are only
     ///    a few hundred kinds. While a world loads, each path's prefab is looked up once.
     ///
-    /// (The game's fixed 1.6 s wait before loading is left alone: it lets the black screen finish fading out
-    /// before Load stops every running tween, DOTween.KillAll. Cut short, the fade stops half-way and the whole
-    /// game stays dim.)
+    /// (The game's fixed 1.6 s wait before loading is left alone: it lets the
+    /// black screen finish fading out before Load stops every running tween,
+    /// DOTween.KillAll. Cut short, the fade stops half-way and the whole game
+    /// stays dim.)
     /// </summary>
     public static class LoadSpeed
     {
-        // ---- 1. ElementAt on the dictionary's keys and values ---------------------------------------------------
+        // ---- 1. ElementAt on the dictionary's keys and values ---------------
 
-        private static readonly Dictionary<object, (int count, Array copy)> _copies = new Dictionary<object, (int, Array)>();
+        private static readonly Dictionary<object, (int count, Array copy)> _copies =
+            new Dictionary<object, (int, Array)>();
 
         public static T ElementAt<T>(IEnumerable<T> source, int index)
         {
@@ -43,7 +46,8 @@ namespace DarkwoodMP.World
             {
                 return Enumerable.ElementAt(source, index);
             }
-            if (!_copies.TryGetValue(source, out var e) || e.count != c.Count || !(e.copy is T[]))
+            if (!_copies.TryGetValue(source, out var e) || e.count != c.Count
+                || !(e.copy is T[]))
             {
                 _copies[source] = e = (c.Count, source.ToArray());
             }
@@ -51,17 +55,21 @@ namespace DarkwoodMP.World
         }
 
 
-        // ---- 3. the save's JSON, parsed while the screen fades -----------------------------------------------
+        // ---- 3. the save's JSON, parsed while the screen fades --------------
 
         private sealed class Ahead<T> where T : class
         {
-            public string Path, Text; public T Result; public System.Threading.Thread Thread;
+            public string Path,
+                Text; public T Result; public System.Threading.Thread Thread;
         }
         private static Ahead<SaveManager.DynamicSave> _dynamic;
         private static Ahead<SaveManager.StaticSave> _static;
         private static int AheadUsed, AheadMissed;
 
-        /// <summary>The game is about to load the current profile's world: start parsing its files.</summary>
+        /// <summary>
+        /// The game is about to load the current profile's world: start parsing
+        /// its files.
+        /// </summary>
         internal static void ParseAhead()
         {
             var sm = Singleton<SaveManager>.Instance;
@@ -84,21 +92,32 @@ namespace DarkwoodMP.World
             {
                 try
                 {
-                    // Shared for writing and deleting: on Windows a plain read would make the game's own write of
-                    // this file fail while the read lasts. If the game changes it meanwhile, Take sees other text.
-                    using (var fs = new System.IO.FileStream(path, System.IO.FileMode.Open, System.IO.FileAccess.Read,
-                               System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete))
+                    // Shared for writing and deleting: on Windows a plain read
+                    // would make the game's own write of this file fail while
+                    // the read lasts. If the game changes it meanwhile, Take
+                    // sees other text.
+                    using (var fs = new System.IO.FileStream(
+                        path, System.IO.FileMode.Open,
+                        System.IO.FileAccess.Read,
+                        System.IO.FileShare.ReadWrite
+                            | System.IO.FileShare.Delete))
                     {
-                        using (var sr = new System.IO.StreamReader(fs, System.Text.Encoding.UTF8, detectEncodingFromByteOrderMarks: true))
+                        using (var sr = new System.IO.StreamReader(
+                            fs, System.Text.Encoding.UTF8,
+                            detectEncodingFromByteOrderMarks: true))
                         {
                             a.Text = sr.ReadToEnd();
                         }
                     }
-                    a.Result = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(a.Text);
+                    a.Result =
+                        Newtonsoft.Json.JsonConvert.DeserializeObject<T>(
+                            a.Text);
                 }
                 catch
                 {
-                    a.Result = null; // encrypted, or something that needs the main thread: Load parses it
+                    // encrypted, or something that needs the main thread: Load
+                    // parses it
+                    a.Result = null;
                 }
             })
             {
@@ -109,18 +128,22 @@ namespace DarkwoodMP.World
             return a;
         }
 
-        public static SaveManager.DynamicSave Dynamic(string text) => Take(ref _dynamic, text);
-        public static SaveManager.StaticSave Static(string text) => Take(ref _static, text);
+        public static SaveManager.DynamicSave Dynamic(string text) =>
+            Take(ref _dynamic, text);
+        public static SaveManager.StaticSave Static(string text) =>
+            Take(ref _static, text);
 
         private static T Take<T>(ref Ahead<T> slot, string text) where T : class
         {
-            // each parse is used once: a later Load (the backup file) parses itself
+            // each parse is used once: a later Load (the backup file) parses
+            // itself
             var a = slot;
             slot = null;
             if (a != null)
             {
                 a.Thread.Join();
-                if (a.Result != null && string.Equals(a.Text, text, StringComparison.Ordinal))
+                if (a.Result != null
+                    && string.Equals(a.Text, text, StringComparison.Ordinal))
                 {
                     AheadUsed++;
                     return a.Result;
@@ -130,10 +153,11 @@ namespace DarkwoodMP.World
             return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(text);
         }
 
-        // ---- 4. Resources.Load once per prefab path while loading -------------------------------------------
+        // ---- 4. Resources.Load once per prefab path while loading -----------
 
         internal static bool Loading;
-        private static readonly Dictionary<string, UnityEngine.Object> _prefabs = new Dictionary<string, UnityEngine.Object>();
+        private static readonly Dictionary<string, UnityEngine.Object> _prefabs =
+            new Dictionary<string, UnityEngine.Object>();
         private static int PrefabLookups, PrefabLoads;
 
         internal static UnityEngine.Object Prefab(string path)
@@ -157,15 +181,21 @@ namespace DarkwoodMP.World
         {
             Loading = false;
             _copies.Clear();
-            _prefabs.Clear(); // not held after loading, so the game can unload what it no longer uses
-            Plugin.Log.LogInfo($"LoadSpeed: {PrefabLookups} prefabs made from {PrefabLoads} loads; save parsed ahead: {AheadUsed} used, {AheadMissed} not");
+            // not held after loading, so the game can unload what it no longer
+            // uses
+            _prefabs.Clear();
+            Plugin.Log.LogInfo(
+                $"LoadSpeed: {PrefabLookups} prefabs made from {PrefabLoads} loads; save parsed ahead: {AheadUsed} used, {AheadMissed} not");
             AheadUsed = AheadMissed = 0;
         }
 
         // ---- 2. WorldGrid.registerToNode during a grid's registerCullablesOnLoad ---------------------------------
 
         internal static bool Batch;
-        /// <summary>"--dwmp-verify-load": also run the game's own search for each object and count differences.</summary>
+        /// <summary>
+        /// "--dwmp-verify-load": also run the game's own search for each object
+        /// and count differences.
+        /// </summary>
         public static bool Verify;
         public static int Checked, Mismatches;
         private static WorldGrid.Grid _grid;
@@ -214,7 +244,9 @@ namespace DarkwoodMP.World
             for (int i = 0; i < _grid.nodes.Count; i++)
             {
                 var p = _grid.nodes[i].position;
-                long k = Key(Mathf.FloorToInt(p.x / _cell), Mathf.FloorToInt(p.y / _cell));
+                long k = Key(
+                    Mathf.FloorToInt(p.x / _cell),
+                    Mathf.FloorToInt(p.y / _cell));
                 if (!_cells.TryGetValue(k, out var list))
                 {
                     _cells[k] = list = new List<int>();
@@ -224,11 +256,15 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The same as WorldGrid.registerToNodes (an object over several nodes: one point per node spacing across
-        /// its size), with the nodes near each point looked up instead of searched. The cullable goes to the same
-        /// nodes, and they're listed on the object in the grid's order, as the game's loop over all nodes does.
+        /// The same as WorldGrid.registerToNodes (an object over several nodes:
+        /// one point per node spacing across its size), with the nodes near
+        /// each point looked up instead of searched. The cullable goes to the
+        /// same nodes, and they're listed on the object in the grid's order, as
+        /// the game's loop over all nodes does.
         /// </summary>
-        internal static bool RegisterToNodes(WorldGrid w, GameObject GO, Vector2 size, WorldGrid.Cullable.Type type)
+        internal static bool RegisterToNodes(
+            WorldGrid w, GameObject GO, Vector2 size,
+            WorldGrid.Cullable.Type type)
         {
             if (w.currentGrid == null)
             {
@@ -257,19 +293,26 @@ namespace DarkwoodMP.World
 
             int d = w.distance;
             int across = ((int)size.x + d) / d, down = ((int)size.y + d) / d;
-            Vector3 corner = new Vector3(GO.transform.position.x - size.x / 2f, 0f, GO.transform.position.z - size.y / 2f);
+            Vector3 corner = new Vector3(
+                GO.transform.position.x - size.x / 2f, 0f,
+                GO.transform.position.z - size.y / 2f);
             if (GO.GetComponent<Collider>() != null)
             {
                 var box = GO.GetComponent<BoxCollider>();
-                corner = new Vector3(box.bounds.center.x - box.bounds.size.x / 2f, 0f, box.bounds.center.z - box.bounds.size.z / 2f);
+                corner = new Vector3(
+                    box.bounds.center.x - box.bounds.size.x / 2f, 0f,
+                    box.bounds.center.z - box.bounds.size.z / 2f);
             }
             float half = d / 2;
             var hit = new SortedSet<int>();
             for (int i = 0; i < across * down; i++)
             {
-                float px = corner.x + d * (i % across), pz = corner.z + d * (i / across);
-                int x0 = Mathf.FloorToInt((px - half) / _cell), x1 = Mathf.FloorToInt((px + half) / _cell);
-                int z0 = Mathf.FloorToInt((pz - half) / _cell), z1 = Mathf.FloorToInt((pz + half) / _cell);
+                float px = corner.x + d * (i % across),
+                    pz = corner.z + d * (i / across);
+                int x0 = Mathf.FloorToInt((px - half) / _cell),
+                    x1 = Mathf.FloorToInt((px + half) / _cell);
+                int z0 = Mathf.FloorToInt((pz - half) / _cell),
+                    z1 = Mathf.FloorToInt((pz + half) / _cell);
                 for (int x = x0; x <= x1; x++)
                 {
                     for (int z = z0; z <= z1; z++)
@@ -281,7 +324,8 @@ namespace DarkwoodMP.World
                         foreach (int n in list)
                         {
                             var np = _grid.nodes[n].position;
-                            if (Mathf.Abs(px - np.x) <= half && Mathf.Abs(pz - np.y) <= half)
+                            if (Mathf.Abs(px - np.x) <= half
+                                && Mathf.Abs(pz - np.y) <= half)
                             {
                                 hit.Add(n);
                             }
@@ -297,8 +341,10 @@ namespace DarkwoodMP.World
                     var np = _grid.nodes[n].position;
                     for (int i = 0; i < across * down; i++)
                     {
-                        float px = corner.x + d * (i % across), pz = corner.z + d * (i / across);
-                        if (Mathf.Abs(px - np.x) <= half && Mathf.Abs(pz - np.y) <= half)
+                        float px = corner.x + d * (i % across),
+                            pz = corner.z + d * (i / across);
+                        if (Mathf.Abs(px - np.x) <= half
+                            && Mathf.Abs(pz - np.y) <= half)
                         {
                             expected.Add(n);
                             break;
@@ -311,14 +357,16 @@ namespace DarkwoodMP.World
                     Mismatches++;
                     if (Mismatches <= 5)
                     {
-                        Plugin.Log.LogWarning($"LoadSpeed: {GO.name}: nodes {string.Join(",", hit)}, the game's search {string.Join(",", expected)}");
+                        Plugin.Log.LogWarning(
+                            $"LoadSpeed: {GO.name}: nodes {string.Join(",", hit)}, the game's search {string.Join(",", expected)}");
                     }
                 }
             }
             foreach (int n in hit)
             {
                 var node = _grid.nodes[n];
-                node.cullables.Add(cullable); // a new Cullable is never already listed
+                // a new Cullable is never already listed
+                node.cullables.Add(cullable);
                 if (!co.nodes.Contains(node))
                 {
                     co.nodes.Add(node);
@@ -328,8 +376,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The same as WorldGrid.registerToClosestNode: the first node at the smallest distance (under 10,000),
-        /// with the distance worked out in place instead of through Core.trueDistance's conversions.
+        /// The same as WorldGrid.registerToClosestNode: the first node at the
+        /// smallest distance (under 10,000), with the distance worked out in
+        /// place instead of through Core.trueDistance's conversions.
         /// </summary>
         internal static bool RegisterToClosestNode(WorldGrid w, GameObject GO)
         {
@@ -360,8 +409,12 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        /// <summary>The same as WorldGrid.registerToNode, with its two searches looked up instead.</summary>
-        internal static bool RegisterToNode(WorldGrid w, GameObject GO, WorldGrid.Cullable.Type type)
+        /// <summary>
+        /// The same as WorldGrid.registerToNode, with its two searches looked
+        /// up instead.
+        /// </summary>
+        internal static bool RegisterToNode(
+            WorldGrid w, GameObject GO, WorldGrid.Cullable.Type type)
         {
             if (w.currentGrid == null)
             {
@@ -392,12 +445,15 @@ namespace DarkwoodMP.World
                 _grid.cullables.Add(co);
             }
 
-            // The first node (in the grid's order) whose square, distance/2 each way, holds the object.
+            // The first node (in the grid's order) whose square, distance/2
+            // each way, holds the object.
             float half = w.distance / 2;
             Vector3 pos = GO.transform.position;
             int best = int.MaxValue;
-            int x0 = Mathf.FloorToInt((pos.x - half) / _cell), x1 = Mathf.FloorToInt((pos.x + half) / _cell);
-            int z0 = Mathf.FloorToInt((pos.z - half) / _cell), z1 = Mathf.FloorToInt((pos.z + half) / _cell);
+            int x0 = Mathf.FloorToInt((pos.x - half) / _cell),
+                x1 = Mathf.FloorToInt((pos.x + half) / _cell);
+            int z0 = Mathf.FloorToInt((pos.z - half) / _cell),
+                z1 = Mathf.FloorToInt((pos.z + half) / _cell);
             for (int x = x0; x <= x1; x++)
             {
                 for (int z = z0; z <= z1; z++)
@@ -413,7 +469,8 @@ namespace DarkwoodMP.World
                             continue;
                         }
                         var np = _grid.nodes[i].position;
-                        if (Mathf.Abs(pos.x - np.x) <= half && Mathf.Abs(pos.z - np.y) <= half)
+                        if (Mathf.Abs(pos.x - np.x) <= half
+                            && Mathf.Abs(pos.z - np.y) <= half)
                         {
                             best = i;
                         }
@@ -426,7 +483,8 @@ namespace DarkwoodMP.World
                 for (int i = 0; i < _grid.nodes.Count; i++)
                 {
                     var np = _grid.nodes[i].position;
-                    if (Mathf.Abs(pos.x - np.x) <= half && Mathf.Abs(pos.z - np.y) <= half)
+                    if (Mathf.Abs(pos.x - np.x) <= half
+                        && Mathf.Abs(pos.z - np.y) <= half)
                     {
                         expected = i;
                         break;
@@ -438,14 +496,17 @@ namespace DarkwoodMP.World
                     Mismatches++;
                     if (Mismatches <= 5)
                     {
-                        Plugin.Log.LogWarning($"LoadSpeed: {GO.name} at {pos}: node {best}, the game's search {expected}");
+                        Plugin.Log.LogWarning(
+                            $"LoadSpeed: {GO.name} at {pos}: node {best}, the game's search {expected}");
                     }
                 }
             }
             if (best != int.MaxValue)
             {
                 var node = _grid.nodes[best];
-                node.cullables.Add(cullable); // a new Cullable is never already listed (it has no Equals of its own)
+                // a new Cullable is never already listed (it has no Equals of
+                // its own)
+                node.cullables.Add(cullable);
                 co.node = node;
                 return false;
             }
@@ -454,13 +515,18 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>SaveManager.Load's loop over loadedObjects: ElementAt from an array copy (see LoadSpeed).</summary>
+    /// <summary>
+    /// SaveManager.Load's loop over loadedObjects: ElementAt from an array copy
+    /// (see LoadSpeed).
+    /// </summary>
     [HarmonyPatch]
     static class LoadElementAtPatch
     {
         static MethodBase TargetMethod()
         {
-            var t = typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic).FirstOrDefault(n => n.Name.StartsWith("<Load>d__"));
+            var t =
+                typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic)
+                    .FirstOrDefault(n => n.Name.StartsWith("<Load>d__"));
             if (t == null)
             {
                 return null;
@@ -468,25 +534,39 @@ namespace DarkwoodMP.World
             return AccessTools.Method(t, "MoveNext");
         }
 
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> code)
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> code)
         {
-            var fast = AccessTools.Method(typeof(LoadSpeed), nameof(LoadSpeed.ElementAt));
-            var dyn = AccessTools.Method(typeof(LoadSpeed), nameof(LoadSpeed.Dynamic));
-            var stat = AccessTools.Method(typeof(LoadSpeed), nameof(LoadSpeed.Static));
+            var fast = AccessTools.Method(
+                typeof(LoadSpeed), nameof(LoadSpeed.ElementAt));
+            var dyn = AccessTools.Method(
+                typeof(LoadSpeed), nameof(LoadSpeed.Dynamic));
+            var stat =
+                AccessTools.Method(typeof(LoadSpeed), nameof(LoadSpeed.Static));
             int n = 0, parses = 0;
             foreach (var ins in code)
             {
-                if ((ins.opcode == OpCodes.Call || ins.opcode == OpCodes.Callvirt) && ins.operand is MethodInfo m)
+                if ((ins.opcode == OpCodes.Call
+                        || ins.opcode == OpCodes.Callvirt)
+                    && ins.operand is MethodInfo m)
                 {
-                    if (m.Name == "ElementAt" && m.DeclaringType == typeof(Enumerable) && m.IsGenericMethod)
+                    if (m.Name == "ElementAt"
+                        && m.DeclaringType == typeof(Enumerable)
+                        && m.IsGenericMethod)
                     {
                         ins.opcode = OpCodes.Call;
-                        ins.operand = fast.MakeGenericMethod(m.GetGenericArguments());
+                        ins.operand =
+                            fast.MakeGenericMethod(m.GetGenericArguments());
                         n++;
                     }
-                    // JsonConvert.DeserializeObject<DynamicSave or StaticSave>(string): the parse made ahead.
-                    else if (m.Name == "DeserializeObject" && m.DeclaringType == typeof(Newtonsoft.Json.JsonConvert) && m.IsGenericMethod
-                             && m.GetParameters().Length == 1 && m.GetParameters()[0].ParameterType == typeof(string))
+                    // JsonConvert.DeserializeObject<DynamicSave or StaticSave>(string):
+                    // the parse made ahead.
+                    else if (m.Name == "DeserializeObject"
+                        && m.DeclaringType
+                            == typeof(Newtonsoft.Json.JsonConvert)
+                        && m.IsGenericMethod
+                        && m.GetParameters().Length == 1
+                        && m.GetParameters()[0].ParameterType == typeof(string))
                     {
                         var t = m.GetGenericArguments()[0];
                         if (t == typeof(SaveManager.DynamicSave))
@@ -505,11 +585,15 @@ namespace DarkwoodMP.World
             }
             if (n == 0)
             {
-                Plugin.Log.LogWarning("LoadSpeed: SaveManager.Load has no ElementAt calls to speed up (game changed?)");
+                Plugin.Log.LogWarning(
+                    "LoadSpeed: SaveManager.Load has no ElementAt calls to "
+                        + "speed up (game changed?)");
             }
             if (parses == 0)
             {
-                Plugin.Log.LogWarning("LoadSpeed: SaveManager.Load parses no save files (game changed?)");
+                Plugin.Log.LogWarning(
+                    "LoadSpeed: SaveManager.Load parses no save files (game "
+                        + "changed?)");
             }
         }
 
@@ -530,7 +614,10 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>The game is about to load a saved world (after its 1.6 s fade): parse the save meanwhile.</summary>
+    /// <summary>
+    /// The game is about to load a saved world (after its 1.6 s fade): parse
+    /// the save meanwhile.
+    /// </summary>
     [HarmonyPatch(typeof(WorldGenerator), "Start")]
     static class ParseAheadPatch
     {
@@ -543,22 +630,37 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Core.AddPrefab(path, ...) while loading: each path's prefab is looked up once (see LoadSpeed).</summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
+    /// <summary>
+    /// Core.AddPrefab(path, ...) while loading: each path's prefab is looked up
+    /// once (see LoadSpeed).
+    /// </summary>
+    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
+    {
+        typeof(string),
+        typeof(Vector3),
+        typeof(Quaternion),
+        typeof(GameObject),
+        typeof(bool)
+    })]
     static class AddPrefabCachePatch
     {
-        static bool Prefix(string prefab, Vector3 position, Quaternion quaternion, GameObject parentGO, bool worldSpace, ref GameObject __result)
+        static bool Prefix(
+            string prefab, Vector3 position, Quaternion quaternion,
+            GameObject parentGO, bool worldSpace, ref GameObject __result)
         {
             if (!LoadSpeed.Loading)
             {
                 return true;
             }
-            __result = Core.AddPrefab(LoadSpeed.Prefab(prefab), position, quaternion, parentGO, worldSpace);
+            __result = Core.AddPrefab(
+                LoadSpeed.Prefab(prefab), position, quaternion, parentGO,
+                worldSpace);
             return false;
         }
     }
 
-    [HarmonyPatch(typeof(WorldGrid.Grid), nameof(WorldGrid.Grid.registerCullablesOnLoad))]
+    [HarmonyPatch(
+        typeof(WorldGrid.Grid), nameof(WorldGrid.Grid.registerCullablesOnLoad))]
     static class GridRegisterBatchPatch
     {
         static void Prefix() => LoadSpeed.BeginBatch();
@@ -569,10 +671,17 @@ namespace DarkwoodMP.World
         }
     }
 
-    [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToNodes), new[] { typeof(GameObject), typeof(Vector2), typeof(WorldGrid.Cullable.Type) })]
+    [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToNodes), new[]
+    {
+        typeof(GameObject),
+        typeof(Vector2),
+        typeof(WorldGrid.Cullable.Type)
+    })]
     static class RegisterToNodesPatch
     {
-        static bool Prefix(WorldGrid __instance, GameObject GO, Vector2 size, WorldGrid.Cullable.Type type)
+        static bool Prefix(
+            WorldGrid __instance, GameObject GO, Vector2 size,
+            WorldGrid.Cullable.Type type)
         {
             if (!LoadSpeed.Batch)
             {
@@ -584,7 +693,8 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"LoadSpeed: {e.Message}; the game's own registerToNodes instead");
+                Plugin.Log.LogWarning(
+                    $"LoadSpeed: {e.Message}; the game's own registerToNodes instead");
                 LoadSpeed.EndBatch();
                 return true;
             }
@@ -594,13 +704,17 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToClosestNode))]
     static class RegisterToClosestNodePatch
     {
-        static bool Prefix(WorldGrid __instance, GameObject GO) => !LoadSpeed.Batch || LoadSpeed.RegisterToClosestNode(__instance, GO);
+        static bool Prefix(WorldGrid __instance, GameObject GO) =>
+            !LoadSpeed.Batch || LoadSpeed.RegisterToClosestNode(__instance, GO);
     }
 
-    [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToNode), new[] { typeof(GameObject), typeof(WorldGrid.Cullable.Type) })]
+    [HarmonyPatch(
+        typeof(WorldGrid), nameof(WorldGrid.registerToNode),
+        new[] { typeof(GameObject), typeof(WorldGrid.Cullable.Type) })]
     static class RegisterToNodePatch
     {
-        static bool Prefix(WorldGrid __instance, GameObject GO, WorldGrid.Cullable.Type type)
+        static bool Prefix(
+            WorldGrid __instance, GameObject GO, WorldGrid.Cullable.Type type)
         {
             if (!LoadSpeed.Batch)
             {
@@ -612,7 +726,8 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"LoadSpeed: {e.Message}; the game's own registerToNode instead");
+                Plugin.Log.LogWarning(
+                    $"LoadSpeed: {e.Message}; the game's own registerToNode instead");
                 LoadSpeed.EndBatch();
                 return true;
             }

@@ -10,16 +10,19 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for what the night brings (tools/tests/map_scenario_night.py) and for how smoothly a client
-    /// draws the host's enemies.
+    /// Map test steps for what the night brings
+    /// (tools/tests/map_scenario_night.py) and for how smoothly a client draws
+    /// the host's enemies.
     ///   nl-inventory (host)   every night scenario's events and what their steps do, in the log ([night] lines).
     ///   nl-event NAME (host)  the night event NAME fired at the nearest hideout, as the night fires it.
     ///   nl-herd N (host)      N enemies that run at the client's player, by it.
     ///   nl-motion SECS        (client) walks in a circle for SECS while counting how its copies of the host's
     ///                         enemies are drawn (EnemyMotion.Stats).
     ///   nl-clear (host)       the herd removed.
-    /// Dump section "nightobjects": every chunk's night-spawned objects (WorldChunk.nightSpawnedObjects, gone at
-    /// dawn) and every object of a kind a night event's spawn step makes, wherever they are, keyed by name and place.
+    /// Dump section "nightobjects": every chunk's night-spawned objects
+    /// (WorldChunk.nightSpawnedObjects, gone at dawn) and every object of a
+    /// kind a night event's spawn step makes, wherever they are, keyed by name
+    /// and place.
     /// </summary>
     public static class MapScenarioNight
     {
@@ -50,7 +53,8 @@ namespace DarkwoodMP.World
                 }
                 foreach (var t in StateDump.All<Transform>())
                 {
-                    if (t != null && names.Contains(Name(t.gameObject)) && !listed.Contains(t.gameObject))
+                    if (t != null && names.Contains(Name(t.gameObject))
+                        && !listed.Contains(t.gameObject))
                     {
                         Entry(ctx, t.gameObject, false);
                     }
@@ -70,7 +74,8 @@ namespace DarkwoodMP.World
             });
         }
 
-        private static string Name(GameObject g) => g.name.Replace("(Clone)", "").Trim();
+        private static string Name(GameObject g) =>
+            g.name.Replace("(Clone)", "").Trim();
 
         private static IEnumerator None()
         {
@@ -78,7 +83,9 @@ namespace DarkwoodMP.World
         }
 
         private static IEnumerable<CustomEvent> NightEvents(NightScenario sc) =>
-            sc.customEvents.Concat(sc.customEventAndInts.Where(x => x != null).Select(x => x.customEvent)).Where(e => e != null).Distinct();
+            sc.customEvents.Concat(sc.customEventAndInts.Where(x => x != null)
+                    .Select(x => x.customEvent)).Where(e => e != null)
+                .Distinct();
 
         /// <summary>The prefabs the night events' spawn steps make.</summary>
         private static HashSet<string> NightObjectNames()
@@ -95,13 +102,19 @@ namespace DarkwoodMP.World
             }
             foreach (var sc in ns.scenarios.Where(x => x != null))
             {
-                foreach (var ce in NightEvents(sc).Where(e => e.theEvent != null))
+                foreach (var ce in NightEvents(sc).Where(
+                    e => e.theEvent != null))
                 {
-                    foreach (var ge in ce.theEvent.gameEvents.Where(g => g != null))
+                    foreach (var ge in ce.theEvent.gameEvents.Where(
+                        g => g != null))
                     {
                         foreach (var e in ge.events)
                         {
-                            if (e != null && e.type == GameEvent.Type.gameObject && e.gameObjectModifyType == GameEvent.GameObjectModify.spawn && e.targetTransform != null)
+                            if (e != null
+                                && e.type == GameEvent.Type.gameObject
+                                && e.gameObjectModifyType
+                                    == GameEvent.GameObjectModify.spawn
+                                && e.targetTransform != null)
                             {
                                 names.Add(e.targetTransform.name);
                             }
@@ -113,9 +126,12 @@ namespace DarkwoodMP.World
         }
         private static HashSet<string> _names;
 
-        // ---- what the night events do ----------------------------------------------------------------------------
+        // ---- what the night events do ---------------------------------------
 
-        /// <summary>"nl-inventory": each night scenario's events, and for each the kinds of steps it runs.</summary>
+        /// <summary>
+        /// "nl-inventory": each night scenario's events, and for each the kinds
+        /// of steps it runs.
+        /// </summary>
         private static IEnumerator Inventory(string[] a, Result r)
         {
             var ns = Singleton<NightScenarios>.Instance;
@@ -124,7 +140,8 @@ namespace DarkwoodMP.World
                 r.Fail("no NightScenarios");
                 return None();
             }
-            var kinds = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
+            var kinds = new SortedDictionary<string, SortedSet<string>>(
+                StringComparer.Ordinal);
             var seen = new HashSet<CustomEvent>();
             int events = 0;
             foreach (var sc in ns.scenarios)
@@ -143,7 +160,8 @@ namespace DarkwoodMP.World
                     var re = ce.theEvent;
                     if (re == null)
                     {
-                        Plugin.Log.LogInfo($"[night] {sc.name} / {ce.name}: no RandomEvent");
+                        Plugin.Log.LogInfo(
+                            $"[night] {sc.name} / {ce.name}: no RandomEvent");
                         continue;
                     }
                     var steps = new List<string>();
@@ -167,7 +185,8 @@ namespace DarkwoodMP.World
                                 {
                                     if (!kinds.TryGetValue(k, out var set))
                                     {
-                                        kinds[k] = set = new SortedSet<string>(StringComparer.Ordinal);
+                                        kinds[k] = set = new SortedSet<string>(
+                                            StringComparer.Ordinal);
                                     }
                                     set.Add(ce.name);
                                 }
@@ -187,14 +206,17 @@ namespace DarkwoodMP.World
                         }
                         steps.Add("(" + re.type + argument + ")");
                     }
-                    Plugin.Log.LogInfo($"[night] {sc.name} (difficulty {sc.difficulty}) / {ce.name}: {re.type}: {string.Join("; ", steps)}");
+                    Plugin.Log.LogInfo(
+                        $"[night] {sc.name} (difficulty {sc.difficulty}) / {ce.name}: {re.type}: {string.Join("; ", steps)}");
                 }
             }
             foreach (var kv in kinds)
             {
-                Plugin.Log.LogInfo($"[night] world step {kv.Key}: in {string.Join(", ", kv.Value)}");
+                Plugin.Log.LogInfo(
+                    $"[night] world step {kv.Key}: in {string.Join(", ", kv.Value)}");
             }
-            r.Info = $"{events} night events; world steps: {string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
+            r.Info =
+                $"{events} night events; world steps: {string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
             return None();
         }
 
@@ -205,7 +227,9 @@ namespace DarkwoodMP.World
             {
                 case GameEvent.Type.gameObject:
                     string spawned = "";
-                    if (e.gameObjectModifyType == GameEvent.GameObjectModify.spawn && e.targetTransform != null)
+                    if (e.gameObjectModifyType
+                            == GameEvent.GameObjectModify.spawn
+                        && e.targetTransform != null)
                     {
                         spawned = " " + e.targetTransform.name;
                     }
@@ -248,8 +272,10 @@ namespace DarkwoodMP.World
                     k += " " + e.Value;
                     break;
             }
-            var targets = e.locationObjects.Where(o => o != null).Select(o => o.type.ToString())
-                .Concat(e.targetGameObjects.Where(g => g != null).Select(g => g.name)).Distinct().Take(4).ToList();
+            var targets = e.locationObjects.Where(o => o != null).Select(
+                o => o.type.ToString())
+                .Concat(e.targetGameObjects.Where(g => g != null)
+                    .Select(g => g.name)).Distinct().Take(4).ToList();
             if (e.getTargetFromLocation || targets.Count > 0)
             {
                 string fromLocation = "";
@@ -262,12 +288,13 @@ namespace DarkwoodMP.World
             return k;
         }
 
-        // ---- a night event at our hideout ------------------------------------------------------------------------
+        // ---- a night event at our hideout -----------------------------------
 
         /// <summary>
-        /// "nl-event NAME" (host): the night event NAME (a CustomEvent of any scenario) fired as the night fires it,
-        /// at the hideout nearest to us (the game puts its GameEvents under the player's big location). Waits for
-        /// what its steps make (NightObjects).
+        /// "nl-event NAME" (host): the night event NAME (a CustomEvent of any
+        /// scenario) fired as the night fires it, at the hideout nearest to us
+        /// (the game puts its GameEvents under the player's big location).
+        /// Waits for what its steps make (NightObjects).
         /// </summary>
         private static IEnumerator FireEvent(string[] a, Result r)
         {
@@ -299,8 +326,12 @@ namespace DarkwoodMP.World
                 r.Fail($"no night event {a[0]}");
                 yield break;
             }
-            var loc = StateDump.All<Location>().Where(l => l.playerBase && !l.isSubLocation)
-                .OrderBy(l => StateDump.Flat(l.transform.position - p.transform.position)).FirstOrDefault();
+            var loc = StateDump.All<Location>().Where(
+                l => l.playerBase && !l.isSubLocation)
+                .OrderBy(
+                    l => StateDump.Flat(
+                        l.transform.position
+                            - p.transform.position)).FirstOrDefault();
             if (loc == null)
             {
                 r.Fail("no hideout");
@@ -318,26 +349,38 @@ namespace DarkwoodMP.World
                 p.whereAmI.location = was;
             }
             float until = Time.realtimeSinceStartup + 8f;
-            while (Time.realtimeSinceStartup < until && NightObjects.SentCount == sent)
+            while (Time.realtimeSinceStartup < until
+                && NightObjects.SentCount == sent)
             {
                 yield return null;
             }
             yield return new WaitForSeconds(2f);
             var names = NightObjectNames();
-            var made = ObjRef.Spawned.Values.Where(g => g != null && names.Contains(Name(g))).GroupBy(Name).Select(gr => $"{gr.Key} x{gr.Count()}");
+            var made = ObjRef.Spawned.Values.Where(
+                g => g != null
+                    && names.Contains(Name(g))).GroupBy(Name)
+                .Select(gr => $"{gr.Key} x{gr.Count()}");
             if (NightObjects.SentCount == sent)
             {
                 r.Fail($"{ev.name} at {loc.name} made nothing");
             }
-            r.Info = $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} objects; night objects now: {string.Join(", ", made)}";
+            r.Info =
+                $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} objects; night objects now: {string.Join(", ", made)}";
         }
 
-        // ---- enemy motion ----------------------------------------------------------------------------------------
+        // ---- enemy motion ---------------------------------------------------
 
-        /// <summary>The first remote player's stand-in on the host (not the test dummy).</summary>
-        internal static NetPlayerProxy ClientProxy() => NetPlayerProxy.All.Values.FirstOrDefault(x => x != null && x.Owner != Sync.PlayerSync.DummyId);
+        /// <summary>
+        /// The first remote player's stand-in on the host (not the test dummy).
+        /// </summary>
+        internal static NetPlayerProxy ClientProxy() =>
+            NetPlayerProxy.All.Values.FirstOrDefault(
+                x => x != null && x.Owner != Sync.PlayerSync.DummyId);
 
-        /// <summary>"nl-herd N [KIND]" (host): N enemies (DogMutated by default) by the client's player, after it.</summary>
+        /// <summary>
+        /// "nl-herd N [KIND]" (host): N enemies (DogMutated by default) by the
+        /// client's player, after it.
+        /// </summary>
         private static IEnumerator Herd(string[] a, Result r)
         {
             int n = 6;
@@ -359,8 +402,13 @@ namespace DarkwoodMP.World
             for (int i = 0; i < n; i++)
             {
                 float ang = i * Mathf.PI * 2f / n;
-                var spot = MapScenarioEnemies.FreeSpot(proxy.transform.position + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 500f);
-                var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: true);
+                var spot = MapScenarioEnemies.FreeSpot(
+                    proxy.transform.position + new Vector3(
+                        Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 500f);
+                var c =
+                    Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                        P.gameObject, spot, 1f, kind, nocturnal: false,
+                        attackPlayer: true);
                 if (c == null)
                 {
                     continue;
@@ -393,7 +441,10 @@ namespace DarkwoodMP.World
             r.Info = $"removed {n}";
         }
 
-        /// <summary>"nl-motion SECS" (client): walk round in a circle while counting how the host's enemies are drawn.</summary>
+        /// <summary>
+        /// "nl-motion SECS" (client): walk round in a circle while counting how
+        /// the host's enemies are drawn.
+        /// </summary>
         private static IEnumerator Motion(string[] a, Result r)
         {
             float secs = 20f;
@@ -417,10 +468,13 @@ namespace DarkwoodMP.World
                 while (Time.realtimeSinceStartup < until)
                 {
                     float ang = leg++ * Mathf.PI / 4f;
-                    var to = centre + new Vector3(Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 250f;
+                    var to = centre + new Vector3(
+                        Mathf.Cos(ang), 0f, Mathf.Sin(ang)) * 250f;
                     var walk = Walk(to, 60f, detours: 0);
                     float legUntil = Time.realtimeSinceStartup + 6f;
-                    while (Time.realtimeSinceStartup < until && Time.realtimeSinceStartup < legUntil && walk.MoveNext())
+                    while (Time.realtimeSinceStartup < until
+                        && Time.realtimeSinceStartup < legUntil
+                        && walk.MoveNext())
                     {
                         yield return walk.Current;
                     }
@@ -443,7 +497,8 @@ namespace DarkwoodMP.World
             }
             else if (EnemyMotion.Stats.Stalls * 10 > EnemyMotion.Stats.Moving)
             {
-                r.Fail("enemies stood still in over 10% of the frames they moved: " + s);
+                r.Fail(
+                    "enemies stood still in over 10% of the frames they moved: " + s);
             }
             r.Info = s;
         }

@@ -10,18 +10,23 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Shares the host's world with the players who join, as goasis hands its pack to them.
+    /// Shares the host's world with the players who join, as goasis hands its
+    /// pack to them.
     ///
-    /// Host: a client whose Hello carries another world hash than the host's gets SaveOffer: the hash, the
-    /// profile and the files' names and sizes. The offered snapshot is kept for that client, so the host saving
-    /// meanwhile doesn't change what it's downloading. The client asks for it a piece at a time (NeedSave) and
-    /// gets each as SaveData.
+    /// Host: a client whose Hello carries another world hash than the host's
+    /// gets SaveOffer: the hash, the profile and the files' names and sizes.
+    /// The offered snapshot is kept for that client, so the host saving
+    /// meanwhile doesn't change what it's downloading. The client asks for it a
+    /// piece at a time (NeedSave) and gets each as SaveData.
     ///
-    /// Client: the world goes into BepInEx/cache/DarkwoodMP/worlds/&lt;hash&gt;/, laid out as 1_4Save is
-    /// (prof&lt;id&gt;/sav.dat ...), plus profile.json. Once it has all come and its hash checks out, the client
-    /// sends Hello again with that hash, is let in, and loads it with saves redirected there (SaveRedirect).
-    /// The world the client last downloaded is offered in Hello while it's unchanged, so rejoining a host that
-    /// hasn't saved since needn't download it again.
+    /// Client: the world goes into
+    /// BepInEx/cache/DarkwoodMP/worlds/&lt;hash&gt;/, laid out as 1_4Save is
+    /// (prof&lt;id&gt;/sav.dat ...), plus profile.json. Once it has all come
+    /// and its hash checks out, the client sends Hello again with that hash, is
+    /// let in, and loads it with saves redirected there (SaveRedirect).
+    /// The world the client last downloaded is offered in Hello while it's
+    /// unchanged, so rejoining a host that hasn't saved since needn't download
+    /// it again.
     /// </summary>
     public sealed class WorldShare
     {
@@ -34,7 +39,8 @@ namespace DarkwoodMP.World
         private readonly MonoBehaviour _runner;
         private readonly string _cacheDir;
 
-        public WorldShare(Session session, MonoBehaviour runner, string cacheRoot)
+        public WorldShare(
+            Session session, MonoBehaviour runner, string cacheRoot)
         {
             Instance = this;
             _session = session;
@@ -88,7 +94,8 @@ namespace DarkwoodMP.World
             });
             session.Register(MsgType.JoinWait, (from, r) =>
             {
-                if (from != _session.HostId || _session.IsHost || _session.Connected)
+                if (from != _session.HostId || _session.IsHost
+                    || _session.Connected)
                 {
                     return;
                 }
@@ -100,12 +107,15 @@ namespace DarkwoodMP.World
                 LoadStatus = why;
                 if (_download != null)
                 {
-                    Plugin.Log.LogInfo("The host no longer offers the world we were downloading");
+                    Plugin.Log.LogInfo(
+                        "The host no longer offers the world we were "
+                            + "downloading");
                     _download = null;
                 }
                 if (why == Preparing)
                 {
-                    JoinScreen.Begin(); // it's on its way: the loading screen says so
+                    // it's on its way: the loading screen says so
+                    JoinScreen.Begin();
                 }
                 _runner.StartCoroutine(HelloAgain());
             });
@@ -120,9 +130,12 @@ namespace DarkwoodMP.World
                 {
                     active.Leave();
                 }
-                LeaveHostWorld("The host went back to the main menu and stopped the server.");
+                LeaveHostWorld(
+                    "The host went back to the main menu and stopped the "
+                        + "server.");
             });
-            session.OnHostLost += why => LeaveHostWorld($"Lost the host: {why}");
+            session.OnHostLost += why => LeaveHostWorld(
+                $"Lost the host: {why}");
             session.OnRefused += why =>
             {
                 if (JoinScreen.Shown)
@@ -132,13 +145,14 @@ namespace DarkwoodMP.World
             };
         }
 
-        // ---- the host's world changing under the players ------------------------------------
+        // ---- the host's world changing under the players --------------------
 
         private int _hostWorldKey;
 
         /// <summary>
-        /// Host, going back to the main menu (Core.returnToMainMenu: the pause menu's Main menu, the permadeath
-        /// screen, the credits): the world the players are in is gone, so the server stops and they're sent to
+        /// Host, going back to the main menu (Core.returnToMainMenu: the pause
+        /// menu's Main menu, the permadeath screen, the credits): the world the
+        /// players are in is gone, so the server stops and they're sent to
         /// their own main menus.
         /// </summary>
         public void HostToMainMenu()
@@ -152,21 +166,29 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Joiner, going back to the main menu: leave the host's game (our character is sent first, while the world
-        /// is still whole), so the menu's Multiplayer window is ready to join this server or another one again.
+        /// Joiner, going back to the main menu: leave the host's game (our
+        /// character is sent first, while the world is still whole), so the
+        /// menu's Multiplayer window is ready to join this server or another
+        /// one again.
         /// </summary>
-        private bool _joiningWorld; // LoadWorld is leaving our world for the host's: not a player's going to the menu
+        // LoadWorld is leaving our world for the host's: not a player's going
+        // to the menu
+        private bool _joiningWorld;
         public void ClientToMainMenu()
         {
             if (!_session.IsClient || _joiningWorld)
             {
                 return;
             }
-            Plugin.Log.LogInfo("Back to the main menu: leaving the host's game");
+            Plugin.Log.LogInfo(
+                "Back to the main menu: leaving the host's game");
             _session.Backend.Leave();
         }
 
-        /// <summary>Host: send the players a last message (HostAway, GameEnd) and stop the server once they've gone.</summary>
+        /// <summary>
+        /// Host: send the players a last message (HostAway, GameEnd) and stop
+        /// the server once they've gone.
+        /// </summary>
         public void StopServer(PacketWriter farewell)
         {
             if (!_session.IsHost)
@@ -182,27 +204,35 @@ namespace DarkwoodMP.World
             _runner.StartCoroutine(StopServerSoon(_session.Backend));
         }
 
-        /// <summary>Client: what the co-op panel says once we're back at the main menu.</summary>
+        /// <summary>
+        /// Client: what the co-op panel says once we're back at the main menu.
+        /// </summary>
         public void SetLoadStatus(string why) => LoadStatus = why;
 
         /// <summary>
-        /// The players leave as HostAway reaches them. Closing their connections from here first could lose it: a
-        /// socket closed with their updates still unread is reset, not closed.
+        /// The players leave as HostAway reaches them. Closing their
+        /// connections from here first could lose it: a socket closed with
+        /// their updates still unread is reset, not closed.
         /// </summary>
         private IEnumerator StopServerSoon(INetBackend backend)
         {
             float until = Time.realtimeSinceStartup + 1f;
-            while (_session.Peers.Count > 0 && Time.realtimeSinceStartup < until)
+            while (_session.Peers.Count > 0
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
-            if (_session.Backend == backend && backend.InSession && backend.IsHost)
+            if (_session.Backend == backend && backend.InSession
+                && backend.IsHost)
             {
                 backend.Leave();
             }
         }
 
-        /// <summary>Client: the host is gone. Leave its world (our copy of it) for the main menu.</summary>
+        /// <summary>
+        /// Client: the host is gone. Leave its world (our copy of it) for the
+        /// main menu.
+        /// </summary>
         private void LeaveHostWorld(string why)
         {
             LoadStatus = why;
@@ -215,9 +245,11 @@ namespace DarkwoodMP.World
 
         private IEnumerator ToMainMenu()
         {
-            // A world still loading is let finish first: leaving in the middle of it isn't something the game does.
+            // A world still loading is let finish first: leaving in the middle
+            // of it isn't something the game does.
             float until = Time.realtimeSinceStartup + 120f;
-            while (!InWorld && !MainMenuReady() && Time.realtimeSinceStartup < until)
+            while (!InWorld && !MainMenuReady()
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
@@ -240,8 +272,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: when its world changes (a new chapter, a save loaded again), the players in it load it again.
-        /// Going back to the main menu stops the server instead (HostToMainMenu).
+        /// Host: when its world changes (a new chapter, a save loaded again),
+        /// the players in it load it again. Going back to the main menu stops
+        /// the server instead (HostToMainMenu).
         /// </summary>
         public void Update()
         {
@@ -262,12 +295,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            int key = ActiveScene; // tracked with nobody in, too: a joiner let in after a change has the new world already
-            if (_hostWorldKey != 0 && key != _hostWorldKey && _session.Peers.Count > 0)
+            // tracked with nobody in, too: a joiner let in after a change has
+            // the new world already
+            int key = ActiveScene;
+            if (_hostWorldKey != 0 && key != _hostWorldKey
+                && _session.Peers.Count > 0)
             {
-                Plugin.Log.LogInfo("Your world changed: the players in it load it again");
+                Plugin.Log.LogInfo(
+                    "Your world changed: the players in it load it again");
                 SharedIds.ResetHost();
-                _session.Broadcast(_session.Begin(MsgType.WorldReload), Channel.Control, reliable: true);
+                _session.Broadcast(
+                    _session.Begin(MsgType.WorldReload), Channel.Control,
+                    reliable: true);
             }
             _hostWorldKey = key;
         }
@@ -276,40 +315,57 @@ namespace DarkwoodMP.World
         private IEnumerator HelloAgain()
         {
             yield return new WaitForSecondsRealtime(3f);
-            // Not while a world is coming in (the offer came meanwhile): that Hello would only be offered it again.
-            if (_session.Active && !_session.IsHost && !_session.Connected && _download == null && !_unpacking)
+            // Not while a world is coming in (the offer came meanwhile): that
+            // Hello would only be offered it again.
+            if (_session.Active && !_session.IsHost && !_session.Connected
+                && _download == null && !_unpacking)
             {
                 _session.SendHello();
             }
         }
 
         /// <summary>
-        /// True while the game has a world loaded and running (not the main menu or a loading screen). The pause
-        /// menu in a world counts as in it: Core.mainMenu is set for it too, but the world is still there.
+        /// True while the game has a world loaded and running (not the main
+        /// menu or a loading screen). The pause menu in a world counts as in
+        /// it: Core.mainMenu is set for it too, but the world is still there.
         /// </summary>
-        public static bool InWorld => (!Core.mainMenu || PauseMenuInWorld) && Core.currentProfile != null && Player.Instance != null;
-
-        /// <summary>The menu is open over a world (the pause menu), not the main menu's own scene.</summary>
-        public static bool PauseMenuInWorld => Core.mainMenu && Singleton<WorldGenerator>.Instance != null && Core.worldGenFinished();
+        public static bool InWorld => (!Core.mainMenu || PauseMenuInWorld)
+            && Core.currentProfile != null && Player.Instance != null;
 
         /// <summary>
-        /// True while the game is loading a world, by the game's own test for it (EventTriggers doesn't fire while
-        /// this holds): the save loader (SaveManager.Load) makes every saved object again with Core.AddPrefab while
-        /// Core.loadingGame is set, and keeps dontFireTriggers set until 2 s after it ends. Nothing made or changed
-        /// then is a player's doing, so none of it is shared (WorldActions.Sharing).
+        /// The menu is open over a world (the pause menu), not the main menu's
+        /// own scene.
+        /// </summary>
+        public static bool PauseMenuInWorld => Core.mainMenu
+            && Singleton<WorldGenerator>.Instance != null
+            && Core.worldGenFinished();
+
+        /// <summary>
+        /// True while the game is loading a world, by the game's own test for
+        /// it (EventTriggers doesn't fire while this holds): the save loader
+        /// (SaveManager.Load) makes every saved object again with
+        /// Core.AddPrefab while Core.loadingGame is set, and keeps
+        /// dontFireTriggers set until 2 s after it ends. Nothing made or
+        /// changed then is a player's doing, so none of it is shared
+        /// (WorldActions.Sharing).
         /// </summary>
         public static bool Loading =>
-            Core.loadingGame || !Core.worldGenFinished() || (Singleton<SaveManager>.Instance != null && Singleton<SaveManager>.Instance.dontFireTriggers);
+            Core.loadingGame || !Core.worldGenFinished()
+                || (Singleton<SaveManager>.Instance != null
+                    && Singleton<SaveManager>.Instance.dontFireTriggers);
 
         /// <summary>
-        /// In a world that has finished loading: the player exists from early in the load, but the save (where they
-        /// are, what they carry) is only applied as it ends. Stays true once it has been for a couple of seconds.
+        /// In a world that has finished loading: the player exists from early
+        /// in the load, but the save (where they are, what they carry) is only
+        /// applied as it ends. Stays true once it has been for a couple of
+        /// seconds.
         /// </summary>
         public static bool WorldReady
         {
             get
             {
-                bool now = InWorld && Core.worldGenFinished() && !Core.loadingGame && !Core.forbidInputs;
+                bool now = InWorld && Core.worldGenFinished()
+                    && !Core.loadingGame && !Core.forbidInputs;
                 if (!now)
                 {
                     _readySince = -1f;
@@ -324,11 +380,19 @@ namespace DarkwoodMP.World
         }
         private static float _readySince = -1f;
 
-        /// <summary>The loaded world's scene handle: it changes whenever the world is loaded again.</summary>
-        private static int ActiveScene => UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+        /// <summary>
+        /// The loaded world's scene handle: it changes whenever the world is
+        /// loaded again.
+        /// </summary>
+        private static int ActiveScene =>
+            UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
 
-        /// <summary>A profile's save folder (prof&lt;id&gt;) under a folder laid out as 1_4Save.</summary>
-        private static string ProfDir(string baseDir, int id) => Path.Combine(baseDir, "prof" + id);
+        /// <summary>
+        /// A profile's save folder (prof&lt;id&gt;) under a folder laid out as
+        /// 1_4Save.
+        /// </summary>
+        private static string ProfDir(string baseDir, int id) =>
+            Path.Combine(baseDir, "prof" + id);
 
         // =====================================================================
         // Host
@@ -338,49 +402,73 @@ namespace DarkwoodMP.World
         {
             public byte[] Hash;
             public string ProfileJson;
-            public List<(string Name, int Size)> Files; // in order, unpacked sizes
-            public byte[] Sent;     // what goes over the wire: Deflate of the files back to back (Packing 1), or the files (0)
+            // in order, unpacked sizes
+            public List<(string Name, int Size)> Files;
+            // what goes over the wire: Deflate of the files back to back
+            // (Packing 1), or the files (0)
+            public byte[] Sent;
             public byte Packing;
             public int RawSize;     // the files' sizes added up
             public string Stamp;
-            public int IdCounter;   // SaveManager.currentUniqueID in it (SharedIds)
-            public int Scene;       // the loaded world it was made in
+            // SaveManager.currentUniqueID in it (SharedIds)
+            public int IdCounter;
+            // the loaded world it was made in
+            public int Scene;
             public float MadeAt;
-            public string Timing;   // how long reading and packing it took (logged on the main thread)
+            // how long reading and packing it took (logged on the main thread)
+            public string Timing;
         }
 
         private Snapshot _hostWorld;
-        // What each joiner was offered, and in which loaded world (scene handle): a reload makes the offer stale.
-        private readonly Dictionary<ulong, (Snapshot World, int Scene)> _offered = new Dictionary<ulong, (Snapshot, int)>();
-        // Joiners waiting for the world being made for them (PrepareWorld), offered it when it's ready.
+        // What each joiner was offered, and in which loaded world (scene
+        // handle): a reload makes the offer stale.
+        private readonly Dictionary<ulong, (Snapshot World, int Scene)> _offered =
+            new Dictionary<ulong, (Snapshot, int)>();
+        // Joiners waiting for the world being made for them (PrepareWorld),
+        // offered it when it's ready.
         private readonly HashSet<ulong> _waiting = new HashSet<ulong>();
         private bool _preparing;
-        // A NeedSave for a world we no longer offer that joiner gets one JoinWait, not one per piece in flight.
-        private readonly Dictionary<ulong, float> _staleTold = new Dictionary<ulong, float>();
+        // A NeedSave for a world we no longer offer that joiner gets one
+        // JoinWait, not one per piece in flight.
+        private readonly Dictionary<ulong, float> _staleTold =
+            new Dictionary<ulong, float>();
 
-        /// <summary>The JoinWait reason while the host makes a snapshot for the joiner (the client shows its loading screen for it).</summary>
-        public const string Preparing = "The host is saving its world for you...";
+        /// <summary>
+        /// The JoinWait reason while the host makes a snapshot for the joiner
+        /// (the client shows its loading screen for it).
+        /// </summary>
+        public const string Preparing =
+            "The host is saving its world for you...";
 
-        /// <summary>True while the host saves a snapshot of its world for a joiner.</summary>
+        /// <summary>
+        /// True while the host saves a snapshot of its world for a joiner.
+        /// </summary>
         public static bool Snapshotting { get; private set; }
         private float _lastSnapshot = -999f;
         private int _lastSnapshotScene;
         private const float SnapshotReuse = 20f;
 
         /// <summary>
-        /// The world as it is now, for someone joining: the host's game saves it, as it would save it, into a folder
-        /// of the mod's (its own save is left as it was), with the night-time and loading checks forced past.
-        /// Sets _snapshotDir to that folder's profile directory, or to null to fall back on the host's last save.
+        /// The world as it is now, for someone joining: the host's game saves
+        /// it, as it would save it, into a folder of the mod's (its own save is
+        /// left as it was), with the night-time and loading checks forced past.
+        /// Sets _snapshotDir to that folder's profile directory, or to null to
+        /// fall back on the host's last save.
         ///
-        /// Only the dynamic part (sav.dat: the player, the clock, every object that moves or changes) is saved. The
-        /// static part (savs.dat: the map's layout and its pathfinding graph, about 9 MB, and savch.dat after chapter 1)
-        /// is copied from the host's own save, as the game itself does: it writes savs.dat only when the world is made or
-        /// a new location has been added (SaveManager.Save), and in that case it writes it into the snapshot too. Saving
-        /// savs.dat would be most of the snapshot's time, on the host's main thread.
+        /// Only the dynamic part (sav.dat: the player, the clock, every object
+        /// that moves or changes) is saved. The static part (savs.dat: the
+        /// map's layout and its pathfinding graph, about 9 MB, and savch.dat
+        /// after chapter 1) is copied from the host's own save, as the game
+        /// itself does: it writes savs.dat only when the world is made or a new
+        /// location has been added (SaveManager.Save), and in that case it
+        /// writes it into the snapshot too. Saving savs.dat would be most of
+        /// the snapshot's time, on the host's main thread.
         ///
-        /// When the static part was copied, sav.dat is saved by SnapshotSave: the world is read in one frame, as the
-        /// game reads it, and written out as JSON on a worker thread (the writing was most of the stop). If that fails,
-        /// or the static part has to be saved too, the game's own SaveManager.Save does it all on the main thread.
+        /// When the static part was copied, sav.dat is saved by SnapshotSave:
+        /// the world is read in one frame, as the game reads it, and written
+        /// out as JSON on a worker thread (the writing was most of the stop).
+        /// If that fails, or the static part has to be saved too, the game's
+        /// own SaveManager.Save does it all on the main thread.
         /// </summary>
         private IEnumerator SaveSnapshot()
         {
@@ -392,12 +480,16 @@ namespace DarkwoodMP.World
             }
             string dir = Path.Combine(_cacheDir, "..", "host-snapshot");
             string profDir = ProfDir(dir, Core.currentProfile.id);
-            if (Time.realtimeSinceStartup - _lastSnapshot < SnapshotReuse && _lastSnapshotScene == ActiveScene && File.Exists(Path.Combine(profDir, "sav.dat")))
+            if (Time.realtimeSinceStartup - _lastSnapshot < SnapshotReuse
+                && _lastSnapshotScene == ActiveScene
+                && File.Exists(Path.Combine(profDir, "sav.dat")))
             {
                 _snapshotDir = profDir;
                 yield break;
             }
-            string ownDir = ProfDir(sm.baseSaveDirectory, Core.currentProfile.id); // before the redirect below
+            // before the redirect below
+            string ownDir =
+                ProfDir(sm.baseSaveDirectory, Core.currentProfile.id);
             var lastSaved = sm.lastTimeSaved;
             bool haveSaved = sm.haveSaved;
             var outside = Singleton<OutsideLocations>.Instance;
@@ -405,7 +497,8 @@ namespace DarkwoodMP.World
             bool haveStatic = false;
             long copied = 0;
             System.Threading.Tasks.Task<long> writing = null;
-            void Restore() => RestoreAfterSnapshot(sm, lastSaved, haveSaved, outside, newLocation);
+            void Restore() => RestoreAfterSnapshot(
+                sm, lastSaved, haveSaved, outside, newLocation);
             var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
@@ -425,47 +518,60 @@ namespace DarkwoodMP.World
                     }
                 }
                 copied = sw.ElapsedMilliseconds;
-                if (haveStatic && !newLocation && Plugin.Cfg.SnapshotOffThread.Value && !_offThreadBroken)
+                if (haveStatic && !newLocation
+                    && Plugin.Cfg.SnapshotOffThread.Value && !_offThreadBroken)
                 {
                     Snapshotting = true;
                     SaveRedirect.BeginTemporary(Path.GetFullPath(dir));
                     try
                     {
-                        DragSync.NoteSnapshot(); // the same frame the world is read in
+                        // the same frame the world is read in
+                        DragSync.NoteSnapshot();
                         FlagsSync.NoteSnapshot();
-                        writing = SnapshotSave.Begin(sm, Path.Combine(profDir, "sav.dat"));
-                        SharedIds.OnSaved(sm.currentUniqueID); // as the patch on SaveManager.Save records it
+                        writing = SnapshotSave.Begin(
+                            sm, Path.Combine(profDir, "sav.dat"));
+                        // as the patch on SaveManager.Save records it
+                        SharedIds.OnSaved(sm.currentUniqueID);
                     }
                     catch (Exception e)
                     {
-                        _offThreadBroken = true; // most likely a game member it uses is missing: don't try again this run
-                        Plugin.Log.LogWarning($"Couldn't read the world for a snapshot off the main thread, saving it the game's way: {e.GetBaseException().Message}");
+                        // most likely a game member it uses is missing: don't
+                        // try again this run
+                        _offThreadBroken = true;
+                        Plugin.Log.LogWarning(
+                            $"Couldn't read the world for a snapshot off the main thread, saving it the game's way: {e.GetBaseException().Message}");
                     }
                     finally
                     {
                         SaveRedirect.EndTemporary();
-                        sm.updateFilePaths(); // SnapshotSave.Begin set them to the snapshot folder's
+                        // SnapshotSave.Begin set them to the snapshot folder's
+                        sm.updateFilePaths();
                         Snapshotting = false;
                     }
                 }
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't snapshot the world, offering the last save instead: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't snapshot the world, offering the last save instead: {e.Message}");
                 Restore();
                 yield break;
             }
             if (writing != null)
             {
-                long stopped = sw.ElapsedMilliseconds; // the main thread's part: copying the static part and reading the world
+                // the main thread's part: copying the static part and reading
+                // the world
+                long stopped = sw.ElapsedMilliseconds;
                 LastSnapshotStopMs = stopped;
                 while (!writing.IsCompleted)
                 {
                     yield return null;
                 }
-                if (!writing.IsFaulted && File.Exists(Path.Combine(profDir, "sav.dat")))
+                if (!writing.IsFaulted
+                    && File.Exists(Path.Combine(profDir, "sav.dat")))
                 {
-                    Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner: the game stopped for {stopped} ms (static part copied from your save in {copied} ms, the world read in {stopped - copied} ms), sav.dat written in {writing.Result} ms on a worker thread");
+                    Plugin.Log.LogInfo(
+                        $"Saved a snapshot of the world for a joiner: the game stopped for {stopped} ms (static part copied from your save in {copied} ms, the world read in {stopped - copied} ms), sav.dat written in {writing.Result} ms on a worker thread");
                     Restore();
                     _lastSnapshot = Time.realtimeSinceStartup;
                     _lastSnapshotScene = ActiveScene;
@@ -473,14 +579,16 @@ namespace DarkwoodMP.World
                     LastSnapshotOffThread = true;
                     yield break;
                 }
-                // Most likely the game changed a list while it was being written. Save it the game's way instead.
+                // Most likely the game changed a list while it was being
+                // written. Save it the game's way instead.
                 AggregateException error = writing.Exception;
                 string why = null;
                 if (error != null)
                 {
                     why = error.GetBaseException().Message;
                 }
-                Plugin.Log.LogWarning($"Couldn't write the snapshot off the main thread, saving it the game's way: {why}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't write the snapshot off the main thread, saving it the game's way: {why}");
                 if (!InWorld || Core.loadingGame)
                 {
                     Restore();
@@ -489,29 +597,50 @@ namespace DarkwoodMP.World
             }
             DragSync.NoteSnapshot();
             FlagsSync.NoteSnapshot();
-            _snapshotDir = SaveSnapshotOnMainThread(sm, dir, profDir, haveStatic, copied, newLocation);
+            _snapshotDir = SaveSnapshotOnMainThread(
+                sm, dir, profDir, haveStatic, copied, newLocation);
             Restore();
         }
 
         private string _snapshotDir;
-        /// <summary>Set when SnapshotSave couldn't read this game's world: only the game's own save is used after.</summary>
+        /// <summary>
+        /// Set when SnapshotSave couldn't read this game's world: only the
+        /// game's own save is used after.
+        /// </summary>
         private static bool _offThreadBroken;
-        /// <summary>How long the host's game stopped for the last snapshot, in ms (-1: none yet).</summary>
+        /// <summary>
+        /// How long the host's game stopped for the last snapshot, in ms (-1:
+        /// none yet).
+        /// </summary>
         public static long LastSnapshotStopMs { get; private set; } = -1;
-        /// <summary>Whether the last snapshot's sav.dat was written on a worker thread (SnapshotSave), not by the game's save.</summary>
+        /// <summary>
+        /// Whether the last snapshot's sav.dat was written on a worker thread
+        /// (SnapshotSave), not by the game's save.
+        /// </summary>
         public static bool LastSnapshotOffThread { get; private set; }
-        /// <summary>The longest host frame while the last joiner joined, in ms (-1: none yet).</summary>
+        /// <summary>
+        /// The longest host frame while the last joiner joined, in ms (-1: none
+        /// yet).
+        /// </summary>
         public static float LastJoinLongestFrameMs { get; private set; } = -1f;
 
-        /// <summary>The snapshot saved by the game's own SaveManager.Save, in one go on the main thread.</summary>
-        private string SaveSnapshotOnMainThread(SaveManager sm, string dir, string profDir, bool haveStatic, long copied, bool newLocation)
+        /// <summary>
+        /// The snapshot saved by the game's own SaveManager.Save, in one go on
+        /// the main thread.
+        /// </summary>
+        private string SaveSnapshotOnMainThread(
+            SaveManager sm, string dir, string profDir, bool haveStatic,
+            long copied, bool newLocation)
         {
             try
             {
                 var sw = System.Diagnostics.Stopwatch.StartNew();
                 Snapshotting = true;
                 SaveRedirect.BeginTemporary(Path.GetFullPath(dir));
-                sm.Save(doJson: true, doSaveProfile: true, force: true, forceSaveStatic: !haveStatic, showSavingIndicator: false, closeAndOpenStadiaSave: false);
+                sm.Save(
+                    doJson: true, doSaveProfile: true, force: true,
+                    forceSaveStatic: !haveStatic, showSavingIndicator: false,
+                    closeAndOpenStadiaSave: false);
                 LastSnapshotStopMs = sw.ElapsedMilliseconds + copied;
                 LastSnapshotOffThread = false;
                 string text = "static part saved too: your save hasn't got one";
@@ -524,7 +653,8 @@ namespace DarkwoodMP.World
                 {
                     locationNote = ", with a new location's static part";
                 }
-                Plugin.Log.LogInfo($"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({text}{locationNote})");
+                Plugin.Log.LogInfo(
+                    $"Saved a snapshot of the world for a joiner the game's way: the game stopped for {LastSnapshotStopMs} ms ({text}{locationNote})");
                 _lastSnapshot = Time.realtimeSinceStartup;
                 _lastSnapshotScene = ActiveScene;
                 if (File.Exists(Path.Combine(profDir, "sav.dat")))
@@ -535,7 +665,8 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't snapshot the world, offering the last save instead: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't snapshot the world, offering the last save instead: {e.Message}");
                 return null;
             }
             finally
@@ -546,20 +677,26 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void RestoreAfterSnapshot(SaveManager sm, DateTime lastSaved, bool haveSaved, OutsideLocations outside, bool newLocation)
+        private static void RestoreAfterSnapshot(
+            SaveManager sm, DateTime lastSaved, bool haveSaved,
+            OutsideLocations outside, bool newLocation)
         {
             // the menu's "progress since your last save" is about your own save
             sm.lastTimeSaved = lastSaved;
             sm.haveSaved = haveSaved;
-            // The game clears this once it has saved the static part; that was the snapshot's, so the host's own next
-            // save must still write its own.
+            // The game clears this once it has saved the static part; that was
+            // the snapshot's, so the host's own next save must still write its
+            // own.
             if (outside != null && newLocation)
             {
                 outside.addedNewLocation = true;
             }
         }
 
-        /// <summary>The world made for joiners lately, if it's still the one to give them (null: make another).</summary>
+        /// <summary>
+        /// The world made for joiners lately, if it's still the one to give
+        /// them (null: make another).
+        /// </summary>
         private Snapshot FreshHostWorld()
         {
             var w = _hostWorld;
@@ -580,7 +717,9 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            if (WorldFiles.Stamp(ProfDir(sm.baseSaveDirectory, Core.currentProfile.id)) == w.Stamp)
+            if (WorldFiles.Stamp(
+                ProfDir(sm.baseSaveDirectory, Core.currentProfile.id))
+                == w.Stamp)
             {
                 return w;
             }
@@ -588,16 +727,21 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: makes the world to give joiners, without stopping the game for longer than the game's own save of it
-        /// takes. The snapshot (SaveSnapshot) has to be on the main thread, as it reads the game's objects; reading the
-        /// files back, hashing them and packing them (Deflate: Darkwood's JSON saves shrink to about a quarter) run on a
-        /// worker thread while the game goes on. Then everyone waiting for it is offered it.
+        /// Host: makes the world to give joiners, without stopping the game for
+        /// longer than the game's own save of it takes. The snapshot
+        /// (SaveSnapshot) has to be on the main thread, as it reads the game's
+        /// objects; reading the files back, hashing them and packing them
+        /// (Deflate: Darkwood's JSON saves shrink to about a quarter) run on a
+        /// worker thread while the game goes on. Then everyone waiting for it
+        /// is offered it.
         /// </summary>
         private IEnumerator PrepareWorld()
         {
             _preparing = true;
             Snapshot world = null;
-            try // an exception in here must not leave _preparing set: every later joiner would wait for ever
+            // an exception in here must not leave _preparing set: every later
+            // joiner would wait for ever
+            try
             {
                 yield return null; // the JoinWait goes out first
                 int scene = ActiveScene;
@@ -618,7 +762,8 @@ namespace DarkwoodMP.World
                     string profDir = snapDir;
                     if (profDir == null && Core.currentProfile != null)
                     {
-                        profDir = ProfDir(sm.baseSaveDirectory, Core.currentProfile.id);
+                        profDir = ProfDir(
+                            sm.baseSaveDirectory, Core.currentProfile.id);
                     }
                     // no save, or we left the world meanwhile: nothing to offer
                     string stamp;
@@ -630,16 +775,20 @@ namespace DarkwoodMP.World
                     {
                         stamp = WorldFiles.Stamp(profDir);
                     }
-                    if (stamp.Length > 0 && _hostWorld != null && _hostWorld.Stamp == stamp && _hostWorld.Scene == scene)
+                    if (stamp.Length > 0 && _hostWorld != null
+                        && _hostWorld.Stamp == stamp
+                        && _hostWorld.Scene == scene)
                     {
                         world = _hostWorld;
                     }
                     else if (stamp.Length > 0)
                     {
-                        string json = JsonConvert.SerializeObject(Core.currentProfile);
+                        string json =
+                            JsonConvert.SerializeObject(Core.currentProfile);
                         int ids = SharedIds.CounterOf(snapDir != null);
                         int day = Core.currentProfile.day;
-                        var job = System.Threading.Tasks.Task.Run(() => Pack(profDir, json));
+                        var job = System.Threading.Tasks.Task.Run(
+                            () => Pack(profDir, json));
                         while (!job.IsCompleted)
                         {
                             yield return null;
@@ -652,7 +801,8 @@ namespace DarkwoodMP.World
                             {
                                 why = error.GetBaseException().Message;
                             }
-                            Plugin.Log.LogWarning($"Couldn't read the world for joiners: {why}");
+                            Plugin.Log.LogWarning(
+                                $"Couldn't read the world for joiners: {why}");
                         }
                         else if ((world = job.Result) != null)
                         {
@@ -663,7 +813,8 @@ namespace DarkwoodMP.World
                             {
                                 packing = " (Deflate)";
                             }
-                            Plugin.Log.LogInfo($"Host world {WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
+                            Plugin.Log.LogInfo(
+                                $"Host world {WorldFiles.Hex(world.Hash).Substring(0, 12)}, day {day}: {string.Join(", ", world.Files.Select(f => $"{f.Name} {f.Size / 1024} KiB"))}; " +
                                                $"sent as {world.Sent.Length / 1024} KiB{packing}; {world.Timing}");
                         }
                     }
@@ -694,7 +845,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Worker thread: read a profile folder's save files, hash them and pack them for sending.</summary>
+        /// <summary>
+        /// Worker thread: read a profile folder's save files, hash them and
+        /// pack them for sending.
+        /// </summary>
         private static Snapshot Pack(string profDir, string json)
         {
             var sw = System.Diagnostics.Stopwatch.StartNew();
@@ -767,17 +921,21 @@ namespace DarkwoodMP.World
             w.W.Write(world.Packing);
             w.W.Write((uint)world.RawSize);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
-            Plugin.Log.LogInfo($"Offered the world to #{peer} ({world.Sent.Length / 1024} KiB to send, {world.RawSize / 1024} KiB unpacked)");
+            Plugin.Log.LogInfo(
+                $"Offered the world to #{peer} ({world.Sent.Length / 1024} KiB to send, {world.RawSize / 1024} KiB unpacked)");
             WatchFrames(peer);
         }
 
-        // ---- the host's frame times while someone joins ---------------------------------------
+        // ---- the host's frame times while someone joins ---------------------
 
         private float _watchUntil = -1f, _watchFrom, _longestFrame;
         private int _slowFrames, _frames;
         private ulong _watchPeer;
 
-        /// <summary>Host: note the longest frame from now until the joiner is in (or a couple of minutes), for the log.</summary>
+        /// <summary>
+        /// Host: note the longest frame from now until the joiner is in (or a
+        /// couple of minutes), for the log.
+        /// </summary>
         private void WatchFrames(ulong peer)
         {
             if (_watchUntil < 0f)
@@ -797,7 +955,8 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            Plugin.Log.LogInfo($"[join] host frames while #{_watchPeer} joined ({why}, {Time.realtimeSinceStartup - _watchFrom:0.0} s): longest {_longestFrame * 1000f:0} ms, {_slowFrames} of {_frames} over 50 ms");
+            Plugin.Log.LogInfo(
+                $"[join] host frames while #{_watchPeer} joined ({why}, {Time.realtimeSinceStartup - _watchFrom:0.0} s): longest {_longestFrame * 1000f:0} ms, {_slowFrames} of {_frames} over 50 ms");
             LastJoinLongestFrameMs = _longestFrame * 1000f;
             _watchUntil = -1f;
         }
@@ -825,9 +984,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Why a joiner can't come in yet, or null. A dream is a place of its own the game loads for the player
-        /// who's in it; someone joining then would be put where the host stands, in a place their game hasn't got,
-        /// and be sent to load again when the host comes out. The prologue's stages are the exception (World.Prologue).
+        /// Why a joiner can't come in yet, or null. A dream is a place of its
+        /// own the game loads for the player who's in it; someone joining then
+        /// would be put where the host stands, in a place their game hasn't
+        /// got, and be sent to load again when the host comes out. The
+        /// prologue's stages are the exception (World.Prologue).
         /// </summary>
         private static string HostNotReady()
         {
@@ -847,10 +1008,13 @@ namespace DarkwoodMP.World
                 }
                 TestHoldSecs = 0f;
             }
-            // The prologue on a new game: the intro film (WorldGenerator.playingIntro), then the forest
-            // (dream_tutorial_00, a separate location), then a dream (dream_tutorial_01). The two stages are played
-            // together: a joiner goes into the stage the host is in as it loads the snapshot (World.Prologue). Only
-            // the film, and the moments between the stages or in their cutscenes, keep it waiting.
+            // The prologue on a new game: the intro film
+            // (WorldGenerator.playingIntro), then the forest
+            // (dream_tutorial_00, a separate location), then a dream
+            // (dream_tutorial_01). The two stages are played together: a joiner
+            // goes into the stage the host is in as it loads the snapshot
+            // (World.Prologue). Only the film, and the moments between the
+            // stages or in their cutscenes, keep it waiting.
             if (World.Prologue.Film)
             {
                 return Prologue;
@@ -863,7 +1027,8 @@ namespace DarkwoodMP.World
                 {
                     return null;
                 }
-                return "The host is between parts of the prologue. You'll join in a moment.";
+                return "The host is between parts of the prologue. You'll join "
+                    + "in a moment.";
             }
             var outside = Singleton<OutsideLocations>.Instance;
             var dreams = Singleton<Dreams>.Instance;
@@ -871,12 +1036,14 @@ namespace DarkwoodMP.World
             {
                 return "The host is in a dream. You'll join when they wake up.";
             }
-            // A separate location is loaded only in the host's game, and the joiner would be put beside the host
-            // there (Characters), on the world's grid of a game that hasn't loaded it. The snapshot would also be
-            // saved while away, which the game itself never does.
+            // A separate location is loaded only in the host's game, and the
+            // joiner would be put beside the host there (Characters), on the
+            // world's grid of a game that hasn't loaded it. The snapshot would
+            // also be saved while away, which the game itself never does.
             if (outside != null && outside.playerInOutsideLocation)
             {
-                return "The host is away in another place. You'll join when they're back.";
+                return "The host is away in another place. You'll join when "
+                    + "they're back.";
             }
             if (!WorldReady)
             {
@@ -885,11 +1052,16 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        private const string Prologue = "The host is watching the prologue's intro. You'll join when it's over.";
-        private const string NotInWorld = "The host isn't in a saved game yet. Join once they've loaded their world.";
+        private const string Prologue =
+            "The host is watching the prologue's intro. You'll join when it's "
+                + "over.";
+        private const string NotInWorld =
+            "The host isn't in a saved game yet. Join once they've loaded "
+                + "their world.";
 
-        /// <summary>Test (map test's "hold-joiners"): for this many seconds from the first joiner, answer as if the
-        /// host were watching the prologue's intro film.</summary>
+        /// <summary>Test (map test's "hold-joiners"): for this many seconds
+        /// from the first joiner, answer as if the host were watching the
+        /// prologue's intro film.</summary>
         internal static float TestHoldSecs;
         private static float _testHoldFrom = -1f;
 
@@ -907,11 +1079,15 @@ namespace DarkwoodMP.World
                 JoinWait(peer, wait);
                 return false;
             }
-            // The world we offered this joiner, now downloaded: let them in with it, even if a newer snapshot would be
-            // taken now. Over Steam's relay a download can outlast SnapshotReuse; asking for a fresh snapshot then
-            // gave a new hash, a new offer and another download, for ever.
+            // The world we offered this joiner, now downloaded: let them in
+            // with it, even if a newer snapshot would be taken now. Over
+            // Steam's relay a download can outlast SnapshotReuse; asking for a
+            // fresh snapshot then gave a new hash, a new offer and another
+            // download, for ever.
             int scene = ActiveScene;
-            if (_offered.TryGetValue(peer, out var offer) && offer.Scene == scene && WorldFiles.Equal(offer.World.Hash, clientHash))
+            if (_offered.TryGetValue(peer, out var offer)
+                && offer.Scene == scene
+                && WorldFiles.Equal(offer.World.Hash, clientHash))
             {
                 LetIn(peer, offer.World.IdCounter);
                 return true;
@@ -919,8 +1095,9 @@ namespace DarkwoodMP.World
             var world = FreshHostWorld();
             if (world == null)
             {
-                // Make one (PrepareWorld), and offer it when it's ready. Until then the joiner is told to wait, and its
-                // Hellos meanwhile get the same answer.
+                // Make one (PrepareWorld), and offer it when it's ready. Until
+                // then the joiner is told to wait, and its Hellos meanwhile get
+                // the same answer.
                 if (!InWorld)
                 {
                     _session.Refuse(peer, NotInWorld);
@@ -971,15 +1148,23 @@ namespace DarkwoodMP.World
             var hash = r.R.ReadBytes(32);
             uint offset = r.R.ReadUInt32();
             uint length = Math.Min(r.R.ReadUInt32(), (uint)PieceSize);
-            if (!_offered.TryGetValue(peer, out var offer) || !WorldFiles.Equal(offer.World.Hash, hash))
+            if (!_offered.TryGetValue(peer, out var offer)
+                || !WorldFiles.Equal(offer.World.Hash, hash))
             {
-                // Not (or no longer) offered to them: the offer went with a dropped connection, or the world was loaded
-                // again. Without an answer the joiner would wait for this piece for ever; this has it ask again.
-                if (!_staleTold.TryGetValue(peer, out var at) || Time.realtimeSinceStartup - at > 2f)
+                // Not (or no longer) offered to them: the offer went with a
+                // dropped connection, or the world was loaded again. Without an
+                // answer the joiner would wait for this piece for ever; this
+                // has it ask again.
+                if (!_staleTold.TryGetValue(peer, out var at)
+                    || Time.realtimeSinceStartup - at > 2f)
                 {
                     _staleTold[peer] = Time.realtimeSinceStartup;
-                    Plugin.Log.LogInfo($"#{peer} asked for a world it isn't offered: telling it to ask again");
-                    JoinWait(peer, "The host's world changed while you were getting it: starting again...");
+                    Plugin.Log.LogInfo(
+                        $"#{peer} asked for a world it isn't offered: telling it to ask again");
+                    JoinWait(
+                        peer,
+                        "The host's world changed while you were getting it: "
+                            + "starting again...");
                 }
                 return;
             }
@@ -1014,20 +1199,26 @@ namespace DarkwoodMP.World
             public uint NextOffset;
             public long Received;
             public float LastPieceAt;
-            public float StartedAt;  // when the offer came, for the transfer time in the log
+            // when the offer came, for the transfer time in the log
+            public float StartedAt;
             public int Stalls;
         }
 
         private Download _download;
         private bool _unpacking;
-        private byte[] _readyHash;   // the world we downloaded or found, sent in the last Hello
+        // the world we downloaded or found, sent in the last Hello
+        private byte[] _readyHash;
 
-        // A download that gets no piece for StallSecs asks again for every piece it's missing; after MaxStalls of those
-        // in a row it gives up, so the loading screen can't wait for ever.
+        // A download that gets no piece for StallSecs asks again for every
+        // piece it's missing; after MaxStalls of those in a row it gives up, so
+        // the loading screen can't wait for ever.
         private const float StallSecs = 10f;
         private const int MaxStalls = 3;
 
-        /// <summary>For the panel: (bytes got, bytes total) while downloading the host's world.</summary>
+        /// <summary>
+        /// For the panel: (bytes got, bytes total) while downloading the host's
+        /// world.
+        /// </summary>
         public (long Got, long Total)? Progress
         {
             get
@@ -1039,7 +1230,10 @@ namespace DarkwoodMP.World
                 return (_download.Received, _download.Blob.Length);
             }
         }
-        /// <summary>The download's size unpacked, for the loading screen (0: not packed, or no download).</summary>
+        /// <summary>
+        /// The download's size unpacked, for the loading screen (0: not packed,
+        /// or no download).
+        /// </summary>
         public long UnpackedSize
         {
             get
@@ -1055,11 +1249,14 @@ namespace DarkwoodMP.World
 
         private byte[] ClientHelloHash()
         {
-            // The newest world we've got that's still as it came (playing it changes it, as the game saves into it).
+            // The newest world we've got that's still as it came (playing it
+            // changes it, as the game saves into it).
             _readyHash = null;
             try
             {
-                foreach (var dir in new DirectoryInfo(_cacheDir).GetDirectories().OrderByDescending(d => d.LastWriteTimeUtc))
+                foreach (var dir in new DirectoryInfo(_cacheDir)
+                    .GetDirectories().OrderByDescending(d =>
+                    d.LastWriteTimeUtc))
                 {
                     var h = HashOfCached(dir.FullName);
                     if (h != null && WorldFiles.Hex(h) == dir.Name)
@@ -1071,14 +1268,17 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't check cached worlds: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't check cached worlds: {e.Message}");
             }
             return _readyHash;
         }
 
-        // Hashing a cached world reads all of it (tens of MB), and Hello (sent every 3 s while the host keeps us
-        // waiting) asks for it: so each folder's hash is kept until a file in it changes.
-        private static readonly Dictionary<string, (string Stamp, byte[] Hash)> _hashCache = new Dictionary<string, (string, byte[])>();
+        // Hashing a cached world reads all of it (tens of MB), and Hello (sent
+        // every 3 s while the host keeps us waiting) asks for it: so each
+        // folder's hash is kept until a file in it changes.
+        private static readonly Dictionary<string, (string Stamp, byte[] Hash)> _hashCache =
+            new Dictionary<string, (string, byte[])>();
 
         private static byte[] HashOfCached(string worldDir)
         {
@@ -1086,7 +1286,8 @@ namespace DarkwoodMP.World
             try
             {
                 long n = 0, bytes = 0, newest = 0;
-                foreach (var f in new DirectoryInfo(worldDir).GetFiles("*", SearchOption.AllDirectories))
+                foreach (var f in new DirectoryInfo(worldDir).GetFiles(
+                    "*", SearchOption.AllDirectories))
                 {
                     n++;
                     bytes += f.Length;
@@ -1120,7 +1321,8 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return WorldFiles.Hash(json, WorldFiles.Read(ProfDir(worldDir, profile.id)));
+            return WorldFiles.Hash(
+                json, WorldFiles.Read(ProfDir(worldDir, profile.id)));
         }
 
         private void OnSaveOffer(ulong from, PacketReader r)
@@ -1130,8 +1332,10 @@ namespace DarkwoodMP.World
                 return;
             }
             var d = new Download { Hash = r.R.ReadBytes(32) };
-            // The same world again (an answer to a Hello sent before the first offer came): go on with this download.
-            if ((_download != null && WorldFiles.Equal(_download.Hash, d.Hash)) || _unpacking)
+            // The same world again (an answer to a Hello sent before the first
+            // offer came): go on with this download.
+            if ((_download != null
+                    && WorldFiles.Equal(_download.Hash, d.Hash)) || _unpacking)
             {
                 return;
             }
@@ -1144,7 +1348,8 @@ namespace DarkwoodMP.World
             {
                 string name = r.ReadStr();
                 uint fsize = r.R.ReadUInt32();
-                if (Array.IndexOf(WorldFiles.Names, name) < 0 || d.Files.Any(f => f.Name == name))
+                if (Array.IndexOf(WorldFiles.Names, name) < 0
+                    || d.Files.Any(f => f.Name == name))
                 {
                     Fail($"the host offered an unexpected file \"{name}\"");
                     return;
@@ -1156,10 +1361,13 @@ namespace DarkwoodMP.World
             uint raw = r.R.ReadUInt32();
             if (d.Packing > 1)
             {
-                Fail($"the host packed its world in a way this version can't read ({d.Packing})");
+                Fail(
+                    $"the host packed its world in a way this version can't read ({d.Packing})");
                 return;
             }
-            if (sum != raw || raw == 0 || raw > WorldFiles.MaxSize || size == 0 || size > WorldFiles.MaxSize || (d.Packing == 0 && size != raw))
+            if (sum != raw || raw == 0 || raw > WorldFiles.MaxSize
+                || size == 0 || size > WorldFiles.MaxSize
+                || (d.Packing == 0 && size != raw))
             {
                 Fail("the host's world has a bad size");
                 return;
@@ -1167,7 +1375,8 @@ namespace DarkwoodMP.World
             d.RawSize = (int)raw;
             try
             {
-                d.Profile = JsonConvert.DeserializeObject<GameProfile>(d.ProfileJson);
+                d.Profile =
+                    JsonConvert.DeserializeObject<GameProfile>(d.ProfileJson);
             }
             catch (Exception e)
             {
@@ -1190,7 +1399,8 @@ namespace DarkwoodMP.World
             {
                 text = $", {raw / 1024} KiB unpacked";
             }
-            Plugin.Log.LogInfo($"Downloading the host's world ({size / 1024} KiB{text}, day {d.Profile.day})");
+            Plugin.Log.LogInfo(
+                $"Downloading the host's world ({size / 1024} KiB{text}, day {d.Profile.day})");
             JoinScreen.Begin();
             for (int i = 0; i < PiecesInFlight; i++)
             {
@@ -1233,7 +1443,8 @@ namespace DarkwoodMP.World
                 return; // a piece of an earlier offer, still on its way
             }
             long piece = offset / PieceSize;
-            if (n <= 0 || offset % PieceSize != 0 || offset + (long)n > d.Blob.Length)
+            if (n <= 0 || offset % PieceSize != 0
+                || offset + (long)n > d.Blob.Length)
             {
                 Fail("bad piece from the host");
                 return;
@@ -1257,26 +1468,33 @@ namespace DarkwoodMP.World
                 return;
             }
             float secs = Time.realtimeSinceStartup - d.StartedAt;
-            Plugin.Log.LogInfo($"[join] the world's {d.Blob.Length / 1024} KiB came in {secs * 1000f:0} ms ({d.Blob.Length / 1024f / Mathf.Max(secs, 0.001f):0} KiB/s, {d.Have.Length} pieces)");
+            Plugin.Log.LogInfo(
+                $"[join] the world's {d.Blob.Length / 1024} KiB came in {secs * 1000f:0} ms ({d.Blob.Length / 1024f / Mathf.Max(secs, 0.001f):0} KiB/s, {d.Have.Length} pieces)");
             _runner.StartCoroutine(Finish(d));
         }
 
-        /// <summary>Client, every frame: a download that has stopped coming asks again, then gives up.</summary>
+        /// <summary>
+        /// Client, every frame: a download that has stopped coming asks again,
+        /// then gives up.
+        /// </summary>
         private void UpdateDownload()
         {
             var d = _download;
-            if (d == null || Time.realtimeSinceStartup - d.LastPieceAt < StallSecs)
+            if (d == null
+                || Time.realtimeSinceStartup - d.LastPieceAt < StallSecs)
             {
                 return;
             }
             d.LastPieceAt = Time.realtimeSinceStartup;
             if (++d.Stalls > MaxStalls)
             {
-                Fail($"the host stopped sending its world ({d.Received / 1024} of {d.Blob.Length / 1024} KiB came)");
+                Fail(
+                    $"the host stopped sending its world ({d.Received / 1024} of {d.Blob.Length / 1024} KiB came)");
                 return;
             }
             int asked = 0;
-            for (int i = 0; i < d.Have.Length && (uint)i * PieceSize < d.NextOffset; i++)
+            for (int i = 0; i < d.Have.Length
+                && (uint)i * PieceSize < d.NextOffset; i++)
             {
                 if (!d.Have[i])
                 {
@@ -1284,12 +1502,13 @@ namespace DarkwoodMP.World
                     asked++;
                 }
             }
-            Plugin.Log.LogWarning($"No piece of the host's world for {StallSecs:0} s: asked again for {asked} ({d.Stalls}/{MaxStalls})");
+            Plugin.Log.LogWarning(
+                $"No piece of the host's world for {StallSecs:0} s: asked again for {asked} ({d.Stalls}/{MaxStalls})");
         }
 
         /// <summary>
-        /// The whole world has come: unpack it, check its hash and store it on a worker thread (tens of MB), then ask
-        /// to join with it.
+        /// The whole world has come: unpack it, check its hash and store it on
+        /// a worker thread (tens of MB), then ask to join with it.
         /// </summary>
         private IEnumerator Finish(Download d)
         {
@@ -1320,7 +1539,8 @@ namespace DarkwoodMP.World
                     at += size;
                     files.Add(new WorldFiles.File { Name = name, Data = data });
                 }
-                if (!WorldFiles.Equal(WorldFiles.Hash(d.ProfileJson, files), d.Hash))
+                if (!WorldFiles.Equal(
+                    WorldFiles.Hash(d.ProfileJson, files), d.Hash))
                 {
                     return "the world didn't arrive intact (hash mismatch)";
                 }
@@ -1331,7 +1551,8 @@ namespace DarkwoodMP.World
                 {
                     File.WriteAllBytes(Path.Combine(profDir, f.Name), f.Data);
                 }
-                File.WriteAllText(Path.Combine(dir, "profile.json"), d.ProfileJson);
+                File.WriteAllText(
+                    Path.Combine(dir, "profile.json"), d.ProfileJson);
                 Directory.SetLastWriteTimeUtc(dir, DateTime.UtcNow);
                 took = sw.ElapsedMilliseconds;
                 return null;
@@ -1365,29 +1586,35 @@ namespace DarkwoodMP.World
                 Fail(error);
                 yield break;
             }
-            Plugin.Log.LogInfo($"[join] the world was unpacked, checked and stored in {took} ms on a worker thread");
+            Plugin.Log.LogInfo(
+                $"[join] the world was unpacked, checked and stored in {took} ms on a worker thread");
             try
             {
                 PruneCache(dir);
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't tidy the world cache: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't tidy the world cache: {e.Message}");
             }
 
-            Plugin.Log.LogInfo($"Got the host's world {hex.Substring(0, 12)}; asking to join with it");
+            Plugin.Log.LogInfo(
+                $"Got the host's world {hex.Substring(0, 12)}; asking to join with it");
             LoadStatus = null;
             _readyHash = d.Hash;
-            _session.ClientWorldHash = () => _readyHash; // send exactly this one in the next Hello
+            // send exactly this one in the next Hello
+            _session.ClientWorldHash = () => _readyHash;
             _session.SendHello();
             _session.ClientWorldHash = ClientHelloHash;
         }
 
         private void PruneCache(string keep)
         {
-            foreach (var old in new DirectoryInfo(_cacheDir).GetDirectories().OrderByDescending(x => x.LastWriteTimeUtc).Skip(KeepWorlds))
+            foreach (var old in new DirectoryInfo(_cacheDir).GetDirectories()
+                .OrderByDescending(x => x.LastWriteTimeUtc).Skip(KeepWorlds))
             {
-                if (WorldFiles.SamePath(old.FullName, keep) || WorldFiles.SamePath(old.FullName, SaveRedirect.Dir))
+                if (WorldFiles.SamePath(old.FullName, keep)
+                    || WorldFiles.SamePath(old.FullName, SaveRedirect.Dir))
                 {
                     continue; // never the world being played
                 }
@@ -1402,11 +1629,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Deletes a folder of ours, to be made again at once. On Windows, a file in it that another program has open
-        /// for a moment (a virus scanner, the search indexer) makes Directory.Delete fail, or leaves the folder waiting
-        /// to be deleted so that making it again fails. So it's renamed out of the way first; if it can't be deleted
-        /// then, what's left is deleted the next time. Every delete goes through WorldFiles.DeleteTree, which refuses
-        /// (with a warning, deleting nothing) anything outside the mod's cache and save-redirect folders.
+        /// Deletes a folder of ours, to be made again at once. On Windows, a
+        /// file in it that another program has open for a moment (a virus
+        /// scanner, the search indexer) makes Directory.Delete fail, or leaves
+        /// the folder waiting to be deleted so that making it again fails. So
+        /// it's renamed out of the way first; if it can't be deleted then,
+        /// what's left is deleted the next time. Every delete goes through
+        /// WorldFiles.DeleteTree, which refuses (with a warning, deleting
+        /// nothing) anything outside the mod's cache and save-redirect folders.
         /// </summary>
         internal static void RemoveDir(string dir)
         {
@@ -1415,10 +1645,12 @@ namespace DarkwoodMP.World
                 return; // refused, with a warning
             }
             dir = WorldFiles.Full(dir);
-            string parent = Path.GetDirectoryName(dir), aside = Path.GetFileName(dir) + ".old-";
+            string parent = Path.GetDirectoryName(dir),
+                aside = Path.GetFileName(dir) + ".old-";
             if (Directory.Exists(parent))
             {
-                foreach (var old in Directory.GetDirectories(parent, aside + "*"))
+                foreach (var old in Directory.GetDirectories(
+                    parent, aside + "*"))
                 {
                     try
                     {
@@ -1453,10 +1685,12 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// We're playing a copy of another host's world (from the cache), e.g. after leaving their game. Hosting it
-        /// would hand joiners that stale copy as if it were a world of its own, so the panel won't host it.
+        /// We're playing a copy of another host's world (from the cache), e.g.
+        /// after leaving their game. Hosting it would hand joiners that stale
+        /// copy as if it were a world of its own, so the panel won't host it.
         /// </summary>
-        public bool PlayingHostCopy => SaveRedirect.Active && WorldFiles.IsUnder(SaveRedirect.Dir, _cacheDir);
+        public bool PlayingHostCopy => SaveRedirect.Active
+            && WorldFiles.IsUnder(SaveRedirect.Dir, _cacheDir);
 
         private void Fail(string why)
         {
@@ -1470,7 +1704,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- loading the world -------------------------------------------------
+        // ---- loading the world ----------------------------------------------
 
         private void OnWelcomed()
         {
@@ -1479,7 +1713,9 @@ namespace DarkwoodMP.World
                 return;
             }
             string dir = Path.Combine(_cacheDir, WorldFiles.Hex(_readyHash));
-            JoinScreen.Begin(); // already up if we downloaded the world; this is the first sign if we had it
+            // already up if we downloaded the world; this is the first sign if
+            // we had it
+            JoinScreen.Begin();
             _runner.StartCoroutine(LoadWorld(dir));
         }
 
@@ -1488,7 +1724,8 @@ namespace DarkwoodMP.World
             GameProfile profile;
             try
             {
-                profile = JsonConvert.DeserializeObject<GameProfile>(File.ReadAllText(Path.Combine(worldDir, "profile.json")));
+                profile = JsonConvert.DeserializeObject<GameProfile>(
+                    File.ReadAllText(Path.Combine(worldDir, "profile.json")));
             }
             catch (Exception e)
             {
@@ -1506,7 +1743,8 @@ namespace DarkwoodMP.World
                 }
                 LoadStatus = "Leaving your game to join the host's world...";
                 Plugin.Log.LogInfo(LoadStatus);
-                // On our way into the host's world (a WorldReload, a chapter): the session stays (ClientToMainMenu).
+                // On our way into the host's world (a WorldReload, a chapter):
+                // the session stays (ClientToMainMenu).
                 _joiningWorld = true;
                 try
                 {
@@ -1517,7 +1755,8 @@ namespace DarkwoodMP.World
                     _joiningWorld = false;
                 }
             }
-            LoadStatus = $"Loading the host's world (day {profile.day})..."; // waiting for the main menu first
+            // waiting for the main menu first
+            LoadStatus = $"Loading the host's world (day {profile.day})...";
             float until = Time.realtimeSinceStartup + 120f;
             while (!MainMenuReady())
             {
@@ -1540,7 +1779,9 @@ namespace DarkwoodMP.World
             Plugin.Log.LogInfo(LoadStatus);
             if (!StartProfile(profile, worldDir))
             {
-                LoadStatus = "Couldn't keep the host's world out of your own saves, so it wasn't loaded (see the log).";
+                LoadStatus =
+                    "Couldn't keep the host's world out of your own saves, so "
+                        + "it wasn't loaded (see the log).";
                 JoinScreen.Fail(LoadStatus);
                 INetBackend backend = _session.Backend;
                 if (backend != null)
@@ -1555,12 +1796,15 @@ namespace DarkwoodMP.World
         public static bool MainMenuReady()
         {
             var mm = Singleton<MainMenu>.Instance;
-            return Core.mainMenu && !PauseMenuInWorld && mm != null && mm.Menu0 != null && mm.Menu0.activeInHierarchy && Singleton<UI>.Instance != null;
+            return Core.mainMenu && !PauseMenuInWorld && mm != null
+                && mm.Menu0 != null && mm.Menu0.activeInHierarchy
+                && Singleton<UI>.Instance != null;
         }
 
         /// <summary>
-        /// Start a profile from the main menu as its Play button does, with saves in saveDir (null: your own).
-        /// False, and nothing started, if the game would still save somewhere else.
+        /// Start a profile from the main menu as its Play button does, with
+        /// saves in saveDir (null: your own). False, and nothing started, if
+        /// the game would still save somewhere else.
         /// </summary>
         public static bool StartProfile(GameProfile profile, string saveDir)
         {
@@ -1591,14 +1835,17 @@ namespace DarkwoodMP.World
                 slots.Add(item);
             }
             Core.profiles = slots;
-            Singleton<UI>.Instance.StartCoroutine(Singleton<UI>.Instance.initLoadGame());
+            Singleton<UI>.Instance.StartCoroutine(
+                Singleton<UI>.Instance.initLoadGame());
             return true;
         }
 
         /// <summary>
-        /// Whether the game's saves really go under saveDir now that SaveRedirect points there: the profile list's
-        /// path and, with Core.currentProfile set, the world's save path, as the game builds them. If baseSaveDirectory
-        /// was inlined somewhere before the redirect was patched in, it would show here; the caller then doesn't load,
+        /// Whether the game's saves really go under saveDir now that
+        /// SaveRedirect points there: the profile list's path and, with
+        /// Core.currentProfile set, the world's save path, as the game builds
+        /// them. If baseSaveDirectory was inlined somewhere before the redirect
+        /// was patched in, it would show here; the caller then doesn't load,
         /// rather than save into the player's own saves, and ends the redirect.
         /// </summary>
         internal static bool RedirectWorks(string saveDir)
@@ -1631,11 +1878,15 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            Plugin.Log.LogError($"The save redirect isn't working: the world would save to {save}, not under {saveDir}");
+            Plugin.Log.LogError(
+                $"The save redirect isn't working: the world would save to {save}, not under {saveDir}");
             return false;
         }
 
-        /// <summary>"--dwmp-continue N": load your own profile N at start (for testing and hosting).</summary>
+        /// <summary>
+        /// "--dwmp-continue N": load your own profile N at start (for testing
+        /// and hosting).
+        /// </summary>
         public IEnumerator ContinueOwnProfile(int id, string sandboxDir = null)
         {
             while (!MainMenuReady())
@@ -1643,7 +1894,8 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             yield return new WaitForSecondsRealtime(1f);
-            // "--dwmp-sandbox DIR": play a copy of the saves in DIR (laid out as 1_4Save), never your own.
+            // "--dwmp-sandbox DIR": play a copy of the saves in DIR (laid out
+            // as 1_4Save), never your own.
             if (sandboxDir != null)
             {
                 SaveRedirect.Begin(sandboxDir);
@@ -1655,7 +1907,8 @@ namespace DarkwoodMP.World
                 List<GameProfile> profiles = state.profiles;
                 if (profiles != null)
                 {
-                    profile = profiles.FirstOrDefault(p => p != null && p.id == id && p.Active);
+                    profile = profiles.FirstOrDefault(
+                        p => p != null && p.id == id && p.Active);
                 }
             }
             if (profile == null)
@@ -1674,9 +1927,11 @@ namespace DarkwoodMP.World
                 SaveRedirect.End();
                 yield break;
             }
-            Plugin.Log.LogInfo($"--dwmp-continue: loading your profile {id} (day {profile.day})");
+            Plugin.Log.LogInfo(
+                $"--dwmp-continue: loading your profile {id} (day {profile.day})");
             Core.profiles = state.profiles;
-            Singleton<UI>.Instance.StartCoroutine(Singleton<UI>.Instance.initLoadGame());
+            Singleton<UI>.Instance.StartCoroutine(
+                Singleton<UI>.Instance.initLoadGame());
         }
     }
 }
@@ -1684,10 +1939,12 @@ namespace DarkwoodMP.World
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Going back to the main menu ends the session: the host's stops its server (WorldShare.HostToMainMenu), a
-    /// joiner's leaves the host's game (WorldShare.ClientToMainMenu). The game only goes back to the main menu
-    /// when its player chose to (the pause menu, the permadeath screen, the credits); the mod's own reloads and
-    /// chapter changes load the next world without it.
+    /// Going back to the main menu ends the session: the host's stops its
+    /// server (WorldShare.HostToMainMenu), a joiner's leaves the host's game
+    /// (WorldShare.ClientToMainMenu). The game only goes back to the main menu
+    /// when its player chose to (the pause menu, the permadeath screen, the
+    /// credits); the mod's own reloads and chapter changes load the next world
+    /// without it.
     /// </summary>
     [HarmonyLib.HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
     static class HostToMainMenuPatch

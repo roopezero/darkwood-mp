@@ -10,8 +10,10 @@ using static DarkwoodMP.World.MapScenario;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for the determinism audit (docs/MULTIPLAYER_DETERMINISM_AUDIT.md): things each game rolls with
-    /// its own random numbers that could make two games' worlds differ. The list is tools/tests/map_scenario_dice.py.
+    /// Map test steps for the determinism audit
+    /// (docs/MULTIPLAYER_DETERMINISM_AUDIT.md): things each game rolls with its
+    /// own random numbers that could make two games' worlds differ. The list is
+    /// tools/tests/map_scenario_dice.py.
     ///
     ///   dice-sets    the set of children each Location kept (Location.Awake picks one of Location.sets at random,
     ///                every time the location is made, and destroys the others; the pick isn't saved). Replies with
@@ -23,14 +25,19 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class MapScenarioDice
     {
-        /// <summary>Each Location that had sets: "name@x,z" -> the set it kept, and of how many.</summary>
-        internal static readonly Dictionary<string, string> Picks = new Dictionary<string, string>();
+        /// <summary>
+        /// Each Location that had sets: "name@x,z" -> the set it kept, and of
+        /// how many.
+        /// </summary>
+        internal static readonly Dictionary<string, string> Picks =
+            new Dictionary<string, string>();
 
         public static void Register()
         {
             Add("dice-sets", (a, r) =>
             {
-                var lines = Picks.OrderBy(p => p.Key, StringComparer.Ordinal).Select(p => $"{p.Key}={p.Value}").ToList();
+                var lines = Picks.OrderBy(p => p.Key, StringComparer.Ordinal)
+                    .Select(p => $"{p.Key}={p.Value}").ToList();
                 foreach (var l in lines)
                 {
                     Plugin.Log.LogInfo($"[dice] set {l}");
@@ -47,10 +54,12 @@ namespace DarkwoodMP.World
             Add("dice-events", (a, r) =>
             {
                 int steps = 0, random = 0, nearest = 0, functions = 0;
-                var names = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                var names =
+                    new SortedDictionary<string, int>(StringComparer.Ordinal);
                 foreach (var ge in Resources.FindObjectsOfTypeAll<GameEvents>())
                 {
-                    if (ge == null || !ge.gameObject.scene.IsValid() || ge.events == null)
+                    if (ge == null || !ge.gameObject.scene.IsValid()
+                        || ge.events == null)
                     {
                         continue;
                     }
@@ -65,12 +74,14 @@ namespace DarkwoodMP.World
                     for (int i = 0; i < ge.events.Count; i++)
                     {
                         var e = ge.events[i];
-                        if (e == null || ScriptedEvents.IsPlayerStep(e.type) || ScriptedEvents.IsHostStep(e.type))
+                        if (e == null || ScriptedEvents.IsPlayerStep(e.type)
+                            || ScriptedEvents.IsHostStep(e.type))
                         {
                             continue;
                         }
                         steps++;
-                        if (e.type == GameEvent.Type.runFunction && !string.IsNullOrEmpty(e.Value))
+                        if (e.type == GameEvent.Type.runFunction
+                            && !string.IsNullOrEmpty(e.Value))
                         {
                             functions++;
                             names.TryGetValue(e.Value, out int n);
@@ -79,9 +90,11 @@ namespace DarkwoodMP.World
                         var gets = new List<Location.GetObject>();
                         if (e.locationObjects != null)
                         {
-                            gets.AddRange(e.locationObjects.Where(g => g != null));
+                            gets.AddRange(
+                                e.locationObjects.Where(g => g != null));
                         }
-                        if (e.getTargetFromLocation && e.targetLocationObject != null)
+                        if (e.getTargetFromLocation
+                            && e.targetLocationObject != null)
                         {
                             gets.Add(e.targetLocationObject);
                         }
@@ -96,7 +109,8 @@ namespace DarkwoodMP.World
                             {
                                 try
                                 {
-                                    List<GameObject> objects = loc.getObjects(g);
+                                    List<GameObject> objects =
+                                        loc.getObjects(g);
                                     int found = 0;
                                     if (objects != null)
                                     {
@@ -139,24 +153,31 @@ namespace DarkwoodMP.World
                             {
                                 locationName = loc.name;
                             }
-                            Plugin.Log.LogInfo($"[dice] event {ge.name} step {i} {e.type} picks a {text} {g.type} of {countText} in {locationName}");
+                            Plugin.Log.LogInfo(
+                                $"[dice] event {ge.name} step {i} {e.type} picks a {text} {g.type} of {countText} in {locationName}");
                         }
                     }
                 }
                 foreach (var n in names)
                 {
-                    Plugin.Log.LogInfo($"[dice] runFunction {n.Key} x{n.Value}");
+                    Plugin.Log.LogInfo(
+                        $"[dice] runFunction {n.Key} x{n.Value}");
                 }
-                // Things that explode in every game (BreakSync's Explode) and spawn objects at random spots round
-                // them: only thrown ones' spawns are the host's (ObjectActions.ThrownLeavesPatch).
-                var blasts = new SortedDictionary<string, int>(StringComparer.Ordinal);
+                // Things that explode in every game (BreakSync's Explode) and
+                // spawn objects at random spots round them: only thrown ones'
+                // spawns are the host's (ObjectActions.ThrownLeavesPatch).
+                var blasts =
+                    new SortedDictionary<string, int>(StringComparer.Ordinal);
                 foreach (var x in Resources.FindObjectsOfTypeAll<Explodes>())
                 {
-                    if (x == null || x.spawnObject == null || x.objectAmount <= 0 || x.GetComponent<ThrownItem>() != null)
+                    if (x == null || x.spawnObject == null
+                        || x.objectAmount <= 0
+                        || x.GetComponent<ThrownItem>() != null)
                     {
                         continue;
                     }
-                    string k = $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}";
+                    string k =
+                        $"{x.name.Replace("(Clone)", "")}->{x.spawnObject.name} x{x.objectAmount}";
                     if (!x.gameObject.scene.IsValid())
                     {
                         k += " (prefab)";
@@ -168,19 +189,24 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Log.LogInfo($"[dice] explodes {b.Key}: {b.Value}");
                 }
-                r.Info = $"{steps} shared steps; {random} pick a random object, {nearest} the one nearest the own player; {functions} runFunction ({string.Join(",", names.Keys)}); {blasts.Count} kinds of unthrown spawning explosions";
+                r.Info =
+                    $"{steps} shared steps; {random} pick a random object, {nearest} the one nearest the own player; {functions} runFunction ({string.Join(",", names.Keys)}); {blasts.Count} kinds of unthrown spawning explosions";
                 return None();
             });
         }
     }
 
-    /// <summary>Notes which of its sets a Location kept (Location.Awake), for dice-sets.</summary>
+    /// <summary>
+    /// Notes which of its sets a Location kept (Location.Awake), for dice-sets.
+    /// </summary>
     [HarmonyPatch(typeof(Location), "Awake")]
     internal static class LocationSetsPatch
     {
-        private static void Prefix(Location __instance, out List<GameObject> __state)
+        private static void Prefix(
+            Location __instance, out List<GameObject> __state)
         {
-            if (__instance != null && __instance.sets != null && __instance.sets.Count > 1)
+            if (__instance != null && __instance.sets != null
+                && __instance.sets.Count > 1)
             {
                 __state = new List<GameObject>(__instance.sets);
             }
@@ -190,15 +216,18 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void Postfix(Location __instance, List<GameObject> __state)
+        private static void Postfix(
+            Location __instance, List<GameObject> __state)
         {
             if (__state == null || __instance == null)
             {
                 return;
             }
-            var kept = __state.FirstOrDefault(g => g != null && !__instance.sets.Contains(g));
+            var kept = __state.FirstOrDefault(
+                g => g != null && !__instance.sets.Contains(g));
             var p = __instance.transform.position;
-            string key = FormattableString.Invariant($"{__instance.name}@{p.x:0},{p.z:0}");
+            string key = FormattableString.Invariant(
+                $"{__instance.name}@{p.x:0},{p.z:0}");
             string name = "?";
             if (kept != null)
             {

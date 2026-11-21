@@ -10,11 +10,13 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for things players bump into and shove (tools/tests/map4_push.py): furniture, crates, placed
-    /// objects and open doors' leaves, moved by the player's body through the physics, as walking into them does
-    /// (the player's rigidbody pushed along, not put in place frame by frame). Run in map4, so a push by one client
-    /// is checked in the host's game and in every other client's, and a second player then bumps the same thing
-    /// where their game has it.
+    /// Map test steps for things players bump into and shove
+    /// (tools/tests/map4_push.py): furniture, crates, placed objects and open
+    /// doors' leaves, moved by the player's body through the physics, as
+    /// walking into them does (the player's rigidbody pushed along, not put in
+    /// place frame by frame). Run in map4, so a push by one client is checked
+    /// in the host's game and in every other client's, and a second player then
+    /// bumps the same thing where their game has it.
     ///
     ///   ps-list [R] [new]        the loose things within R (400) of the centre that a player's body can move: each
     ///                            one's ObjRef, where it is, its mass, and whether this game watches it for pushes
@@ -42,7 +44,8 @@ namespace DarkwoodMP.World
     {
         private static Player P => Player.Instance;
         private static readonly List<string> _order = new List<string>();
-        private const float PushSpeed = 250f; // a walk (MoveCheck lets much more through)
+        // a walk (MoveCheck lets much more through)
+        private const float PushSpeed = 250f;
 
         public static void Register()
         {
@@ -55,58 +58,79 @@ namespace DarkwoodMP.World
             Add("ps-overlap", Overlap, timeout: 30f);
             StateDump.AddSection("loose", ctx =>
             {
-                // Every thing a player can drag or push, with its turn (the items section has where it is). Not by
-                // its body's state: a game's culling switches far things off and may leave their bodies kinematic.
+                // Every thing a player can drag or push, with its turn (the
+                // items section has where it is). Not by its body's state: a
+                // game's culling switches far things off and may leave their
+                // bodies kinematic.
                 foreach (var it in StateDump.All<Item>())
                 {
                     var b = it.GetComponent<Rigidbody>();
-                    if (b == null || !it.draggable || it.isDroppedItem || !ctx.Near(it.transform.position) || it.GetComponentInParent<Player>() != null)
+                    if (b == null || !it.draggable || it.isDroppedItem
+                        || !ctx.Near(it.transform.position)
+                        || it.GetComponentInParent<Player>() != null)
                     {
                         continue;
                     }
                     var e = ctx.Add(it.gameObject);
-                    e["yaw"] = StateDump.R(b.transform.rotation.eulerAngles.y, 1f);
+                    e["yaw"] =
+                        StateDump.R(b.transform.rotation.eulerAngles.y, 1f);
                 }
             });
             StateDump.AddSection("leaves", ctx =>
             {
-                // Every open door's leaf, at its angle from shut (the doors section has only whether it's drawn open).
+                // Every open door's leaf, at its angle from shut (the doors
+                // section has only whether it's drawn open).
                 foreach (var d in StateDump.All<Door>())
                 {
-                    if (!ctx.Near(d.transform.position) || !d.opened || d.destroyed || d.body == null)
+                    if (!ctx.Near(d.transform.position) || !d.opened
+                        || d.destroyed || d.body == null)
                     {
                         continue;
                     }
-                    ctx.Add(d.gameObject)["leaf"] = StateDump.R(DoorLeaf.Signed(d), 1f);
+                    ctx.Add(d.gameObject)["leaf"] =
+                        StateDump.R(DoorLeaf.Signed(d), 1f);
                 }
             });
         }
 
-        private static string Fmt1(Vector3 p) => FormattableString.Invariant($"{p.x:0.0} {p.z:0.0}");
-        private static string Ref(Component c) => ObjRef.Of(c.gameObject).ToString();
-        private static Vector3 Dir(float deg) => Quaternion.Euler(0f, deg, 0f) * Vector3.right;
+        private static string Fmt1(Vector3 p) =>
+            FormattableString.Invariant($"{p.x:0.0} {p.z:0.0}");
+        private static string Ref(Component c) =>
+            ObjRef.Of(c.gameObject).ToString();
+        private static Vector3 Dir(float deg) =>
+            Quaternion.Euler(0f, deg, 0f) * Vector3.right;
 
-        /// <summary>An Item with a rigidbody that the physics can move, not a character, door, window or dropped item.</summary>
+        /// <summary>
+        /// An Item with a rigidbody that the physics can move, not a character,
+        /// door, window or dropped item.
+        /// </summary>
         private static bool Movable(Rigidbody b, out Item it)
         {
             it = null;
-            if (b == null || b.isKinematic || b.constraints == RigidbodyConstraints.FreezeAll)
+            if (b == null || b.isKinematic
+                || b.constraints == RigidbodyConstraints.FreezeAll)
             {
                 return false;
             }
-            if (b.GetComponent<CharBase>() != null || b.GetComponentInParent<Door>() != null || b.GetComponentInParent<Window>() != null)
+            if (b.GetComponent<CharBase>() != null
+                || b.GetComponentInParent<Door>() != null
+                || b.GetComponentInParent<Window>() != null)
             {
                 return false;
             }
             it = b.GetComponent<Item>();
-            if (it == null || it.GetComponentInParent<Player>() != null || it.isDroppedItem)
+            if (it == null || it.GetComponentInParent<Player>() != null
+                || it.isDroppedItem)
             {
                 return false;
             }
             return Solid(b);
         }
 
-        /// <summary>The body has a collider the player's body bumps into (not a trigger, on a layer that collides with the player's), switched on or off.</summary>
+        /// <summary>
+        /// The body has a collider the player's body bumps into (not a trigger,
+        /// on a layer that collides with the player's), switched on or off.
+        /// </summary>
         private static bool Solid(Rigidbody b)
         {
             int pl = 0;
@@ -116,7 +140,9 @@ namespace DarkwoodMP.World
             }
             foreach (var c in b.GetComponentsInChildren<Collider>(true))
             {
-                if (c.GetComponentInParent<Rigidbody>(true) == b && !c.isTrigger && !Physics.GetIgnoreLayerCollision(pl, c.gameObject.layer))
+                if (c.GetComponentInParent<Rigidbody>(true) == b
+                    && !c.isTrigger
+                    && !Physics.GetIgnoreLayerCollision(pl, c.gameObject.layer))
                 {
                     return true;
                 }
@@ -124,10 +150,16 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        /// <summary>Every body near the centre that a player's body can move, whatever it is.</summary>
+        /// <summary>
+        /// Every body near the centre that a player's body can move, whatever
+        /// it is.
+        /// </summary>
         private static IEnumerable<Rigidbody> Bodies(float radius) =>
-            Object.FindObjectsOfType<Rigidbody>().Where(b => b != null && !b.isKinematic && b.constraints != RigidbodyConstraints.FreezeAll
-                && StateDump.Flat(b.position - Centre) < radius && b.GetComponentInParent<Player>() == null && Solid(b));
+            Object.FindObjectsOfType<Rigidbody>().Where(
+                b => b != null && !b.isKinematic
+                    && b.constraints != RigidbodyConstraints.FreezeAll
+                    && StateDump.Flat(b.position - Centre) < radius
+                    && b.GetComponentInParent<Player>() == null && Solid(b));
 
         private static IEnumerator List(string[] a, Result r)
         {
@@ -138,7 +170,10 @@ namespace DarkwoodMP.World
             }
             var things = new List<Item>();
             var unwatched = new List<string>();
-            foreach (var b in Bodies(radius).OrderBy(b => Math.Round(StateDump.Flat(b.position - Centre))).ThenBy(b => ObjRef.Of(b.gameObject).ToString(), StringComparer.Ordinal))
+            foreach (var b in Bodies(radius)
+                .OrderBy(b => Math.Round(StateDump.Flat(b.position - Centre)))
+                .ThenBy(b => ObjRef.Of(b.gameObject)
+                    .ToString(), StringComparer.Ordinal))
             {
                 string what;
                 if (b.GetComponent<CharBase>() != null)
@@ -196,21 +231,27 @@ namespace DarkwoodMP.World
                     what = $"NOT SHARED (no Item{bodyNote})";
                     unwatched.Add($"{b.name} {Ref(b)}");
                 }
-                Plugin.Log.LogInfo(FormattableString.Invariant($"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));
+                Plugin.Log.LogInfo(
+                    FormattableString.Invariant(
+                        $"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));
             }
             if (_order.Count == 0 || a.Contains("new"))
             {
                 _order.Clear();
                 _order.AddRange(things.Select(Ref));
             }
-            r.Info = string.Join("; ", things.Select(i => $"{_order.IndexOf(Ref(i))}={i.name} {Ref(i)} {Fmt1(i.transform.position)}"));
+            r.Info = string.Join(
+                "; ",
+                things.Select(
+                    i => $"{_order.IndexOf(Ref(i))}={i.name} {Ref(i)} {Fmt1(i.transform.position)}"));
             if (things.Count == 0)
             {
                 r.Fail("nothing loose by the centre");
             }
             else if (unwatched.Count > 0)
             {
-                r.Fail($"not watched for pushes here: {string.Join(", ", unwatched)}");
+                r.Fail(
+                    $"not watched for pushes here: {string.Join(", ", unwatched)}");
             }
             yield break;
         }
@@ -227,7 +268,8 @@ namespace DarkwoodMP.World
                 r.Fail($"no thing {k} (ps-list found {_order.Count})");
                 return null;
             }
-            var it = StateDump.All<Item>().FirstOrDefault(i => i != null && Ref(i) == _order[k]);
+            var it = StateDump.All<Item>().FirstOrDefault(
+                i => i != null && Ref(i) == _order[k]);
             if (it == null)
             {
                 r.Fail($"thing {k} ({_order[k]}) not here");
@@ -235,7 +277,10 @@ namespace DarkwoodMP.World
             return it;
         }
 
-        /// <summary>How far the thing reaches out from its centre along the ground (its colliders' bounds).</summary>
+        /// <summary>
+        /// How far the thing reaches out from its centre along the ground (its
+        /// colliders' bounds).
+        /// </summary>
         private static float Size(Item it)
         {
             float s = 20f;
@@ -243,17 +288,21 @@ namespace DarkwoodMP.World
             {
                 if (!c.isTrigger)
                 {
-                    s = Mathf.Max(s, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
+                    s = Mathf.Max(
+                        s, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
                 }
             }
             return s;
         }
 
         /// <summary>
-        /// Our player's body moved along dir at PushSpeed by the physics (its rigidbody's velocity, set every physics
-        /// step, as the game's own walking force does), so whatever is in the way is pushed, for secs or until stop().
+        /// Our player's body moved along dir at PushSpeed by the physics (its
+        /// rigidbody's velocity, set every physics step, as the game's own
+        /// walking force does), so whatever is in the way is pushed, for secs
+        /// or until stop().
         /// </summary>
-        private static IEnumerator BodyWalk(Vector3 dir, float secs, Func<bool> stop)
+        private static IEnumerator BodyWalk(
+            Vector3 dir, float secs, Func<bool> stop)
         {
             var rb = P.GetComponent<Rigidbody>();
             if (rb == null)
@@ -271,7 +320,8 @@ namespace DarkwoodMP.World
                     yield break;
                 }
                 rb.WakeUp();
-                rb.velocity = new Vector3(dir.x * PushSpeed, rb.velocity.y, dir.z * PushSpeed);
+                rb.velocity = new Vector3(
+                    dir.x * PushSpeed, rb.velocity.y, dir.z * PushSpeed);
             }
             if (rb != null)
             {
@@ -280,17 +330,22 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The way to push it: DEG if a player can stand back from it on that side and it has room to go (no wall,
-        /// shut door or fixed furniture between), else the nearest of every 45 degrees from there that has. The rooms
-        /// are the game's: a wall right behind a thing (a lamp in a corner) would make a push from there test nothing.
+        /// The way to push it: DEG if a player can stand back from it on that
+        /// side and it has room to go (no wall, shut door or fixed furniture
+        /// between), else the nearest of every 45 degrees from there that has.
+        /// The rooms are the game's: a wall right behind a thing (a lamp in a
+        /// corner) would make a push from there test nothing.
         /// </summary>
-        private static Vector3 ClearWay(Item it, float deg, float back, float ahead)
+        private static Vector3 ClearWay(
+            Item it, float deg, float back, float ahead)
         {
             var at = it.transform.position;
             foreach (int k in new[] { 0, 45, -45, 90, -90, 135, -135, 180 })
             {
                 var d = Dir(deg + k);
-                if (Clear(it, at - d * back, at) && (ahead <= 0f || Clear(it, at, at + d * (Size(it) + ahead))))
+                if (Clear(it, at - d * back, at)
+                    && (ahead <= 0f || Clear(
+                        it, at, at + d * (Size(it) + ahead))))
                 {
                     return d;
                 }
@@ -298,22 +353,30 @@ namespace DarkwoodMP.World
             return Dir(deg);
         }
 
-        /// <summary>Nothing solid between a and b at the player's height but the thing, players and loose things.</summary>
+        /// <summary>
+        /// Nothing solid between a and b at the player's height but the thing,
+        /// players and loose things.
+        /// </summary>
         private static bool Clear(Item it, Vector3 a, Vector3 b)
         {
             float y = P.transform.position.y;
             a.y = y;
             b.y = y;
             var d = b - a;
-            foreach (var h in Physics.SphereCastAll(a, 15f, d.normalized, d.magnitude, ~0, QueryTriggerInteraction.Ignore))
+            foreach (var h in Physics.SphereCastAll(
+                a, 15f, d.normalized, d.magnitude, ~0,
+                QueryTriggerInteraction.Ignore))
             {
                 var c = h.collider;
-                if (c == null || c.transform.IsChildOf(it.transform) || c.GetComponentInParent<Player>() != null)
+                if (c == null || c.transform.IsChildOf(it.transform)
+                    || c.GetComponentInParent<Player>() != null)
                 {
                     continue;
                 }
                 var rb = c.attachedRigidbody;
-                if (rb != null && !rb.isKinematic && rb.constraints != RigidbodyConstraints.FreezeAll && rb.GetComponentInParent<Door>() == null)
+                if (rb != null && !rb.isKinematic
+                    && rb.constraints != RigidbodyConstraints.FreezeAll
+                    && rb.GetComponentInParent<Door>() == null)
                 {
                     continue;
                 }
@@ -361,7 +424,8 @@ namespace DarkwoodMP.World
             }
             var dir = ClearWay(it, angle, back, ahead);
             yield return Walk(start - dir * back, 10f, detours: 0);
-            yield return new WaitForSeconds(0.5f); // at rest where the walk left us
+            // at rest where the walk left us
+            yield return new WaitForSeconds(0.5f);
             start = it.transform.position;
             float moved() => StateDump.Flat(it.transform.position - start);
             yield return BodyWalk(dir, 6f, () => it == null || moved() >= dist);
@@ -372,18 +436,22 @@ namespace DarkwoodMP.World
             }
             if (lean)
             {
-                // Pressed against it while it's still: a body held there. A thing in the way stops it, else it goes on.
+                // Pressed against it while it's still: a body held there. A
+                // thing in the way stops it, else it goes on.
                 yield return BodyWalk(dir, hold, null);
             }
             var rb = it.GetComponent<Rigidbody>();
             yield return BodyWalk(-dir, 0.4f, null); // back off it
             float rest = Time.time + 6f;
-            while (Time.time < rest && rb != null && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f))
+            while (Time.time < rest && rb != null
+                && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f))
             {
                 yield return null;
             }
-            yield return new WaitForSeconds(1.5f); // seen at rest (four checks a second) and sent
-            r.Info = FormattableString.Invariant($"{it.name} {Ref(it)} pushed towards {Mathf.Atan2(-dir.z, dir.x) * Mathf.Rad2Deg:0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved():0.0} units), we are at {Fmt1(P.transform.position)}");
+            // seen at rest (four checks a second) and sent
+            yield return new WaitForSeconds(1.5f);
+            r.Info = FormattableString.Invariant(
+                $"{it.name} {Ref(it)} pushed towards {Mathf.Atan2(-dir.z, dir.x) * Mathf.Rad2Deg:0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved():0.0} units), we are at {Fmt1(P.transform.position)}");
             if (moved() < 3f)
             {
                 r.Fail($"{r.Info}: it didn't move");
@@ -403,24 +471,31 @@ namespace DarkwoodMP.World
             yield return Walk(from, 10f, detours: 0);
             yield return new WaitForSeconds(0.5f);
             start = it.transform.position;
-            var point = it.GetComponentsInChildren<Collider>().Where(c => !c.isTrigger).Select(c => c.ClosestPoint(P.transform.position)).DefaultIfEmpty(start).First();
+            var point = it.GetComponentsInChildren<Collider>()
+                .Where(c => !c.isTrigger)
+                .Select(c => c.ClosestPoint(P.transform.position))
+                .DefaultIfEmpty(start).First();
             AsPlayer(() =>
             {
                 it.getHit(1, P.transform);
                 if (rb != null)
                 {
-                    rb.AddForceAtPosition((P.transform.position - point).normalized * -20000f, point);
+                    rb.AddForceAtPosition(
+                        (P.transform.position - point).normalized * -20000f,
+                        point);
                 }
             });
             float rest = Time.time + 6f;
             yield return new WaitForSeconds(0.3f);
-            while (Time.time < rest && rb != null && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f))
+            while (Time.time < rest && rb != null
+                && !(rb.IsSleeping() || rb.velocity.sqrMagnitude < 1f))
             {
                 yield return null;
             }
             yield return new WaitForSeconds(1.5f);
             float moved = StateDump.Flat(it.transform.position - start);
-            r.Info = $"{it.name} {Ref(it)} hit from {StateDump.Flat(P.transform.position - start):0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved:0.0} units)";
+            r.Info =
+                $"{it.name} {Ref(it)} hit from {StateDump.Flat(P.transform.position - start):0}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({moved:0.0} units)";
             if (moved < 3f)
             {
                 r.Fail($"{r.Info}: it didn't move");
@@ -435,23 +510,33 @@ namespace DarkwoodMP.World
                 deg = F(a[0]);
             }
             var dir = Dir(deg);
-            var d = Nearest(Object.FindObjectsOfType<Door>().Where(x => x.opened && !x.destroyed && !x.barricaded && x.body != null && ObjRef.Of(x.gameObject).Valid), Centre);
+            var d = Nearest(
+                Object.FindObjectsOfType<Door>().Where(
+                    x => x.opened && !x.destroyed && !x.barricaded
+                        && x.body != null && ObjRef.Of(x.gameObject).Valid),
+                Centre);
             if (d == null)
             {
                 r.Fail("no open door");
                 yield break;
             }
             float before = DoorLeaf.Signed(d);
-            // From DEG's side, and if the leaf doesn't turn (it's against the wall that way), from the other.
-            for (int side = 0; side < 2 && Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f; side++, dir = -dir)
+            // From DEG's side, and if the leaf doesn't turn (it's against the
+            // wall that way), from the other.
+            for (int side = 0; side < 2
+                && Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d)))
+                    < 6f; side++, dir = -dir)
             {
                 var leaf = d.body.position;
                 yield return Walk(leaf - dir * 120f, 10f, detours: 0);
                 yield return new WaitForSeconds(0.3f);
-                yield return BodyWalk(dir, 1.2f, null); // into the leaf and through
-                yield return new WaitForSeconds(2.5f); // the leaf at rest (0.4 s still) and sent
+                // into the leaf and through
+                yield return BodyWalk(dir, 1.2f, null);
+                // the leaf at rest (0.4 s still) and sent
+                yield return new WaitForSeconds(2.5f);
             }
-            r.Info = $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
+            r.Info =
+                $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
             if (Mathf.Abs(Mathf.DeltaAngle(before, DoorLeaf.Signed(d))) < 6f)
             {
                 r.Fail($"{r.Info}: the leaf didn't turn");
@@ -471,7 +556,8 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    float d = StateDump.Flat(rp.Root.transform.position - P.transform.position);
+                    float d = StateDump.Flat(
+                        rp.Root.transform.position - P.transform.position);
                     if (d < best)
                     {
                         best = d;
@@ -487,14 +573,17 @@ namespace DarkwoodMP.World
             yield return Walk(near.Root.transform.position, 60f);
             var on = near.Root.transform.position + new Vector3(2f, 0f, 1f);
             Place(on);
-            float eased = Sync.PlayerSeparation.Eased, want = Sync.PlayerSeparation.Distance * 0.75f;
-            float dist() => StateDump.Flat(near.Root.transform.position - P.transform.position);
+            float eased = Sync.PlayerSeparation.Eased,
+                want = Sync.PlayerSeparation.Distance * 0.75f;
+            float dist() => StateDump.Flat(
+                near.Root.transform.position - P.transform.position);
             float until = Time.unscaledTime + 4f;
             while (Time.unscaledTime < until && dist() < want)
             {
                 yield return null;
             }
-            r.Info = $"put on {near.Name} ({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
+            r.Info =
+                $"put on {near.Name} ({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
             if (dist() < want)
             {
                 r.Fail($"{r.Info}: not eased apart");
@@ -524,7 +613,8 @@ namespace DarkwoodMP.World
             {
                 watch = drag.WatchInfo(rb);
             }
-            r.Info = FormattableString.Invariant($"{name} {id} at {pos} yaw {yaw:0}, {watch}");
+            r.Info = FormattableString.Invariant(
+                $"{name} {id} at {pos} yaw {yaw:0}, {watch}");
             yield break;
         }
     }

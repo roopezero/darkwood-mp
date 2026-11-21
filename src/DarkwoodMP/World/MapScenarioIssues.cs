@@ -13,23 +13,29 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Steps of the two-game map test for the bugs reported on GitHub, one or more steps each (see MapScenario;
-    /// the order they run in is tools/tests/map_scenario_issues.py).
+    /// Steps of the two-game map test for the bugs reported on GitHub, one or
+    /// more steps each (see MapScenario; the order they run in is
+    /// tools/tests/map_scenario_issues.py).
     ///
-    /// Things these steps add to the test area are found again by where they are, in both games: the station's
-    /// egg and infection patch are the ones nearest the centre, the extra ones the nearest to a fixed offset from
-    /// it (<see cref="Spot"/>), far enough from the stations not to be mixed up with them.
+    /// Things these steps add to the test area are found again by where they
+    /// are, in both games: the station's egg and infection patch are the ones
+    /// nearest the centre, the extra ones the nearest to a fixed offset from it
+    /// (<see cref="Spot"/>), far enough from the stations not to be mixed up
+    /// with them.
     /// </summary>
     public static class MapScenarioIssues
     {
-        // Where the extra things go, from the centre (the stations are within ~500 of it; the dump reaches 2000).
-        private static readonly Dictionary<string, Vector3> Spots = new Dictionary<string, Vector3>
-        {
-            ["egg:near"] = new Vector3(0f, 0f, -900f),
-            ["egg:far"] = new Vector3(2800f, 0f, 0f),   // outside what the client has loaded around it: culled there
-            ["infection:client"] = new Vector3(-900f, 0f, 0f),
-            ["infection:keep"] = new Vector3(900f, 0f, 0f),
-        };
+        // Where the extra things go, from the centre (the stations are within
+        // ~500 of it; the dump reaches 2000).
+        private static readonly Dictionary<string, Vector3> Spots =
+            new Dictionary<string, Vector3>
+            {
+                ["egg:near"] = new Vector3(0f, 0f, -900f),
+                // outside what the client has loaded around it: culled there
+                ["egg:far"] = new Vector3(2800f, 0f, 0f),
+                ["infection:client"] = new Vector3(-900f, 0f, 0f),
+                ["infection:keep"] = new Vector3(900f, 0f, 0f),
+            };
         private static Vector3 Spot(string which)
         {
             if (which == "station" || !Spots.TryGetValue(which, out var off))
@@ -45,7 +51,8 @@ namespace DarkwoodMP.World
             MapScenario.Add("join-log", JoinLog, timeout: 15f);
             // #13 a joiner placed off the others, not on top of them
             MapScenario.Add("join-apart", JoinApart, timeout: 20f);
-            // #2 dead enemy's sounds, #3 re-equip after join (and an attack with it)
+            // #2 dead enemy's sounds, #3 re-equip after join (and an attack
+            // with it)
             MapScenario.Add("hold", Hold);
             MapScenario.Add("check-equip", CheckEquip);
             MapScenario.Add("spawn-dog", SpawnDog);
@@ -63,7 +70,8 @@ namespace DarkwoodMP.World
             MapScenario.Add("issue-setup", Setup);
             MapScenario.Add("egg-break", EggBreak, timeout: 30f);
             MapScenario.Add("egg-check", EggCheck, timeout: 15f);
-            // "egg-cull WHICH on|off": that egg made inactive here (on) or active again, as the game culls what's far off.
+            // "egg-cull WHICH on|off": that egg made inactive here (on) or
+            // active again, as the game culls what's far off.
             MapScenario.Add("egg-cull", (a, r) =>
             {
                 var e = Egg(a[0]);
@@ -74,15 +82,21 @@ namespace DarkwoodMP.World
                 else
                 {
                     e.gameObject.SetActive(a.Length > 1 && a[1] == "off");
-                    r.Info = $"{a[0]} egg {ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}";
+                    r.Info =
+                        $"{a[0]} egg {ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}";
                 }
                 return Nothing();
             });
-            // "flags": the story flags here (to tell which one differs between the games).
+            // "flags": the story flags here (to tell which one differs between
+            // the games).
             MapScenario.Add("flags", (a, r) =>
             {
-                var dict = AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict")(Singleton<Flags>.Instance);
-                r.Info = string.Join(",", dict.Values.Where(f => f != null).Select(f =>
+                var dict =
+                    AccessTools
+                        .FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
+                            "flagsDict")(Singleton<Flags>.Instance);
+                r.Info = string.Join(",",
+                    dict.Values.Where(f => f != null).Select(f =>
                 {
                     string bit = "=0";
                     if (f.isTrue)
@@ -97,10 +111,16 @@ namespace DarkwoodMP.World
             MapScenario.Add("burn-infection", BurnInfection, timeout: 15f);
             MapScenario.Add("swing-infection", SwingInfection, timeout: 25f);
             MapScenario.Add("infection-check", InfectionCheck, timeout: 15f);
-            // Where the patches are, noted in each game before any is cleared (a cleared one is removed).
+            // Where the patches are, noted in each game before any is cleared
+            // (a cleared one is removed).
             MapScenario.Add("infection-note", (a, r) =>
             {
-                foreach (var w in new[] { "station", "infection:client", "infection:keep" })
+                foreach (var w in new[]
+                {
+                    "station",
+                    "infection:client",
+                    "infection:keep"
+                })
                 {
                     var i = Patch(w);
                     if (i != null)
@@ -108,7 +128,8 @@ namespace DarkwoodMP.World
                         _noted[w] = i.transform.position;
                     }
                 }
-                r.Info = string.Join("; ", _noted.Select(kv => $"{kv.Key} {Fmt(kv.Value)}"));
+                r.Info = string.Join(
+                    "; ", _noted.Select(kv => $"{kv.Key} {Fmt(kv.Value)}"));
                 return Nothing();
             });
 
@@ -116,7 +137,8 @@ namespace DarkwoodMP.World
             {
                 foreach (var inf in StateDump.All<Infection>())
                 {
-                    if (inf == null || inf.disappearing || !ctx.Near(inf.transform.position))
+                    if (inf == null || inf.disappearing
+                        || !ctx.Near(inf.transform.position))
                     {
                         continue; // a cleared one is gone
                     }
@@ -125,13 +147,18 @@ namespace DarkwoodMP.World
             });
         }
 
-        // ---- helpers ----------------------------------------------------------------------------------------------
+        // ---- helpers --------------------------------------------------------
 
-        // Where this test's part of the log starts: the game keeps running between test items (tools/run-test.sh), and
-        // an earlier item's lines (the scripted peers' refused slot changes in host-authority) aren't this test's.
+        // Where this test's part of the log starts: the game keeps running
+        // between test items (tools/run-test.sh), and an earlier item's lines
+        // (the scripted peers' refused slot changes in host-authority) aren't
+        // this test's.
         private static int _logStart;
 
-        /// <summary>Test control's reset, before each test item: later LogLines start here.</summary>
+        /// <summary>
+        /// Test control's reset, before each test item: later LogLines start
+        /// here.
+        /// </summary>
         internal static void MarkLogStart()
         {
             _logStart = 0;
@@ -144,11 +171,15 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>This game's BepInEx log since the last test reset, as written so far (the disk log is flushed every second or two).</summary>
+        /// <summary>
+        /// This game's BepInEx log since the last test reset, as written so far
+        /// (the disk log is flushed every second or two).
+        /// </summary>
         internal static List<string> LogLines()
         {
             var all = AllLogLines();
-            // A log shorter than the mark is a new one (the game was started again): all of it is this test's.
+            // A log shorter than the mark is a new one (the game was started
+            // again): all of it is this test's.
             if (_logStart > 0 && _logStart < all.Count)
             {
                 return all.GetRange(_logStart, all.Count - _logStart);
@@ -158,8 +189,9 @@ namespace DarkwoodMP.World
 
         private static List<string> AllLogLines()
         {
-            // BepInEx writes the file from a buffer it flushes every 2 s: without this, a line logged just before a
-            // step was often missing (join-waited found no "World ready" after a quick join).
+            // BepInEx writes the file from a buffer it flushes every 2 s:
+            // without this, a line logged just before a step was often missing
+            // (join-waited found no "World ready" after a quick join).
             foreach (var l in BepInEx.Logging.Logger.Listeners)
             {
                 if (l is BepInEx.Logging.DiskLogListener disk)
@@ -176,18 +208,26 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            string path = Path.Combine(BepInEx.Paths.BepInExRootPath, "LogOutput.log");
-            using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+            string path =
+                Path.Combine(BepInEx.Paths.BepInExRootPath, "LogOutput.log");
+            using (var fs = new FileStream(
+                path, FileMode.Open, FileAccess.Read,
+                FileShare.ReadWrite | FileShare.Delete))
             {
                 using (var sr = new StreamReader(fs))
                 {
-                    return sr.ReadToEnd().Split('\n').Select(l => l.TrimEnd('\r')).ToList();
+                    return sr.ReadToEnd().Split('\n')
+                        .Select(l => l.TrimEnd('\r')).ToList();
                 }
             }
         }
 
-        /// <summary>Wait (up to secs) for a line matching each pattern in this game's log after line `from`; the ones not found.</summary>
-        internal static IEnumerator WaitLog(int from, string[] patterns, float secs, List<string> missing)
+        /// <summary>
+        /// Wait (up to secs) for a line matching each pattern in this game's
+        /// log after line `from`; the ones not found.
+        /// </summary>
+        internal static IEnumerator WaitLog(
+            int from, string[] patterns, float secs, List<string> missing)
         {
             float until = Time.realtimeSinceStartup + secs;
             while (true)
@@ -222,14 +262,20 @@ namespace DarkwoodMP.World
         }
 
         private static IEnumerable<InvItemClass> Carried(Player p) =>
-            p.Inventory.slots.Concat(p.Hotbar.slots).Where(s => s != null && !InvItemClass.isNull(s.invItem)).Select(s => s.invItem);
+            p.Inventory.slots.Concat(p.Hotbar.slots)
+                .Where(s => s != null && !InvItemClass.isNull(s.invItem))
+                .Select(s => s.invItem);
 
         private static bool InBags(Player p, InvItemClass item) =>
-            p.Inventory.slots.Concat(p.Hotbar.slots).Any(s => s != null && s.invItem == item);
+            p.Inventory.slots.Concat(p.Hotbar.slots).Any(
+                s => s != null && s.invItem == item);
 
         private static GameObject Place(string prefab, Vector3 at)
         {
-            var go = Core.AddPrefab(prefab, MapScenarioEnemies.FreeSpot(at), Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer, worldSpace: true);
+            var go = Core.AddPrefab(
+                prefab, MapScenarioEnemies.FreeSpot(at),
+                Quaternion.Euler(90f, 0f, 0f), Core.ItemContainer,
+                worldSpace: true);
             if (go != null)
             {
                 Core.addToSaveable(go, isDynamic: true, assignID: true);
@@ -237,10 +283,13 @@ namespace DarkwoodMP.World
             return go;
         }
 
-        /// <summary>Things of a kind in the scene (culled ones too), nearest a spot.</summary>
+        /// <summary>
+        /// Things of a kind in the scene (culled ones too), nearest a spot.
+        /// </summary>
         internal static T NearestAll<T>(Vector3 to, Func<T, bool> ok) where T : Component =>
             StateDump.All<T>().Where(ok)
-                .OrderBy(t => StateDump.Flat(t.transform.position - to)).FirstOrDefault();
+                .OrderBy(t => StateDump.Flat(t.transform.position - to))
+                .FirstOrDefault();
 
         private static Item Egg(string which)
         {
@@ -253,20 +302,30 @@ namespace DarkwoodMP.World
             {
                 spot = "egg:" + which;
             }
-            return NearestAll<Item>(Spot(spot), i => i.gameObject.name.StartsWith("larva_egg", StringComparison.Ordinal));
+            return NearestAll<Item>(
+                Spot(spot),
+                i => i.gameObject.name.StartsWith(
+                    "larva_egg", StringComparison.Ordinal));
         }
 
-        private static Infection Patch(string which, bool any = false) => NearestAll<Infection>(Spot(which), i => any || !i.disappearing);
+        private static Infection Patch(string which, bool any = false) =>
+            NearestAll<Infection>(Spot(which), i => any || !i.disappearing);
 
-        /// <summary>Swing what our player holds, as the game's attack animation does (Player.attack), facing `at`.</summary>
-        private static readonly System.Reflection.MethodInfo AttackMethod = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
+        /// <summary>
+        /// Swing what our player holds, as the game's attack animation does
+        /// (Player.attack), facing `at`.
+        /// </summary>
+        private static readonly System.Reflection.MethodInfo AttackMethod =
+            AccessTools.Method(
+                typeof(Player), "attack", new[] { typeof(float) });
         private static void Swing(Player p, Vector3 at)
         {
             var d = at - p.transform.position;
             d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
-                p.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
+                p.transform.rotation = Quaternion.Euler(
+                    90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
             }
             AsPlayer(() => AttackMethod.Invoke(p, new object[] { 1f }));
         }
@@ -280,20 +339,35 @@ namespace DarkwoodMP.World
             return i.type;
         }
 
-        // ---- #1 loading screen while joining ------------------------------------------------------------------
+        // ---- #1 loading screen while joining --------------------------------
 
-        /// <summary>"join-log" (client): the join showed our loading screen, its stages, and handed over to the game's.</summary>
+        /// <summary>
+        /// "join-log" (client): the join showed our loading screen, its stages,
+        /// and handed over to the game's.
+        /// </summary>
         private static IEnumerator JoinLog(string[] a, Result r)
         {
             var missing = new List<string>();
-            yield return WaitLog(0, new[] { @"\[join\] loading screen shown", @"\[join\] loading screen: (download|load|connect|wait)\w* \d+%", @"\[join\] loading screen: (handed over to the game's|the game's loading has it now)" }, 6f, missing);
+            yield return WaitLog(0, new[]
+            {
+                @"\[join\] loading screen shown",
+                @"\[join\] loading screen: (download|load|connect|wait)\w* \d+%",
+                @"\[join\] loading screen: (handed over to the game's|the game's loading has it now)"
+            }, 6f, missing);
             var lines = LogLines();
-            var join = lines.Where(l => l.Contains("[join]")).Select(l => l.Substring(l.IndexOf("[join]", StringComparison.Ordinal))).ToList();
-            var bad = join.FirstOrDefault(l => l.Contains("didn't show") || l.Contains("hidden:"));
-            r.Info = $"{join.Count} [join] lines: " + string.Join(" | ", join.Distinct().Take(6));
+            var join = lines.Where(l => l.Contains("[join]"))
+                .Select(
+                    l => l.Substring(
+                        l.IndexOf("[join]", StringComparison.Ordinal)))
+                .ToList();
+            var bad = join.FirstOrDefault(
+                l => l.Contains("didn't show") || l.Contains("hidden:"));
+            r.Info = $"{join.Count} [join] lines: " + string.Join(
+                " | ", join.Distinct().Take(6));
             if (missing.Count > 0)
             {
-                r.Fail($"not in the log: {string.Join(", ", missing)} (saw: {string.Join(" | ", join.Distinct().Take(8))})");
+                r.Fail(
+                    $"not in the log: {string.Join(", ", missing)} (saw: {string.Join(" | ", join.Distinct().Take(8))})");
             }
             else if (bad != null)
             {
@@ -301,11 +375,12 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- #13 joining players placed apart ------------------------------------------------------------------
+        // ---- #13 joining players placed apart -------------------------------
 
         /// <summary>
-        /// "join-apart" (client, just after joining): our player isn't overlapping any other player, the log says
-        /// where it was placed ([spawn]), and the others' puppets are seen where they are.
+        /// "join-apart" (client, just after joining): our player isn't
+        /// overlapping any other player, the log says where it was placed
+        /// ([spawn]), and the others' puppets are seen where they are.
         /// </summary>
         private static IEnumerator JoinApart(string[] a, Result r)
         {
@@ -317,11 +392,14 @@ namespace DarkwoodMP.World
             }
             var ps = Sync.PlayerSync.Instance;
             float until = Time.realtimeSinceStartup + 5f;
-            while ((ps == null || !ps.Remotes.Values.Any(x => x.Owner != Sync.PlayerSync.DummyId && x.Last != null)) && Time.realtimeSinceStartup < until)
+            while ((ps == null || !ps.Remotes.Values.Any(
+                x => x.Owner != Sync.PlayerSync.DummyId && x.Last != null))
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
-            float apart = Sync.SpawnSpot.Apart(p) - 10f; // touching is fine, overlapping isn't
+            // touching is fine, overlapping isn't
+            float apart = Sync.SpawnSpot.Apart(p) - 10f;
             var parts = new List<string>();
             if (ps != null)
             {
@@ -337,7 +415,8 @@ namespace DarkwoodMP.World
                     parts.Add($"{rp.Name} {d:0} away");
                     if (d < apart)
                     {
-                        r.Fail($"we overlap {rp.Name}: {d:0} apart, bodies need {apart:0}");
+                        r.Fail(
+                            $"we overlap {rp.Name}: {d:0} apart, bodies need {apart:0}");
                     }
                 }
             }
@@ -345,7 +424,8 @@ namespace DarkwoodMP.World
             {
                 r.Fail("no other player seen");
             }
-            // The log file is written a little behind (this step runs right after the join): wait for the line.
+            // The log file is written a little behind (this step runs right
+            // after the join): wait for the line.
             var missing = new List<string>();
             yield return WaitLog(0, new[] { @"\[spawn\]" }, 8f, missing);
             var spawn = LogLines().LastOrDefault(l => l.Contains("[spawn]"));
@@ -356,14 +436,18 @@ namespace DarkwoodMP.World
             string spawnNote = "";
             if (spawn != null)
             {
-                spawnNote = " | " + spawn.Substring(spawn.IndexOf("[spawn]", StringComparison.Ordinal));
+                spawnNote = " | " + spawn.Substring(
+                    spawn.IndexOf("[spawn]", StringComparison.Ordinal));
             }
             r.Info = string.Join(", ", parts) + spawnNote;
         }
 
-        // ---- #3 re-equip after join ----------------------------------------------------------------------------
+        // ---- #3 re-equip after join -----------------------------------------
 
-        /// <summary>"hold TYPE" (host, before the join): TYPE in a hotbar slot, that slot selected and in our hands.</summary>
+        /// <summary>
+        /// "hold TYPE" (host, before the join): TYPE in a hotbar slot, that
+        /// slot selected and in our hands.
+        /// </summary>
         private static IEnumerator Hold(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -372,15 +456,19 @@ namespace DarkwoodMP.World
             {
                 type = a[0];
             }
-            int slot = p.Hotbar.slots.FindIndex(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
+            int slot = p.Hotbar.slots.FindIndex(
+                s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
             if (slot < 0)
             {
-                slot = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
+                slot = p.Hotbar.slots.FindIndex(
+                    s => InvItemClass.isNull(s.invItem));
                 if (slot < 0)
                 {
                     slot = 0;
                 }
-                var inBag = p.Inventory.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
+                var inBag = p.Inventory.slots.FirstOrDefault(
+                    s => !InvItemClass.isNull(s.invItem)
+                        && s.invItem.type == type);
                 InvItemClass it = null;
                 if (inBag != null)
                 {
@@ -404,8 +492,10 @@ namespace DarkwoodMP.World
                     p.Hotbar.slots[slot].createItem(type, 1);
                 }
             }
-            // Inventory.selectSlot does nothing for the slot that's already selected (an empty slot 0, say, which
-            // we just filled), so select it the way Characters.Reequip does: InvSlot.select, through switchToItem.
+            // Inventory.selectSlot does nothing for the slot that's already
+            // selected (an empty slot 0, say, which we just filled), so select
+            // it the way Characters.Reequip does: InvSlot.select, through
+            // switchToItem.
             if (p.Hotbar.slots[slot].selected)
             {
                 p.selectCurrentHotbarSlot();
@@ -415,25 +505,31 @@ namespace DarkwoodMP.World
                 p.Hotbar.selectSlot(slot, noiseless: true, force: true);
             }
             float until = Time.realtimeSinceStartup + 5f;
-            while ((InvItemClass.isNull(p.currentItem) || p.currentItem.type != type) && Time.realtimeSinceStartup < until)
+            while ((InvItemClass.isNull(p.currentItem)
+                    || p.currentItem.type != type)
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"hotbar slot {slot}: {ItemName(p.Hotbar.slots[slot].invItem)}, holding {ItemName(p.currentItem)}";
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            r.Info =
+                $"hotbar slot {slot}: {ItemName(p.Hotbar.slots[slot].invItem)}, holding {ItemName(p.currentItem)}";
+            if (InvItemClass.isNull(p.currentItem)
+                || p.currentItem.type != type)
             {
                 r.Fail(r.Info);
             }
         }
 
-        /// <summary>"check-equip" (client): what we hold is the selected hotbar slot's item (bare hands if it's empty),
-        /// not the host's item from the save, and the log says it was re-equipped.</summary>
+        /// <summary>"check-equip" (client): what we hold is the selected hotbar
+        /// slot's item (bare hands if it's empty), not the host's item from the
+        /// save, and the log says it was re-equipped.</summary>
         private static IEnumerator CheckEquip(string[] a, Result r)
         {
             var p = Player.Instance;
             var missing = new List<string>();
-            yield return WaitLog(0, new[] { @"\[chars\] re-equipped" }, 3f, missing);
+            yield return WaitLog(
+                0, new[] { @"\[chars\] re-equipped" }, 3f, missing);
             var slot = p.getCurrentlySelectedHotbarSlot();
             InvItemClass want;
             if (slot != null && !InvItemClass.isNull(slot.invItem))
@@ -445,7 +541,8 @@ namespace DarkwoodMP.World
                 want = p.fists;
             }
             var held = p.currentItem;
-            string line = LogLines().LastOrDefault(l => l.Contains("[chars] re-equipped"));
+            string line = LogLines().LastOrDefault(
+                l => l.Contains("[chars] re-equipped"));
             string heldName = ItemName(held);
             string bare = "";
             if (held == p.fists)
@@ -461,14 +558,17 @@ namespace DarkwoodMP.World
             string logged = null;
             if (line != null)
             {
-                logged = line.Substring(line.IndexOf("[chars]", StringComparison.Ordinal));
+                logged = line.Substring(
+                    line.IndexOf("[chars]", StringComparison.Ordinal));
             }
-            r.Info = $"holding {heldName}{bare}, selected slot holds {slotName}; {logged}";
+            r.Info =
+                $"holding {heldName}{bare}, selected slot holds {slotName}; {logged}";
             if (missing.Count > 0)
             {
                 r.Fail("no '[chars] re-equipped' in the log");
             }
-            else if (held != want && !(InvItemClass.isNull(held) && want == p.fists))
+            else if (held != want
+                && !(InvItemClass.isNull(held) && want == p.fists))
             {
                 string item = ItemName(held);
                 string place = "in no slot: the host's from the save";
@@ -480,17 +580,24 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- #2 dead enemy's sounds (and #3's attack) ----------------------------------------------------------
+        // ---- #2 dead enemy's sounds (and #3's attack) -----------------------
 
-        private static Character _dog;       // host: the dog spawn-dog made
-        private static float _dogHealth;     // host: its health then
-        private static uint _dogId;          // client: the copy attack-dog went for
-        private static string _dogDeath;     // client: its death cry's audio ID
+        // host: the dog spawn-dog made
+        private static Character _dog;
+        // host: its health then
+        private static float _dogHealth;
+        // client: the copy attack-dog went for
+        private static uint _dogId;
+        // client: its death cry's audio ID
+        private static string _dogDeath;
 
-        /// <summary>"spawn-dog" (host): a Dog beside the centre, not set on anyone.</summary>
+        /// <summary>
+        /// "spawn-dog" (host): a Dog beside the centre, not set on anyone.
+        /// </summary>
         private static IEnumerator SpawnDog(string[] a, Result r)
         {
-            // Clear of the stations: a dog among them walked into a trap and died before anyone hit it.
+            // Clear of the stations: a dog among them walked into a trap and
+            // died before anyone hit it.
             Vector3 spot = Centre + new Vector3(0f, 0f, 1200f);
             string type = "Dog";
             if (a.Length > 0)
@@ -506,10 +613,14 @@ namespace DarkwoodMP.World
             _dog = c;
             yield return new WaitForSeconds(1.5f);
             _dogHealth = c.health; // once it's set up (it starts at 0)
-            r.Info = $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, health {c.health}";
+            r.Info =
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, health {c.health}";
         }
 
-        /// <summary>"attack-dog" (client): walk to the host's dog and swing what we hold at it a few times.</summary>
+        /// <summary>
+        /// "attack-dog" (client): walk to the host's dog and swing what we hold
+        /// at it a few times.
+        /// </summary>
         private static IEnumerator AttackDog(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -518,12 +629,15 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + 6f;
             while (dog == null && Time.realtimeSinceStartup < until)
             {
-                // The one spawn-dog just made: by where it puts it, a copy made from its prefab (the host spawned it
-                // while playing), then the newest net id there. A save dog or the far module's dog can be nearer
-                // the centre; hitting one killed it instead.
+                // The one spawn-dog just made: by where it puts it, a copy made
+                // from its prefab (the host spawned it while playing), then the
+                // newest net id there. A save dog or the far module's dog can
+                // be nearer the centre; hitting one killed it instead.
                 var spot = Centre + new Vector3(0f, 0f, 1200f);
-                dog = Object.FindObjectsOfType<Character>().Where(c => c.alive && c.name.StartsWith("Dog") && ne != null && ne.NetIdOf(c, out _)
-                                                                     && StateDump.Flat(c.transform.position - spot) < 400f)
+                dog = Object.FindObjectsOfType<Character>().Where(
+                    c => c.alive && c.name.StartsWith("Dog") && ne != null
+                        && ne.NetIdOf(c, out _)
+                        && StateDump.Flat(c.transform.position - spot) < 400f)
                     .OrderBy(c =>
                     {
                         if (ne.MadeHere(c))
@@ -556,11 +670,14 @@ namespace DarkwoodMP.World
             {
                 _dogDeath = null;
             }
-            // A copy has its own idle loop and the host's relayed sounds while it lives: the death check below
-            // is only worth something if there was something to stop.
-            bool loud = dog.GetComponentsInChildren<AudioObject>(true).Any(ao => ao != null && ao.IsPlaying());
-            // Darkwood has no bare-handed attack: a new character takes a weapon out first (the game's own hotbar
-            // select), so the swing is a real one.
+            // A copy has its own idle loop and the host's relayed sounds while
+            // it lives: the death check below is only worth something if there
+            // was something to stop.
+            bool loud = dog.GetComponentsInChildren<AudioObject>(true).Any(
+                ao => ao != null && ao.IsPlaying());
+            // Darkwood has no bare-handed attack: a new character takes a
+            // weapon out first (the game's own hotbar select), so the swing is
+            // a real one.
             string type = "pitchfork";
             if (a.Length > 0)
             {
@@ -575,7 +692,8 @@ namespace DarkwoodMP.World
                 }
                 if (!InvItemClass.isNull(slot.invItem))
                 {
-                    InvSlot chosen = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                    InvSlot chosen = p.Hotbar.slots.FirstOrDefault(
+                        s => InvItemClass.isNull(s.invItem));
                     if (chosen == null)
                     {
                         chosen = slot;
@@ -593,7 +711,8 @@ namespace DarkwoodMP.World
                 }
                 slot.select(noiseless: true);
                 float t = Time.realtimeSinceStartup + 5f;
-                while ((InvItemClass.isNull(p.currentItem) || p.switchingItem) && Time.realtimeSinceStartup < t)
+                while ((InvItemClass.isNull(p.currentItem) || p.switchingItem)
+                    && Time.realtimeSinceStartup < t)
                 {
                     yield return null;
                 }
@@ -611,10 +730,13 @@ namespace DarkwoodMP.World
                 swings++;
                 yield return new WaitForSeconds(0.6f);
             }
-            r.Info = $"{swings} swing(s) with {ItemName(p.currentItem)} at {dog.name} #{_dogId} (sounds playing on it before: {loud})";
+            r.Info =
+                $"{swings} swing(s) with {ItemName(p.currentItem)} at {dog.name} #{_dogId} (sounds playing on it before: {loud})";
         }
 
-        /// <summary>"dog-hurt" (host): the client's swings took health off the dog here.</summary>
+        /// <summary>
+        /// "dog-hurt" (host): the client's swings took health off the dog here.
+        /// </summary>
         private static IEnumerator DogHurt(string[] a, Result r)
         {
             yield return new WaitForSeconds(0.5f);
@@ -623,10 +745,12 @@ namespace DarkwoodMP.World
                 r.Fail("no dog (spawn-dog first)");
                 yield break;
             }
-            r.Info = $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive {_dog.alive}";
+            r.Info =
+                $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive {_dog.alive}";
             if (!(_dog.health < _dogHealth))
             {
-                string cause = "it died of something else before the client's attack: ";
+                string cause =
+                    "it died of something else before the client's attack: ";
                 if (_dog.alive)
                 {
                     cause = "the client's attack did nothing here: ";
@@ -646,7 +770,9 @@ namespace DarkwoodMP.World
             }
             if (_dog.alive)
             {
-                AsPlayer(() => _dog.getHit(_dog.health + 500f, p.transform, false, true, false));
+                AsPlayer(
+                    () => _dog.getHit(
+                        _dog.health + 500f, p.transform, false, true, false));
             }
             yield return new WaitForSeconds(1f);
             r.Info = $"{_dog.name} alive {_dog.alive}";
@@ -656,12 +782,20 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"dead-dog" (client): our copy of the dog is dead, and silent but for its death cry.</summary>
+        /// <summary>
+        /// "dead-dog" (client): our copy of the dog is dead, and silent but for
+        /// its death cry.
+        /// </summary>
         private static IEnumerator DeadDog(string[] a, Result r)
         {
             var missing = new List<string>();
-            yield return WaitLog(0, new[] { $@"\[enemy\] {_dogId} died: sounds stopped", $@"#{_dogId} died: its corpse can be searched here" }, 8f, missing);
-            yield return new WaitForSeconds(2f); // past the death cry and any late sound from the host
+            yield return WaitLog(0, new[]
+            {
+                $@"\[enemy\] {_dogId} died: sounds stopped",
+                $@"#{_dogId} died: its corpse can be searched here"
+            }, 8f, missing);
+            // past the death cry and any late sound from the host
+            yield return new WaitForSeconds(2f);
             var dog = MapScenarioFixChecks.ById(_dogId);
             if (dog == null)
             {
@@ -674,7 +808,9 @@ namespace DarkwoodMP.World
             {
                 loop = snd.idleAudioObject;
             }
-            var playing = dog.GetComponentsInChildren<AudioObject>(true).Where(ao => ao != null && ao.IsPlaying()).Select(ao => ao.audioID).ToList();
+            var playing = dog.GetComponentsInChildren<AudioObject>(true)
+                .Where(ao => ao != null && ao.IsPlaying())
+                .Select(ao => ao.audioID).ToList();
             var stray = playing.Where(id => id != _dogDeath).ToList();
             string name = dog.name;
             uint number = _dogId;
@@ -684,7 +820,8 @@ namespace DarkwoodMP.World
             {
                 idle = loop.audioID;
             }
-            r.Info = $"{name} #{number} alive {alive}, idle loop {idle}, playing [{string.Join(", ", playing)}], death cry {_dogDeath}";
+            r.Info =
+                $"{name} #{number} alive {alive}, idle loop {idle}, playing [{string.Join(", ", playing)}], death cry {_dogDeath}";
             if (dog.alive)
             {
                 r.Fail($"it's alive here: {r.Info}");
@@ -699,21 +836,27 @@ namespace DarkwoodMP.World
             }
             else if (stray.Count > 0)
             {
-                r.Fail($"sounds still playing on the corpse: {string.Join(", ", stray)}");
+                r.Fail(
+                    $"sounds still playing on the corpse: {string.Join(", ", stray)}");
             }
         }
 
         /// <summary>
-        /// "hidden-silent" (client): our own characters stay out of the host's world. A spawn point makes nothing here
-        /// (the host's spawns come from the host), and our hidden frozen characters, switched off and on again as the
-        /// game does when their culling node or location is entered, start no sound (a dead dog camp's dogs barked on).
+        /// "hidden-silent" (client): our own characters stay out of the host's
+        /// world. A spawn point makes nothing here (the host's spawns come from
+        /// the host), and our hidden frozen characters, switched off and on
+        /// again as the game does when their culling node or location is
+        /// entered, start no sound (a dead dog camp's dogs barked on).
         /// </summary>
         private static IEnumerator HiddenSilent(string[] a, Result r)
         {
             var p = Player.Instance;
             var holder = new GameObject("dwmp_test_spawn_holder");
-            holder.transform.position = p.transform.position + new Vector3(300f, 0f, 0f);
-            var sp = new GameObject("dwmp_test_spawnpoint").AddComponent<CharacterSpawnPoint>();
+            holder.transform.position =
+                p.transform.position + new Vector3(300f, 0f, 0f);
+            var sp =
+                new GameObject("dwmp_test_spawnpoint")
+                    .AddComponent<CharacterSpawnPoint>();
             sp.transform.SetParent(holder.transform, false);
             sp.type = CharacterType.Dog;
             sp.spawnChance = 1f;
@@ -725,14 +868,16 @@ namespace DarkwoodMP.World
             }
             Object.Destroy(holder);
 
-            // One of our own, as a location's spawn would have made it before: frozen and hidden by its Start.
-            // A Dog has no idle loop of its own: one with a loop is picked, so the check means something.
+            // One of our own, as a location's spawn would have made it before:
+            // frozen and hidden by its Start. A Dog has no idle loop of its
+            // own: one with a loop is picked, so the check means something.
             string kind = null;
             if (a.Length > 0)
             {
                 kind = a[0];
             }
-            GameObject gameObject = Resources.Load("Prefabs/Characters/Dog") as GameObject;
+            GameObject gameObject =
+                Resources.Load("Prefabs/Characters/Dog") as GameObject;
             CharacterSounds dogSnd = null;
             if (gameObject != null)
             {
@@ -745,13 +890,23 @@ namespace DarkwoodMP.World
             }
             else
             {
-                dogLoops = $"idle '{dogSnd.idleLoop}', sleeping '{dogSnd.sleeping}', aggressive '{dogSnd.aggressive}', idle sound '{dogSnd.idle}'";
+                dogLoops =
+                    $"idle '{dogSnd.idleLoop}', sleeping '{dogSnd.sleeping}', aggressive '{dogSnd.aggressive}', idle sound '{dogSnd.idle}'";
             }
             if (kind == null)
             {
-                foreach (var k in new[] { "Dog", "DogMutated", "Villager", "ChomperRed", "Mimic", "Banshee" }.Concat(Enum.GetNames(typeof(CharacterType))))
+                foreach (var k in new[]
                 {
-                    GameObject prefab = Resources.Load("Prefabs/Characters/" + k) as GameObject;
+                    "Dog",
+                    "DogMutated",
+                    "Villager",
+                    "ChomperRed",
+                    "Mimic",
+                    "Banshee"
+                }.Concat(Enum.GetNames(typeof(CharacterType))))
+                {
+                    GameObject prefab =
+                        Resources.Load("Prefabs/Characters/" + k) as GameObject;
                     CharacterSounds s = null;
                     if (prefab != null)
                     {
@@ -773,7 +928,9 @@ namespace DarkwoodMP.World
             GameObject go = null;
             if (res != null)
             {
-                go = Core.AddPrefab(res, p.transform.position + new Vector3(250f, 0f, 250f), Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
+                go = Core.AddPrefab(
+                    res, p.transform.position + new Vector3(250f, 0f, 250f),
+                    Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
             }
             Character mine = null;
             if (go != null)
@@ -806,7 +963,8 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 c.gameObject.SetActive(false);
-                c.gameObject.SetActive(true); // CharacterSounds.OnEnable: its idle loop
+                // CharacterSounds.OnEnable: its idle loop
+                c.gameObject.SetActive(true);
                 toggled.Add(c);
             }
             yield return new WaitForSeconds(0.5f);
@@ -836,14 +994,16 @@ namespace DarkwoodMP.World
             {
                 idleName = "none";
             }
-            r.Info = $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idleName} (a Dog's: {dogLoops}); " +
+            r.Info =
+                $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idleName} (a Dog's: {dogLoops}); " +
                      $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
             NetEnemies.Hidden.Remove(mine);
             NetEnemies.Frozen.Remove(mine);
             Object.Destroy(mine.gameObject);
             if (spawned)
             {
-                r.Fail($"a spawn point made a character of our own in the host's world: {r.Info}");
+                r.Fail(
+                    $"a spawn point made a character of our own in the host's world: {r.Info}");
             }
             else if (!hidden)
             {
@@ -851,7 +1011,8 @@ namespace DarkwoodMP.World
             }
             else if (!toggled.Contains(mine))
             {
-                r.Fail($"our own character wasn't switched on to be checked: {r.Info}");
+                r.Fail(
+                    $"our own character wasn't switched on to be checked: {r.Info}");
             }
             else if (loud.Count > 0)
             {
@@ -859,7 +1020,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"search-corpse" (client): open the dead dog's body and take what's in it (as take-item does).</summary>
+        /// <summary>
+        /// "search-corpse" (client): open the dead dog's body and take what's
+        /// in it (as take-item does).
+        /// </summary>
         private static IEnumerator SearchCorpse(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -873,14 +1037,17 @@ namespace DarkwoodMP.World
             var inv = dog.GetComponentInChildren<Inventory>(true);
             if (item == null || inv == null)
             {
-                r.Fail($"its corpse can't be searched here (Item {item != null}, Inventory {inv != null})");
+                r.Fail(
+                    $"its corpse can't be searched here (Item {item != null}, Inventory {inv != null})");
                 yield break;
             }
             yield return Walk(dog.transform.position, 90f);
             int mark = LogMark();
             p.openedItemInventory = inv;
-            yield return new WaitForSeconds(1.5f); // the host's contents come back (ContainerSlotsAll)
-            var slot = inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem));
+            // the host's contents come back (ContainerSlotsAll)
+            yield return new WaitForSeconds(1.5f);
+            var slot =
+                inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem));
             string took = "nothing in it";
             if (slot != null)
             {
@@ -888,31 +1055,42 @@ namespace DarkwoodMP.World
                 AsPlayer(() =>
                 {
                     slot.removeItem();
-                    p.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true);
+                    p.Inventory.addItemTypeToPlayer(
+                        it.type, it.amount, dropIfNoRoom: true);
                 });
                 took = $"took {it.type} x{it.amount}";
                 yield return new WaitForSeconds(0.8f);
             }
             p.openedItemInventory = null;
             yield return new WaitForSeconds(1.5f);
-            var refused = LogLines().Skip(mark).FirstOrDefault(l => l.Contains("refused"));
-            r.Info = $"{dog.name} #{_dogId} {ObjRef.Of(inv.gameObject)}: {took}";
+            var refused = LogLines().Skip(mark)
+                .FirstOrDefault(l => l.Contains("refused"));
+            r.Info =
+                $"{dog.name} #{_dogId} {ObjRef.Of(inv.gameObject)}: {took}";
             if (refused != null)
             {
                 r.Fail($"{r.Info}; {refused}");
             }
         }
 
-        // ---- #4 workbench storage ------------------------------------------------------------------------------
+        // ---- #4 workbench storage -------------------------------------------
 
         private static readonly string[] WbItems = { "nail", "wire", "rope" };
 
-        private static int Amount(Inventory inv, string type) => inv.slots.Where(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type).Sum(s => s.invItem.amount);
+        private static int Amount(Inventory inv, string type) =>
+            inv.slots.Where(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.type == type).Sum(s => s.invItem.amount);
 
-        private static Workbench Bench() => Nearest(Object.FindObjectsOfType<Workbench>().Where(w => w.normalInventory != null), Centre);
+        private static Workbench Bench() => Nearest(
+            Object.FindObjectsOfType<Workbench>().Where(
+                w => w.normalInventory != null),
+            Centre);
 
-        /// <summary>"wb-fill" (host, before the join): put things in the workbench's storage, and change them again
-        /// once a player has begun to join (while their game loads the snapshot, which doesn't have that change).</summary>
+        /// <summary>"wb-fill" (host, before the join): put things in the
+        /// workbench's storage, and change them again once a player has begun
+        /// to join (while their game loads the snapshot, which doesn't have
+        /// that change).</summary>
         private static IEnumerator WbFill(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -926,7 +1104,9 @@ namespace DarkwoodMP.World
             yield return Walk(wb.transform.position);
             p.openedItemInventory2 = st;
             yield return new WaitForSeconds(0.6f);
-            var free = Enumerable.Range(0, st.slots.Count).Where(i => InvItemClass.isNull(st.slots[i].invItem)).Take(WbItems.Length).ToList();
+            var free = Enumerable.Range(0, st.slots.Count)
+                .Where(i => InvItemClass.isNull(st.slots[i].invItem))
+                .Take(WbItems.Length).ToList();
             if (free.Count < WbItems.Length)
             {
                 p.openedItemInventory2 = null;
@@ -941,17 +1121,21 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory2 = null;
             Plugin.Instance.StartCoroutine(WbLateChange(wb, free));
-            r.Info = $"{st.name} {ObjRef.Of(st.gameObject)}: {string.Join(", ", WbItems.Select((t, i) => $"{free[i]}={t} x3"))}; a change follows once a player joins";
+            r.Info =
+                $"{st.name} {ObjRef.Of(st.gameObject)}: {string.Join(", ", WbItems.Select((t, i) => $"{free[i]}={t} x3"))}; a change follows once a player joins";
         }
 
         private static IEnumerator WbLateChange(Workbench wb, List<int> slots)
         {
             float until = Time.realtimeSinceStartup + 240f;
-            while (Time.realtimeSinceStartup < until && (Net.Session.Instance == null || Net.Session.Instance.Peers.Count == 0))
+            while (Time.realtimeSinceStartup < until
+                && (Net.Session.Instance == null
+                    || Net.Session.Instance.Peers.Count == 0))
             {
                 yield return null;
             }
-            yield return new WaitForSecondsRealtime(2f); // the snapshot went with the Welcome; their game is loading it now
+            // the snapshot went with the Welcome; their game is loading it now
+            yield return new WaitForSecondsRealtime(2f);
             var p = Player.Instance;
             if (wb == null || p == null)
             {
@@ -960,18 +1144,22 @@ namespace DarkwoodMP.World
             var st = wb.normalInventory;
             p.openedItemInventory2 = st;
             yield return new WaitForSeconds(0.6f);
-            st.slots[slots[1]].removeItem();                          // wire gone
+            // wire gone
+            st.slots[slots[1]].removeItem();
             st.slots[slots[2]].removeItem();
             // rope 3 -> 5
             st.slots[slots[2]].inventory = st;
             st.slots[slots[2]].createItem("rope", 5);
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory2 = null;
-            Plugin.Log.LogInfo($"[map] wb-fill: changed the storage while a player joins (slot {slots[1]} emptied, slot {slots[2]} rope x5)");
+            Plugin.Log.LogInfo(
+                $"[map] wb-fill: changed the storage while a player joins (slot {slots[1]} emptied, slot {slots[2]} rope x5)");
         }
 
-        /// <summary>"wb-use" (client): the storage is the host's (asked for once our world loaded); open the workbench as
-        /// Workbench.open does, shift-click something in (InvSlot.transferItem) and one stack out; nothing refused or dropped.</summary>
+        /// <summary>"wb-use" (client): the storage is the host's (asked for
+        /// once our world loaded); open the workbench as Workbench.open does,
+        /// shift-click something in (InvSlot.transferItem) and one stack out;
+        /// nothing refused or dropped.</summary>
         private static IEnumerator WbUse(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -984,28 +1172,49 @@ namespace DarkwoodMP.World
             var st = wb.normalInventory;
             var sref = ObjRef.Of(st.gameObject);
             var missing = new List<string>();
-            yield return WaitLog(0, new[] { Regex.Escape($"[slots] {sref} contents from host") }, 3f, missing);
+            yield return WaitLog(
+                0, new[] { Regex.Escape($"[slots] {sref} contents from host") },
+                3f, missing);
             if (missing.Count > 0)
             {
-                r.Fail($"no '[slots] {sref} contents from host' in the log: the storage wasn't asked for after joining");
+                r.Fail(
+                    $"no '[slots] {sref} contents from host' in the log: the storage wasn't asked for after joining");
                 yield break;
             }
-            string got = LogLines().Last(l => l.Contains($"[slots] {sref} contents from host"));
-            got = got.Substring(got.IndexOf("[slots]", StringComparison.Ordinal));
-            string Contents() => string.Join(",", st.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(s => $"{s.invItem.type}x{s.invItem.amount}"));
+            string got = LogLines().Last(
+                l => l.Contains($"[slots] {sref} contents from host"));
+            got =
+                got.Substring(got.IndexOf("[slots]", StringComparison.Ordinal));
+            string Contents() => string.Join(
+                ",",
+                st.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(
+                    s => $"{s.invItem.type}x{s.invItem.amount}"));
             string before = Contents();
-            if (st.slots.Any(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "wire") || !st.slots.Any(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "rope" && s.invItem.amount == 5))
+            if (st.slots.Any(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.type == "wire")
+                || !st.slots.Any(
+                    s => !InvItemClass.isNull(s.invItem)
+                        && s.invItem.type == "rope" && s.invItem.amount == 5))
             {
-                r.Fail($"the storage here isn't the host's after its late change (wire gone, rope x5): {before}; {got}");
+                r.Fail(
+                    $"the storage here isn't the host's after its late change (wire gone, rope x5): {before}; {got}");
                 yield break;
             }
 
-            int dropped0 = Object.FindObjectsOfType<Inventory>().Count(i => i.name.StartsWith("DroppedItem", StringComparison.Ordinal));
+            int dropped0 = Object.FindObjectsOfType<Inventory>().Count(
+                i => i.name.StartsWith(
+                    "DroppedItem", StringComparison.Ordinal));
             yield return Walk(wb.transform.position);
-            // What we carried before (the trade before this step can have bought a nail).
-            int nails0 = Carried(p).Where(i => i.type == "nail").Sum(i => i.amount), bandages0 = Carried(p).Where(i => i.type == "bandages").Sum(i => i.amount);
+            // What we carried before (the trade before this step can have
+            // bought a nail).
+            int nails0 = Carried(p).Where(i => i.type == "nail")
+                .Sum(i => i.amount),
+                bandages0 = Carried(p).Where(i => i.type == "bandages")
+                    .Sum(i => i.amount);
             // Something of ours to put in (a new character has empty bags).
-            var bag = p.Inventory.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+            var bag = p.Inventory.slots.FirstOrDefault(
+                s => InvItemClass.isNull(s.invItem));
             if (bag == null)
             {
                 r.Fail("no free slot in our bags");
@@ -1016,15 +1225,19 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             int mark = LogMark();
             AsPlayer(() => wb.open());
-            yield return new WaitForSeconds(SlotShare.AskTimeout + 0.5f); // it asks the host again as it opens; changes wait for the answer
+            // it asks the host again as it opens; changes wait for the answer
+            yield return new WaitForSeconds(SlotShare.AskTimeout + 0.5f);
             if (p.openedItemInventory2 != st)
             {
                 r.Fail("the workbench didn't open its storage");
                 yield break;
             }
-            AsPlayer(() => bag.transferItem());                         // shift-click into the storage
+            // shift-click into the storage
+            AsPlayer(() => bag.transferItem());
             yield return new WaitForSeconds(0.8f);
-            var nails = st.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "nail");
+            var nails = st.slots.FirstOrDefault(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.type == "nail");
             if (nails != null)
             {
                 AsPlayer(() => nails.transferItem());   // and one stack out
@@ -1036,7 +1249,8 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[map] wb-use: closeInventory: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[map] wb-use: closeInventory: {e.Message}");
             }
             if (p.openedItemInventory2 == st)
             {
@@ -1044,11 +1258,18 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1.5f);
             string after = Contents();
-            int dropped1 = Object.FindObjectsOfType<Inventory>().Count(i => i.name.StartsWith("DroppedItem", StringComparison.Ordinal));
-            var refused = LogLines().Skip(mark).Where(l => l.Contains("refused")).ToList();
-            // A shift-click moves one of the stack (InvSlot.transferItem; transferItemAll is the whole stack).
-            bool inStorage = Amount(st, "bandages") == 1 && Carried(p).Where(i => i.type == "bandages").Sum(i => i.amount) == bandages0 + 1;
-            bool tookNails = Carried(p).Where(i => i.type == "nail").Sum(i => i.amount) == nails0 + 1 && Amount(st, "nail") == 2;
+            int dropped1 = Object.FindObjectsOfType<Inventory>().Count(
+                i => i.name.StartsWith(
+                    "DroppedItem", StringComparison.Ordinal));
+            var refused = LogLines().Skip(mark)
+                .Where(l => l.Contains("refused")).ToList();
+            // A shift-click moves one of the stack (InvSlot.transferItem;
+            // transferItemAll is the whole stack).
+            bool inStorage = Amount(st, "bandages") == 1
+                && Carried(p).Where(i => i.type == "bandages")
+                    .Sum(i => i.amount) == bandages0 + 1;
+            bool tookNails = Carried(p).Where(i => i.type == "nail")
+                .Sum(i => i.amount) == nails0 + 1 && Amount(st, "nail") == 2;
             r.Info = $"{sref} before [{before}] after [{after}]; {got}";
             if (refused.Count > 0)
             {
@@ -1068,7 +1289,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"wb-host" (host): the client's two changes (a bandage in, a nail out) are in our storage, and we refused none of them.</summary>
+        /// <summary>
+        /// "wb-host" (host): the client's two changes (a bandage in, a nail
+        /// out) are in our storage, and we refused none of them.
+        /// </summary>
         private static IEnumerator WbHost(string[] a, Result r)
         {
             yield return new WaitForSeconds(0.5f);
@@ -1079,8 +1303,12 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var st = wb.normalInventory;
-            string contents = string.Join(",", st.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(s => $"{s.invItem.type}x{s.invItem.amount}"));
-            var refused = LogLines().Where(l => l.Contains($"of {st.name}: refused")).ToList();
+            string contents = string.Join(
+                ",",
+                st.slots.Where(s => !InvItemClass.isNull(s.invItem)).Select(
+                    s => $"{s.invItem.type}x{s.invItem.amount}"));
+            var refused = LogLines()
+                .Where(l => l.Contains($"of {st.name}: refused")).ToList();
             r.Info = $"{st.name}: [{contents}]";
             if (refused.Count > 0)
             {
@@ -1092,9 +1320,12 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- #5 larva eggs, #6 infection: the extra ones ------------------------------------------------------
+        // ---- #5 larva eggs, #6 infection: the extra ones --------------------
 
-        /// <summary>"issue-setup" (host, before the join): a second egg near the area and a third far off, and two more infection patches.</summary>
+        /// <summary>
+        /// "issue-setup" (host, before the join): a second egg near the area
+        /// and a third far off, and two more infection patches.
+        /// </summary>
         private static IEnumerator Setup(string[] a, Result r)
         {
             var made = new List<string>();
@@ -1111,13 +1342,17 @@ namespace DarkwoodMP.World
                     r.Fail($"couldn't place {prefab}");
                     yield break;
                 }
-                made.Add($"{kv.Key} {ObjRef.Of(go)} at {Fmt(go.transform.position)}");
+                made.Add(
+                    $"{kv.Key} {ObjRef.Of(go)} at {Fmt(go.transform.position)}");
             }
             yield return new WaitForSeconds(0.5f);
             r.Info = string.Join("; ", made);
         }
 
-        /// <summary>"egg-break station|near|far": our player hits that egg until it breaks (walking to it first).</summary>
+        /// <summary>
+        /// "egg-break station|near|far": our player hits that egg until it
+        /// breaks (walking to it first).
+        /// </summary>
         private static IEnumerator EggBreak(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -1141,7 +1376,8 @@ namespace DarkwoodMP.World
                 AsPlayer(() => egg.getHit(2, p.transform, true));
                 yield return new WaitForSeconds(0.3f);
             }
-            r.Info = $"{which} egg {egg.gameObject.name} {ObjRef.Of(egg.gameObject)} at {Fmt(egg.transform.position)}: broken {egg.destroyed}, health {egg.health}";
+            r.Info =
+                $"{which} egg {egg.gameObject.name} {ObjRef.Of(egg.gameObject)} at {Fmt(egg.transform.position)}: broken {egg.destroyed}, health {egg.health}";
             if (!egg.destroyed)
             {
                 r.Fail(r.Info);
@@ -1158,8 +1394,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"egg-check station,near,far [--from-other WHICH,...]": those eggs are broken here, and for each in
-        /// --from-other the log says the other game's break arrived (and whether it was culled here then).</summary>
+        /// <summary>"egg-check station,near,far [--from-other WHICH,...]":
+        /// those eggs are broken here, and for each in --from-other the log
+        /// says the other game's break arrived (and whether it was culled here
+        /// then).</summary>
         private static IEnumerator EggCheck(string[] a, Result r)
         {
             string spec = "station";
@@ -1179,8 +1417,10 @@ namespace DarkwoodMP.World
             }
             var eggs = which.ToDictionary(w => w, Egg);
             var missing = new List<string>();
-            var pats = fromOther.Where(eggs.ContainsKey).Where(w => eggs[w] != null)
-                .Select(w => $@"\[world\] egg {Regex.Escape(ObjRef.Of(eggs[w].gameObject).ToString())} destroyed \(from ").ToArray();
+            var pats = fromOther.Where(eggs.ContainsKey).Where(
+                w => eggs[w] != null)
+                .Select(
+                    w => $@"\[world\] egg {Regex.Escape(ObjRef.Of(eggs[w].gameObject).ToString())} destroyed \(from ").ToArray();
             yield return WaitLog(0, pats, 6f, missing);
             var lines = LogLines();
             var parts = new List<string>();
@@ -1193,13 +1433,16 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 string rf = ObjRef.Of(e.gameObject).ToString();
-                var line = lines.LastOrDefault(l => l.Contains($"[world] egg {rf} destroyed"));
+                var line = lines.LastOrDefault(
+                    l => l.Contains($"[world] egg {rf} destroyed"));
                 string lineNote = "";
                 if (line != null)
                 {
-                    lineNote = $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
+                    lineNote =
+                        $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
                 }
-                parts.Add($"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + lineNote);
+                parts.Add(
+                    $"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + lineNote);
                 if (!e.destroyed)
                 {
                     r.Fail($"the {kv.Key} egg {rf} isn't broken here");
@@ -1208,7 +1451,8 @@ namespace DarkwoodMP.World
             r.Info = string.Join("; ", parts);
             if (missing.Count > 0)
             {
-                r.Fail($"not in the log: {string.Join(", ", missing)}; {r.Info}");
+                r.Fail(
+                    $"not in the log: {string.Join(", ", missing)}; {r.Info}");
             }
             else if (r.Failure != null)
             {
@@ -1216,15 +1460,19 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- #6 infection --------------------------------------------------------------------------------------
+        // ---- #6 infection ---------------------------------------------------
 
-        private static readonly Dictionary<string, Vector3> _noted = new Dictionary<string, Vector3>();
+        private static readonly Dictionary<string, Vector3> _noted =
+            new Dictionary<string, Vector3>();
         internal static IEnumerator Nothing()
         {
             yield break;
         }
 
-        /// <summary>"burn-infection" (host): set the station's patch alight as fire does (a Burn on it, which clears every patch within 40).</summary>
+        /// <summary>
+        /// "burn-infection" (host): set the station's patch alight as fire does
+        /// (a Burn on it, which clears every patch within 40).
+        /// </summary>
         private static IEnumerator BurnInfection(string[] a, Result r)
         {
             var inf = Patch("station");
@@ -1234,18 +1482,25 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return Walk(inf.transform.position, 150f);
-            var near = Object.FindObjectsOfType<Infection>().Where(i => !i.disappearing && StateDump.Flat(i.transform.position - inf.transform.position) <= 40f).ToList();
+            var near = Object.FindObjectsOfType<Infection>()
+                .Where(
+                    i => !i.disappearing
+                        && StateDump.Flat(
+                            i.transform.position - inf.transform.position)
+                            <= 40f).ToList();
             AsPlayer(() => inf.gameObject.AddComponent<Burn>().burnTime = 5f);
             yield return new WaitForSeconds(1f);
-            r.Info = $"{inf.name} {ObjRef.Of(inf.gameObject)} at {Fmt(inf.transform.position)}: {near.Count(i => i == null || i.disappearing)} of {near.Count} patches cleared";
+            r.Info =
+                $"{inf.name} {ObjRef.Of(inf.gameObject)} at {Fmt(inf.transform.position)}: {near.Count(i => i == null || i.disappearing)} of {near.Count} patches cleared";
             if (near.Any(i => i != null && !i.disappearing))
             {
                 r.Fail(r.Info);
             }
         }
 
-        /// <summary>"swing-infection" (client): our player holds a torch and swings it at the extra patch (MeleeSensor's
-        /// flaming weapon clears it: Infection.disappear), as a request to the host.</summary>
+        /// <summary>"swing-infection" (client): our player holds a torch and
+        /// swings it at the extra patch (MeleeSensor's flaming weapon clears
+        /// it: Infection.disappear), as a request to the host.</summary>
         private static IEnumerator SwingInfection(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -1261,8 +1516,10 @@ namespace DarkwoodMP.World
                 r.Fail("no patch");
                 yield break;
             }
-            string rf = ObjRef.Of(inf.gameObject).ToString(), infAt = Fmt(inf.transform.position);
-            var free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
+            string rf = ObjRef.Of(inf.gameObject).ToString(),
+                infAt = Fmt(inf.transform.position);
+            var free =
+                p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
             if (free < 0)
             {
                 free = 0;
@@ -1273,29 +1530,38 @@ namespace DarkwoodMP.World
                 p.Hotbar.slots[free].removeItem();
             }
             p.Hotbar.slots[free].createItem(type, 1);
-            // As Inventory.selectSlot does, but also when that slot is the selected one already (it then does nothing).
+            // As Inventory.selectSlot does, but also when that slot is the
+            // selected one already (it then does nothing).
             foreach (var s in p.Hotbar.slots)
             {
                 s.deselect();
             }
             p.Hotbar.slots[free].select(noiseless: true);
             float until = Time.realtimeSinceStartup + 5f;
-            while ((InvItemClass.isNull(p.currentItem) || p.currentItem.type != type || p.switchingItem) && Time.realtimeSinceStartup < until)
+            while ((InvItemClass.isNull(p.currentItem)
+                    || p.currentItem.type != type
+                    || p.switchingItem) && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            if (InvItemClass.isNull(p.currentItem)
+                || p.currentItem.type != type)
             {
-                r.Fail($"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
+                r.Fail(
+                    $"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
                 yield break;
             }
             var sensor = p.currentItem.baseClass.meleeSensor;
-            bool flaming = sensor != null && sensor is GameObject g && g.GetComponent<MeleeSensor>() is MeleeSensor ms && ms.flaming;
+            bool flaming = sensor != null && sensor is GameObject g
+                && g.GetComponent<MeleeSensor>() is MeleeSensor ms
+                && ms.flaming;
             int mark = LogMark();
             string seen = "";
-            // MeleeSensor hits a patch only if Core.canSeeAttack passes: rays from our player at a character's height
+            // MeleeSensor hits a patch only if Core.canSeeAttack passes: rays
+            // from our player at a character's height
             // (14) towards the patch (at y -40), as long as the flat distance, must hit the patch's collider.
-            // The sensor's check is against the collider it touched, which may be on a child of the patch.
+            // The sensor's check is against the collider it touched, which may
+            // be on a child of the patch.
             Collider hitCollider = inf.GetComponentInChildren<Collider>();
             Transform hitT = null;
             if (hitCollider != null)
@@ -1306,9 +1572,10 @@ namespace DarkwoodMP.World
             {
                 hitT = inf.transform;
             }
-            // The patch's collider is a ball of radius 70 around a point 50 above the patch itself, and a ray that
-            // starts inside a collider doesn't hit it: so from closer than ~70 it never sees the patch. Stand just
-            // outside it, where the torch still reaches into it.
+            // The patch's collider is a ball of radius 70 around a point 50
+            // above the patch itself, and a ray that starts inside a collider
+            // doesn't hit it: so from closer than ~70 it never sees the patch.
+            // Stand just outside it, where the torch still reaches into it.
             float[] stand = { 120f, 105f, 95f, 85f, 78f, 72f };
             var tried = new List<string>();
             for (int i = 0; i < 6 && !inf.disappearing; i++)
@@ -1327,7 +1594,8 @@ namespace DarkwoodMP.World
                     bool sees = Core.canSeeAttack(p.transform, hitT);
                     if (i == 0)
                     {
-                        float gap = StateDump.Flat(p.transform.position - inf.transform.position);
+                        float gap = StateDump.Flat(
+                            p.transform.position - inf.transform.position);
                         string sight = "no";
                         if (sees)
                         {
@@ -1342,11 +1610,17 @@ namespace DarkwoodMP.World
                 }
                 if (i == 0)
                 {
-                    // What the game's ray (Core.canSeeAttack's first) runs into from here.
-                    var from = new Vector3(p.transform.position.x, Core.getYpos(PosType.character, false), p.transform.position.z);
-                    var to = new Vector3(hitT.position.x, hitT.position.y, hitT.position.z);
+                    // What the game's ray (Core.canSeeAttack's first) runs into
+                    // from here.
+                    var from = new Vector3(
+                        p.transform.position.x,
+                        Core.getYpos(PosType.character, false),
+                        p.transform.position.z);
+                    var to = new Vector3(
+                        hitT.position.x, hitT.position.y, hitT.position.z);
                     float len = StateDump.Flat(to - from);
-                    var hits = Physics.RaycastAll(from, (to - from).normalized, len, 44165635);
+                    var hits = Physics.RaycastAll(
+                        from, (to - from).normalized, len, 44165635);
                     var cc = hitT.GetComponent<Collider>();
                     Vector3? center = null;
                     if (cc != null)
@@ -1358,25 +1632,36 @@ namespace DarkwoodMP.World
                     {
                         extents = cc.bounds.extents;
                     }
-                    tried.Add(FormattableString.Invariant($"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {center} ext {extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
+                    tried.Add(
+                        FormattableString.Invariant(
+                            $"queriesHitTriggers {Physics.queriesHitTriggers}, player y {p.transform.position.y:0.0}, ray y {from.y:0.0}, patch y {to.y:0.0} (inf {inf.transform.position.y:0.0}), collider {hitT.name} bounds {center} ext {extents}, ray {len:0.0} hits [{string.Join(",", hits.Select(h => $"{h.collider.name} L{h.collider.gameObject.layer}"))}]"));
                 }
                 Swing(p, inf.transform.position);
                 yield return new WaitForFixedUpdate();
-                var sensors = Object.FindObjectsOfType<MeleeSensor>().Where(m => m.type == MeleeSensor.MeleeSensorType.player).ToList();
+                var sensors = Object.FindObjectsOfType<MeleeSensor>()
+                    .Where(m => m.type == MeleeSensor.MeleeSensorType.player)
+                    .ToList();
                 var col = inf.GetComponentsInChildren<Collider>(true);
                 if (i == 0)
                 {
-                    seen = $"; melee {p.currentItem.baseClass.isMelee}, {sensors.Count} sensor(s) " + string.Join(",", sensors.Select(m => $"{m.name} flaming {m.flaming} layer {m.gameObject.layer} ignores layer 1: {Physics.GetIgnoreLayerCollision(m.gameObject.layer, 1)}, overlaps {m.GetComponentsInChildren<Collider>().Any(mc => col.Any(ic => mc.bounds.Intersects(ic.bounds)))} at {StateDump.Flat(m.transform.position - inf.transform.position):0}, sees it {Core.canSeeAttack(p.transform, inf.transform)}"))
-                        + $"; patch colliders {string.Join(",", col.Select(c => $"{c.GetType().Name} on {c.enabled} trigger {c.isTrigger} layer {c.gameObject.layer}"))}; player at {StateDump.Flat(p.transform.position - inf.transform.position):0}";
+                    seen =
+                        $"; melee {p.currentItem.baseClass.isMelee}, {sensors.Count} sensor(s) " + string.Join(",", sensors.Select(m =>
+                            $"{m.name} flaming {m.flaming} layer {m.gameObject.layer} ignores layer 1: {Physics.GetIgnoreLayerCollision(m.gameObject.layer, 1)}, overlaps {m.GetComponentsInChildren<Collider>().Any(mc => col.Any(ic => mc.bounds.Intersects(ic.bounds)))} at {StateDump.Flat(m.transform.position - inf.transform.position):0}, sees it {Core.canSeeAttack(p.transform, inf.transform)}"))
+                            + $"; patch colliders {string.Join(",", col.Select(c => $"{c.GetType().Name} on {c.enabled} trigger {c.isTrigger} layer {c.gameObject.layer}"))}; player at {StateDump.Flat(p.transform.position - inf.transform.position):0}";
                 }
                 yield return new WaitForSeconds(0.6f);
             }
             yield return new WaitForSeconds(1f);
-            // Off the patch, which hurts while we stand in it, the way we came: the straight way to Centre crosses one of
-            // the test world's chain traps (Saved:21369), which holds the player there until the step times out.
+            // Off the patch, which hurts while we stand in it, the way we came:
+            // the straight way to Centre crosses one of the test world's chain
+            // traps (Saved:21369), which holds the player there until the step
+            // times out.
             yield return Walk(cameFrom, 60f);
-            var refused = LogLines().Skip(mark).FirstOrDefault(l => l.Contains("refused") && l.Contains("infection"));
-            r.Info = $"{type} (sensor flaming {flaming}) at {rf} {infAt}: cleared {inf == null || inf.disappearing}{seen}; stood at {string.Join(" ", tried)}";
+            var refused = LogLines().Skip(mark)
+                .FirstOrDefault(
+                    l => l.Contains("refused") && l.Contains("infection"));
+            r.Info =
+                $"{type} (sensor flaming {flaming}) at {rf} {infAt}: cleared {inf == null || inf.disappearing}{seen}; stood at {string.Join(" ", tried)}";
             if (inf != null && !inf.disappearing)
             {
                 r.Fail(r.Info);
@@ -1387,7 +1672,11 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"infection-check station[,infection:client] [--from-other]": those patches are gone here (and the log says the other game's clear arrived).</summary>
+        /// <summary>
+        /// "infection-check station[,infection:client] [--from-other]": those
+        /// patches are gone here (and the log says the other game's clear
+        /// arrived).
+        /// </summary>
         private static IEnumerator InfectionCheck(string[] a, Result r)
         {
             string spec = "station";
@@ -1399,7 +1688,9 @@ namespace DarkwoodMP.World
             var missing = new List<string>();
             if (a.Contains("--from-other"))
             {
-                yield return WaitLog(0, new[] { @"\[world\] infection cleared: [1-9]" }, 6f, missing);
+                yield return WaitLog(
+                    0, new[] { @"\[world\] infection cleared: [1-9]" }, 6f,
+                    missing);
             }
             else
             {
@@ -1413,18 +1704,25 @@ namespace DarkwoodMP.World
                     r.Fail($"{w}'s patch wasn't noted (infection-note first)");
                     continue;
                 }
-                var near = StateDump.All<Infection>().Where(i => !i.disappearing && StateDump.Flat(i.transform.position - at) <= 20f).ToList();
+                var near = StateDump.All<Infection>()
+                    .Where(
+                        i => !i.disappearing
+                            && StateDump.Flat(i.transform.position - at)
+                                <= 20f).ToList();
                 parts.Add($"{w}: {near.Count} left at {Fmt(at)}");
                 if (near.Count > 0)
                 {
-                    r.Fail($"{w}'s infection is still here ({string.Join(", ", near.Select(i => ObjRef.Of(i.gameObject)))})");
+                    r.Fail(
+                        $"{w}'s infection is still here ({string.Join(", ", near.Select(i => ObjRef.Of(i.gameObject)))})");
                 }
             }
-            var line = LogLines().LastOrDefault(l => l.Contains("[world] infection cleared"));
+            var line = LogLines().LastOrDefault(
+                l => l.Contains("[world] infection cleared"));
             string item = "no 'infection cleared' line";
             if (line != null)
             {
-                item = line.Substring(line.IndexOf("[world]", StringComparison.Ordinal));
+                item = line.Substring(
+                    line.IndexOf("[world]", StringComparison.Ordinal));
             }
             parts.Add(item);
             r.Info = string.Join("; ", parts);

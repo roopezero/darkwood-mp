@@ -7,8 +7,9 @@ using static DarkwoodMP.World.MapScenario;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for the epilogue played together (World.EpilogueSync). The list is
-    /// tools/tests/map_scenario_epilogue.py; the epilogue ends the game, so it runs alone and last.
+    /// Map test steps for the epilogue played together (World.EpilogueSync).
+    /// The list is tools/tests/map_scenario_epilogue.py; the epilogue ends the
+    /// game, so it runs alone and last.
     /// </summary>
     public static class MapScenarioEpilogue
     {
@@ -58,7 +59,9 @@ namespace DarkwoodMP.World
             return $"preset {name} dreaming {dreaming} inEpilogue {inEpilogue} shared {shared} playing {EpilogueSync.Playing}";
         }
 
-        private static bool InPart(string name) => P != null && P.inEpilogue && D != null && D.dreaming && !D.switchingDream && D.preset != null && D.preset.name == name;
+        private static bool InPart(string name) => P != null && P.inEpilogue
+            && D != null && D.dreaming && !D.switchingDream
+            && D.preset != null && D.preset.name == name;
 
         private static bool FriendShown()
         {
@@ -76,11 +79,20 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        /// <summary>"epilogue-start" (host): the game's last step starts the epilogue; wait until we're in its first part.</summary>
+        /// <summary>
+        /// "epilogue-start" (host): the game's last step starts the epilogue;
+        /// wait until we're in its first part.
+        /// </summary>
         private static IEnumerator Start(string[] a, Result r)
         {
-            var step = new GameEvent { type = GameEvent.Type.startDream, Value = Chapters.EpilogueDream, eventAmount = 1 };
-            Singleton<Controller>.Instance.StartCoroutine(step.fire(P.gameObject));
+            var step = new GameEvent
+            {
+                type = GameEvent.Type.startDream,
+                Value = Chapters.EpilogueDream,
+                eventAmount = 1
+            };
+            Singleton<Controller>.Instance.StartCoroutine(
+                step.fire(P.gameObject));
             while (!InPart(Chapters.EpilogueDream))
             {
                 yield return new WaitForSeconds(0.5f);
@@ -93,7 +105,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"epilogue-in" (client): we went into the host's epilogue by ourselves, still connected.</summary>
+        /// <summary>
+        /// "epilogue-in" (client): we went into the host's epilogue by
+        /// ourselves, still connected.
+        /// </summary>
         private static IEnumerator In(string[] a, Result r)
         {
             while (!InPart(Chapters.EpilogueDream))
@@ -108,14 +123,19 @@ namespace DarkwoodMP.World
             {
                 active = session.Active;
             }
-            r.Info = $"{state}; session {active}; a friend's puppet shown {FriendShown()}";
-            if (!EpilogueSync.Playing || DreamSync.Shared == null || Net.Session.Instance == null || !Net.Session.Instance.Active)
+            r.Info =
+                $"{state}; session {active}; a friend's puppet shown {FriendShown()}";
+            if (!EpilogueSync.Playing || DreamSync.Shared == null
+                || Net.Session.Instance == null || !Net.Session.Instance.Active)
             {
                 r.Fail($"not in the shared epilogue: {r.Info}");
             }
         }
 
-        /// <summary>"epilogue-next" (client): our part ends (its first outcome, as its endDream step does); we go on to the next.</summary>
+        /// <summary>
+        /// "epilogue-next" (client): our part ends (its first outcome, as its
+        /// endDream step does); we go on to the next.
+        /// </summary>
         private static IEnumerator Next(string[] a, Result r)
         {
             string from = "";
@@ -132,7 +152,9 @@ namespace DarkwoodMP.World
             string outcome = D.outcome;
             AsPlayer(() => D.initiateEndDreaming());
             float until = Time.realtimeSinceStartup + 90f;
-            while (Time.realtimeSinceStartup < until && !(D.dreaming && !D.switchingDream && D.preset != null && D.preset.name != from))
+            while (Time.realtimeSinceStartup < until
+                && !(D.dreaming && !D.switchingDream && D.preset != null
+                    && D.preset.name != from))
             {
                 yield return new WaitForSeconds(0.5f);
             }
@@ -144,7 +166,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"epilogue-moved FROM" (host): the client's end of a part took us on too, out of FROM.</summary>
+        /// <summary>
+        /// "epilogue-moved FROM" (host): the client's end of a part took us on
+        /// too, out of FROM.
+        /// </summary>
         private static IEnumerator Moved(string[] a, Result r)
         {
             string from;
@@ -157,7 +182,9 @@ namespace DarkwoodMP.World
                 from = Chapters.EpilogueDream;
             }
             float until = Time.realtimeSinceStartup + 90f;
-            while (Time.realtimeSinceStartup < until && !(D.dreaming && !D.switchingDream && D.preset != null && D.preset.name != from))
+            while (Time.realtimeSinceStartup < until
+                && !(D.dreaming && !D.switchingDream && D.preset != null
+                    && D.preset.name != from))
             {
                 yield return new WaitForSeconds(0.5f);
             }
@@ -169,7 +196,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"epilogue-credits" (host): to the credits as EpilogueOutcomes.goToCredits does; the server stops.</summary>
+        /// <summary>
+        /// "epilogue-credits" (host): to the credits as
+        /// EpilogueOutcomes.goToCredits does; the server stops.
+        /// </summary>
         private static IEnumerator Credits(string[] a, Result r)
         {
             EpilogueSync.BeforeCredits();
@@ -188,7 +218,10 @@ namespace DarkwoodMP.World
             yield return ExitCredits();
         }
 
-        /// <summary>"epilogue-menu" (client): the host's credits took us to ours, out of the session, then the menu.</summary>
+        /// <summary>
+        /// "epilogue-menu" (client): the host's credits took us to ours, out of
+        /// the session, then the menu.
+        /// </summary>
         private static IEnumerator Menu(string[] a, Result r)
         {
             bool credits = false;
@@ -207,18 +240,23 @@ namespace DarkwoodMP.World
             {
                 active = instance.Active;
             }
-            r.Info = $"at the main menu (credits seen {credits}); session {active}";
+            r.Info =
+                $"at the main menu (credits seen {credits}); session {active}";
             if (!credits)
             {
                 r.Fail($"no credits: {r.Info}");
             }
-            else if (Net.Session.Instance != null && Net.Session.Instance.Active)
+            else if (Net.Session.Instance != null
+                && Net.Session.Instance.Active)
             {
                 r.Fail($"still in the session: {r.Info}");
             }
         }
 
-        /// <summary>Where an outcome of the current part goes (the next part's preset name, or "").</summary>
+        /// <summary>
+        /// Where an outcome of the current part goes (the next part's preset
+        /// name, or "").
+        /// </summary>
         private static string Dest(DreamPreset.Outcome o)
         {
             if (o == null)
@@ -227,7 +265,10 @@ namespace DarkwoodMP.World
             }
             foreach (var e in o.effects)
             {
-                if (e != null && e.type == DreamPreset.Outcome.Effect.Type.transferToDream && e.destPrefab != null)
+                if (e != null
+                    && e.type
+                        == DreamPreset.Outcome.Effect.Type.transferToDream
+                    && e.destPrefab != null)
                 {
                     return e.destPrefab.name;
                 }
@@ -236,8 +277,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "epilogue-onward PART" (client): end parts (the outcome that goes to PART if there is one, else the first)
-        /// until we're in PART, at most 5 parts on. Each move is the shared dream's; "epilogue-at PART" checks the host.
+        /// "epilogue-onward PART" (client): end parts (the outcome that goes to
+        /// PART if there is one, else the first) until we're in PART, at most 5
+        /// parts on. Each move is the shared dream's; "epilogue-at PART" checks
+        /// the host.
         /// </summary>
         private static IEnumerator Onward(string[] a, Result r)
         {
@@ -247,7 +290,8 @@ namespace DarkwoodMP.World
                 want = a[0];
             }
             var path = new System.Collections.Generic.List<string>();
-            for (int hop = 0; hop < 5 && !(D.preset != null && D.preset.name.Contains(want)); hop++)
+            for (int hop = 0; hop < 5
+                && !(D.preset != null && D.preset.name.Contains(want)); hop++)
             {
                 string from = "";
                 if (D.preset != null)
@@ -272,20 +316,25 @@ namespace DarkwoodMP.World
                 path.Add($"{from} -{pick.name}-> {Dest(pick)}");
                 AsPlayer(() => D.initiateEndDreaming());
                 float until = Time.realtimeSinceStartup + 90f;
-                while (Time.realtimeSinceStartup < until && !(D.dreaming && !D.switchingDream && D.preset != null && D.preset.name != from))
+                while (Time.realtimeSinceStartup < until
+                    && !(D.dreaming && !D.switchingDream && D.preset != null
+                        && D.preset.name != from))
                 {
                     yield return new WaitForSeconds(0.5f);
                 }
                 yield return new WaitForSeconds(4f);
             }
             r.Info = $"{string.Join("; ", path)}: {Where()}";
-            if (D.preset == null || !D.preset.name.Contains(want) || !P.inEpilogue)
+            if (D.preset == null || !D.preset.name.Contains(want)
+                || !P.inEpilogue)
             {
                 r.Fail($"didn't get to {want}: {r.Info}");
             }
         }
 
-        /// <summary>"epilogue-at PART" (host): the client's ends took us to PART too.</summary>
+        /// <summary>
+        /// "epilogue-at PART" (host): the client's ends took us to PART too.
+        /// </summary>
         private static IEnumerator At(string[] a, Result r)
         {
             string want = "crater";
@@ -306,9 +355,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool InPartLike(string name) => P != null && P.inEpilogue && D != null && D.dreaming && !D.switchingDream && D.preset != null && D.preset.name.Contains(name);
+        private static bool InPartLike(string name) => P != null
+            && P.inEpilogue && D != null && D.dreaming && !D.switchingDream
+            && D.preset != null && D.preset.name.Contains(name);
 
-        /// <summary>"epilogue-burn" (host): our player sets the Being on fire (the crater's events run here).</summary>
+        /// <summary>
+        /// "epilogue-burn" (host): our player sets the Being on fire (the
+        /// crater's events run here).
+        /// </summary>
         private static IEnumerator Burn(string[] a, Result r)
         {
             GameEvents found = null;
@@ -327,14 +381,18 @@ namespace DarkwoodMP.World
             }
             AsPlayer(() => found.fire());
             yield return new WaitForSeconds(2f);
-            r.Info = $"{EpilogueSync.BurnEvents} fired {found.fired}; shared {EpilogueSync.BurnShared}";
+            r.Info =
+                $"{EpilogueSync.BurnEvents} fired {found.fired}; shared {EpilogueSync.BurnShared}";
             if (!EpilogueSync.BurnShared)
             {
                 r.Fail($"not sent: {r.Info}");
             }
         }
 
-        /// <summary>"epilogue-burned" (client): the host's burning of the Being ran in our crater too.</summary>
+        /// <summary>
+        /// "epilogue-burned" (client): the host's burning of the Being ran in
+        /// our crater too.
+        /// </summary>
         private static IEnumerator Burned(string[] a, Result r)
         {
             GameEvents found = null;
@@ -347,11 +405,13 @@ namespace DarkwoodMP.World
                 }
             }
             float until = Time.realtimeSinceStartup + 30f;
-            while (Time.realtimeSinceStartup < until && !(found != null && found.fired))
+            while (Time.realtimeSinceStartup < until
+                && !(found != null && found.fired))
             {
                 yield return new WaitForSeconds(0.5f);
             }
-            r.Info = $"{EpilogueSync.BurnEvents} found {found != null} fired {found != null && found.fired}; heard {EpilogueSync.BurnShared}";
+            r.Info =
+                $"{EpilogueSync.BurnEvents} found {found != null} fired {found != null && found.fired}; heard {EpilogueSync.BurnShared}";
             if (found == null || !found.fired)
             {
                 r.Fail($"the Being didn't burn here: {r.Info}");
@@ -359,8 +419,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "epilogue-crawl-die" (either): our player's first death in the fire starts the crawl, the second ends it
-        /// (as the burning does). The pan must wait for the other player ("epilogue-pan").
+        /// "epilogue-crawl-die" (either): our player's first death in the fire
+        /// starts the crawl, the second ends it (as the burning does). The pan
+        /// must wait for the other player ("epilogue-pan").
         /// </summary>
         private static IEnumerator CrawlDie(string[] a, Result r)
         {
@@ -372,21 +433,25 @@ namespace DarkwoodMP.World
             }
             if (!P.crawling && P.startingCrawling)
             {
-                // A test shortcut: our player stands where the test put it, not where the burning leaves it, and the
-                // CrawlStart clip didn't play here; end it as the clip's end does (Player's animation-completed handler).
+                // A test shortcut: our player stands where the test put it, not
+                // where the burning leaves it, and the CrawlStart clip didn't
+                // play here; end it as the clip's end does (Player's
+                // animation-completed handler).
                 P.startingCrawling = false;
                 P.performingAction = false;
                 P.crawling = true;
             }
             if (!P.crawling)
             {
-                r.Fail($"no crawl after the first death: startingCrawling {P.startingCrawling} dying {P.dying}");
+                r.Fail(
+                    $"no crawl after the first death: startingCrawling {P.startingCrawling} dying {P.dying}");
                 yield break;
             }
             yield return new WaitForSeconds(1f);
             P.die();
             yield return new WaitForSeconds(1f);
-            r.Info = $"crawled {P.crawling} dying {P.dying}; our death told {EpilogueSync.OwnDeath}; pan released {EpilogueSync.PanReleased}";
+            r.Info =
+                $"crawled {P.crawling} dying {P.dying}; our death told {EpilogueSync.OwnDeath}; pan released {EpilogueSync.PanReleased}";
             if (!EpilogueSync.OwnDeath)
             {
                 r.Fail($"the second death wasn't the crawl's: {r.Info}");
@@ -394,13 +459,16 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "epilogue-pan EARLY" (either): the pan ran here once every player had crawled to their death (not before:
-        /// EARLY 1 checks it was still held 20 s after our own death); on the client the host's outcomes came too.
+        /// "epilogue-pan EARLY" (either): the pan ran here once every player
+        /// had crawled to their death (not before: EARLY 1 checks it was still
+        /// held 20 s after our own death); on the client the host's outcomes
+        /// came too.
         /// </summary>
         private static IEnumerator PanStep(string[] a, Result r)
         {
             float until = Time.realtimeSinceStartup + 90f;
-            while (Time.realtimeSinceStartup < until && !EpilogueSync.PanReleased)
+            while (Time.realtimeSinceStartup < until
+                && !EpilogueSync.PanReleased)
             {
                 yield return new WaitForSeconds(0.5f);
             }
@@ -418,12 +486,14 @@ namespace DarkwoodMP.World
                     text = "not burned";
                 }
             }
-            r.Info = $"pan released {EpilogueSync.PanReleased}; spectating {Spectator.Active}; host's burned {EpilogueSync.HostBurned}; outcomes screen {text}";
+            r.Info =
+                $"pan released {EpilogueSync.PanReleased}; spectating {Spectator.Active}; host's burned {EpilogueSync.HostBurned}; outcomes screen {text}";
             if (!EpilogueSync.PanReleased)
             {
                 r.Fail($"no pan: {r.Info}");
             }
-            else if (Net.Session.Instance.IsClient && EpilogueSync.HostBurned != 1)
+            else if (Net.Session.Instance.IsClient
+                && EpilogueSync.HostBurned != 1)
             {
                 r.Fail($"the host's outcomes didn't come: {r.Info}");
             }
@@ -433,11 +503,15 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"epilogue-held" (host): our own crawl death alone doesn't run the pan (the client is still crawling).</summary>
+        /// <summary>
+        /// "epilogue-held" (host): our own crawl death alone doesn't run the
+        /// pan (the client is still crawling).
+        /// </summary>
         private static IEnumerator Held(string[] a, Result r)
         {
             yield return new WaitForSeconds(20f); // past the game's own 16 s
-            r.Info = $"pan released {EpilogueSync.PanReleased}; spectating {Spectator.Active} (epilogue {Spectator.Epilogue})";
+            r.Info =
+                $"pan released {EpilogueSync.PanReleased}; spectating {Spectator.Active} (epilogue {Spectator.Epilogue})";
             if (EpilogueSync.PanReleased)
             {
                 r.Fail($"the pan ran before the client died: {r.Info}");
@@ -450,7 +524,8 @@ namespace DarkwoodMP.World
             var c = Object.FindObjectOfType<global::Credits>();
             if (c != null)
             {
-                AccessTools.Method(typeof(global::Credits), "exitToMainMenu").Invoke(c, null);
+                AccessTools.Method(typeof(global::Credits), "exitToMainMenu")
+                    .Invoke(c, null);
             }
             while (!WorldShare.MainMenuReady())
             {

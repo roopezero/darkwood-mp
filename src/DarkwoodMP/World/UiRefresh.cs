@@ -3,29 +3,40 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Redraws the open window that shows a world object after another player's change to it was applied here, so
-    /// the window is up to date without the viewer closing it, hovering or clicking.
+    /// Redraws the open window that shows a world object after another player's
+    /// change to it was applied here, so the window is up to date without the
+    /// viewer closing it, hovering or clicking.
     ///
-    /// A slot's icon already follows a remote change: InvSlot.createItem and removeItem draw and remove it while
-    /// its inventory is open. What the game draws once and keeps until the player does something is the rest:
+    /// A slot's icon already follows a remote change: InvSlot.createItem and
+    /// removeItem draw and remove it while its inventory is open. What the game
+    /// draws once and keeps until the player does something is the rest:
     /// - the workbench's recipes, red or not by what the player carries plus the storage (CraftingRequirement.met,
     ///   set by CraftingRecipes.refresh), and its upgrade button: Player.refreshRecipes, which the game calls after
     ///   each of the player's own moves, redraws those, the backpack and the hotbar;
     /// - the saw's "Fuel: N" label and whether its Convert button can be pressed: Saw.refresh;
     /// - the fuel bar of the generator or saw under the cursor: EnemyHealthBar.show with onlyRefresh.
     ///
-    /// These only redraw. They run with WorldActions.Replaying set, and none of them changes a slot, so nothing goes
-    /// back out from them. Nothing is done when the object's window isn't open.
+    /// These only redraw. They run with WorldActions.Replaying set, and none of
+    /// them changes a slot, so nothing goes back out from them. Nothing is done
+    /// when the object's window isn't open.
     /// </summary>
     internal static class UiRefresh
     {
-        /// <summary>Counted for the map test (ui-* steps): how many times an open window was redrawn.</summary>
+        /// <summary>
+        /// Counted for the map test (ui-* steps): how many times an open window
+        /// was redrawn.
+        /// </summary>
         internal static int Redraws;
 
-        /// <summary>False only in the map test's "before" run (ui-refresh off): windows behave as they did without this.</summary>
+        /// <summary>
+        /// False only in the map test's "before" run (ui-refresh off): windows
+        /// behave as they did without this.
+        /// </summary>
         internal static bool Enabled = true;
 
-        /// <summary>Whether the local player has this inventory's window open.</summary>
+        /// <summary>
+        /// Whether the local player has this inventory's window open.
+        /// </summary>
         private static bool Shown(Inventory inv)
         {
             var p = Player.Instance;
@@ -33,10 +44,14 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            return inv.open || p.openedItemInventory == inv || p.openedItemInventory2 == inv;
+            return inv.open || p.openedItemInventory == inv
+                || p.openedItemInventory2 == inv;
         }
 
-        /// <summary>A remote change to these slots was applied: redraw what of its window the slots don't draw.</summary>
+        /// <summary>
+        /// A remote change to these slots was applied: redraw what of its
+        /// window the slots don't draw.
+        /// </summary>
         internal static void Changed(Inventory inv)
         {
             if (!Enabled || !Shown(inv))
@@ -54,7 +69,9 @@ namespace DarkwoodMP.World
             }, inv.name);
         }
 
-        /// <summary>A remote change to a generator's or the saw's fuel was applied.</summary>
+        /// <summary>
+        /// A remote change to a generator's or the saw's fuel was applied.
+        /// </summary>
         internal static void FuelChanged(Component c)
         {
             if (c == null || !Enabled)
@@ -74,7 +91,8 @@ namespace DarkwoodMP.World
             {
                 bar = ui.enemyHealthBar;
             }
-            bool barShown = bar != null && bar.currentObj == c.gameObject && bar.gameObject.activeInHierarchy;
+            bool barShown = bar != null && bar.currentObj == c.gameObject
+                && bar.gameObject.activeInHierarchy;
             if (!sawOpen && !barShown)
             {
                 return;
@@ -103,7 +121,8 @@ namespace DarkwoodMP.World
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"[ui] couldn't redraw {what}: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[ui] couldn't redraw {what}: {e.Message}");
             }
             finally
             {

@@ -8,8 +8,10 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for repairs (tools/tests/map_scenario_repair.py): a broken door rebuilt with the hammer and a
-    /// broken piece of furniture rebuilt from its construction menu, by the client, must stay repaired in both games.
+    /// Map test steps for repairs (tools/tests/map_scenario_repair.py): a
+    /// broken door rebuilt with the hammer and a broken piece of furniture
+    /// rebuilt from its construction menu, by the client, must stay repaired in
+    /// both games.
     ///
     ///   rp-door N            the Nth door from the centre (MapScenarioWorld.Nth), noted for the other steps.
     ///   rp-door-break        our player breaks it (Door.destroyDoor).
@@ -128,9 +130,15 @@ namespace DarkwoodMP.World
         private static IEnumerator RpFurniture(string[] a, Result r)
         {
             var at = Centre + new Vector3(F(a[0]), 0f, F(a[1]));
-            _item = Nearest(Object.FindObjectsOfType<Item>().Where(i => i.destructible && !i.hasInventory && i.GetComponent<Explodes>() == null
-                && i.GetComponent<Trigger>() == null && i.GetComponent<ProxyItem>() == null && ObjRef.Of(i.gameObject).Valid
-                && StateDump.Flat(i.transform.position - at) < 200f), at);
+            _item = Nearest(
+                Object.FindObjectsOfType<Item>().Where(
+                    i => i.destructible && !i.hasInventory
+                        && i.GetComponent<Explodes>() == null
+                        && i.GetComponent<Trigger>() == null
+                        && i.GetComponent<ProxyItem>() == null
+                        && ObjRef.Of(i.gameObject).Valid
+                        && StateDump.Flat(i.transform.position - at) < 200f),
+                at);
             if (_item == null)
             {
                 r.Fail("no breakable furniture there");
@@ -143,14 +151,23 @@ namespace DarkwoodMP.World
                 c = _item.gameObject.AddComponent<Constructible>();
                 c.onlyWhenDestroyed = true;
                 c.dontDestroyMeWhenConstructed = true;
-                c.options = new List<Constructible.Option> { new Constructible.Option { name = "repair", constructTime = 1f, requirements = new List<ConstructionRequirement>() } };
+                c.options = new List<Constructible.Option>
+                {
+                    new Constructible.Option
+                    {
+                        name = "repair",
+                        constructTime = 1f,
+                        requirements = new List<ConstructionRequirement>()
+                    }
+                };
             }
             string menu = "its own";
             if (made)
             {
                 menu = "added";
             }
-            r.Info = $"{ItemInfo} at {Fmt(_item.transform.position)}, construction menu {menu} (only when broken: {c.onlyWhenDestroyed}, {c.options.Count} options)";
+            r.Info =
+                $"{ItemInfo} at {Fmt(_item.transform.position)}, construction menu {menu} (only when broken: {c.onlyWhenDestroyed}, {c.options.Count} options)";
         }
 
         private static IEnumerator RpFurnitureBreak(string[] a, Result r)
@@ -194,7 +211,8 @@ namespace DarkwoodMP.World
             }
             AsPlayer(() => c.construct(manual: false, 0));
             float until = Time.realtimeSinceStartup + 4f;
-            while (_item != null && _item.destroyed && Time.realtimeSinceStartup < until)
+            while (_item != null && _item.destroyed
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.1f);
             }

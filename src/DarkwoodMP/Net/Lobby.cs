@@ -5,8 +5,8 @@ using Steamworks;
 namespace DarkwoodMP.Net
 {
     /// <summary>
-    /// Steam lobby: used for invites (overlay "Join Game"/"Invite to game") and membership.
-    /// The lobby owner is the authoritative host.
+    /// Steam lobby: used for invites (overlay "Join Game"/"Invite to game") and
+    /// membership. The lobby owner is the authoritative host.
     /// </summary>
     public sealed class Lobby : IDisposable
     {
@@ -15,8 +15,10 @@ namespace DarkwoodMP.Net
 
         public CSteamID Id { get; private set; } = CSteamID.Nil;
         public bool InLobby => Id != CSteamID.Nil;
-        // The host is whoever owned the lobby when we entered it. Steam hands ownership to another member when the
-        // owner leaves or crashes, but the game world can't move with it, so the live owner is never trusted after that.
+        // The host is whoever owned the lobby when we entered it. Steam hands
+        // ownership to another member when the owner leaves or crashes, but the
+        // game world can't move with it, so the live owner is never trusted
+        // after that.
         public CSteamID Owner
         {
             get
@@ -31,7 +33,8 @@ namespace DarkwoodMP.Net
         public bool IsHost => InLobby && _iAmHost;
         private CSteamID _hostId = CSteamID.Nil;
         private bool _iAmHost;
-        private CSteamID _refused = CSteamID.Nil; // the lobby we just left for running another version
+        // the lobby we just left for running another version
+        private CSteamID _refused = CSteamID.Nil;
         public string Status { get; private set; } = "Not connected";
 
         public event Action OnEntered;
@@ -42,24 +45,30 @@ namespace DarkwoodMP.Net
         private CallResult<LobbyEnter_t> _enterResult;
         private Callback<GameLobbyJoinRequested_t> _joinRequested;
         private Callback<LobbyChatUpdate_t> _chatUpdate;
-        // The lobby's creator enters it without a JoinLobby call: Steam tells of that only as a callback.
+        // The lobby's creator enters it without a JoinLobby call: Steam tells
+        // of that only as a callback.
         private Callback<LobbyEnter_t> _entered;
 
         public void Init()
         {
             _createResult = CallResult<LobbyCreated_t>.Create(OnLobbyCreated);
             _enterResult = CallResult<LobbyEnter_t>.Create(OnLobbyEntered);
-            _joinRequested = Callback<GameLobbyJoinRequested_t>.Create(r => Join(r.m_steamIDLobby));
+            _joinRequested = Callback<GameLobbyJoinRequested_t>.Create(
+                r => Join(r.m_steamIDLobby));
             _chatUpdate = Callback<LobbyChatUpdate_t>.Create(OnChatUpdate);
-            _entered = Callback<LobbyEnter_t>.Create(r => OnLobbyEntered(r, false));
+            _entered =
+                Callback<LobbyEnter_t>.Create(r => OnLobbyEntered(r, false));
 
-            // Game launched by accepting an invite while not running: "+connect_lobby <id>"
+            // Game launched by accepting an invite while not running:
+            // "+connect_lobby <id>"
             var args = Environment.GetCommandLineArgs();
             for (int i = 0; i < args.Length - 1; i++)
             {
-                if (args[i] == "+connect_lobby" && ulong.TryParse(args[i + 1], out var lobbyId))
+                if (args[i] == "+connect_lobby"
+                    && ulong.TryParse(args[i + 1], out var lobbyId))
                 {
-                    Plugin.Log.LogInfo($"Launched with +connect_lobby {lobbyId}");
+                    Plugin.Log.LogInfo(
+                        $"Launched with +connect_lobby {lobbyId}");
                     Join(new CSteamID(lobbyId));
                 }
             }
@@ -76,7 +85,9 @@ namespace DarkwoodMP.Net
             }
             HostLost = false;
             Status = "Creating lobby...";
-            _createResult.Set(SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, Protocol.MaxPlayers));
+            _createResult.Set(
+                SteamMatchmaking.CreateLobby(
+                    ELobbyType.k_ELobbyTypeFriendsOnly, Protocol.MaxPlayers));
         }
 
         public void Join(CSteamID lobby)
@@ -112,7 +123,10 @@ namespace DarkwoodMP.Net
             }
         }
 
-        /// <summary>Client: the host is gone (its connection failed); leave as if it had left the lobby.</summary>
+        /// <summary>
+        /// Client: the host is gone (its connection failed); leave as if it had
+        /// left the lobby.
+        /// </summary>
         public void LoseHost(string why)
         {
             if (!InLobby || _iAmHost)
@@ -159,32 +173,41 @@ namespace DarkwoodMP.Net
             }
             var id = new CSteamID(r.m_ulSteamIDLobby);
             SteamMatchmaking.SetLobbyData(id, KeyMod, PluginInfo.Version);
-            SteamMatchmaking.SetLobbyData(id, KeyProto, Protocol.Version.ToString());
-            // LobbyEnter_t also fires for the creator; OnLobbyEntered handles the rest.
+            SteamMatchmaking.SetLobbyData(
+                id, KeyProto, Protocol.Version.ToString());
+            // LobbyEnter_t also fires for the creator; OnLobbyEntered handles
+            // the rest.
             Plugin.Log.LogInfo($"Lobby created {id}");
         }
 
         private void OnLobbyEntered(LobbyEnter_t r, bool ioFailure)
         {
-            if (ioFailure || r.m_EChatRoomEnterResponse != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
+            if (ioFailure
+                || r.m_EChatRoomEnterResponse
+                    != (uint)EChatRoomEnterResponse.k_EChatRoomEnterResponseSuccess)
             {
-                Status = $"Failed to join lobby ({(EChatRoomEnterResponse)r.m_EChatRoomEnterResponse})";
+                Status =
+                    $"Failed to join lobby ({(EChatRoomEnterResponse)r.m_EChatRoomEnterResponse})";
                 Plugin.Log.LogError(Status);
                 return;
             }
             var id = new CSteamID(r.m_ulSteamIDLobby);
-            // Told twice: as JoinLobby's result and as the callback. After a refusal (below) the second one must not
-            // let us in: we've left, so the lobby's data reads empty then and the version check would pass.
+            // Told twice: as JoinLobby's result and as the callback. After a
+            // refusal (below) the second one must not let us in: we've left, so
+            // the lobby's data reads empty then and the version check would
+            // pass.
             if (id == Id || id == _refused)
             {
                 return;
             }
             string proto = SteamMatchmaking.GetLobbyData(id, KeyProto);
-            if (!string.IsNullOrEmpty(proto) && proto != Protocol.Version.ToString())
+            if (!string.IsNullOrEmpty(proto)
+                && proto != Protocol.Version.ToString())
             {
                 SteamMatchmaking.LeaveLobby(id);
                 _refused = id;
-                Status = $"Host runs a different DarkwoodMP version ({SteamMatchmaking.GetLobbyData(id, KeyMod)})";
+                Status =
+                    $"Host runs a different DarkwoodMP version ({SteamMatchmaking.GetLobbyData(id, KeyMod)})";
                 Plugin.Log.LogError(Status);
                 return;
             }
@@ -197,7 +220,8 @@ namespace DarkwoodMP.Net
             }
             else
             {
-                Status = $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
+                Status =
+                    $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
             }
             Plugin.Log.LogInfo($"Entered lobby {id}, host={IsHost}");
             Action handler = OnEntered;
@@ -215,19 +239,24 @@ namespace DarkwoodMP.Net
             }
             var who = new CSteamID(u.m_ulSteamIDUserChanged);
             var change = (EChatMemberStateChange)u.m_rgfChatMemberStateChange;
-            if ((change & EChatMemberStateChange.k_EChatMemberStateChangeEntered) != 0)
+            if ((change
+                    & EChatMemberStateChange.k_EChatMemberStateChangeEntered)
+                != 0)
             {
-                Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} joined the lobby");
+                Plugin.Log.LogInfo(
+                    $"{SteamFriends.GetFriendPersonaName(who)} joined the lobby");
             }
             else
             {
-                Plugin.Log.LogInfo($"{SteamFriends.GetFriendPersonaName(who)} left the lobby");
+                Plugin.Log.LogInfo(
+                    $"{SteamFriends.GetFriendPersonaName(who)} left the lobby");
                 Action<CSteamID> handler = OnMemberLeft;
                 if (handler != null)
                 {
                     handler(who);
                 }
-                // Host left: lobby ownership moves in Steam, but the game world can't; end the session.
+                // Host left: lobby ownership moves in Steam, but the game world
+                // can't; end the session.
                 if (!_iAmHost && who == _hostId)
                 {
                     HostLost = true;
@@ -236,8 +265,10 @@ namespace DarkwoodMP.Net
                     return;
                 }
             }
-            // Steam made this joiner the owner (the host is gone and we missed it): it isn't a host either.
-            if (InLobby && !_iAmHost && SteamMatchmaking.GetLobbyOwner(Id) == SteamUser.GetSteamID())
+            // Steam made this joiner the owner (the host is gone and we missed
+            // it): it isn't a host either.
+            if (InLobby && !_iAmHost
+                && SteamMatchmaking.GetLobbyOwner(Id) == SteamUser.GetSteamID())
             {
                 HostLost = true;
                 Status = "Host left the game";

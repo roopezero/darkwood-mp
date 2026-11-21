@@ -8,20 +8,28 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// Host: places in the game's enemy code that only react to the host's own player (a Player component, or
-    /// Player.Instance), made to react to a joiner's proxy the same way. With nobody else in the world every
-    /// helper here gives what the game's own code gives, so single player is unchanged.
+    /// Host: places in the game's enemy code that only react to the host's own
+    /// player (a Player component, or Player.Instance), made to react to a
+    /// joiner's proxy the same way. With nobody else in the world every helper
+    /// here gives what the game's own code gives, so single player is
+    /// unchanged.
     /// </summary>
     static class JoinerAi
     {
         /// <summary>
-        /// Swaps each run of instructions that <paramref name="match"/> recognises (it returns the run's length, or 0)
-        /// for "ldarg.0 (or ldarg.1 with <paramref name="arg"/> 1); call helper", padded with nops, keeping the labels.
-        /// Logs a warning when it swapped other than <paramref name="expected"/> runs, or, given <paramref name="none"/>,
-        /// that text when it swapped none (the game's code changed); the method then keeps the game's own behaviour.
+        /// Swaps each run of instructions that <paramref name="match"/>
+        /// recognises (it returns the run's length, or 0) for
+        /// "ldarg.0 (or ldarg.1 with <paramref name="arg"/> 1); call helper",
+        /// padded with nops, keeping the labels. Logs a warning when it swapped
+        /// other than <paramref name="expected"/> runs, or, given
+        /// <paramref name="none"/>, that text when it swapped none (the game's
+        /// code changed); the method then keeps the game's own behaviour.
         /// </summary>
-        public static IEnumerable<CodeInstruction> Swap(IEnumerable<CodeInstruction> instructions, Func<List<CodeInstruction>, int, int> match,
-                                                        MethodInfo helper, string where, int expected = 1, int arg = 0, string none = null)
+        public static IEnumerable<CodeInstruction> Swap(
+            IEnumerable<CodeInstruction> instructions,
+            Func<List<CodeInstruction>, int, int> match,
+            MethodInfo helper, string where, int expected = 1, int arg = 0,
+            string none = null)
         {
             OpCode load;
             if (arg == 0)
@@ -41,11 +49,23 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                list[i] = new CodeInstruction(load) { labels = list[i].labels, blocks = list[i].blocks };
-                list[i + 1] = new CodeInstruction(OpCodes.Call, helper) { labels = list[i + 1].labels, blocks = list[i + 1].blocks };
+                list[i] = new CodeInstruction(load)
+                {
+                    labels = list[i].labels,
+                    blocks = list[i].blocks
+                };
+                list[i + 1] = new CodeInstruction(OpCodes.Call, helper)
+                {
+                    labels = list[i + 1].labels,
+                    blocks = list[i + 1].blocks
+                };
                 for (int k = 2; k < n; k++)
                 {
-                    list[i + k] = new CodeInstruction(OpCodes.Nop) { labels = list[i + k].labels, blocks = list[i + k].blocks };
+                    list[i + k] = new CodeInstruction(OpCodes.Nop)
+                    {
+                        labels = list[i + k].labels,
+                        blocks = list[i + k].blocks
+                    };
                 }
                 swapped++;
                 i += n - 1;
@@ -59,19 +79,24 @@ namespace DarkwoodMP.Combat
             }
             else if (swapped != expected)
             {
-                Plugin.Log.LogWarning($"JoinerAi: {where}: swapped {swapped} reads of the host's player, expected {expected} (game changed?)");
+                Plugin.Log.LogWarning(
+                    $"JoinerAi: {where}: swapped {swapped} reads of the host's player, expected {expected} (game changed?)");
             }
             return list;
         }
 
-        public static readonly MethodInfo GetInstance = AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));
+        public static readonly MethodInfo GetInstance =
+            AccessTools.PropertyGetter(typeof(Player), nameof(Player.Instance));
 
         /// <summary>Player.Instance.whereAmI.bigLocation</summary>
         public static int HostBigLocation(List<CodeInstruction> l, int i)
         {
-            var whereAmI = AccessTools.Field(typeof(Player), nameof(Player.whereAmI));
-            var big = AccessTools.PropertyGetter(typeof(WhereAmI), nameof(WhereAmI.bigLocation));
-            if (i + 2 < l.Count && l[i].Calls(GetInstance) && l[i + 1].LoadsField(whereAmI) && l[i + 2].Calls(big))
+            var whereAmI =
+                AccessTools.Field(typeof(Player), nameof(Player.whereAmI));
+            var big = AccessTools.PropertyGetter(
+                typeof(WhereAmI), nameof(WhereAmI.bigLocation));
+            if (i + 2 < l.Count && l[i].Calls(GetInstance)
+                && l[i + 1].LoadsField(whereAmI) && l[i + 2].Calls(big))
             {
                 return 3;
             }
@@ -79,10 +104,12 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>Player.Instance.&lt;getter&gt;</summary>
-        public static Func<List<CodeInstruction>, int, int> HostThen(MethodInfo getter) =>
+        public static Func<List<CodeInstruction>, int, int> HostThen(
+            MethodInfo getter) =>
             (l, i) =>
             {
-                if (i + 1 < l.Count && l[i].Calls(GetInstance) && l[i + 1].Calls(getter))
+                if (i + 1 < l.Count && l[i].Calls(GetInstance)
+                    && l[i + 1].Calls(getter))
                 {
                     return 2;
                 }
@@ -90,10 +117,12 @@ namespace DarkwoodMP.Combat
             };
 
         /// <summary>Player.Instance.&lt;field&gt;</summary>
-        public static Func<List<CodeInstruction>, int, int> HostField(FieldInfo field) =>
+        public static Func<List<CodeInstruction>, int, int> HostField(
+            FieldInfo field) =>
             (l, i) =>
             {
-                if (i + 1 < l.Count && l[i].Calls(GetInstance) && l[i + 1].LoadsField(field))
+                if (i + 1 < l.Count && l[i].Calls(GetInstance)
+                    && l[i + 1].LoadsField(field))
                 {
                     return 2;
                 }
@@ -111,10 +140,15 @@ namespace DarkwoodMP.Combat
 
         private static readonly RaycastHit[] _hit = new RaycastHit[1];
 
-        /// <summary>Whether a position is on indoor ground, the way CharBase.checkGround decides isInside.</summary>
+        /// <summary>
+        /// Whether a position is on indoor ground, the way CharBase.checkGround
+        /// decides isInside.
+        /// </summary>
         public static bool InsideAt(Vector3 pos)
         {
-            if (!Physics.Raycast(pos + new Vector3(0f, 300f, 0f), Vector3.down, out var hit, 1000f, 2))
+            if (!Physics.Raycast(
+                pos + new Vector3(0f, 300f, 0f), Vector3.down, out var hit,
+                1000f, 2))
             {
                 return false;
             }
@@ -127,8 +161,9 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Part of "--dwmp-test-night" (after the night attacker): on character c and a proxy, checks the patches
-        /// here by calling the game's methods as it would. Logs "[joiner ai test]" lines.
+        /// Part of "--dwmp-test-night" (after the night attacker): on character
+        /// c and a proxy, checks the patches here by calling the game's methods
+        /// as it would. Logs "[joiner ai test]" lines.
         /// </summary>
         public static void Test(Character c, NetPlayerProxy proxy)
         {
@@ -162,7 +197,8 @@ namespace DarkwoodMP.Combat
                     Location loc = null;
                     if (a.target != null)
                     {
-                        loc = NightSpawns.BigLocationAt(a.target.transform.position);
+                        loc = NightSpawns.BigLocationAt(
+                            a.target.transform.position);
                     }
                     string targetName = "none";
                     if (a.target != null)
@@ -174,30 +210,40 @@ namespace DarkwoodMP.Combat
                     {
                         locationName = loc.name;
                     }
-                    Plugin.Log.LogInfo($"[joiner ai test] activity {a.type}: target {targetName}, in {locationName}");
+                    Plugin.Log.LogInfo(
+                        $"[joiner ai test] activity {a.type}: target {targetName}, in {locationName}");
                 }
-                Plugin.Log.LogInfo($"[joiner ai test] {c.name} has {c.activities.Count} activities");
+                Plugin.Log.LogInfo(
+                    $"[joiner ai test] {c.name} has {c.activities.Count} activities");
 
-                c.transform.position = proxy.transform.position + new Vector3(800f, 0f, 0f);
+                c.transform.position =
+                    proxy.transform.position + new Vector3(800f, 0f, 0f);
                 bool near = c.inSightOrCloseToPlayer();
-                Plugin.Log.LogInfo($"[joiner ai test] near the joiner: {near}, {Core.trueDistance(c.transform.position, Player.Instance.transform.position):0} from the host");
+                Plugin.Log.LogInfo(
+                    $"[joiner ai test] near the joiner: {near}, {Core.trueDistance(c.transform.position, Player.Instance.transform.position):0} from the host");
 
-                var onCollide = AccessTools.Method(typeof(Character), "onCollideWith");
+                var onCollide =
+                    AccessTools.Method(typeof(Character), "onCollideWith");
                 c.sleeping = true;
                 c.wakingUp = false;
-                onCollide.Invoke(c, new object[] { proxy.GetComponent<Collider>() });
-                Plugin.Log.LogInfo($"[joiner ai test] bump on a sleeping {c.name}: waking up {c.wakingUp}");
+                onCollide.Invoke(
+                    c, new object[] { proxy.GetComponent<Collider>() });
+                Plugin.Log.LogInfo(
+                    $"[joiner ai test] bump on a sleeping {c.name}: waking up {c.wakingUp}");
                 c.sleeping = false;
                 c.wakingUp = false;
 
                 c.stopAttacking(proxy.transform);
                 c.cowardiness = Cowardiness.always;
-                if (c.aggressiveness == Aggressiveness.flee || c.aggressiveness == Aggressiveness.fleeAndDespawn)
+                if (c.aggressiveness == Aggressiveness.flee
+                    || c.aggressiveness == Aggressiveness.fleeAndDespawn)
                 {
                     c.aggressiveness = Aggressiveness.attackOnSight;
                 }
-                AccessTools.Method(typeof(Character), "reactToCharacter").Invoke(c, new object[] { null, proxy.transform, true });
-                Plugin.Log.LogInfo($"[joiner ai test] hit by the joiner (cowardiness always): behaviour {c.behaviour}, target {T(c.target)}");
+                AccessTools.Method(typeof(Character), "reactToCharacter")
+                    .Invoke(c, new object[] { null, proxy.transform, true });
+                Plugin.Log.LogInfo(
+                    $"[joiner ai test] hit by the joiner (cowardiness always): behaviour {c.behaviour}, target {T(c.target)}");
             }
             catch (Exception e)
             {
@@ -207,7 +253,10 @@ namespace DarkwoodMP.Combat
 
         // ---- helpers the transpilers call ----
 
-        /// <summary>The forest spirit leaves when its player goes indoors: the joiner it chases, or else the host's.</summary>
+        /// <summary>
+        /// The forest spirit leaves when its player goes indoors: the joiner it
+        /// chases, or else the host's.
+        /// </summary>
         public static bool TargetIsInside(Character c)
         {
             Transform t = null;
@@ -223,7 +272,10 @@ namespace DarkwoodMP.Combat
             return Player.Instance.isInside;
         }
 
-        /// <summary>reactToCharacter's "is the attacker the player": the host's player, or a joiner's proxy.</summary>
+        /// <summary>
+        /// reactToCharacter's "is the attacker the player": the host's player,
+        /// or a joiner's proxy.
+        /// </summary>
         public static Component PlayerOrProxyOn(Transform t)
         {
             if (t == null)
@@ -238,7 +290,10 @@ namespace DarkwoodMP.Combat
             return ProxyOf(t);
         }
 
-        /// <summary>reactToCharacter's attackPlayer(): a joiner who hit or bumped the enemy is the one it goes for.</summary>
+        /// <summary>
+        /// reactToCharacter's attackPlayer(): a joiner who hit or bumped the
+        /// enemy is the one it goes for.
+        /// </summary>
         public static void AttackWhoReacted(Character c, Transform attacker)
         {
             var proxy = ProxyOf(attacker);
@@ -247,15 +302,20 @@ namespace DarkwoodMP.Combat
                 c.attackPlayer();
                 return;
             }
-            // An NPC turns on the joiner here, and the host runs it as an enemy from then on (Combat.HostileNpcs).
+            // An NPC turns on the joiner here, and the host runs it as an enemy
+            // from then on (Combat.HostileNpcs).
             GoFor(c, proxy.transform);
             if (Threat.Debug)
             {
-                Plugin.Log.LogInfo($"[threat] {c.name} reacts to {proxy.OwnerName}: goes for them");
+                Plugin.Log.LogInfo(
+                    $"[threat] {c.name} reacts to {proxy.OwnerName}: goes for them");
             }
         }
 
-        /// <summary>Sends a character after a player, as Character.attackPlayer does for the host's (a defensive one stays defensive).</summary>
+        /// <summary>
+        /// Sends a character after a player, as Character.attackPlayer does for
+        /// the host's (a defensive one stays defensive).
+        /// </summary>
         public static void GoFor(Character c, Transform player)
         {
             if (c.aggressiveness != Aggressiveness.defensive)
@@ -275,7 +335,10 @@ namespace DarkwoodMP.Combat
             return null;
         }
 
-        /// <summary>A hatching spider's location: the host's, unless a joiner is the nearest player; then where it is.</summary>
+        /// <summary>
+        /// A hatching spider's location: the host's, unless a joiner is the
+        /// nearest player; then where it is.
+        /// </summary>
         public static Location HatchLocation(Character c)
         {
             var hostLoc = HostLocation();
@@ -283,7 +346,8 @@ namespace DarkwoodMP.Combat
             {
                 return hostLoc;
             }
-            if (Threat.NearestPlayerPos(c) == Player.Instance.transform.position)
+            if (Threat.NearestPlayerPos(c)
+                == Player.Instance.transform.position)
             {
                 return hostLoc;
             }
@@ -291,8 +355,9 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// A spawned character's activity (getFromLocation) takes its target from "the player's" location: for one
-        /// sent at a joiner's hideout that hideout, for others the location of the player it is after.
+        /// A spawned character's activity (getFromLocation) takes its target
+        /// from "the player's" location: for one sent at a joiner's hideout
+        /// that hideout, for others the location of the player it is after.
         /// </summary>
         public static Location SpawnedLocation(Character.Activity a)
         {
@@ -306,7 +371,8 @@ namespace DarkwoodMP.Combat
             {
                 return hostLoc;
             }
-            if (NightSpawns.SentAt(c, out var proxy, out var loc) && loc != null)
+            if (NightSpawns.SentAt(c, out var proxy, out var loc)
+                && loc != null)
             {
                 return loc;
             }
@@ -318,7 +384,8 @@ namespace DarkwoodMP.Combat
             {
                 return hostLoc;
             }
-            Location bigLocationAt = NightSpawns.BigLocationAt(proxy.transform.position);
+            Location bigLocationAt =
+                NightSpawns.BigLocationAt(proxy.transform.position);
             if (bigLocationAt == null)
             {
                 bigLocationAt = hostLoc;
@@ -326,7 +393,10 @@ namespace DarkwoodMP.Combat
             return bigLocationAt;
         }
 
-        /// <summary>An activity aimed at "the player" (playerIsTarget): the joiner it was sent at, or the most-threat player.</summary>
+        /// <summary>
+        /// An activity aimed at "the player" (playerIsTarget): the joiner it
+        /// was sent at, or the most-threat player.
+        /// </summary>
         public static GameObject ActivityPlayer(Character.Activity a)
         {
             Character c = null;
@@ -338,7 +408,8 @@ namespace DarkwoodMP.Combat
             {
                 return Player.Instance.gameObject;
             }
-            if (NightSpawns.SentAt(c, out var proxy, out _) && proxy != null && proxy.alive)
+            if (NightSpawns.SentAt(c, out var proxy, out _) && proxy != null
+                && proxy.alive)
             {
                 return proxy.gameObject;
             }
@@ -352,19 +423,24 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Host: an enemy bumping into a joiner's proxy does what it does when it bumps into the host's player
-    /// (Character.onCollideWith only checks for a Player): a banshee goes off, a sleeping enemy wakes, others react
-    /// to them. The rest of the game's method (doors, water and so on) still runs, as it does after a player bump.
+    /// Host: an enemy bumping into a joiner's proxy does what it does when it
+    /// bumps into the host's player (Character.onCollideWith only checks for a
+    /// Player): a banshee goes off, a sleeping enemy wakes, others react to
+    /// them. The rest of the game's method (doors, water and so on) still runs,
+    /// as it does after a player bump.
     /// </summary>
     [HarmonyPatch(typeof(Character), "onCollideWith")]
     static class ProxyBumpPatch
     {
         private static readonly Action<Character, Character, Transform, bool> React =
-            AccessTools.MethodDelegate<Action<Character, Character, Transform, bool>>(AccessTools.Method(typeof(Character), "reactToCharacter"));
+            AccessTools
+                .MethodDelegate<Action<Character, Character, Transform, bool>>(
+                    AccessTools.Method(typeof(Character), "reactToCharacter"));
 
         static bool Prefix(Character __instance, Collider _collider)
         {
-            if (_collider == null || !Threat.Enabled || NetEnemies.ClientMode || !__instance.isActive)
+            if (_collider == null || !Threat.Enabled || NetEnemies.ClientMode
+                || !__instance.isActive)
             {
                 return true;
             }
@@ -382,7 +458,8 @@ namespace DarkwoodMP.Combat
             {
                 if (Threat.Debug)
                 {
-                    Plugin.Log.LogInfo($"[threat] {c.name} (banshee) touched by {proxy.OwnerName}");
+                    Plugin.Log.LogInfo(
+                        $"[threat] {c.name} (banshee) touched by {proxy.OwnerName}");
                 }
                 c.initiateBansheeAttack();
                 return false;
@@ -391,7 +468,8 @@ namespace DarkwoodMP.Combat
             {
                 if (Threat.Debug)
                 {
-                    Plugin.Log.LogInfo($"[threat] {c.name} woken by {proxy.OwnerName} bumping into it");
+                    Plugin.Log.LogInfo(
+                        $"[threat] {c.name} woken by {proxy.OwnerName} bumping into it");
                 }
                 c.wakeup();
                 return false;
@@ -405,19 +483,26 @@ namespace DarkwoodMP.Combat
     }
 
     /// <summary>
-    /// Host: an enemy hit or bumped by a joiner reacts as it does to the host's player: it chases and attacks them,
-    /// instead of rolling its cowardice. The transpiler swaps reactToCharacter's GetComponent&lt;Player&gt;() test for
-    /// one that also accepts a proxy, and its attackPlayer() for an attack on whoever it reacted to.
+    /// Host: an enemy hit or bumped by a joiner reacts as it does to the host's
+    /// player: it chases and attacks them, instead of rolling its cowardice.
+    /// The transpiler swaps reactToCharacter's GetComponent&lt;Player&gt;()
+    /// test for one that also accepts a proxy, and its attackPlayer() for an
+    /// attack on whoever it reacted to.
     /// </summary>
     [HarmonyPatch(typeof(Character), "reactToCharacter")]
     static class ReactToJoinerPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions)
         {
-            var attackPlayer = AccessTools.Method(typeof(Character), nameof(Character.attackPlayer));
+            var attackPlayer = AccessTools.Method(
+                typeof(Character), nameof(Character.attackPlayer));
             var list = new List<CodeInstruction>(instructions);
-            int test = list.FindIndex(ci => ci.operand is MethodInfo m && m.Name == "GetComponent" && m.IsGenericMethod
-                                            && m.GetGenericArguments()[0] == typeof(Player));
+            int test = list.FindIndex(
+                ci => ci.operand is MethodInfo m && m.Name == "GetComponent"
+                    && m.IsGenericMethod
+                    && m.GetGenericArguments()[0]
+                        == typeof(Player));
             int call;
             if (test < 0)
             {
@@ -429,21 +514,37 @@ namespace DarkwoodMP.Combat
             }
             if (test < 0 || call < 0)
             {
-                Plugin.Log.LogWarning("ReactToJoinerPatch: no GetComponent<Player>() / attackPlayer() in reactToCharacter (game changed?); a joiner's hit still rolls cowardice");
+                Plugin.Log.LogWarning(
+                    "ReactToJoinerPatch: no GetComponent<Player>() / "
+                        + "attackPlayer() in reactToCharacter (game changed?); "
+                        + "a joiner's hit still rolls cowardice");
                 return list;
             }
-            list[test] = new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JoinerAi), nameof(JoinerAi.PlayerOrProxyOn))) { labels = list[test].labels };
+            list[test] = new CodeInstruction(
+                OpCodes.Call,
+                AccessTools.Method(
+                    typeof(JoinerAi), nameof(JoinerAi.PlayerOrProxyOn)))
+            {
+                labels = list[test].labels
+            };
             var labels = list[call].labels;
-            list[call] = new CodeInstruction(OpCodes.Call, AccessTools.Method(typeof(JoinerAi), nameof(JoinerAi.AttackWhoReacted)));
-            list.Insert(call, new CodeInstruction(OpCodes.Ldarg_2) { labels = labels });
+            list[call] = new CodeInstruction(
+                OpCodes.Call,
+                AccessTools.Method(
+                    typeof(JoinerAi), nameof(JoinerAi.AttackWhoReacted)));
+            list.Insert(call, new CodeInstruction(OpCodes.Ldarg_2)
+            {
+                labels = labels
+            });
             return list;
         }
     }
 
     /// <summary>
-    /// Host: an enemy that left its location doesn't jump back to its spawn point while a joiner is near it
-    /// (inSightOrCloseToPlayer only looks at the host's player). Line of sight to a proxy isn't checked, so a
-    /// joiner counts within 1500, more than the game's 1000 for the host's player.
+    /// Host: an enemy that left its location doesn't jump back to its spawn
+    /// point while a joiner is near it (inSightOrCloseToPlayer only looks at
+    /// the host's player). Line of sight to a proxy isn't checked, so a joiner
+    /// counts within 1500, more than the game's 1000 for the host's player.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.inSightOrCloseToPlayer))]
     static class NearJoinerPatch
@@ -457,7 +558,8 @@ namespace DarkwoodMP.Combat
             Vector3 me = __instance.transform.position;
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p != null && p.alive && !p.Away && Core.trueDistance(p.transform.position, me) < 1500f)
+                if (p != null && p.alive && !p.Away
+                    && Core.trueDistance(p.transform.position, me) < 1500f)
                 {
                     __result = true;
                     return;
@@ -466,51 +568,89 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Host: the forest spirit leaves when the player it chases goes indoors, not whenever the host does.</summary>
+    /// <summary>
+    /// Host: the forest spirit leaves when the player it chases goes indoors,
+    /// not whenever the host does.
+    /// </summary>
     [HarmonyPatch(typeof(Character), "checkStuff")]
     static class ForestSpiritIndoorsPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            JoinerAi.Swap(instructions, JoinerAi.HostField(AccessTools.Field(typeof(CharBase), nameof(CharBase.isInside))),
-                          AccessTools.Method(typeof(JoinerAi), nameof(JoinerAi.TargetIsInside)), "Character.checkStuff (forest spirit)");
-    }
-
-    /// <summary>Host: a defensive enemy that wakes up paths toward the player it has the most threat for, not always the host.</summary>
-    [HarmonyPatch(typeof(Character), "OnAniFinish")]
-    static class DefensiveWakeTargetPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            JoinerAi.Swap(instructions, JoinerAi.HostThen(AccessTools.PropertyGetter(typeof(Component), nameof(Component.transform))),
-                          AccessTools.Method(typeof(Threat), nameof(Threat.PursuitTarget)), "Character.OnAniFinish");
-    }
-
-    /// <summary>Host: a hatching spider joins the location it is in when a joiner, not the host, is the nearest player.</summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.onSpiderSpawn))]
-    static class SpiderHatchLocationPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions) =>
-            JoinerAi.Swap(instructions, JoinerAi.HostBigLocation, AccessTools.Method(typeof(JoinerAi), nameof(JoinerAi.HatchLocation)), "Character.onSpiderSpawn");
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            JoinerAi.Swap(
+                instructions, JoinerAi.HostField(
+                    AccessTools.Field(
+                        typeof(CharBase), nameof(CharBase.isInside))),
+                AccessTools.Method(
+                    typeof(JoinerAi), nameof(JoinerAi.TargetIsInside)),
+                "Character.checkStuff (forest spirit)");
     }
 
     /// <summary>
-    /// Host: a spawned character's activities (going to a location's doors, windows and so on, or to "the player")
-    /// use the hideout of the joiner it was sent at, or the location of the player it's after, not the host's.
+    /// Host: a defensive enemy that wakes up paths toward the player it has the
+    /// most threat for, not always the host.
     /// </summary>
-    [HarmonyPatch(typeof(Character.Activity), nameof(Character.Activity.assignTarget))]
+    [HarmonyPatch(typeof(Character), "OnAniFinish")]
+    static class DefensiveWakeTargetPatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            JoinerAi.Swap(
+                instructions, JoinerAi.HostThen(
+                    AccessTools.PropertyGetter(
+                        typeof(Component), nameof(Component.transform))),
+                AccessTools.Method(
+                    typeof(Threat), nameof(Threat.PursuitTarget)),
+                "Character.OnAniFinish");
+    }
+
+    /// <summary>
+    /// Host: a hatching spider joins the location it is in when a joiner, not
+    /// the host, is the nearest player.
+    /// </summary>
+    [HarmonyPatch(typeof(Character), nameof(Character.onSpiderSpawn))]
+    static class SpiderHatchLocationPatch
+    {
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions) =>
+            JoinerAi.Swap(
+                instructions, JoinerAi.HostBigLocation,
+                AccessTools.Method(
+                    typeof(JoinerAi), nameof(JoinerAi.HatchLocation)),
+                "Character.onSpiderSpawn");
+    }
+
+    /// <summary>
+    /// Host: a spawned character's activities (going to a location's doors,
+    /// windows and so on, or to "the player") use the hideout of the joiner it
+    /// was sent at, or the location of the player it's after, not the host's.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Character.Activity), nameof(Character.Activity.assignTarget))]
     static class SpawnedActivityTargetPatch
     {
-        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions)
         {
-            var l = JoinerAi.Swap(instructions, JoinerAi.HostBigLocation, AccessTools.Method(typeof(JoinerAi), nameof(JoinerAi.SpawnedLocation)),
-                                  "Character.Activity.assignTarget (location)", expected: 2);
-            return JoinerAi.Swap(l, JoinerAi.HostThen(AccessTools.PropertyGetter(typeof(Component), nameof(Component.gameObject))),
-                                 AccessTools.Method(typeof(JoinerAi), nameof(JoinerAi.ActivityPlayer)), "Character.Activity.assignTarget (player)");
+            var l = JoinerAi.Swap(
+                instructions, JoinerAi.HostBigLocation, AccessTools.Method(
+                    typeof(JoinerAi), nameof(JoinerAi.SpawnedLocation)),
+                "Character.Activity.assignTarget (location)", expected: 2);
+            return JoinerAi.Swap(
+                l, JoinerAi.HostThen(
+                    AccessTools.PropertyGetter(
+                        typeof(Component), nameof(Component.gameObject))),
+                AccessTools.Method(
+                    typeof(JoinerAi), nameof(JoinerAi.ActivityPlayer)),
+                "Character.Activity.assignTarget (player)");
         }
     }
 
     /// <summary>
-    /// Host: an enemy chasing a joiner into a location starts at the waypoint nearest them, as checkOutLocation does
-    /// for the host's player when it's inside. The prefix notes the joiner; gotoNextWaypoint then gets the waypoint.
+    /// Host: an enemy chasing a joiner into a location starts at the waypoint
+    /// nearest them, as checkOutLocation does for the host's player when it's
+    /// inside. The prefix notes the joiner; gotoNextWaypoint then gets the
+    /// waypoint.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.checkOutLocation))]
     static class CheckOutLocationJoinerPatch
@@ -525,7 +665,8 @@ namespace DarkwoodMP.Combat
                 return;
             }
             var proxy = JoinerAi.ProxyOf(__instance.superTarget);
-            if (proxy != null && proxy.alive && JoinerAi.InsideAt(proxy.transform.position))
+            if (proxy != null && proxy.alive
+                && JoinerAi.InsideAt(proxy.transform.position))
             {
                 Chased = proxy;
             }
@@ -548,7 +689,8 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            CheckOutLocationJoinerPatch.Chased = null; // only the call checkOutLocation makes
+            // only the call checkOutLocation makes
+            CheckOutLocationJoinerPatch.Chased = null;
             var loc = __instance.locationCheckingOut;
             if (loc == null)
             {
@@ -574,7 +716,10 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Host: the scripted brother's weak attack goes by the health of the player it is fighting.</summary>
+    /// <summary>
+    /// Host: the scripted brother's weak attack goes by the health of the
+    /// player it is fighting.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.checkBrotherWeakAttack))]
     static class BrotherWeakAttackPatch
     {
@@ -590,7 +735,8 @@ namespace DarkwoodMP.Combat
             {
                 max = Player.Instance.maxHealth;
             }
-            if (proxy.HealthPercent / 100f * max < 20f && __instance.attacks.Count >= 3)
+            if (proxy.HealthPercent / 100f * max < 20f
+                && __instance.attacks.Count >= 3)
             {
                 __instance.attacks[0].disabled = true;
                 __instance.attacks[1].disabled = true;

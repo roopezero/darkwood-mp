@@ -5,9 +5,10 @@ using UnityEngine;
 namespace DarkwoodMP.Sync
 {
     /// <summary>
-    /// What a player looks like right now: root transform plus every visible tk2d sprite in the
-    /// player's hierarchy, expressed relative to the root. Mirroring sprite ids directly means
-    /// weapons, clothing and every animation come across without syncing the animation state machine.
+    /// What a player looks like right now: root transform plus every visible
+    /// tk2d sprite in the player's hierarchy, expressed relative to the root.
+    /// Mirroring sprite ids directly means weapons, clothing and every
+    /// animation come across without syncing the animation state machine.
     /// </summary>
     public sealed class PlayerSnapshot
     {
@@ -21,7 +22,8 @@ namespace DarkwoodMP.Sync
             public Vector3 Pos;     // relative to player root
             public Quaternion Rot;  // relative to player root
             public Vector3 Scale;
-            public Vector3 SpriteScale; // tk2d mesh scale, separate from the transform
+            // tk2d mesh scale, separate from the transform
+            public Vector3 SpriteScale;
             public Color Color;
         }
 
@@ -29,52 +31,82 @@ namespace DarkwoodMP.Sync
         public float Time;
         public Vector3 Position;
         public Quaternion Rotation;
-        /// <summary>Alive and not dying: enemies leave a dead or dying player be.</summary>
+        /// <summary>
+        /// Alive and not dying: enemies leave a dead or dying player be.
+        /// </summary>
         public bool Alive = true;
-        /// <summary>Dead for good and watching the others (World.Spectator): not shown.</summary>
+        /// <summary>
+        /// Dead for good and watching the others (World.Spectator): not shown.
+        /// </summary>
         public bool Spectating;
         /// <summary>
-        /// The body's animation library (a weapon's, a held torch's...). Its sprites come from collections a game loads
-        /// only when its own player uses that item, so the others load it by this name to show them.
+        /// The body's animation library (a weapon's, a held torch's...). Its
+        /// sprites come from collections a game loads only when its own player
+        /// uses that item, so the others load it by this name to show them.
         /// </summary>
         public string Library = "";
-        /// <summary>The item type of the lit thing in hand (a torch, a lamp), whose light and flames the others show.</summary>
+        /// <summary>
+        /// The item type of the lit thing in hand (a torch, a lamp), whose
+        /// light and flames the others show.
+        /// </summary>
         public string HeldLight = "";
         /// <summary>
-        /// Where the held light's flames are, relative to the root (as the sprites' Pos). The game moves them to the
-        /// item's emitter position for each animation clip and frame (Player.ProcessAnims, InvItem.emitterPositions),
-        /// so a torch's flame sits on the torch in every facing; zero when nothing lit is in hand.
+        /// Where the held light's flames are, relative to the root (as the
+        /// sprites' Pos). The game moves them to the item's emitter position
+        /// for each animation clip and frame (Player.ProcessAnims,
+        /// InvItem.emitterPositions), so a torch's flame sits on the torch in
+        /// every facing; zero when nothing lit is in hand.
         /// </summary>
         public Vector3 HeldFlames;
         /// <summary>
-        /// The radius of the light around the player from a lantern worn on the hotbar (InvItemClass.checkForActiveSwitches
-        /// puts Player.lightDot in Controller.logicLights at the lantern's lightRadius); 0 when there's none. The others
-        /// light the area around the puppet with it, so the host's proxy counts as lit (Core.isInLight).
+        /// The radius of the light around the player from a lantern worn on the
+        /// hotbar (InvItemClass.checkForActiveSwitches puts Player.lightDot in
+        /// Controller.logicLights at the lantern's lightRadius); 0 when there's
+        /// none. The others light the area around the puppet with it, so the
+        /// host's proxy counts as lit (Core.isInLight).
         /// </summary>
         public float Lantern;
         /// <summary>The flashlight's beam is on.</summary>
         public bool Flashlight;
         /// <summary>
-        /// The beam's radius and brightness (the grey of its colour), which Player.processFlashlight works out each frame
-        /// from how far the mouse is; the others draw their copy of the beam with them. Zero when it's off.
+        /// The beam's radius and brightness (the grey of its colour), which
+        /// Player.processFlashlight works out each frame from how far the mouse
+        /// is; the others draw their copy of the beam with them. Zero when it's
+        /// off.
         /// </summary>
         public float BeamRadius, BeamBright;
         /// <summary>
-        /// What the host's enemies check about the player they look at, which only the player's own game knows:
-        /// invisible (the Chameleon skill, Player.setInvisible), the shadow ward and forest spirit ward effects, and the
-        /// Friend / Enemy of the Forest skills. The host puts them on the player's proxy.
+        /// What the host's enemies check about the player they look at, which
+        /// only the player's own game knows: invisible (the Chameleon skill,
+        /// Player.setInvisible), the shadow ward and forest spirit ward
+        /// effects, and the Friend / Enemy of the Forest skills. The host puts
+        /// them on the player's proxy.
         /// </summary>
-        public bool Invisible, ShadowWard, ForestSpiritWard, FriendOfTheForest, EnemyOfTheForest;
+        public bool Invisible,
+            ShadowWard,
+            ForestSpiritWard,
+            FriendOfTheForest,
+            EnemyOfTheForest;
         /// <summary>
-        /// In a separate location or a dream (OutsideLocations.playerInOutsideLocation, Dreams.dreaming): an area loaded
-        /// only in their own game, so the others don't show them where their coordinates are.
+        /// In a separate location or a dream
+        /// (OutsideLocations.playerInOutsideLocation, Dreams.dreaming): an area
+        /// loaded only in their own game, so the others don't show them where
+        /// their coordinates are.
         /// </summary>
         public bool Away;
-        /// <summary>In an after-night: in their hideout after dawn, with their game's clock stopped (Controller.isAfterNight).</summary>
+        /// <summary>
+        /// In an after-night: in their hideout after dawn, with their game's
+        /// clock stopped (Controller.isAfterNight).
+        /// </summary>
         public bool AfterNight;
-        /// <summary>Where, when Away: the location's name, or "dream:" and the dream's (World.Locations.Current).</summary>
+        /// <summary>
+        /// Where, when Away: the location's name, or "dream:" and the dream's
+        /// (World.Locations.Current).
+        /// </summary>
         public string Place = "";
-        /// <summary>Health as a percentage of the maximum (0 to 100), for the name tag.</summary>
+        /// <summary>
+        /// Health as a percentage of the maximum (0 to 100), for the name tag.
+        /// </summary>
         public byte Health = 100;
         public readonly List<SpriteState> Sprites = new List<SpriteState>(32);
 
@@ -204,7 +236,8 @@ namespace DarkwoodMP.Sync
                     Scale = pr.ReadVector3(),
                     SpriteScale = pr.ReadVector3(),
                 };
-                s.Color = new Color32(r.ReadByte(), r.ReadByte(), r.ReadByte(), r.ReadByte());
+                s.Color = new Color32(
+                    r.ReadByte(), r.ReadByte(), r.ReadByte(), r.ReadByte());
                 Sprites.Add(s);
             }
             byte more = r.ReadByte();
@@ -225,7 +258,9 @@ namespace DarkwoodMP.Sync
             w.Write(q.z);
             w.Write(q.w);
         }
-        private static Quaternion ReadRot(System.IO.BinaryReader r) => new Quaternion(r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
+        private static Quaternion ReadRot(System.IO.BinaryReader r) =>
+            new Quaternion(
+                r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
 
         public void CopyFrom(PlayerSnapshot o)
         {
@@ -268,12 +303,15 @@ namespace DarkwoodMP.Sync
         private bool _dumped;
 
         /// <summary>
-        /// The player object also carries the FOV/light rigs, the cursor, interaction prompts and progress bars.
-        /// Those are rendered by the lighting system or are local-only UI, so only the character's own art is mirrored:
-        /// torso (root sprite, includes held weapon frames), legs, and the drop shadow.
+        /// The player object also carries the FOV/light rigs, the cursor,
+        /// interaction prompts and progress bars.
+        /// Those are rendered by the lighting system or are local-only UI, so
+        /// only the character's own art is mirrored: torso (root sprite,
+        /// includes held weapon frames), legs, and the drop shadow.
         /// </summary>
         private static bool IsCharacterArt(string path) =>
-            path == "." || path == "PlayerLegs" || path.StartsWith("PlayerLegs/") || path == "Shadow";
+            path == "." || path == "PlayerLegs"
+                || path.StartsWith("PlayerLegs/") || path == "Shadow";
 
         public bool Capture(PlayerSnapshot snap)
         {
@@ -285,7 +323,8 @@ namespace DarkwoodMP.Sync
             var root = player.transform;
 
             // Children (held items, effects) come and go; rescan periodically.
-            if (_cachedRoot != player.gameObject || UnityEngine.Time.unscaledTime >= _nextRescan)
+            if (_cachedRoot != player.gameObject
+                || UnityEngine.Time.unscaledTime >= _nextRescan)
             {
                 _cachedRoot = player.gameObject;
                 var all = player.GetComponentsInChildren<tk2dBaseSprite>(true);
@@ -318,7 +357,8 @@ namespace DarkwoodMP.Sync
                         {
                             spriteName = definition.name;
                         }
-                        log.LogInfo($"[sprite] {text} path={path} layer={layer} " +
+                        log.LogInfo(
+                            $"[sprite] {text} path={path} layer={layer} " +
                                     $"active={active} coll={collectionName} sprite={spriteName}");
                     }
                     if (!ok)
@@ -339,7 +379,8 @@ namespace DarkwoodMP.Sync
             snap.Rotation = root.rotation;
             snap.Alive = player.alive && !player.dying;
             snap.Spectating = World.Spectator.Active;
-            if (player.torsoAnimator != null && player.torsoAnimator.Library != null)
+            if (player.torsoAnimator != null
+                && player.torsoAnimator.Library != null)
             {
                 snap.Library = player.torsoAnimator.Library.name;
             }
@@ -348,7 +389,8 @@ namespace DarkwoodMP.Sync
                 snap.Library = "";
             }
             var held = player.currentItem;
-            if (player.itemLightEmitter != null && !InvItemClass.isNull(held) && held.baseClass != null)
+            if (player.itemLightEmitter != null && !InvItemClass.isNull(held)
+                && held.baseClass != null)
             {
                 string heldLight = held.type;
                 if (heldLight == null)
@@ -372,7 +414,8 @@ namespace DarkwoodMP.Sync
             }
             var dot = player.lightDot;
             var ctl = Singleton<Controller>.Instance;
-            if (dot != null && dot.lightsPlayer && ctl != null && ctl.logicLights.Contains(dot))
+            if (dot != null && dot.lightsPlayer && ctl != null
+                && ctl.logicLights.Contains(dot))
             {
                 snap.Lantern = dot.LightRadius;
             }
@@ -417,24 +460,32 @@ namespace DarkwoodMP.Sync
             }
             snap.Invisible = player.invisible;
             var fx = player.effects;
-            snap.ShadowWard = fx != null && fx.hasEffectType(CharacterEffectType.shadowWard);
-            snap.ForestSpiritWard = fx != null && fx.hasEffectType(CharacterEffectType.forestSpiritWard);
-            snap.FriendOfTheForest = player.skills != null && player.skills.FriendOfTheForest;
-            snap.EnemyOfTheForest = player.skills != null && player.skills.EnemyOfTheForest;
+            snap.ShadowWard =
+                fx != null && fx.hasEffectType(CharacterEffectType.shadowWard);
+            snap.ForestSpiritWard = fx != null
+                && fx.hasEffectType(CharacterEffectType.forestSpiritWard);
+            snap.FriendOfTheForest =
+                player.skills != null && player.skills.FriendOfTheForest;
+            snap.EnemyOfTheForest =
+                player.skills != null && player.skills.EnemyOfTheForest;
             snap.Away = LocalAway();
             snap.AfterNight = World.AfterNight.Local;
             snap.Place = World.Locations.Current();
             int percent = 0;
             if (player.maxHealth > 0f)
             {
-                percent = Mathf.Clamp(Mathf.RoundToInt(player.health / player.maxHealth * 100f), 0, 100);
+                percent = Mathf.Clamp(
+                    Mathf.RoundToInt(player.health / player.maxHealth * 100f),
+                    0, 100);
             }
             snap.Health = (byte)percent;
             snap.Sprites.Clear();
-            for (int i = 0; i < _sprites.Length && snap.Sprites.Count < 255; i++)
+            for (int i = 0; i < _sprites.Length
+                && snap.Sprites.Count < 255; i++)
             {
                 var s = _sprites[i];
-                if (s == null || !s.gameObject.activeInHierarchy || s.Collection == null)
+                if (s == null || !s.gameObject.activeInHierarchy
+                    || s.Collection == null)
                 {
                     continue;
                 }
@@ -447,7 +498,8 @@ namespace DarkwoodMP.Sync
                 snap.Sprites.Add(new PlayerSnapshot.SpriteState
                 {
                     PathHash = _pathHashes[i],
-                    CollectionHash = StableHash.Of(s.Collection.spriteCollectionName),
+                    CollectionHash = StableHash.Of(
+                        s.Collection.spriteCollectionName),
                     SpriteId = s.spriteId,
                     SortingOrder = mr.sortingOrder,
                     Layer = s.gameObject.layer,
@@ -461,12 +513,15 @@ namespace DarkwoodMP.Sync
             return true;
         }
 
-        /// <summary>This game's player is in a separate location or a dream.</summary>
+        /// <summary>
+        /// This game's player is in a separate location or a dream.
+        /// </summary>
         public static bool LocalAway()
         {
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
-            return (o != null && o.playerInOutsideLocation) || (d != null && d.dreaming);
+            return (o != null && o.playerInOutsideLocation)
+                || (d != null && d.dreaming);
         }
 
         private static string PathOf(Transform t, Transform root)

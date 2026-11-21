@@ -11,28 +11,37 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// The story's state, shared: Darkwood keeps what has happened in Flags: named flags (a quest step done, a
-    /// door's key found, an NPC told something), each NPC's state (reputation, whether they want to talk, dead,
-    /// who attacked them) and which lines of each dialogue have been said. Talking to an NPC, trading with them,
-    /// finishing a quest or killing someone changes it in that player's game.
+    /// The story's state, shared: Darkwood keeps what has happened in Flags:
+    /// named flags (a quest step done, a door's key found, an NPC told
+    /// something), each NPC's state (reputation, whether they want to talk,
+    /// dead, who attacked them) and which lines of each dialogue have been
+    /// said. Talking to an NPC, trading with them, finishing a quest or killing
+    /// someone changes it in that player's game.
     ///
-    /// The journal goes with it: the story's entries, the notes read, keys and quest items found, the places found
-    /// on the map, and the directions to places. Another player's new entry is added here, with the game's own
-    /// "journal updated" popup for an entry, a note or a place (not for a place the game finds quietly, and not for
-    /// anything the game has no text for: JournalPopupTextPatch). An entry, note, key or item can also go: a dialogue's
-    /// removeItem takes a key or quest item the player hands over. That goes as the value "-", and the entry is
-    /// removed in the other games too. What a player picks up in a dream is marked inDream, and the game drops it
-    /// from the journal as the dream ends (Journal.clearDreamEntries). In a dream every game is in (SharedDream: the
-    /// prologue's stages, the level dreams) it's shared like the rest, still marked inDream, so the key to a door in
-    /// the dream opens it for everyone and every game drops it as its own dream ends; that drop isn't sent. In a
-    /// dream of one player's own it's theirs alone and isn't in the snapshot.
+    /// The journal goes with it: the story's entries, the notes read, keys and
+    /// quest items found, the places found on the map, and the directions to
+    /// places. Another player's new entry is added here, with the game's own
+    /// "journal updated" popup for an entry, a note or a place (not for a place
+    /// the game finds quietly, and not for anything the game has no text for:
+    /// JournalPopupTextPatch). An entry, note, key or item can also go: a
+    /// dialogue's removeItem takes a key or quest item the player hands over.
+    /// That goes as the value "-", and the entry is removed in the other games
+    /// too. What a player picks up in a dream is marked inDream, and the game
+    /// drops it from the journal as the dream ends (Journal.clearDreamEntries).
+    /// In a dream every game is in (SharedDream: the prologue's stages, the
+    /// level dreams) it's shared like the rest, still marked inDream, so the
+    /// key to a door in the dream opens it for everyone and every game drops it
+    /// as its own dream ends; that drop isn't sent. In a dream of one player's
+    /// own it's theirs alone and isn't in the snapshot.
     ///
-    /// Every two seconds each game looks for entries that changed since it last sent or got them, and sends those
-    /// (FlagsDelta: u16 n, n x (str key, str value)); the host applies a client's and passes them on. Flags are set
-    /// through the game's own setFlag. An NPC whose state says they died is killed where they're still alive.
-    /// Achievements stay each player's own.
+    /// Every two seconds each game looks for entries that changed since it last
+    /// sent or got them, and sends those (FlagsDelta: u16 n, n x (str key,
+    /// str value)); the host applies a client's and passes them on. Flags are
+    /// set through the game's own setFlag. An NPC whose state says they died is
+    /// killed where they're still alive. Achievements stay each player's own.
     ///
-    /// Numbers that more than one game changes at about the same time aren't sent whole:
+    /// Numbers that more than one game changes at about the same time aren't
+    /// sent whole:
     /// - An NPC's reputation ("r:" key) goes as the change ("+d"), so two trades close together both count. A
     ///   reputation not sent before goes whole ("=v"). The "n:" state is sent without it. Changes that every game
     ///   makes by itself aren't sent at all (Absorb): a shared scripted event's reputation step, and a trade, whose
@@ -45,21 +54,28 @@ namespace DarkwoodMP.World
     {
         public const float Interval = 2f;
         /// <summary>
-        /// The mod's own flags start with this (World.SharedTank's). The game's setFlag refuses a name that isn't in its
-        /// flag list, so they go straight into Flags.flagsDict (SetModFlag); Flags.SaveState saves every entry there,
-        /// so they're in the host's save and a joiner's snapshot, and the game itself never reads them.
+        /// The mod's own flags start with this (World.SharedTank's). The game's
+        /// setFlag refuses a name that isn't in its flag list, so they go
+        /// straight into Flags.flagsDict (SetModFlag); Flags.SaveState saves
+        /// every entry there, so they're in the host's save and a joiner's
+        /// snapshot, and the game itself never reads them.
         /// </summary>
         public const string ModPrefix = "dwmp_";
         public static FlagsSync Instance { get; private set; }
         private readonly Session _session;
-        /// <summary>The after-night reward each trader got, by name: the day and the amount.</summary>
-        private readonly Dictionary<string, KeyValuePair<int, int>> _rewards = new Dictionary<string, KeyValuePair<int, int>>();
+        /// <summary>
+        /// The after-night reward each trader got, by name: the day and the
+        /// amount.
+        /// </summary>
+        private readonly Dictionary<string, KeyValuePair<int, int>> _rewards =
+            new Dictionary<string, KeyValuePair<int, int>>();
         private Dictionary<string, string> _baseline;
         private int _baselineScene = -1; // the world (scene) the baseline is of
         private float _next;
 
         private static readonly AccessTools.FieldRef<Flags, Dictionary<string, Flags.Flag>> FlagsDict =
-            AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>("flagsDict");
+            AccessTools.FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
+                "flagsDict");
 
         public FlagsSync(Session session)
         {
@@ -75,20 +91,30 @@ namespace DarkwoodMP.World
         }
 
         private static bool Sharing =>
-            WorldShare.WorldReady && ((Session.Instance.IsHost && Session.Instance.Peers.Count > 0) || NetEnemies.ClientMode);
+            WorldShare.WorldReady
+                && ((Session.Instance.IsHost
+                        && Session.Instance.Peers.Count > 0)
+                    || NetEnemies.ClientMode);
 
         public void Update()
         {
             if (!Sharing)
             {
-                // A world being (re)loaded, another scene, or a host with nobody in: start again from what there is
-                // when sharing starts, since that's what the others load (reputation goes as changes, which must
-                // count from there). Any other pause (inputs forbidden while dead, dreaming, spectating, the couple
-                // of seconds after a load) keeps what was last sent, so the changes made meanwhile go when it
-                // resumes: a player dying sets player_diedAtLeastOneTime as its inputs are forbidden.
-                bool sameWorld = _baseline != null && Session.Instance != null && Session.Instance.Active && WorldShare.InWorld
-                                 && UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle == _baselineScene;
-                if (!sameWorld || WorldShare.Loading || (Session.Instance.IsHost && Session.Instance.Peers.Count == 0)
+                // A world being (re)loaded, another scene, or a host with
+                // nobody in: start again from what there is when sharing
+                // starts, since that's what the others load (reputation goes as
+                // changes, which must count from there). Any other pause
+                // (inputs forbidden while dead, dreaming, spectating, the
+                // couple of seconds after a load) keeps what was last sent, so
+                // the changes made meanwhile go when it resumes: a player dying
+                // sets player_diedAtLeastOneTime as its inputs are forbidden.
+                bool sameWorld = _baseline != null && Session.Instance != null
+                    && Session.Instance.Active && WorldShare.InWorld
+                    && UnityEngine.SceneManagement.SceneManager
+                        .GetActiveScene().handle == _baselineScene;
+                if (!sameWorld || WorldShare.Loading
+                    || (Session.Instance.IsHost
+                        && Session.Instance.Peers.Count == 0)
                     || !(Session.Instance.IsHost || NetEnemies.ClientMode))
                 {
                     _baseline = null;
@@ -102,7 +128,10 @@ namespace DarkwoodMP.World
             Flush();
         }
 
-        /// <summary>Send what changed now, not at the next two-second tick (a dialogue closing: TalkLock).</summary>
+        /// <summary>
+        /// Send what changed now, not at the next two-second tick (a dialogue
+        /// closing: TalkLock).
+        /// </summary>
         public void FlushNow()
         {
             if (Sharing)
@@ -122,7 +151,9 @@ namespace DarkwoodMP.World
             if (_baseline == null) // what we start from isn't news
             {
                 _baseline = now;
-                _baselineScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
+                _baselineScene =
+                    UnityEngine.SceneManagement.SceneManager
+                        .GetActiveScene().handle;
                 return;
             }
 
@@ -136,27 +167,36 @@ namespace DarkwoodMP.World
                 }
                 if (kv.Key.StartsWith("r:"))
                 {
-                    // Reputation: the change, so that changes made in two games add up.
-                    if (had && int.TryParse(was, out int w) && int.TryParse(kv.Value, out int v))
+                    // Reputation: the change, so that changes made in two games
+                    // add up.
+                    if (had && int.TryParse(was, out int w)
+                        && int.TryParse(kv.Value, out int v))
                     {
-                        changed.Add(new KeyValuePair<string, string>(kv.Key, "+" + (v - w)));
+                        changed.Add(
+                            new KeyValuePair<string, string>(
+                                kv.Key, "+" + (v - w)));
                     }
                     else
                     {
-                        changed.Add(new KeyValuePair<string, string>(kv.Key, "=" + kv.Value));
+                        changed.Add(
+                            new KeyValuePair<string, string>(
+                                kv.Key, "=" + kv.Value));
                     }
                     continue;
                 }
                 changed.Add(kv);
             }
             // Journal entries that went (handed over in a dialogue).
-            // Dream entries dropped as the dream ended aren't sent: every game drops its own.
+            // Dream entries dropped as the dream ended aren't sent: every game
+            // drops its own.
             bool shared = SharedDream;
             foreach (var kv in _baseline)
             {
-                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key) && (shared || !DreamEntry(kv.Value)))
+                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key)
+                    && (shared || !DreamEntry(kv.Value)))
                 {
-                    changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
+                    changed.Add(
+                        new KeyValuePair<string, string>(kv.Key, Removed));
                 }
             }
             _baseline = now;
@@ -169,9 +209,11 @@ namespace DarkwoodMP.World
         /// <summary>The value that says a journal entry was removed.</summary>
         private const string Removed = "-";
         /// <summary>
-        /// Whether our game is in a dream every game is in (DreamSync.Shared), so what's found in it is shared. Once
-        /// the dream ends here, it isn't. (Going from one prologue stage to the next isn't an end: the game keeps what
-        /// was found in the first stage until the dreaming ends, Dreams.endDreaming.)
+        /// Whether our game is in a dream every game is in (DreamSync.Shared),
+        /// so what's found in it is shared. Once the dream ends here, it isn't.
+        /// (Going from one prologue stage to the next isn't an end: the game
+        /// keeps what was found in the first stage until the dreaming ends,
+        /// Dreams.endDreaming.)
         /// </summary>
         internal static bool SharedDream
         {
@@ -182,13 +224,19 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Whether a journal entry's value (its JSON) is one found in a dream (inDream).</summary>
-        private static bool DreamEntry(string value) => value != null && value.Contains("\"inDream\":true");
+        /// <summary>
+        /// Whether a journal entry's value (its JSON) is one found in a dream
+        /// (inDream).
+        /// </summary>
+        private static bool DreamEntry(string value) =>
+            value != null && value.Contains("\"inDream\":true");
 
         /// <summary>
-        /// Client: our journal's key of this type, sent again (FlagsDelta) just before we unlock with it, on the same
-        /// ordered channel as the unlock request, so the host's check (WorldActions.HasKey) finds it even when the
-        /// two-second sending missed it or the host didn't take it then.
+        /// Client: our journal's key of this type, sent again (FlagsDelta) just
+        /// before we unlock with it, on the same ordered channel as the unlock
+        /// request, so the host's check (WorldActions.HasKey) finds it even
+        /// when the two-second sending missed it or the host didn't take it
+        /// then.
         /// </summary>
         internal void SendKey(string type)
         {
@@ -202,7 +250,8 @@ namespace DarkwoodMP.World
             {
                 j = instance.journal;
             }
-            if (j == null || !j.keysDict.TryGetValue(type, out var k) || k == null)
+            if (j == null || !j.keysDict.TryGetValue(type, out var k)
+                || k == null)
             {
                 return;
             }
@@ -215,10 +264,16 @@ namespace DarkwoodMP.World
             {
                 _baseline["jk:" + type] = json;
             }
-            Send(new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("jk:" + type, json) }, except: 0);
+            Send(new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>("jk:" + type, json)
+            }, except: 0);
         }
 
-        /// <summary>Our journal's entry for a "je:", "jn:", "jk:" or "ji:" key, as Snapshot writes it (null: none).</summary>
+        /// <summary>
+        /// Our journal's entry for a "je:", "jn:", "jk:" or "ji:" key, as
+        /// Snapshot writes it (null: none).
+        /// </summary>
         private static string OwnJournal(string key)
         {
             UI instance = Singleton<UI>.Instance;
@@ -268,11 +323,14 @@ namespace DarkwoodMP.World
         }
 
         private static bool IsRemovable(string key) =>
-            key.Length > 3 && key[0] == 'j' && key[2] == ':' && (key[1] == 'e' || key[1] == 'n' || key[1] == 'k' || key[1] == 'i');
+            key.Length > 3 && key[0] == 'j' && key[2] == ':'
+                && (key[1] == 'e' || key[1] == 'n' || key[1] == 'k'
+                    || key[1] == 'i');
 
         /// <summary>
-        /// A change to this NPC's reputation that every game makes by itself, or that another message carries: it
-        /// isn't sent as a change. Call it in the same frame as the change.
+        /// A change to this NPC's reputation that every game makes by itself,
+        /// or that another message carries: it isn't sent as a change. Call it
+        /// in the same frame as the change.
         /// </summary>
         public void Absorb(string npc, int delta)
         {
@@ -280,13 +338,16 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (_baseline.TryGetValue("r:" + npc, out var was) && int.TryParse(was, out int w))
+            if (_baseline.TryGetValue("r:" + npc, out var was)
+                && int.TryParse(was, out int w))
             {
                 _baseline["r:" + npc] = (w + delta).ToString();
             }
         }
 
-        /// <summary>Change this NPC's reputation here, without sending the change.</summary>
+        /// <summary>
+        /// Change this NPC's reputation here, without sending the change.
+        /// </summary>
         internal void AddReputation(string npc, int delta)
         {
             Flags instance = Singleton<Flags>.Instance;
@@ -305,8 +366,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// This game gave a trader the after-night reward (Controller.startAfterNight; already absorbed). It counts
-        /// once a day: if another game's for today came first, ours is taken back; otherwise it goes to the others.
+        /// This game gave a trader the after-night reward
+        /// (Controller.startAfterNight; already absorbed). It counts once a
+        /// day: if another game's for today came first, ours is taken back;
+        /// otherwise it goes to the others.
         /// </summary>
         internal void LocalReward(string trader, int day, int amount)
         {
@@ -317,25 +380,36 @@ namespace DarkwoodMP.World
             if (_rewards.TryGetValue(trader, out var had) && had.Key == day)
             {
                 AddReputation(trader, -amount);
-                Plugin.Log.LogInfo($"[world] {trader} already got day {day}'s after-night reward ({had.Value}) in another game: ours ({amount}) taken back");
+                Plugin.Log.LogInfo(
+                    $"[world] {trader} already got day {day}'s after-night reward ({had.Value}) in another game: ours ({amount}) taken back");
                 return;
             }
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
-            Plugin.Log.LogInfo($"[world] {trader}'s after-night reward for day {day}: {amount}, sent to the others");
-            Send(new List<KeyValuePair<string, string>> { new KeyValuePair<string, string>("ra:" + trader, $"{day}|{amount}") }, except: 0);
+            Plugin.Log.LogInfo(
+                $"[world] {trader}'s after-night reward for day {day}: {amount}, sent to the others");
+            Send(new List<KeyValuePair<string, string>>
+            {
+                new KeyValuePair<string, string>(
+                    "ra:" + trader, $"{day}|{amount}")
+            }, except: 0);
         }
 
-        /// <summary>Another game's after-night reward for a trader. Returns whether the host passes it on.</summary>
+        /// <summary>
+        /// Another game's after-night reward for a trader. Returns whether the
+        /// host passes it on.
+        /// </summary>
         private bool ApplyReward(string trader, string value)
         {
             var parts = value.Split('|');
             int day = int.Parse(parts[0]), amount = int.Parse(parts[1]);
-            bool had = _rewards.TryGetValue(trader, out var was) && was.Key == day;
+            bool had =
+                _rewards.TryGetValue(trader, out var was) && was.Key == day;
             if (_session.IsHost)
             {
                 if (had)
                 {
-                    Plugin.Log.LogInfo($"[world] {trader} already got day {day}'s after-night reward: another one ({amount}) not given");
+                    Plugin.Log.LogInfo(
+                        $"[world] {trader} already got day {day}'s after-night reward: another one ({amount}) not given");
                     return false;
                 }
                 AddReputation(trader, amount);
@@ -351,39 +425,54 @@ namespace DarkwoodMP.World
                 {
                     delta = amount;
                 }
-                AddReputation(trader, delta); // the host's is the one that counts
+                // the host's is the one that counts
+                AddReputation(trader, delta);
             }
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
-            Plugin.Log.LogInfo($"[world] {trader}'s after-night reward for day {day}: {amount}");
+            Plugin.Log.LogInfo(
+                $"[world] {trader}'s after-night reward for day {day}: {amount}");
             return true;
         }
 
         /// <summary>
-        /// Flags about this game's own player, which each game keeps for itself (not sent, and another game's not
-        /// taken): where the player is (PlayersPlace) and which one-time help popups this player has seen (PlayersPopup).
+        /// Flags about this game's own player, which each game keeps for itself
+        /// (not sent, and another game's not taken): where the player is
+        /// (PlayersPlace) and which one-time help popups this player has seen
+        /// (PlayersPopup).
         /// </summary>
-        public static bool PlayersOwn(string flag) => PlayersPlace(flag) || PlayersPopup(flag);
+        public static bool PlayersOwn(string flag) =>
+            PlayersPlace(flag) || PlayersPopup(flag);
 
         /// <summary>
-        /// Where this game's own player is: WhereAmI.checkWhereAmI sets player_inFirstHideout (second, third) every
-        /// time it looks, true only while the player is at that hideout. Two players at different places would
-        /// otherwise overwrite each other's every two seconds.
+        /// Where this game's own player is: WhereAmI.checkWhereAmI sets
+        /// player_inFirstHideout (second, third) every time it looks, true only
+        /// while the player is at that hideout. Two players at different places
+        /// would otherwise overwrite each other's every two seconds.
         /// </summary>
         public static bool PlayersPlace(string flag) =>
-            flag == "player_inFirstHideout" || flag == "player_inSecondHideout" || flag == "player_inThirdHideout";
+            flag == "player_inFirstHideout"
+                || flag == "player_inSecondHideout"
+                || flag == "player_inThirdHideout";
 
         /// <summary>
-        /// The game's one-time help popups, each shown on this game's screen and then marked as seen: the secondary
-        /// attack hint the first time the player takes a melee weapon in hand (Player.onDoneSwitchingItem), the map
-        /// hint (Map), the active skill hint (SkillsMenu.tryShowActiveSkillsHelpPopup), and the reload hint the first
-        /// time something that can be reloaded runs out (InvItemClass.drainDurability, player_firstDrainReloadableItem).
-        /// The game reads them only to decide whether to show that popup, so another player having seen it says nothing
-        /// about ours: sharing them would hide a hint from a player who never saw it. (A joiner starts with the host's,
-        /// which came with the host's save: what a joiner's game marks seen isn't kept with their character.)
+        /// The game's one-time help popups, each shown on this game's screen
+        /// and then marked as seen: the secondary attack hint the first time
+        /// the player takes a melee weapon in hand
+        /// (Player.onDoneSwitchingItem), the map hint (Map), the active skill
+        /// hint (SkillsMenu.tryShowActiveSkillsHelpPopup), and the reload hint
+        /// the first time something that can be reloaded runs out
+        /// (InvItemClass.drainDurability, player_firstDrainReloadableItem). The
+        /// game reads them only to decide whether to show that popup, so
+        /// another player having seen it says nothing about ours: sharing them
+        /// would hide a hint from a player who never saw it. (A joiner starts
+        /// with the host's, which came with the host's save: what a joiner's
+        /// game marks seen isn't kept with their character.)
         /// </summary>
         public static bool PlayersPopup(string flag) =>
-            flag == "player_shownSecondaryAttackPopup" || flag == "player_shownMapPopup" || flag == "player_shownActiveSkillPopup"
-            || flag == "player_firstDrainReloadableItem";
+            flag == "player_shownSecondaryAttackPopup"
+                || flag == "player_shownMapPopup"
+                || flag == "player_shownActiveSkillPopup"
+                || flag == "player_firstDrainReloadableItem";
 
         private static Dictionary<string, string> Snapshot(bool host)
         {
@@ -417,7 +506,8 @@ namespace DarkwoodMP.World
             {
                 if (dl != null)
                 {
-                    d["d:" + dl.name] = JsonConvert.SerializeObject(new CharacterDialogue.SaveState(dl));
+                    d["d:" + dl.name] = JsonConvert.SerializeObject(
+                        new CharacterDialogue.SaveState(dl));
                 }
             }
             UI instance = Singleton<UI>.Instance;
@@ -428,7 +518,9 @@ namespace DarkwoodMP.World
             }
             if (j != null)
             {
-                bool dream = SharedDream; // what's found in a dream: only a shared dream's (see the class)
+                // what's found in a dream: only a shared dream's (see the
+                // class)
+                bool dream = SharedDream;
                 foreach (var e in j.journalEntriesDict.Values)
                 {
                     if (e != null && (dream || !e.inDream))
@@ -465,14 +557,18 @@ namespace DarkwoodMP.World
                 {
                     if (e != null && e.locationName != null)
                     {
-                        d["jd:" + e.locationName] = JsonConvert.SerializeObject(e);
+                        d["jd:" + e.locationName] =
+                            JsonConvert.SerializeObject(e);
                     }
                 }
             }
             return d;
         }
 
-        /// <summary>An NPC's "n:" value: its state as JSON, without the reputation (that goes as "r:").</summary>
+        /// <summary>
+        /// An NPC's "n:" value: its state as JSON, without the reputation (that
+        /// goes as "r:").
+        /// </summary>
         private static string NpcJson(Flags.NPCState n)
         {
             var jo = JObject.FromObject(n);
@@ -480,29 +576,42 @@ namespace DarkwoodMP.World
             return jo.ToString(Formatting.None);
         }
 
-        /// <summary>Host: what the story was in the frame the last joiner's snapshot was read (null: not known).</summary>
+        /// <summary>
+        /// Host: what the story was in the frame the last joiner's snapshot was
+        /// read (null: not known).
+        /// </summary>
         private static Dictionary<string, string> _atSnapshot;
 
         /// <summary>
-        /// Host, in the frame the world is read for a joiner's snapshot: the story as the snapshot has it. What changes
-        /// after that, while the joiner downloads and loads it, reaches the joiner no other way: FlagsDelta is taken
-        /// only by games in the world (a loading one drops it), and with nobody in yet nothing is sent at all, the
-        /// first look after the joiner is let in taking what there is then as known. JoinerInWorld sends the difference.
+        /// Host, in the frame the world is read for a joiner's snapshot: the
+        /// story as the snapshot has it. What changes after that, while the
+        /// joiner downloads and loads it, reaches the joiner no other way:
+        /// FlagsDelta is taken only by games in the world (a loading one drops
+        /// it), and with nobody in yet nothing is sent at all, the first look
+        /// after the joiner is let in taking what there is then as known.
+        /// JoinerInWorld sends the difference.
         /// </summary>
         public static void NoteSnapshot()
         {
             _atSnapshot = Snapshot(true);
             SnapshotNoted++;
         }
-        /// <summary>How many snapshots' story was noted (for the tests).</summary>
+        /// <summary>
+        /// How many snapshots' story was noted (for the tests).
+        /// </summary>
         internal static int SnapshotNoted;
 
-        /// <summary>Host: the world offered to joiners isn't a snapshot (LiveWorld off: the last save).</summary>
+        /// <summary>
+        /// Host: the world offered to joiners isn't a snapshot (LiveWorld off:
+        /// the last save).
+        /// </summary>
         public static void ForgetSnapshot() => _atSnapshot = null;
 
         /// <summary>
-        /// Host: a joiner is in the world it loaded (it asked for its character). Every story entry that changed since
-        /// its snapshot is sent to that joiner alone (FlagsDelta; reputation whole, "=v"; entries handed over, "-").
+        /// Host: a joiner is in the world it loaded (it asked for its
+        /// character). Every story entry that changed since its snapshot is
+        /// sent to that joiner alone (FlagsDelta; reputation whole, "=v";
+        /// entries handed over, "-").
         /// </summary>
         public void JoinerInWorld(ulong who)
         {
@@ -518,7 +627,8 @@ namespace DarkwoodMP.World
             var changed = new List<KeyValuePair<string, string>>();
             foreach (var kv in now)
             {
-                if (_atSnapshot.TryGetValue(kv.Key, out var was) && was == kv.Value)
+                if (_atSnapshot.TryGetValue(kv.Key, out var was)
+                    && was == kv.Value)
                 {
                     continue;
                 }
@@ -533,12 +643,16 @@ namespace DarkwoodMP.World
                 }
                 changed.Add(new KeyValuePair<string, string>(kv.Key, stored));
             }
-            bool shared = SharedDream; // as Flush: a dream entry the game dropped as the dream ended isn't sent
+            // as Flush: a dream entry the game dropped as the dream ended isn't
+            // sent
+            bool shared = SharedDream;
             foreach (var kv in _atSnapshot)
             {
-                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key) && (shared || !DreamEntry(kv.Value)))
+                if (IsRemovable(kv.Key) && !now.ContainsKey(kv.Key)
+                    && (shared || !DreamEntry(kv.Value)))
                 {
-                    changed.Add(new KeyValuePair<string, string>(kv.Key, Removed));
+                    changed.Add(
+                        new KeyValuePair<string, string>(kv.Key, Removed));
                 }
             }
             if (changed.Count == 0)
@@ -553,10 +667,13 @@ namespace DarkwoodMP.World
             {
                 more = ", ...";
             }
-            Plugin.Log.LogInfo($"{name} is in the world: {changed.Count} story changes since their snapshot sent to them ({keys}{more})");
+            Plugin.Log.LogInfo(
+                $"{name} is in the world: {changed.Count} story changes since their snapshot sent to them ({keys}{more})");
         }
 
-        private void Send(List<KeyValuePair<string, string>> entries, ulong except, ulong to = 0)
+        private void Send(
+            List<KeyValuePair<string, string>> entries, ulong except,
+            ulong to = 0)
         {
             // In chunks, to keep each message well under any size limit.
             for (int start = 0; start < entries.Count; start += 64)
@@ -575,7 +692,8 @@ namespace DarkwoodMP.World
                 }
                 else if (_session.IsHost)
                 {
-                    _session.Broadcast(w, Channel.Control, reliable: true, except: except);
+                    _session.Broadcast(
+                        w, Channel.Control, reliable: true, except: except);
                 }
                 else
                 {
@@ -584,7 +702,8 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent {entries.Count} story changes: {string.Join(", ", entries.ConvertAll(e => e.Key))}");
+                Plugin.Log.LogInfo(
+                    $"[world] sent {entries.Count} story changes: {string.Join(", ", entries.ConvertAll(e => e.Key))}");
             }
         }
 
@@ -602,7 +721,8 @@ namespace DarkwoodMP.World
             var got = new List<KeyValuePair<string, string>>();
             for (int i = 0; i < n; i++)
             {
-                got.Add(new KeyValuePair<string, string>(r.ReadStr(), r.ReadStr()));
+                got.Add(
+                    new KeyValuePair<string, string>(r.ReadStr(), r.ReadStr()));
             }
             var relay = new List<KeyValuePair<string, string>>();
             foreach (var kv in got)
@@ -622,7 +742,8 @@ namespace DarkwoodMP.World
                     {
                         pass = false; // karma is the host's
                     }
-                    else if (_session.IsHost && kv.Key.StartsWith("n:") && !DeathOk(from, kv.Key.Substring(2), kv.Value))
+                    else if (_session.IsHost && kv.Key.StartsWith("n:")
+                        && !DeathOk(from, kv.Key.Substring(2), kv.Value))
                     {
                         pass = false;
                     }
@@ -637,9 +758,12 @@ namespace DarkwoodMP.World
                             }
                             else if (IsRemovable(kv.Key))
                             {
-                                // A journal entry: what our journal has now, which can differ from theirs (one we
-                                // had already, made by our own game). Taking theirs as the baseline would send ours
-                                // back at every look, and theirs again, for good. One we didn't take isn't ours to send.
+                                // A journal entry: what our journal has now,
+                                // which can differ from theirs (one we had
+                                // already, made by our own game). Taking theirs
+                                // as the baseline would send ours back at every
+                                // look, and theirs again, for good. One we
+                                // didn't take isn't ours to send.
                                 string own = OwnJournal(kv.Key);
                                 if (own != null)
                                 {
@@ -652,14 +776,16 @@ namespace DarkwoodMP.World
                             }
                             else
                             {
-                                _baseline[kv.Key] = kv.Value; // known now; not ours to send back
+                                // known now; not ours to send back
+                                _baseline[kv.Key] = kv.Value;
                             }
                         }
                     }
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't apply {kv.Key}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't apply {kv.Key}: {e.Message}");
                 }
                 if (pass)
                 {
@@ -676,7 +802,8 @@ namespace DarkwoodMP.World
                     }
                     return e.Key;
                 });
-                Plugin.Log.LogInfo($"[world] got {got.Count} story changes: {string.Join(", ", changes)}");
+                Plugin.Log.LogInfo(
+                    $"[world] got {got.Count} story changes: {string.Join(", ", changes)}");
             }
             if (_session.IsHost && relay.Count > 0)
             {
@@ -684,10 +811,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Host: NPCs whose death a joiner's NpcDied showed us just now (WorldActions), and when.</summary>
-        private readonly Dictionary<string, float> _deathsAllowed = new Dictionary<string, float>();
+        /// <summary>
+        /// Host: NPCs whose death a joiner's NpcDied showed us just now
+        /// (WorldActions), and when.
+        /// </summary>
+        private readonly Dictionary<string, float> _deathsAllowed =
+            new Dictionary<string, float>();
 
-        /// <summary>Host: a joiner killed this NPC and we checked it (their NpcDied request was allowed).</summary>
+        /// <summary>
+        /// Host: a joiner killed this NPC and we checked it (their NpcDied
+        /// request was allowed).
+        /// </summary>
         internal void DeathAllowed(string npc)
         {
             if (!string.IsNullOrEmpty(npc))
@@ -697,11 +831,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: checks a joiner's NPC state against our NPC's death. A player's kill reaches us first as an
-        /// NpcDied request, which we check (reach, the NPC here) and which kills our copy; a dead state that didn't
-        /// come that way isn't taken (or any client could kill any NPC everywhere). Nothing in the game brings a dead
-        /// NPC back, so a state that says alive over our dead one is out of date (sent before our death reached
-        /// them) and isn't taken either. Either way the sender gets our state back.
+        /// Host: checks a joiner's NPC state against our NPC's death. A
+        /// player's kill reaches us first as an NpcDied request, which we check
+        /// (reach, the NPC here) and which kills our copy; a dead state that
+        /// didn't come that way isn't taken (or any client could kill any NPC
+        /// everywhere). Nothing in the game brings a dead NPC back, so a state
+        /// that says alive over our dead one is out of date (sent before our
+        /// death reached them) and isn't taken either. Either way the sender
+        /// gets our state back.
         /// </summary>
         private bool DeathOk(ulong from, string npc, string value)
         {
@@ -733,11 +870,13 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            if (_deathsAllowed.TryGetValue(npc, out float t) && UnityEngine.Time.unscaledTime - t < 30f)
+            if (_deathsAllowed.TryGetValue(npc, out float t)
+                && UnityEngine.Time.unscaledTime - t < 30f)
             {
                 return true;
             }
-            Plugin.Log.LogInfo($"[authority] refused {_session.NameOf(from)}'s state of {npc}: dead, but no kill of theirs was allowed here");
+            Plugin.Log.LogInfo(
+                $"[authority] refused {_session.NameOf(from)}'s state of {npc}: dead, but no kill of theirs was allowed here");
             SendNpcState(from, npc, st);
             return false;
         }
@@ -755,7 +894,10 @@ namespace DarkwoodMP.World
             _session.SendTo(to, w, Channel.Control, reliable: true);
         }
 
-        /// <summary>Another game's reputation change ("+d"), or a reputation sent whole ("=v").</summary>
+        /// <summary>
+        /// Another game's reputation change ("+d"), or a reputation sent whole
+        /// ("=v").
+        /// </summary>
         private void ApplyReputation(string npc, string value)
         {
             var st = Singleton<Flags>.Instance.getNPCState(npc);
@@ -801,7 +943,8 @@ namespace DarkwoodMP.World
                     var parts = value.Split('|');
                     if (name.StartsWith(ModPrefix))
                     {
-                        SetModFlag(f, name, bool.Parse(parts[0]), int.Parse(parts[1]));
+                        SetModFlag(
+                            f, name, bool.Parse(parts[0]), int.Parse(parts[1]));
                         break;
                     }
                     f.setFlag(name, bool.Parse(parts[0]));
@@ -812,7 +955,10 @@ namespace DarkwoodMP.World
                     bool wasDead = state != null && state.dead;
                     if (state == null)
                     {
-                        f.npcStates.Add(state = JsonConvert.DeserializeObject<Flags.NPCState>(value));
+                        f.npcStates.Add(
+                            state =
+                                JsonConvert.DeserializeObject<Flags.NPCState>(
+                                    value));
                     }
                     else
                     {
@@ -828,14 +974,20 @@ namespace DarkwoodMP.World
                     var dialogue = f.getDialogue(name);
                     if (dialogue != null)
                     {
-                        JsonConvert.DeserializeObject<CharacterDialogue.SaveState>(value).loadValues(dialogue);
+                        JsonConvert
+                            .DeserializeObject<CharacterDialogue.SaveState>(
+                                value).loadValues(dialogue);
                     }
                     break;
             }
         }
 
-        /// <summary>Set one of the mod's own flags (ModPrefix) in Flags.flagsDict, which the game's setFlag won't take.</summary>
-        internal static void SetModFlag(Flags f, string name, bool on, int amount)
+        /// <summary>
+        /// Set one of the mod's own flags (ModPrefix) in Flags.flagsDict, which
+        /// the game's setFlag won't take.
+        /// </summary>
+        internal static void SetModFlag(
+            Flags f, string name, bool on, int amount)
         {
             if (!f.flagsDict.TryGetValue(name, out var flag) || flag == null)
             {
@@ -845,7 +997,10 @@ namespace DarkwoodMP.World
             flag.amount = amount;
         }
 
-        /// <summary>The trade window with this NPC is open: its reputation label shows the new value at once.</summary>
+        /// <summary>
+        /// The trade window with this NPC is open: its reputation label shows
+        /// the new value at once.
+        /// </summary>
         private static void RefreshReputation(string npc)
         {
             NPC talked = null;
@@ -853,7 +1008,9 @@ namespace DarkwoodMP.World
             {
                 talked = Player.Instance.talkedToNPC;
             }
-            if (talked == null || talked.name != npc || talked.inventory == null || talked.inventory.reputationText == null)
+            if (talked == null || talked.name != npc
+                || talked.inventory == null
+                || talked.inventory.reputationText == null)
             {
                 return;
             }
@@ -867,13 +1024,15 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't refresh {npc}'s reputation: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't refresh {npc}'s reputation: {e.Message}");
             }
         }
 
         /// <summary>
-        /// A place another player found (walking into it, or reading a map: Location.discoverMe) is shown on our map
-        /// too, as discoverMe shows it on theirs: Map.showElement on the location's MapElement.
+        /// A place another player found (walking into it, or reading a map:
+        /// Location.discoverMe) is shown on our map too, as discoverMe shows it
+        /// on theirs: Map.showElement on the location's MapElement.
         /// </summary>
         private static void ShowOnMap(string name)
         {
@@ -903,11 +1062,15 @@ namespace DarkwoodMP.World
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't show {name} on the map: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't show {name} on the map: {e.Message}");
             }
         }
 
-        /// <summary>Another player's new journal entry: added here if it isn't yet (removed, for "-").</summary>
+        /// <summary>
+        /// Another player's new journal entry: added here if it isn't yet
+        /// (removed, for "-").
+        /// </summary>
         private static void ApplyJournal(char kind, string name, string value)
         {
             UI instance = Singleton<UI>.Instance;
@@ -932,14 +1095,17 @@ namespace DarkwoodMP.World
                 };
                 if (gone)
                 {
-                    Plugin.Log.LogInfo($"Journal: another player no longer has {name} (handed over): removed here too");
+                    Plugin.Log.LogInfo(
+                        $"Journal: another player no longer has {name} (handed over): removed here too");
                 }
                 return;
             }
             if (kind != 'l' && kind != 'd' && DreamEntry(value) && !SharedDream)
             {
-                // Found in a shared dream that has ended here (or not begun): the game would never drop it.
-                Plugin.Log.LogInfo($"Journal: another player's {name} from a dream we aren't in: not taken");
+                // Found in a shared dream that has ended here (or not begun):
+                // the game would never drop it.
+                Plugin.Log.LogInfo(
+                    $"Journal: another player's {name} from a dream we aren't in: not taken");
                 return;
             }
             string popup = null;
@@ -950,7 +1116,9 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
-                    j.journalEntriesDict[name] = JsonConvert.DeserializeObject<Journal.JournalEntry>(value);
+                    j.journalEntriesDict[name] =
+                        JsonConvert.DeserializeObject<Journal.JournalEntry>(
+                            value);
                     popup = "JournalEntry";
                     break;
                 case 'n':
@@ -958,7 +1126,8 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
-                    j.notesDict[name] = JsonConvert.DeserializeObject<Journal.Note>(value);
+                    j.notesDict[name] =
+                        JsonConvert.DeserializeObject<Journal.Note>(value);
                     popup = "Note";
                     break;
                 case 'k':
@@ -966,14 +1135,16 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
-                    j.keysDict[name] = JsonConvert.DeserializeObject<Journal.Key>(value);
+                    j.keysDict[name] =
+                        JsonConvert.DeserializeObject<Journal.Key>(value);
                     break;
                 case 'i':
                     if (j.itemsDict.ContainsKey(name))
                     {
                         return;
                     }
-                    j.itemsDict[name] = JsonConvert.DeserializeObject<Journal.Item>(value);
+                    j.itemsDict[name] =
+                        JsonConvert.DeserializeObject<Journal.Item>(value);
                     break;
                 case 'l':
                     if (j.locationsDict.ContainsKey(name))
@@ -992,12 +1163,16 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
-                    j.locationDirections.Add(JsonConvert.DeserializeObject<Journal.LocationDirection>(value));
+                    j.locationDirections.Add(
+                        JsonConvert
+                            .DeserializeObject<Journal.LocationDirection>(
+                                value));
                     break;
                 default:
                     return;
             }
-            Plugin.Log.LogInfo($"Journal: another player's {kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
+            Plugin.Log.LogInfo(
+                $"Journal: another player's {kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
             if (popup != null && WorldShare.WorldReady)
             {
                 try
@@ -1006,18 +1181,21 @@ namespace DarkwoodMP.World
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't show the journal popup for {name}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't show the journal popup for {name}: {e.Message}");
                 }
             }
         }
 
-        /// <summary>Whether the game finds this place without a popup (Location.discoverMe): it's marked
-        /// noDiscoverPopup, or it counts as found from the start.</summary>
+        /// <summary>Whether the game finds this place without a popup
+        /// (Location.discoverMe): it's marked noDiscoverPopup, or it counts as
+        /// found from the start.</summary>
         private static bool QuietPlace(string name)
         {
             foreach (var loc in Resources.FindObjectsOfTypeAll<Location>())
             {
-                if (loc != null && Core.getTrueLocationName(loc.name) == name && (loc.noDiscoverPopup || loc.discoveredOnStart))
+                if (loc != null && Core.getTrueLocationName(loc.name) == name
+                    && (loc.noDiscoverPopup || loc.discoveredOnStart))
                 {
                     return true;
                 }
@@ -1026,10 +1204,13 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Someone killed this NPC in their game: it dies here too, if it's still alive. Several copies of a story
-        /// NPC can stand at once (the wolfman as a trader in more than one place, and as a night attacker); the one
-        /// that died has the save id in deadID (Character.die), so when every game knows that id only that copy
-        /// dies. The game itself removes the other copies only as they next start (NPC.Start, onlyOneInstance).
+        /// Someone killed this NPC in their game: it dies here too, if it's
+        /// still alive. Several copies of a story NPC can stand at once (the
+        /// wolfman as a trader in more than one place, and as a night
+        /// attacker); the one that died has the save id in deadID
+        /// (Character.die), so when every game knows that id only that copy
+        /// dies. The game itself removes the other copies only as they next
+        /// start (NPC.Start, onlyOneInstance).
         /// </summary>
         private static void KillNpc(string name, int deadId)
         {
@@ -1053,12 +1234,15 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                // A copy of one the host runs as an enemy dies with the host's state (Combat.NetEnemies).
-                if (Combat.NetEnemies.Instance != null && Combat.NetEnemies.Instance.IsPuppet(c, out _))
+                // A copy of one the host runs as an enemy dies with the host's
+                // state (Combat.NetEnemies).
+                if (Combat.NetEnemies.Instance != null
+                    && Combat.NetEnemies.Instance.IsPuppet(c, out _))
                 {
                     continue;
                 }
-                Plugin.Log.LogInfo($"{name} was killed in another player's game");
+                Plugin.Log.LogInfo(
+                    $"{name} was killed in another player's game");
                 WorldActions.Replaying = true;
                 try
                 {
@@ -1073,13 +1257,17 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// The "journal updated" popup (Journal.showJournalInfoPopup) shows the game's text for what was found, looked up
-    /// by its name. When the game has no text for that name, Language.Get gives back the bare name, and the popup
-    /// would say something like "Location found: place_10". This happens for some small places in the game itself,
-    /// and for a place, entry or note another player found (FlagsSync), so such a popup isn't shown at all; what was
-    /// found is still added to the journal.
+    /// The "journal updated" popup (Journal.showJournalInfoPopup) shows the
+    /// game's text for what was found, looked up by its name. When the game has
+    /// no text for that name, Language.Get gives back the bare name, and the
+    /// popup would say something like "Location found: place_10". This happens
+    /// for some small places in the game itself, and for a place, entry or note
+    /// another player found (FlagsSync), so such a popup isn't shown at all;
+    /// what was found is still added to the journal.
     /// </summary>
-    [HarmonyPatch(typeof(Journal), nameof(Journal.showJournalInfoPopup), new[] { typeof(string), typeof(string) })]
+    [HarmonyPatch(
+        typeof(Journal), nameof(Journal.showJournalInfoPopup),
+        new[] { typeof(string), typeof(string) })]
     static class JournalPopupTextPatch
     {
         static bool Prefix(string _type, string _desc)
@@ -1097,14 +1285,16 @@ namespace DarkwoodMP.World
                         has = Has(_desc + "_name", "JournalEntries");
                         break;
                     case "Note":
-                        has = Has(_desc + "_name", "Notes") || Has(_desc + "_name", "Items");
+                        has = Has(_desc + "_name", "Notes")
+                            || Has(_desc + "_name", "Items");
                         break;
                     case "Key":
                     case "InvItem":
                         has = Has(_desc + "_name", "Items");
                         break;
                     default:
-                        return true; // reputation and others carry their own text
+                        // reputation and others carry their own text
+                        return true;
                 }
             }
             catch (Exception)
@@ -1113,18 +1303,22 @@ namespace DarkwoodMP.World
             }
             if (!has)
             {
-                Plugin.Log.LogInfo($"Journal: no popup for {_type} {_desc}, the game has no text for it");
+                Plugin.Log.LogInfo(
+                    $"Journal: no popup for {_type} {_desc}, the game has no text for it");
             }
             return has;
         }
 
         private static bool Has(string key, string sheet)
-            => !string.IsNullOrEmpty(key) && global::Language.HasKey(key, sheet) && !string.IsNullOrEmpty(global::Language.Get(key, sheet));
+            => !string.IsNullOrEmpty(key)
+                && global::Language.HasKey(key, sheet)
+                && !string.IsNullOrEmpty(global::Language.Get(key, sheet));
     }
 
     /// <summary>
-    /// A scripted event's reputation step (GameEvent modifyCharacter / reputation) is a shared step: it runs in
-    /// every game (ScriptedEvents), so each game's change is its own and isn't sent as a change too.
+    /// A scripted event's reputation step (GameEvent modifyCharacter /
+    /// reputation) is a shared step: it runs in every game (ScriptedEvents), so
+    /// each game's change is its own and isn't sent as a change too.
     /// </summary>
     [HarmonyPatch]
     static class EventReputationPatch
@@ -1133,7 +1327,8 @@ namespace DarkwoodMP.World
 
         static System.Reflection.MethodBase TargetMethod()
         {
-            var mn = AccessTools.EnumeratorMoveNext(AccessTools.Method(typeof(GameEvent), nameof(GameEvent.fire)));
+            var mn = AccessTools.EnumeratorMoveNext(
+                AccessTools.Method(typeof(GameEvent), nameof(GameEvent.fire)));
             if (mn != null)
             {
                 _this = AccessTools.Field(mn.DeclaringType, "<>4__this");
@@ -1149,7 +1344,9 @@ namespace DarkwoodMP.World
                 return;
             }
             var ev = _this.GetValue(__instance) as GameEvent;
-            if (ev == null || ev.type != GameEvent.Type.modifyCharacter || ev.characterModifyType != GameEvent.CharacterModify.reputation)
+            if (ev == null || ev.type != GameEvent.Type.modifyCharacter
+                || ev.characterModifyType
+                    != GameEvent.CharacterModify.reputation)
             {
                 return;
             }

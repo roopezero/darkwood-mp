@@ -8,31 +8,44 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Fuel in generators and the saw, shared. A player pours fuel a little at a time (Generator.addFuel and
-    /// Saw.addFuel, from the gasoline can in their hand), and the saw uses some for each log it cuts (Saw.convert).
+    /// Fuel in generators and the saw, shared. A player pours fuel a little at
+    /// a time (Generator.addFuel and Saw.addFuel, from the gasoline can in
+    /// their hand), and the saw uses some for each log it cuts (Saw.convert).
     ///
-    /// The host's fuel is the one that counts. A client adds what it poured to its own game at once (a prediction)
-    /// and sends the amount, not the level it now has, as a Request up to four times a second (Fuel): two players
-    /// pouring into the same tank at the same moment would otherwise each send "what I have now", and the last one
-    /// would win. The host checks the player is at it and the amount (no more than a can holds; a saw only loses a
-    /// log's worth at a time), adds it to its own level, up to the tank, and sends everyone the level it now has.
-    /// A pour into a full tank is refused, and the part of a pour that didn't fit comes back: the can gets that
-    /// fuel back. The host's own pours go out as its level.
+    /// The host's fuel is the one that counts. A client adds what it poured to
+    /// its own game at once (a prediction) and sends the amount, not the level
+    /// it now has, as a Request up to four times a second (Fuel): two players
+    /// pouring into the same tank at the same moment would otherwise each send
+    /// "what I have now", and the last one would win. The host checks the
+    /// player is at it and the amount (no more than a can holds; a saw only
+    /// loses a log's worth at a time), adds it to its own level, up to the
+    /// tank, and sends everyone the level it now has.
+    /// A pour into a full tank is refused, and the part of a pour that didn't
+    /// fit comes back: the can gets that fuel back. The host's own pours go out
+    /// as its level.
     ///
-    /// Fuel goes out at once before anything is switched on, so a generator that was just filled also starts in
-    /// the other games (Generator.turnOn does nothing without fuel). Only the host burns its generators' fuel
-    /// (GeneratorDrainSkillPatch): every 5 seconds it sends each generator's fuel and whether it runs, if that
-    /// changed, and the others take it (switching theirs on or off to match).
+    /// Fuel goes out at once before anything is switched on, so a generator
+    /// that was just filled also starts in the other games (Generator.turnOn
+    /// does nothing without fuel). Only the host burns its generators' fuel
+    /// (GeneratorDrainSkillPatch): every 5 seconds it sends each generator's
+    /// fuel and whether it runs, if that changed, and the others take it
+    /// (switching theirs on or off to match).
     /// </summary>
     public sealed class FuelSync
     {
         public static FuelSync Instance { get; private set; }
         private const float SendInterval = 0.25f, HostInterval = 5f;
         private const byte IsGenerator = 1, IsSaw = 2;
-        /// <summary>The most a pour may add when the game's gasoline can can't be looked up.</summary>
+        /// <summary>
+        /// The most a pour may add when the game's gasoline can can't be looked
+        /// up.
+        /// </summary>
         private const float FallbackCan = 100f;
 
-        /// <summary>What the local player did to one tank since the last send: fuel added (or a saw's cut), and the can it came from.</summary>
+        /// <summary>
+        /// What the local player did to one tank since the last send: fuel
+        /// added (or a saw's cut), and the can it came from.
+        /// </summary>
         private sealed class Pour
         {
             public float Amount, Drained;
@@ -40,12 +53,16 @@ namespace DarkwoodMP.World
         }
 
         private readonly Session _session;
-        // Poured here, not sent yet. A saw's cut (negative) is kept apart from a pour, since the host checks them differently.
-        private readonly Dictionary<(Component c, bool cut), Pour> _pending = new Dictionary<(Component, bool), Pour>();
+        // Poured here, not sent yet. A saw's cut (negative) is kept apart from
+        // a pour, since the host checks them differently.
+        private readonly Dictionary<(Component c, bool cut), Pour> _pending =
+            new Dictionary<(Component, bool), Pour>();
         private float _nextSend, _nextHost;
-        private readonly Dictionary<Generator, (float fuel, bool on)> _sent = new Dictionary<Generator, (float, bool)>();
+        private readonly Dictionary<Generator, (float fuel, bool on)> _sent =
+            new Dictionary<Generator, (float, bool)>();
 
-        internal static readonly HashSet<Generator> Generators = new HashSet<Generator>();
+        internal static readonly HashSet<Generator> Generators =
+            new HashSet<Generator>();
 
         public FuelSync(Session session)
         {
@@ -60,12 +77,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The local player changed this generator's or saw's fuel by delta (a pour, or a log cut). Each pour drains
-        /// the can in the player's hand by one (Player.waitToSpillLiquid); a refusal gives that back.
+        /// The local player changed this generator's or saw's fuel by delta (a
+        /// pour, or a log cut). Each pour drains the can in the player's hand
+        /// by one (Player.waitToSpillLiquid); a refusal gives that back.
         /// </summary>
         internal void Poured(Component c, float delta)
         {
-            if (!WorldActions.Sharing || WorldActions.Replaying || Mathf.Abs(delta) < 0.0001f)
+            if (!WorldActions.Sharing || WorldActions.Replaying
+                || Mathf.Abs(delta) < 0.0001f)
             {
                 return;
             }
@@ -80,7 +99,8 @@ namespace DarkwoodMP.World
             {
                 can = Player.Instance.currentItem;
             }
-            if (delta > 0f && !InvItemClass.isNull(can) && can.type == "gasoline")
+            if (delta > 0f && !InvItemClass.isNull(can)
+                && can.type == "gasoline")
             {
                 p.Can = can;
                 p.Drained += 1f;
@@ -104,7 +124,9 @@ namespace DarkwoodMP.World
                 Generators.RemoveWhere(g => g == null);
                 foreach (var g in Generators)
                 {
-                    if (_sent.TryGetValue(g, out var was) && Mathf.Abs(was.fuel - g.fuel) < 0.5f && was.on == g.isOn)
+                    if (_sent.TryGetValue(g, out var was)
+                        && Mathf.Abs(was.fuel - g.fuel) < 0.5f
+                        && was.on == g.isOn)
                     {
                         continue;
                     }
@@ -113,7 +135,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Send what was poured now (before a switch-on goes out).</summary>
+        /// <summary>
+        /// Send what was poured now (before a switch-on goes out).
+        /// </summary>
         internal void Flush()
         {
             _nextSend = Time.unscaledTime + SendInterval;
@@ -153,7 +177,9 @@ namespace DarkwoodMP.World
             return ((Saw)c).maxFuel;
         }
 
-        /// <summary>What a gasoline can holds: the most one pour can add.</summary>
+        /// <summary>
+        /// What a gasoline can holds: the most one pour can add.
+        /// </summary>
         private static float CanHolds()
         {
             try
@@ -175,7 +201,10 @@ namespace DarkwoodMP.World
             return FallbackCan;
         }
 
-        /// <summary>Client: ask the host to add what our player poured (or used, cutting a log).</summary>
+        /// <summary>
+        /// Client: ask the host to add what our player poured (or used, cutting
+        /// a log).
+        /// </summary>
         private void Request(Component c, Pour p)
         {
             var r = ObjRef.Of(c.gameObject);
@@ -198,15 +227,21 @@ namespace DarkwoodMP.World
             w.W.Write(p.Amount);
             w.W.Write((byte)0);
             string name = c.name;
-            Authority.Request(w, $"fuel {p.Amount:+0.0;-0.0} for {name}", (ok, reason, result) =>
+            Authority.Request(w, $"fuel {p.Amount:+0.0;-0.0} for {name}",
+                (ok, reason, result) =>
             {
-                // Refused: all of it back to the can. Allowed, but only part of it fitted: the rest back.
+                // Refused: all of it back to the can. Allowed, but only part of
+                // it fitted: the rest back.
                 float back = 0f;
                 if (!ok)
                 {
                     back = p.Drained;
                 }
-                else if (p.Amount > 0f && float.TryParse(result, NumberStyles.Float, CultureInfo.InvariantCulture, out float took) && took < p.Amount - 0.001f)
+                else if (p.Amount > 0f
+                    && float.TryParse(
+                        result, NumberStyles.Float,
+                        CultureInfo.InvariantCulture, out float took)
+                    && took < p.Amount - 0.001f)
                 {
                     back = p.Drained * (1f - Mathf.Clamp01(took / p.Amount));
                 }
@@ -217,11 +252,15 @@ namespace DarkwoodMP.World
             }, inventory: false);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] asked to add fuel {p.Amount:0.0} to {name} ({r})");
+                Plugin.Log.LogInfo(
+                    $"[world] asked to add fuel {p.Amount:0.0} to {name} ({r})");
             }
         }
 
-        /// <summary>Put fuel back in the can it came from (or a can, if that one was used up by the pour).</summary>
+        /// <summary>
+        /// Put fuel back in the can it came from (or a can, if that one was
+        /// used up by the pour).
+        /// </summary>
         private static void Refund(InvItemClass can, float amount, string to)
         {
             var player = Player.Instance;
@@ -231,16 +270,20 @@ namespace DarkwoodMP.World
             }
             if (can == null)
             {
-                Plugin.Log.LogInfo($"[authority] {amount:0.0} fuel for {to} wasn't from a can: nothing to give back");
+                Plugin.Log.LogInfo(
+                    $"[authority] {amount:0.0} fuel for {to} wasn't from a can: nothing to give back");
                 return;
             }
             try
             {
                 if (can.amount <= 0)
                 {
-                    // InvItemClass.drainDurability removed the emptied can: give a can back instead.
-                    player.Inventory.addItemTypeToPlayer("gasoline", 1, dropIfNoRoom: true);
-                    Plugin.Log.LogInfo($"[authority] gave back a gasoline can for the fuel {to} didn't take");
+                    // InvItemClass.drainDurability removed the emptied can:
+                    // give a can back instead.
+                    player.Inventory.addItemTypeToPlayer(
+                        "gasoline", 1, dropIfNoRoom: true);
+                    Plugin.Log.LogInfo(
+                        $"[authority] gave back a gasoline can for the fuel {to} didn't take");
                     return;
                 }
                 float max;
@@ -254,11 +297,13 @@ namespace DarkwoodMP.World
                 }
                 can.durability = Mathf.Min(max, can.durability + amount);
                 can.refresh();
-                Plugin.Log.LogInfo($"[authority] gave back {amount:0.0} fuel to the gasoline can ({to} didn't take it)");
+                Plugin.Log.LogInfo(
+                    $"[authority] gave back {amount:0.0} fuel to the gasoline can ({to} didn't take it)");
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"[authority] couldn't give the fuel back: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[authority] couldn't give the fuel back: {e.Message}");
             }
         }
 
@@ -295,7 +340,8 @@ namespace DarkwoodMP.World
             }
             else
             {
-                _session.Broadcast(w, Channel.Control, reliable: true, except: except);
+                _session.Broadcast(
+                    w, Channel.Control, reliable: true, except: except);
             }
             if (g != null && to == 0)
             {
@@ -317,7 +363,8 @@ namespace DarkwoodMP.World
                         state = ", off";
                     }
                 }
-                Plugin.Log.LogInfo($"[world] sent fuel {name} ({r}): {fuel:0.0}{state}");
+                Plugin.Log.LogInfo(
+                    $"[world] sent fuel {name} ({r}): {fuel:0.0}{state}");
             }
         }
 
@@ -333,7 +380,8 @@ namespace DarkwoodMP.World
             }
             var obj = ObjRef.Read(r);
             byte what = r.R.ReadByte();
-            float value = r.R.ReadSingle(); // from a client: the amount it added; from the host: the level
+            // from a client: the amount it added; from the host: the level
+            float value = r.R.ReadSingle();
             bool on = r.R.ReadByte() != 0;
             Component c;
             if (what == IsGenerator)
@@ -357,7 +405,8 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] got fuel for {obj}: not found here");
+                    Plugin.Log.LogInfo(
+                        $"[world] got fuel for {obj}: not found here");
                 }
                 return;
             }
@@ -368,10 +417,12 @@ namespace DarkwoodMP.World
 
             if (_session.IsHost)
             {
-                // Only taken inside a Request (Authority.RequestOnly): a player poured this much, or cut a log at the saw.
+                // Only taken inside a Request (Authority.RequestOnly): a player
+                // poured this much, or cut a log at the saw.
                 string refused = null;
                 float took = value;
-                bool near = Authority.Near(from, c.transform.position, WorldActions.Reach);
+                bool near = Authority.Near(
+                    from, c.transform.position, WorldActions.Reach);
                 if (!near)
                 {
                     refused = "too far from it";
@@ -385,7 +436,8 @@ namespace DarkwoodMP.World
                     float can = CanHolds();
                     if (value > can + 0.01f)
                     {
-                        refused = $"{value:0.0} is more than a can holds ({can:0})";
+                        refused =
+                            $"{value:0.0} is more than a can holds ({can:0})";
                     }
                     else if (have >= max - 0.01f)
                     {
@@ -398,7 +450,8 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    // Fuel only goes down at the saw, a log's worth (Saw.fuelToConvert) for each log cut.
+                    // Fuel only goes down at the saw, a log's worth
+                    // (Saw.fuelToConvert) for each log cut.
                     var saw = c as Saw;
                     float used = -value;
                     float logs = 0f;
@@ -410,9 +463,11 @@ namespace DarkwoodMP.World
                     {
                         refused = "a generator's fuel only goes down by itself";
                     }
-                    else if (logs < 0.99f || Mathf.Abs(logs - Mathf.Round(logs)) > 0.02f)
+                    else if (logs < 0.99f
+                        || Mathf.Abs(logs - Mathf.Round(logs)) > 0.02f)
                     {
-                        refused = $"{used:0.0} isn't a whole number of logs ({saw.fuelToConvert} each)";
+                        refused =
+                            $"{used:0.0} isn't a whole number of logs ({saw.fuelToConvert} each)";
                     }
                     else if (used > have + 0.5f)
                     {
@@ -421,17 +476,21 @@ namespace DarkwoodMP.World
                 }
                 if (refused != null)
                 {
-                    Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)}'s fuel {value:+0.0;-0.0} for {c.name} (have {have:0.0}): {refused}; sent back");
-                    Send(c, except: 0, to: from); // the level to roll back to, before the Verdict
+                    Plugin.Log.LogInfo(
+                        $"[authority] {_session.NameOf(from)}'s fuel {value:+0.0;-0.0} for {c.name} (have {have:0.0}): {refused}; sent back");
+                    // the level to roll back to, before the Verdict
+                    Send(c, except: 0, to: from);
                     Authority.Refuse(refused);
                     return;
                 }
                 fuel = Mathf.Clamp(have + took, 0f, max);
-                Authority.Result(took.ToString("0.###", CultureInfo.InvariantCulture));
+                Authority.Result(
+                    took.ToString("0.###", CultureInfo.InvariantCulture));
             }
             else
             {
-                // The host's level, plus what our player poured since that hasn't gone out yet.
+                // The host's level, plus what our player poured since that
+                // hasn't gone out yet.
                 fuel = value;
                 foreach (var kv in _pending)
                 {
@@ -478,7 +537,8 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
-            UiRefresh.FuelChanged(c); // an open saw's "Fuel" label, the fuel bar under the cursor
+            // an open saw's "Fuel" label, the fuel bar under the cursor
+            UiRefresh.FuelChanged(c);
             if (WorldActions.Debug)
             {
                 string name = c.name;
@@ -499,12 +559,15 @@ namespace DarkwoodMP.World
                         state = ", off";
                     }
                 }
-                Plugin.Log.LogInfo($"[world] got fuel {name} ({obj}): {change}{fuel:0.0}{state}");
+                Plugin.Log.LogInfo(
+                    $"[world] got fuel {name} ({obj}): {change}{fuel:0.0}{state}");
             }
 
             if (_session.IsHost)
             {
-                Send(c, except: 0); // everyone, the pourer too: the level with everyone's pours in it
+                // everyone, the pourer too: the level with everyone's pours in
+                // it
+                Send(c, except: 0);
             }
         }
     }
@@ -512,7 +575,8 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Generator), nameof(Generator.addFuel))]
     static class GeneratorFuelPatch
     {
-        static void Prefix(Generator __instance, out float __state) => __state = __instance.fuel;
+        static void Prefix(Generator __instance, out float __state) =>
+            __state = __instance.fuel;
         static void Postfix(Generator __instance, float __state)
         {
             FuelSync instance = FuelSync.Instance;
@@ -526,7 +590,8 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Saw), nameof(Saw.addFuel))]
     static class SawFuelPatch
     {
-        static void Prefix(Saw __instance, out float __state) => __state = __instance.fuel;
+        static void Prefix(Saw __instance, out float __state) =>
+            __state = __instance.fuel;
         static void Postfix(Saw __instance, float __state)
         {
             FuelSync instance = FuelSync.Instance;
@@ -537,15 +602,21 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Cutting a log (Saw.convert) uses fuelToConvert of the saw's fuel; it goes out like a pour.</summary>
+    /// <summary>
+    /// Cutting a log (Saw.convert) uses fuelToConvert of the saw's fuel; it
+    /// goes out like a pour.
+    /// </summary>
     [HarmonyPatch(typeof(Saw), nameof(Saw.convert))]
     static class SawConvertPatch
     {
-        // A finalizer, not a postfix: the fuel is taken before Saw.refresh, which throws when the saw's window
-        // isn't set up (a test calling it directly).
-        static void Prefix(Saw __instance, out float __state) => __state = __instance.fuel;
+        // A finalizer, not a postfix: the fuel is taken before Saw.refresh,
+        // which throws when the saw's window isn't set up (a test calling it
+        // directly).
+        static void Prefix(Saw __instance, out float __state) =>
+            __state = __instance.fuel;
 
-        static System.Exception Finalizer(Saw __instance, System.Exception __exception, float __state)
+        static System.Exception Finalizer(
+            Saw __instance, System.Exception __exception, float __state)
         {
             FuelSync instance = FuelSync.Instance;
             if (instance != null)
@@ -559,10 +630,14 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Generator), "Start")]
     static class GeneratorListPatch
     {
-        static void Postfix(Generator __instance) => FuelSync.Generators.Add(__instance);
+        static void Postfix(Generator __instance) =>
+            FuelSync.Generators.Add(__instance);
     }
 
-    /// <summary>Fuel just poured goes out before the switch-on does (ItemOnPatch sends it in its postfix).</summary>
+    /// <summary>
+    /// Fuel just poured goes out before the switch-on does (ItemOnPatch sends
+    /// it in its postfix).
+    /// </summary>
     [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
     static class FuelBeforeOnPatch
     {
@@ -581,18 +656,24 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// Host: a generator burns fuel by the electricity skill of the player nearest it (Generator.drainFuel uses our
-    /// own player's Player.electricityModifier for every generator). A joiner's skill is read from the character it
-    /// last sent (Characters.Electrician); while it isn't known yet, ours is used, as before. The host's fuel is the
-    /// one every game keeps (FuelSync).
+    /// Host: a generator burns fuel by the electricity skill of the player
+    /// nearest it (Generator.drainFuel uses our own player's
+    /// Player.electricityModifier for every generator). A joiner's skill is
+    /// read from the character it last sent (Characters.Electrician); while it
+    /// isn't known yet, ours is used, as before. The host's fuel is the one
+    /// every game keeps (FuelSync).
     ///
-    /// Client: its generators burn nothing (the modifier is 0 for the call); the level comes from the host. The rest
-    /// of drainFuel still runs, so the lights dim on low fuel as the host's level says.
+    /// Client: its generators burn nothing (the modifier is 0 for the call);
+    /// the level comes from the host. The rest of drainFuel still runs, so the
+    /// lights dim on low fuel as the host's level says.
     /// </summary>
     [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
     static class GeneratorDrainSkillPatch
     {
-        /// <summary>For the tests: the last drain's generator, whose skill it used, and the modifier.</summary>
+        /// <summary>
+        /// For the tests: the last drain's generator, whose skill it used, and
+        /// the modifier.
+        /// </summary>
         public static string Last;
 
         static void Prefix(Generator __instance, out float? __state)
@@ -606,7 +687,8 @@ namespace DarkwoodMP.World
                 p.electricityModifier = 0f;
                 return;
             }
-            if (s == null || !s.IsHost || p == null || !Proxies.Any || Characters.Instance == null)
+            if (s == null || !s.IsHost || p == null || !Proxies.Any
+                || Characters.Instance == null)
             {
                 return;
             }
@@ -623,7 +705,8 @@ namespace DarkwoodMP.World
             NetPlayerProxy nearest = null;
             foreach (var x in NetPlayerProxy.All.Values)
             {
-                if (x == null || x.Away || x.InLocation != null || x.Owner == Sync.PlayerSync.DummyId)
+                if (x == null || x.Away || x.InLocation != null
+                    || x.Owner == Sync.PlayerSync.DummyId)
                 {
                     continue;
                 }
@@ -676,7 +759,8 @@ namespace DarkwoodMP.World
             }
         }
 
-        static System.Exception Finalizer(System.Exception __exception, float? __state)
+        static System.Exception Finalizer(
+            System.Exception __exception, float? __state)
         {
             if (__state.HasValue && Player.Instance != null)
             {

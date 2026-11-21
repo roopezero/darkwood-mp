@@ -5,10 +5,13 @@ using System.Text;
 namespace DarkwoodMP.Net
 {
     /// <summary>
-    /// The server browser's info query, the same as goasis's (package protocol, after Half-Life's A2S_INFO):
-    /// one UDP datagram "info" SEP END to the game's port number, answered with one datagram
+    /// The server browser's info query, the same as goasis's (package protocol,
+    /// after Half-Life's A2S_INFO):
+    /// one UDP datagram "info" SEP END to the game's port number, answered with
+    /// one datagram
     ///   INFO SEP name SEP players SEP maxplayers SEP password SEP localchars SEP version SEP [key=value SEP]* END
-    /// where SEP is byte 0 and END is byte 237. DarkwoodMP adds the fields game=darkwood and proto=&lt;version&gt;.
+    /// where SEP is byte 0 and END is byte 237. DarkwoodMP adds the fields
+    /// game=darkwood and proto=&lt;version&gt;.
     /// </summary>
     public sealed class ServerInfo
     {
@@ -21,7 +24,8 @@ namespace DarkwoodMP.Net
         public bool Password;
         public bool LocalChars;
         public string Version = "";
-        public readonly SortedDictionary<string, string> Fields = new SortedDictionary<string, string>(System.StringComparer.Ordinal);
+        public readonly SortedDictionary<string, string> Fields =
+            new SortedDictionary<string, string>(System.StringComparer.Ordinal);
 
         public string Game
         {
@@ -38,7 +42,8 @@ namespace DarkwoodMP.Net
         {
             get
             {
-                if (Fields.TryGetValue("proto", out var p) && int.TryParse(p, out int v))
+                if (Fields.TryGetValue("proto", out var p)
+                    && int.TryParse(p, out int v))
                 {
                     return v;
                 }
@@ -78,7 +83,8 @@ namespace DarkwoodMP.Net
 
         public static readonly byte[] Query = Encode("info");
 
-        public static bool IsQuery(byte[] b, int n) => n == Query.Length && b.Take(n).SequenceEqual(Query);
+        public static bool IsQuery(byte[] b, int n) =>
+            n == Query.Length && b.Take(n).SequenceEqual(Query);
 
         private static string Clean(string s, string drop)
         {
@@ -87,7 +93,9 @@ namespace DarkwoodMP.Net
             {
                 text = "";
             }
-            return new string(text.Where(c => c != (char)Sep && drop.IndexOf(c) < 0).ToArray());
+            return new string(
+                text.Where(c => c != (char)Sep
+                        && drop.IndexOf(c) < 0).ToArray());
         }
 
         public byte[] EncodeAnswer()
@@ -102,7 +110,15 @@ namespace DarkwoodMP.Net
             {
                 localCharsFlag = "1";
             }
-            var f = new List<string> { Clean(Name, ""), Players.ToString(), MaxPlayers.ToString(), passwordFlag, localCharsFlag, Clean(Version, "") };
+            var f = new List<string>
+            {
+                Clean(Name, ""),
+                Players.ToString(),
+                MaxPlayers.ToString(),
+                passwordFlag,
+                localCharsFlag,
+                Clean(Version, "")
+            };
             foreach (var kv in Fields)
             {
                 string k = Clean(kv.Key, "=");
@@ -125,7 +141,8 @@ namespace DarkwoodMP.Net
             {
                 return null;
             }
-            if (!int.TryParse(parts[2], out int players) || !int.TryParse(parts[3], out int max))
+            if (!int.TryParse(parts[2], out int players)
+                || !int.TryParse(parts[3], out int max))
             {
                 return null;
             }
@@ -143,7 +160,8 @@ namespace DarkwoodMP.Net
                 int eq = parts[i].IndexOf('=');
                 if (eq > 0)
                 {
-                    info.Fields[parts[i].Substring(0, eq)] = parts[i].Substring(eq + 1);
+                    info.Fields[parts[i].Substring(0, eq)] =
+                        parts[i].Substring(eq + 1);
                 }
             }
             return info;

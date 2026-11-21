@@ -7,17 +7,23 @@ using static DarkwoodMP.World.MapScenario;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for the lights the others' puppets carry (Sync.RemotePlayer: a torch or lamp in hand, a hotbar
-    /// lantern, the flashlight's beam) and for our own view: each Light2D draws into a mesh of its own, so what our
-    /// player sees (its view cone, its light dot, its beam) is worked out where our player stands, not where a
-    /// puppet does. Steps: "lt-hold TYPE|fists", "lt-check torch|lantern|flashlight|none". Listed in
-    /// tools/tests/map_scenario_lights.py.
+    /// Map test steps for the lights the others' puppets carry
+    /// (Sync.RemotePlayer: a torch or lamp in hand, a hotbar lantern, the
+    /// flashlight's beam) and for our own view: each Light2D draws into a mesh
+    /// of its own, so what our player sees (its view cone, its light dot, its
+    /// beam) is worked out where our player stands, not where a puppet does.
+    /// Steps: "lt-hold TYPE|fists", "lt-check torch|lantern|flashlight|none".
+    /// Listed in tools/tests/map_scenario_lights.py.
     /// </summary>
     public static class MapScenarioLights
     {
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight = HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovDot = HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVDot");
-        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> OwnBeam = HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("Flashlight");
+        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovLight =
+            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVLight");
+        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> FovDot =
+            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>("FOVDot");
+        private static readonly HarmonyLib.AccessTools.FieldRef<Player, Light2D> OwnBeam =
+            HarmonyLib.AccessTools.FieldRefAccess<Player, Light2D>(
+                "Flashlight");
 
         public static void Register()
         {
@@ -25,7 +31,10 @@ namespace DarkwoodMP.World
             Add("lt-check", Check, timeout: 15f);
         }
 
-        /// <summary>"lt-hold TYPE": TYPE taken out of the hotbar into our hands; "lt-hold fists": an empty hotbar slot selected.</summary>
+        /// <summary>
+        /// "lt-hold TYPE": TYPE taken out of the hotbar into our hands;
+        /// "lt-hold fists": an empty hotbar slot selected.
+        /// </summary>
         private static IEnumerator Hold(string[] a, Result r)
         {
             var p = Player.Instance;
@@ -40,7 +49,8 @@ namespace DarkwoodMP.World
             }
             else
             {
-                InvSlot slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                InvSlot slot = p.Hotbar.slots.FirstOrDefault(
+                    s => InvItemClass.isNull(s.invItem));
                 if (slot == null)
                 {
                     slot = p.Hotbar.slots.FirstOrDefault(s => !s.selected);
@@ -61,7 +71,10 @@ namespace DarkwoodMP.World
                 }
                 slot.select(noiseless: true);
                 float until = Time.realtimeSinceStartup + 4f;
-                while ((!InvItemClass.isNull(p.currentItem) && p.currentItem != p.fists || p.switchingItem) && Time.realtimeSinceStartup < until)
+                while ((!InvItemClass.isNull(p.currentItem)
+                            && p.currentItem != p.fists
+                        || p.switchingItem)
+                    && Time.realtimeSinceStartup < until)
                 {
                     yield return null;
                 }
@@ -92,10 +105,13 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "lt-check WHAT" (the other side): some puppet shows WHAT (torch: the held item's light; lantern: a lantern light;
-        /// flashlight: its beam on, at the radius its player's game sent), or with "none", no puppet shows any light.
-        /// Always: no Light2D on our player or on a puppet draws into another light's mesh, and our view light
-        /// (Player.FOVLight) is on our player and drawn from a mesh no other light writes.
+        /// "lt-check WHAT" (the other side): some puppet shows WHAT (torch: the
+        /// held item's light; lantern: a lantern light; flashlight: its beam
+        /// on, at the radius its player's game sent), or with "none", no puppet
+        /// shows any light.
+        /// Always: no Light2D on our player or on a puppet draws into another
+        /// light's mesh, and our view light (Player.FOVLight) is on our player
+        /// and drawn from a mesh no other light writes.
         /// </summary>
         private static IEnumerator Check(string[] a, Result r)
         {
@@ -113,21 +129,27 @@ namespace DarkwoodMP.World
                 List<Sync.RemotePlayer> puppets = null;
                 if (instance != null)
                 {
-                    puppets = instance.Remotes.Values.Where(x => x.Owner != Sync.PlayerSync.DummyId && x.Root != null).ToList();
+                    puppets = instance.Remotes.Values.Where(
+                        x => x.Owner != Sync.PlayerSync.DummyId
+                            && x.Root != null).ToList();
                 }
                 if (puppets == null)
                 {
                     puppets = new List<Sync.RemotePlayer>();
                 }
                 seen = string.Join("; ", puppets.Select(Describe));
-                bool any(System.Func<Sync.RemotePlayer, bool> f) => puppets.Any(f);
+                bool any(System.Func<Sync.RemotePlayer, bool> f) =>
+                    puppets.Any(f);
                 switch (what)
                 {
                     case "torch":
                         ok = any(x => Drawn(x.HeldLightShown));
                         break;
                     case "lantern":
-                        ok = any(x => x.LanternLight != null && x.LanternLight.LightRadius > 130f && Drawn(x.LanternLight));
+                        ok = any(
+                            x => x.LanternLight != null
+                                && x.LanternLight.LightRadius > 130f
+                                && Drawn(x.LanternLight));
                         break;
                     case "flashlight":
                         ok = any(x =>
@@ -137,11 +159,17 @@ namespace DarkwoodMP.World
                             {
                                 l = x.Beam.GetComponent<Light2D>();
                             }
-                            return l != null && x.Last != null && x.Last.BeamRadius > 0f && Mathf.Abs(l.LightRadius - x.Last.BeamRadius) < 1f && Drawn(l);
+                            return l != null && x.Last != null
+                                && x.Last.BeamRadius > 0f
+                                && Mathf.Abs(l.LightRadius
+                                    - x.Last.BeamRadius) < 1f && Drawn(l);
                         });
                         break;
                     default:
-                        ok = !any(x => Drawn(x.HeldLightShown) || x.LanternLight != null || (x.Beam != null && x.Beam.activeSelf));
+                        ok = !any(
+                            x => Drawn(x.HeldLightShown)
+                                || x.LanternLight != null
+                                || (x.Beam != null && x.Beam.activeSelf));
                         break;
                 }
                 shared = SharedMeshes();
@@ -176,7 +204,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>A light that is on and has drawn something (its mesh has triangles).</summary>
+        /// <summary>
+        /// A light that is on and has drawn something (its mesh has triangles).
+        /// </summary>
         private static bool Drawn(Light2D l)
         {
             if (l == null || !l.gameObject.activeInHierarchy || l._mesh == null)
@@ -184,7 +214,8 @@ namespace DarkwoodMP.World
                 return false;
             }
             var f = l.GetComponent<MeshFilter>();
-            return f != null && f.sharedMesh == l._mesh && l._mesh.vertexCount > 2;
+            return f != null && f.sharedMesh == l._mesh
+                && l._mesh.vertexCount > 2;
         }
 
         private static string Describe(Sync.RemotePlayer x)
@@ -199,11 +230,13 @@ namespace DarkwoodMP.World
                 {
                     heldLight = snapshot.HeldLight;
                 }
-                parts.Add($"{heldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
+                parts.Add(
+                    $"{heldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
             }
             if (x.LanternLight != null)
             {
-                parts.Add($"lantern r{x.LanternLight.LightRadius:0} drawn {Drawn(x.LanternLight)}");
+                parts.Add(
+                    $"lantern r{x.LanternLight.LightRadius:0} drawn {Drawn(x.LanternLight)}");
             }
             if (x.Beam != null && x.Beam.activeSelf)
             {
@@ -224,7 +257,8 @@ namespace DarkwoodMP.World
                 {
                     grey = l.LightColor.r;
                 }
-                parts.Add($"beam r{lightRadius:0} (sent {beamRadius:0}) grey {grey:0.00} drawn {Drawn(l)}");
+                parts.Add(
+                    $"beam r{lightRadius:0} (sent {beamRadius:0}) grey {grey:0.00} drawn {Drawn(l)}");
             }
             string listing;
             if (parts.Count == 0)
@@ -238,11 +272,15 @@ namespace DarkwoodMP.World
             return $"{x.Name}: {listing}";
         }
 
-        /// <summary>Lights on our player or a puppet whose mesh another light also has ("" if none).</summary>
+        /// <summary>
+        /// Lights on our player or a puppet whose mesh another light also has
+        /// ("" if none).
+        /// </summary>
         private static string SharedMeshes()
         {
             var p = Player.Instance;
-            var lights = Resources.FindObjectsOfTypeAll<Light2D>().Where(l => l != null && l.gameObject.scene.IsValid()).ToList();
+            var lights = Resources.FindObjectsOfTypeAll<Light2D>()
+                .Where(l => l != null && l.gameObject.scene.IsValid()).ToList();
             var byMesh = new Dictionary<Mesh, List<Light2D>>();
             foreach (var l in lights)
             {
@@ -269,9 +307,15 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            bool mine(Light2D l) => (p != null && l.transform.IsChildOf(p.transform)) || HasPuppetParent(l.transform);
-            var bad = byMesh.Where(kv => kv.Value.Count > 1 && kv.Value.Any(mine))
-                            .Select(kv => string.Join(" + ", kv.Value.Select(l => Sync.ViewWatch.Path(l.transform))));
+            bool mine(Light2D l) => (p != null && l.transform.IsChildOf(
+                p.transform)) || HasPuppetParent(l.transform);
+            var bad = byMesh.Where(
+                kv => kv.Value.Count > 1 && kv.Value.Any(mine))
+                .Select(
+                    kv => string.Join(
+                        " + ",
+                        kv.Value.Select(
+                            l => Sync.ViewWatch.Path(l.transform))));
             return string.Join("; ", bad);
         }
 
@@ -287,7 +331,10 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        /// <summary>Where our view is drawn from: "view: ours ..." when Player.FOVLight, FOVDot and lightDot are on our player with meshes of their own.</summary>
+        /// <summary>
+        /// Where our view is drawn from: "view: ours ..." when Player.FOVLight,
+        /// FOVDot and lightDot are on our player with meshes of their own.
+        /// </summary>
         internal static string ViewSource()
         {
             var p = Player.Instance;
@@ -297,7 +344,12 @@ namespace DarkwoodMP.World
             }
             var parts = new List<string>();
             bool ours = true;
-            foreach (var (name, l) in new[] { ("cone", FovLight(p)), ("dot", FovDot(p)), ("light dot", p.lightDot) })
+            foreach (var (name, l) in new[]
+            {
+                ("cone", FovLight(p)),
+                ("dot", FovDot(p)),
+                ("light dot", p.lightDot)
+            })
             {
                 if (l == null)
                 {
@@ -306,9 +358,11 @@ namespace DarkwoodMP.World
                 }
                 bool onUs = l.transform.IsChildOf(p.transform);
                 var f = l.GetComponent<MeshFilter>();
-                bool own = l._mesh == null || (f != null && f.sharedMesh == l._mesh);
+                bool own =
+                    l._mesh == null || (f != null && f.sharedMesh == l._mesh);
                 ours &= onUs && own;
-                float d = StateDump.Flat(l.transform.position - p.transform.position);
+                float d =
+                    StateDump.Flat(l.transform.position - p.transform.position);
                 string text;
                 if (onUs)
                 {

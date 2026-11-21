@@ -6,30 +6,46 @@ using HarmonyLib;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// One player at a time talks to an NPC, as with containers: a dialogue can give a one-time reward
-    /// (giveItem), and two players in the same dialogue would both get it. The host keeps who talks to whom. A
-    /// joiner's dialogue opens at once and asks the host (TalkLock as a Request); if someone else is talking to
-    /// that NPC, the host refuses with who it is and the joiner's dialogue closes again. The host's own player
-    /// simply isn't let in while a joiner talks to them. Closing the dialogue lets go (TalkLock with talking 0).
+    /// One player at a time talks to an NPC, as with containers: a dialogue can
+    /// give a one-time reward (giveItem), and two players in the same dialogue
+    /// would both get it. The host keeps who talks to whom. A joiner's dialogue
+    /// opens at once and asks the host (TalkLock as a Request); if someone else
+    /// is talking to that NPC, the host refuses with who it is and the joiner's
+    /// dialogue closes again. The host's own player simply isn't let in while a
+    /// joiner talks to them. Closing the dialogue lets go (TalkLock with
+    /// talking 0).
     ///
-    /// What the dialogue did (lines said, which a one-time reward checks, reputation, flags) goes out at once when
-    /// it closes (FlagsSync.FlushNow), before the lock is let go on the same reliable channel, so the host has it
-    /// before the NPC is free. The others get it a moment later, so for Grace seconds after someone lets go only
-    /// the host's own player (who has it already) may talk to that NPC; a joiner is told to wait.
+    /// What the dialogue did (lines said, which a one-time reward checks,
+    /// reputation, flags) goes out at once when it closes (FlagsSync.FlushNow),
+    /// before the lock is let go on the same reliable channel, so the host has
+    /// it before the NPC is free. The others get it a moment later, so for
+    /// Grace seconds after someone lets go only the host's own player (who has
+    /// it already) may talk to that NPC; a joiner is told to wait.
     ///
-    /// A trader or the wolf is the same NPC in every game, though each game puts its own copy in its player's
-    /// hideout in the morning: they are locked by name, so two players can't talk to "him" in two hideouts at once.
+    /// A trader or the wolf is the same NPC in every game, though each game
+    /// puts its own copy in its player's hideout in the morning: they are
+    /// locked by name, so two players can't talk to "him" in two hideouts at
+    /// once.
     /// </summary>
     public static class TalkLock
     {
         private static Session S => Session.Instance;
         /// <summary>Host: who talks to which NPC (Key).</summary>
-        private static readonly Dictionary<string, ulong> _talkers = new Dictionary<string, ulong>();
-        /// <summary>Host: who last let go of each NPC, and when (unscaled time).</summary>
-        private static readonly Dictionary<string, KeyValuePair<ulong, float>> _released = new Dictionary<string, KeyValuePair<ulong, float>>();
-        /// <summary>Seconds after someone lets go of an NPC before a joiner may talk to them (their dialogue's changes on the way).</summary>
+        private static readonly Dictionary<string, ulong> _talkers =
+            new Dictionary<string, ulong>();
+        /// <summary>
+        /// Host: who last let go of each NPC, and when (unscaled time).
+        /// </summary>
+        private static readonly Dictionary<string, KeyValuePair<ulong, float>> _released =
+            new Dictionary<string, KeyValuePair<ulong, float>>();
+        /// <summary>
+        /// Seconds after someone lets go of an NPC before a joiner may talk to
+        /// them (their dialogue's changes on the way).
+        /// </summary>
         private const float Grace = 1.5f;
-        /// <summary>The NPC our own player talks to now, as shared (null: none).</summary>
+        /// <summary>
+        /// The NPC our own player talks to now, as shared (null: none).
+        /// </summary>
         private static NPC _ours;
         private static ObjRef _oursRef;
         private static string _oursName = "";
@@ -58,8 +74,10 @@ namespace DarkwoodMP.World
                 _released.Clear();
                 _ours = null;
             };
-            // The world unloaded during our dialogue (a death, a reload, a dialogue that ends the chapter): the window's
-            // close never ran, so let the NPC go, or every other player would be told we're still talking to them.
+            // The world unloaded during our dialogue (a death, a reload, a
+            // dialogue that ends the chapter): the window's close never ran, so
+            // let the NPC go, or every other player would be told we're still
+            // talking to them.
             UnityEngine.SceneManagement.SceneManager.sceneUnloaded += _ =>
             {
                 if (_oursRef.Valid && _ours == null)
@@ -69,12 +87,16 @@ namespace DarkwoodMP.World
             };
         }
 
-        /// <summary>The name an NPC is locked by if they're the same NPC in every game wherever they stand, else "".
-        /// One from the shared save goes by his ref instead: a new chapter-1 world has three "wolfman" traders.</summary>
+        /// <summary>The name an NPC is locked by if they're the same NPC in
+        /// every game wherever they stand, else "". One from the shared save
+        /// goes by his ref instead: a new chapter-1 world has three "wolfman"
+        /// traders.</summary>
         private static string UniqueName(NPC npc)
         {
-            if (npc != null && npc.name != null && (npc.trader || npc.name.IndexOf("wolf", StringComparison.OrdinalIgnoreCase) >= 0)
-                        && ObjRef.Of(npc.gameObject).K != ObjRef.Kind.Saved)
+            if (npc != null && npc.name != null
+                && (npc.trader || npc.name.IndexOf(
+                    "wolf", StringComparison.OrdinalIgnoreCase) >= 0)
+                && ObjRef.Of(npc.gameObject).K != ObjRef.Kind.Saved)
             {
                 return npc.name;
             }
@@ -90,7 +112,9 @@ namespace DarkwoodMP.World
             return r.ToString();
         }
 
-        /// <summary>Host: who other than this player talks to the NPC, or null.</summary>
+        /// <summary>
+        /// Host: who other than this player talks to the NPC, or null.
+        /// </summary>
         private static string TalkingOther(string key, ulong who)
         {
             if (_talkers.TryGetValue(key, out var holder) && holder != who)
@@ -100,7 +124,9 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>Host: we let go of the NPC (ours or a joiner's dialogue closed).</summary>
+        /// <summary>
+        /// Host: we let go of the NPC (ours or a joiner's dialogue closed).
+        /// </summary>
         private static void Release(string key, ulong who)
         {
             if (!_talkers.TryGetValue(key, out var h) || h != who)
@@ -108,10 +134,14 @@ namespace DarkwoodMP.World
                 return;
             }
             _talkers.Remove(key);
-            _released[key] = new KeyValuePair<ulong, float>(who, UnityEngine.Time.unscaledTime);
+            _released[key] = new KeyValuePair<ulong, float>(
+                who, UnityEngine.Time.unscaledTime);
         }
 
-        /// <summary>Host, before our own player's dialogue opens: whether someone else has the NPC.</summary>
+        /// <summary>
+        /// Host, before our own player's dialogue opens: whether someone else
+        /// has the NPC.
+        /// </summary>
         internal static bool HostMayTalk(NPC npc)
         {
             if (!WorldActions.Sharing || !S.IsHost)
@@ -187,7 +217,8 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            // What the dialogue did goes first, so it's there before the NPC is free for the next player.
+            // What the dialogue did goes first, so it's there before the NPC is
+            // free for the next player.
             FlagsSync instance = FlagsSync.Instance;
             if (instance != null)
             {
@@ -209,7 +240,10 @@ namespace DarkwoodMP.World
             s.SendToHost(w, Channel.Control, reliable: true);
         }
 
-        /// <summary>Joiner: the host said someone else talks to them: close our dialogue (once it has finished opening).</summary>
+        /// <summary>
+        /// Joiner: the host said someone else talks to them: close our dialogue
+        /// (once it has finished opening).
+        /// </summary>
         private static void Refused(NPC npc, string reason)
         {
             if (_ours == npc) // nothing of ours to let go
@@ -238,24 +272,32 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            // The window opens over a second or so (a portrait, then a fade: inDialogue, then tweening until it's in);
-            // closing it before that leaves the game's own opening steps without an NPC.
-            bool opening = win.tweening || Player.Instance == null || !Player.Instance.inDialogue;
+            // The window opens over a second or so (a portrait, then a fade:
+            // inDialogue, then tweening until it's in); closing it before that
+            // leaves the game's own opening steps without an NPC.
+            bool opening = win.tweening || Player.Instance == null
+                || !Player.Instance.inDialogue;
             if (opening)
             {
                 if (tries > 0)
                 {
-                    Singleton<Controller>.Instance.Invoke(() => CloseWhenReady(npc, tries - 1), 0.25f, timeScaleDependent: false);
+                    Singleton<Controller>.Instance.Invoke(
+                        () => CloseWhenReady(npc, tries - 1), 0.25f,
+                        timeScaleDependent: false);
                 }
                 return;
             }
-            // From the main menu, close() shows the NPC's goodbye line instead of closing. Setting the menu back to
-            // main before each try showed that line again every time, so a refused dialogue never closed (the map
-            // test's wolf). Any other menu closes at once, without a goodbye from someone we never talked to.
+            // From the main menu, close() shows the NPC's goodbye line instead
+            // of closing. Setting the menu back to main before each try showed
+            // that line again every time, so a refused dialogue never closed
+            // (the map test's wolf). Any other menu closes at once, without a
+            // goodbye from someone we never talked to.
             DialogueGuard.Close(win);
             if (win.npc == npc)
             {
-                Singleton<Controller>.Instance.Invoke(() => CloseWhenReady(npc, tries - 1), 0.25f, timeScaleDependent: false);
+                Singleton<Controller>.Instance.Invoke(
+                    () => CloseWhenReady(npc, tries - 1), 0.25f,
+                    timeScaleDependent: false);
             }
         }
 
@@ -280,13 +322,16 @@ namespace DarkwoodMP.World
                 Authority.Refuse($"{other} is talking to them");
                 return;
             }
-            if (_released.TryGetValue(key, out var rel) && rel.Key != from && UnityEngine.Time.unscaledTime - rel.Value < Grace)
+            if (_released.TryGetValue(key, out var rel) && rel.Key != from
+                && UnityEngine.Time.unscaledTime - rel.Value < Grace)
             {
-                Authority.Refuse($"{s.NameOf(rel.Key)} just talked to them: try again in a moment");
+                Authority.Refuse(
+                    $"{s.NameOf(rel.Key)} just talked to them: try again in a moment");
                 return;
             }
             var npc = ObjRef.Resolve<NPC>(obj);
-            if (npc != null && !Authority.InReach(npc.transform.position, 1500f, npc.name))
+            if (npc != null
+                && !Authority.InReach(npc.transform.position, 1500f, npc.name))
             {
                 return;
             }
@@ -312,7 +357,8 @@ namespace DarkwoodMP.World
     static class TalkToPatch
     {
         static bool Prefix(NPC __instance) =>
-            __instance.characterDialogue == null || !__instance.wantsToTalk || TalkLock.HostMayTalk(__instance);
+            __instance.characterDialogue == null || !__instance.wantsToTalk
+                || TalkLock.HostMayTalk(__instance);
 
         static void Postfix(NPC __instance)
         {

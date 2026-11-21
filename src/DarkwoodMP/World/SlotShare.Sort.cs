@@ -7,38 +7,54 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Sort &amp; Stack for the workbench's storage (GitHub issue 10). A button under the storage's slots merges
-    /// partial stacks of the same item and then puts the items in order: by the game's item category (melee
-    /// weapons, firearms, ammo, ..., as InvItem.Category numbers them), then by item type, then fullest first.
+    /// Sort &amp; Stack for the workbench's storage (GitHub issue 10). A button
+    /// under the storage's slots merges partial stacks of the same item and
+    /// then puts the items in order: by the game's item category (melee
+    /// weapons, firearms, ammo, ..., as InvItem.Category numbers them), then by
+    /// item type, then fullest first.
     ///
-    /// Stacks merge the way the game merges them when it moves a stack onto another (InvSlot.transferItemAllToPlayer):
-    /// only stackable items of the same type, up to the item's maxAmount, and the merged stack's durability is the
-    /// average of the two weighted by their amounts (InvItemClass.getStackedDurability), which is how food of
-    /// different freshness stacks in the game too. Items that aren't stackable, items that hold ammo, recipes for
-    /// different things, and items with upgrades are only moved, never merged, so a weapon keeps its durability,
-    /// its loaded rounds and its upgrades.
+    /// Stacks merge the way the game merges them when it moves a stack onto
+    /// another (InvSlot.transferItemAllToPlayer): only stackable items of the
+    /// same type, up to the item's maxAmount, and the merged stack's durability
+    /// is the average of the two weighted by their amounts
+    /// (InvItemClass.getStackedDurability), which is how food of different
+    /// freshness stacks in the game too. Items that aren't stackable, items
+    /// that hold ammo, recipes for different things, and items with upgrades
+    /// are only moved, never merged, so a weapon keeps its durability, its
+    /// loaded rounds and its upgrades.
     ///
-    /// Items whose fuel is their durability (InvItem.stacksDurability: gasoline, the lantern) never stack, but the game
-    /// pours one into another when a player drops one on the other (InvSlot.swapItems): up to the item's maxDurability,
-    /// and what doesn't fit stays in the one poured from. Sort &amp; Stack pours them the same way, each into the earlier
-    /// ones of the same type in slot order, so the cans end up full but one. A can poured empty is gone, as one is when
-    /// its fuel runs out (InvItemClass.drainDurability). One the game keeps when it's empty (a reloadable, repairable or
-    /// regenerating item, or one that rots: the lantern) stays, empty, so a sort never takes a player's lantern.
+    /// Items whose fuel is their durability (InvItem.stacksDurability:
+    /// gasoline, the lantern) never stack, but the game pours one into another
+    /// when a player drops one on the other (InvSlot.swapItems): up to the
+    /// item's maxDurability, and what doesn't fit stays in the one poured from.
+    /// Sort &amp; Stack pours them the same way, each into the earlier ones of
+    /// the same type in slot order, so the cans end up full but one. A can
+    /// poured empty is gone, as one is when its fuel runs out
+    /// (InvItemClass.drainDurability). One the game keeps when it's empty (a
+    /// reloadable, repairable or regenerating item, or one that rots: the
+    /// lantern) stays, empty, so a sort never takes a player's lantern.
     ///
-    /// Item type (not the item's name in the player's language) is the order within a category, so every game
-    /// sorts the same contents into the same slots whatever language it runs in.
+    /// Item type (not the item's name in the player's language) is the order
+    /// within a category, so every game sorts the same contents into the same
+    /// slots whatever language it runs in.
     ///
-    /// In co-op the host decides. The host (and a game without co-op) sorts at once, and the host sends the
-    /// changed slots to everyone as ContainerSlots. A client sorts its own copy at once as a prediction, without
-    /// sending those slot changes, and sends StorageSort in a Request. The host refuses it if the player isn't at
-    /// the workbench, and otherwise sorts its own copy, which ends the same as the client's when both held the
-    /// same items. Either way the host sends the requester every slot of its storage (ContainerSlots), which the
-    /// client takes as it is: a wrong prediction (someone else changed a slot meanwhile) is replaced by the host's
-    /// slots, and nothing is lost or doubled because only the host's copy counts.
+    /// In co-op the host decides. The host (and a game without co-op) sorts at
+    /// once, and the host sends the changed slots to everyone as
+    /// ContainerSlots. A client sorts its own copy at once as a prediction,
+    /// without sending those slot changes, and sends StorageSort in a Request.
+    /// The host refuses it if the player isn't at the workbench, and otherwise
+    /// sorts its own copy, which ends the same as the client's when both held
+    /// the same items. Either way the host sends the requester every slot of
+    /// its storage (ContainerSlots), which the client takes as it is: a wrong
+    /// prediction (someone else changed a slot meanwhile) is replaced by the
+    /// host's slots, and nothing is lost or doubled because only the host's
+    /// copy counts.
     /// </summary>
     public sealed partial class SlotShare
     {
-        /// <summary>The local player pressed Sort &amp; Stack at this storage.</summary>
+        /// <summary>
+        /// The local player pressed Sort &amp; Stack at this storage.
+        /// </summary>
         public void SortPressed(Inventory inv)
         {
             if (inv == null)
@@ -56,13 +72,16 @@ namespace DarkwoodMP.World
                 var r = ObjRef.Of(inv.gameObject);
                 if (!r.Valid)
                 {
-                    Plugin.Log.LogWarning($"[slots] can't sort {inv.name}: no name for it in the host's world");
+                    Plugin.Log.LogWarning(
+                        $"[slots] can't sort {inv.name}: no name for it in the host's world");
                     return;
                 }
-                // The host's contents must be our starting point, and what we changed before pressing goes first.
+                // The host's contents must be our starting point, and what we
+                // changed before pressing goes first.
                 if (_awaiting.ContainsKey(inv))
                 {
-                    Plugin.Log.LogInfo($"[slots] sort of {inv.name}: still waiting for the host's contents");
+                    Plugin.Log.LogInfo(
+                        $"[slots] sort of {inv.name}: still waiting for the host's contents");
                     return;
                 }
                 if (_watched.ContainsKey(inv))
@@ -73,11 +92,13 @@ namespace DarkwoodMP.World
                 var w = s.Begin(MsgType.StorageSort);
                 r.Write(w);
                 Authority.Request(w, $"sort {inv.name}", inventory: false);
-                Plugin.Log.LogInfo($"[slots] sorted {inv.name} here ({changed.Count} slot(s) changed); asked the host to sort it");
+                Plugin.Log.LogInfo(
+                    $"[slots] sorted {inv.name} here ({changed.Count} slot(s) changed); asked the host to sort it");
                 return;
             }
             var done = Sort(inv);
-            Plugin.Log.LogInfo($"[slots] sorted {inv.name}: {done.Count} slot(s) changed");
+            Plugin.Log.LogInfo(
+                $"[slots] sorted {inv.name}: {done.Count} slot(s) changed");
             if (s.IsHost && done.Count > 0)
             {
                 var r = ObjRef.Of(inv.gameObject);
@@ -88,7 +109,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Host: a client's player pressed Sort &amp; Stack (inside a Request).</summary>
+        /// <summary>
+        /// Host: a client's player pressed Sort &amp; Stack (inside a Request).
+        /// </summary>
         private void OnSort(ulong from, PacketReader r)
         {
             var s = _session;
@@ -106,7 +129,10 @@ namespace DarkwoodMP.World
             var before = Keys(inv);
             string why = Containers.Refusal(from, inv);
             var ctl = Singleton<Controller>.Instance;
-            if (why == null && ctl != null && !InvItemClass.isNull(ctl.pickedUpItem) && ctl.pickedUpItem.slot != null && ctl.pickedUpItem.slot.inventory == inv)
+            if (why == null && ctl != null
+                && !InvItemClass.isNull(ctl.pickedUpItem)
+                && ctl.pickedUpItem.slot != null
+                && ctl.pickedUpItem.slot.inventory == inv)
             {
                 why = "the host is moving an item in it";
             }
@@ -119,31 +145,42 @@ namespace DarkwoodMP.World
             {
                 done = new List<Change>();
             }
-            // The requester gets every slot: what to keep if its prediction was right, what to take if not.
+            // The requester gets every slot: what to keep if its prediction was
+            // right, what to take if not.
             var all = new List<Change>(before.Length);
             for (int i = 0; i < before.Length && i < inv.slots.Count; i++)
             {
-                all.Add(new Change { Slot = i, Old = before[i], New = Json(inv, i) });
+                all.Add(new Change
+                {
+                    Slot = i,
+                    Old = before[i],
+                    New = Json(inv, i)
+                });
             }
             SendChanges(obj, all, from, toOnly: true);
             if (why != null)
             {
                 Authority.Refuse(why);
-                Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} sorted {inv.name}: refused ({why})");
+                Plugin.Log.LogInfo(
+                    $"[authority] {s.NameOf(from)} sorted {inv.name}: refused ({why})");
                 return;
             }
             if (done.Count > 0)
             {
                 SendChanges(obj, done, from);
             }
-            Plugin.Log.LogInfo($"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} slot(s) changed here");
+            Plugin.Log.LogInfo(
+                $"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} slot(s) changed here");
         }
 
         /// <summary>
-        /// ContainerSlots with these changes, in parts of at most 200 (its count is a byte): to one peer (toOnly);
-        /// otherwise from the host to everyone but that peer, and from a client to the host.
+        /// ContainerSlots with these changes, in parts of at most 200 (its
+        /// count is a byte): to one peer (toOnly); otherwise from the host to
+        /// everyone but that peer, and from a client to the host.
         /// </summary>
-        private void SendChanges(ObjRef obj, List<Change> changes, ulong peer = 0, bool toOnly = false)
+        private void SendChanges(
+            ObjRef obj, List<Change> changes, ulong peer = 0,
+            bool toOnly = false)
         {
             var s = _session;
             for (int at = 0; at < changes.Count; at += 200)
@@ -164,7 +201,8 @@ namespace DarkwoodMP.World
                 }
                 else if (s.IsHost)
                 {
-                    s.Broadcast(w, Channel.Control, reliable: true, except: peer);
+                    s.Broadcast(
+                        w, Channel.Control, reliable: true, except: peer);
                 }
                 else
                 {
@@ -178,22 +216,37 @@ namespace DarkwoodMP.World
             public InvItemClass.SaveState State;
             public InvItem Base;
             public bool Mergeable =>
-                Base != null && Base.stackable && !Base.hasAmmo && Base.maxAmount > 1
-                && (State.upgrades == null || State.upgrades.Count == 0) && (State.modifiers == null || State.modifiers.Count == 0);
-            /// <summary>Fuel kept as durability: poured into another of its type, never stacked (see the class comment).</summary>
+                Base != null && Base.stackable && !Base.hasAmmo
+                    && Base.maxAmount > 1
+                    && (State.upgrades == null || State.upgrades.Count == 0)
+                    && (State.modifiers == null || State.modifiers.Count == 0);
+            /// <summary>
+            /// Fuel kept as durability: poured into another of its type, never
+            /// stacked (see the class comment).
+            /// </summary>
             public bool Pours =>
                 Base != null && Base.stacksDurability && Base.maxDurability > 0f
-                && (State.upgrades == null || State.upgrades.Count == 0) && (State.modifiers == null || State.modifiers.Count == 0);
-            /// <summary>Whether the game takes this item away when it's empty (InvItemClass.drainDurability).</summary>
+                    && (State.upgrades == null || State.upgrades.Count == 0)
+                    && (State.modifiers == null || State.modifiers.Count == 0);
+            /// <summary>
+            /// Whether the game takes this item away when it's empty
+            /// (InvItemClass.drainDurability).
+            /// </summary>
             public bool GoneWhenEmpty =>
-                !Base.hasAmmo && !Base.canBeReloaded && !Base.repairable && !Base.regeneratesWhenInactive && Base.rottenItem == null;
-            public bool Empty => Pours && GoneWhenEmpty && State.durability <= 0.001f;
-            public bool SameItem(Stack o) => State.type == o.State.type && State.isRecipe == o.State.isRecipe && State.recipeFor == o.State.recipeFor;
+                !Base.hasAmmo && !Base.canBeReloaded && !Base.repairable
+                    && !Base.regeneratesWhenInactive && Base.rottenItem == null;
+            public bool Empty =>
+                Pours && GoneWhenEmpty && State.durability <= 0.001f;
+            public bool SameItem(Stack o) => State.type == o.State.type
+                && State.isRecipe == o.State.isRecipe
+                && State.recipeFor == o.State.recipeFor;
         }
 
         /// <summary>
-        /// Merge and sort this storage's slots here (each changed slot set as Set does, so it's the slot's
-        /// starting point and isn't sent by Check). Returns the slots that changed: what each held (key) and holds (JSON).
+        /// Merge and sort this storage's slots here (each changed slot set as
+        /// Set does, so it's the slot's starting point and isn't sent by
+        /// Check). Returns the slots that changed: what each held (key) and
+        /// holds (JSON).
         /// </summary>
         private List<Change> Sort(Inventory inv)
         {
@@ -205,10 +258,15 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                stacks.Add(new Stack { State = new InvItemClass.SaveState(it, i), Base = it.baseClass });
+                stacks.Add(new Stack
+                {
+                    State = new InvItemClass.SaveState(it, i),
+                    Base = it.baseClass
+                });
             }
 
-            // Merge: each mergeable stack tops up the earlier stacks of the same item, in slot order.
+            // Merge: each mergeable stack tops up the earlier stacks of the
+            // same item, in slot order.
             for (int b = 0; b < stacks.Count; b++)
             {
                 var src = stacks[b];
@@ -219,18 +277,25 @@ namespace DarkwoodMP.World
                 for (int a = 0; a < b && src.State.amount > 0; a++)
                 {
                     var dst = stacks[a];
-                    if (!dst.Mergeable || !dst.SameItem(src) || dst.State.amount <= 0 || dst.State.amount >= dst.Base.maxAmount)
+                    if (!dst.Mergeable || !dst.SameItem(src)
+                        || dst.State.amount <= 0
+                        || dst.State.amount >= dst.Base.maxAmount)
                     {
                         continue;
                     }
-                    int n = Mathf.Min(src.State.amount, dst.Base.maxAmount - dst.State.amount);
-                    dst.State.durability = (dst.State.amount * dst.State.durability + src.State.durability * n) / (dst.State.amount + n);
+                    int n = Mathf.Min(
+                        src.State.amount,
+                        dst.Base.maxAmount - dst.State.amount);
+                    dst.State.durability =
+                        (dst.State.amount * dst.State.durability
+                            + src.State.durability * n) / (dst.State.amount + n);
                     dst.State.amount += n;
                     src.State.amount -= n;
                 }
             }
 
-            // Pour: each item whose fuel is its durability tops up the earlier ones of its type, in slot order.
+            // Pour: each item whose fuel is its durability tops up the earlier
+            // ones of its type, in slot order.
             for (int b = 0; b < stacks.Count; b++)
             {
                 var src = stacks[b];
@@ -242,16 +307,19 @@ namespace DarkwoodMP.World
                 {
                     var dst = stacks[a];
                     float max = dst.Base.maxDurability;
-                    if (!dst.Pours || dst.State.type != src.State.type || dst.State.durability >= max)
+                    if (!dst.Pours || dst.State.type != src.State.type
+                        || dst.State.durability >= max)
                     {
                         continue;
                     }
-                    float n = Mathf.Min(src.State.durability, max - dst.State.durability);
+                    float n = Mathf.Min(
+                        src.State.durability, max - dst.State.durability);
                     dst.State.durability += n;
                     src.State.durability -= n;
                 }
             }
-            stacks.RemoveAll(st => (st.State.amount <= 0 && st.Mergeable) || st.Empty);
+            stacks.RemoveAll(
+                st => (st.State.amount <= 0 && st.Mergeable) || st.Empty);
 
             stacks.Sort((x, y) =>
             {
@@ -288,7 +356,8 @@ namespace DarkwoodMP.World
                 }
                 if (c == 0)
                 {
-                    c = x.State.slotId.CompareTo(y.State.slotId); // stable: equal items keep their order
+                    // stable: equal items keep their order
+                    c = x.State.slotId.CompareTo(y.State.slotId);
                 }
                 return c;
             });
@@ -308,14 +377,20 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 Set(inv, i, json);
-                changes.Add(new Change { Slot = i, Old = before[i], New = json });
+                changes.Add(new Change
+                {
+                    Slot = i,
+                    Old = before[i],
+                    New = json
+                });
             }
             return changes;
         }
 
         private static int Category(Stack s)
         {
-            if (s.Base != null && s.Base.categories != null && s.Base.categories.Count > 0)
+            if (s.Base != null && s.Base.categories != null
+                && s.Base.categories.Count > 0)
             {
                 return (int)s.Base.categories[0];
             }
@@ -325,8 +400,10 @@ namespace DarkwoodMP.World
         internal const string ButtonName = "DarkwoodMP_SortStack";
 
         /// <summary>
-        /// The button, under the storage's slots. It's a copy of the workbench's Repair Item button (UI/Inventory/RepairBtn),
-        /// the game's own text button with its frame and rollover, drawn, placed and clicked by the game's Button.
+        /// The button, under the storage's slots. It's a copy of the
+        /// workbench's Repair Item button (UI/Inventory/RepairBtn), the game's
+        /// own text button with its frame and rollover, drawn, placed and
+        /// clicked by the game's Button.
         /// The game has no words for it, so the text isn't localized.
         /// </summary>
         internal static void AddButton(Inventory inv)
@@ -341,14 +418,20 @@ namespace DarkwoodMP.World
                 int cols = Mathf.Max(1, inv.maxColumns);
                 int rows = (inv.slots.Count + cols - 1) / cols;
                 const float slot = 60f; // Inventory.slotSize
-                var at = ui.transform.position + new Vector3((cols - 1) * slot * 0.5f, 5f, -rows * slot + 8f); // as far under the slots as Repair Item is under the workbench's
-                var go = Core.AddPrefab("UI/Inventory/RepairBtn", at, Quaternion.Euler(90f, 0f, 0f), ui, worldSpace: true);
+                // as far under the slots as Repair Item is under the
+                // workbench's
+                var at = ui.transform.position + new Vector3(
+                    (cols - 1) * slot * 0.5f, 5f, -rows * slot + 8f);
+                var go = Core.AddPrefab(
+                    "UI/Inventory/RepairBtn", at, Quaternion.Euler(90f, 0f, 0f),
+                    ui, worldSpace: true);
                 if (go == null)
                 {
                     return;
                 }
                 go.name = ButtonName;
-                foreach (var loc in go.GetComponentsInChildren<LocalizedText>(true))
+                foreach (var loc in go.GetComponentsInChildren<LocalizedText>(
+                    true))
                 {
                     Object.DestroyImmediate(loc);
                 }
@@ -388,16 +471,21 @@ namespace DarkwoodMP.World
                         }
                     };
                 }
-                Plugin.Log.LogInfo($"[slots] Sort & Stack button added to {inv.name} at {at}");
+                Plugin.Log.LogInfo(
+                    $"[slots] Sort & Stack button added to {inv.name} at {at}");
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"[slots] couldn't add the Sort & Stack button: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[slots] couldn't add the Sort & Stack button: {e.Message}");
             }
         }
     }
 
-    /// <summary>The workbench's storage was drawn (Workbench.open shows it): add Sort &amp; Stack under it.</summary>
+    /// <summary>
+    /// The workbench's storage was drawn (Workbench.open shows it): add Sort
+    /// &amp; Stack under it.
+    /// </summary>
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
     static class StorageSortButtonPatch
     {

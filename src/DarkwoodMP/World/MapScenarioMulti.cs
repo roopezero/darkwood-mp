@@ -11,16 +11,20 @@ using static DarkwoodMP.World.MapScenario;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps with several client games at once (tools/tests/map4_multi.py, run with tools/run-test.sh map4):
-    /// an enemy's threat among several remote players, three players taking from one container slot at the same
-    /// moment, two at one trader, things done while a third player is far away, and night attackers with players
-    /// in different hideouts. Steps that happen "at the same moment" take an epoch second (the games share one
-    /// machine's clock), which the driver fills in for a step run in several games at once ("c1+c2+c3").
+    /// Map test steps with several client games at once
+    /// (tools/tests/map4_multi.py, run with tools/run-test.sh map4): an enemy's
+    /// threat among several remote players, three players taking from one
+    /// container slot at the same moment, two at one trader, things done while
+    /// a third player is far away, and night attackers with players in
+    /// different hideouts. Steps that happen "at the same moment" take an epoch
+    /// second (the games share one machine's clock), which the driver fills in
+    /// for a step run in several games at once ("c1+c2+c3").
     /// </summary>
     public static class MapScenarioMulti
     {
         private static Player P => Player.Instance;
-        private static double Now => DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
+        private static double Now =>
+            DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
 
         public static void Register()
         {
@@ -50,7 +54,9 @@ namespace DarkwoodMP.World
             Add("mt-open-free", OpenFree, timeout: 20f);
         }
 
-        /// <summary>"mt-stand DX DZ": walk to the centre plus (DX, DZ).</summary>
+        /// <summary>
+        /// "mt-stand DX DZ": walk to the centre plus (DX, DZ).
+        /// </summary>
         private static IEnumerator Stand(string[] a, Result r)
         {
             var to = Centre + new Vector3(F(a[0]), 0f, F(a[1]));
@@ -58,7 +64,10 @@ namespace DarkwoodMP.World
             r.Info = Fmt(P.transform.position);
         }
 
-        /// <summary>"mt-home": the test area is the centre again (after far-spot), and we walk back to it.</summary>
+        /// <summary>
+        /// "mt-home": the test area is the centre again (after far-spot), and
+        /// we walk back to it.
+        /// </summary>
         private static IEnumerator HomeStep(string[] a, Result r)
         {
             if (Home.HasValue)
@@ -66,7 +75,8 @@ namespace DarkwoodMP.World
                 SetCentre(Home.Value);
             }
             yield return Walk(Centre, 40f);
-            r.Info = $"centre {Fmt(Centre)}, we're at {Fmt(P.transform.position)}";
+            r.Info =
+                $"centre {Fmt(Centre)}, we're at {Fmt(P.transform.position)}";
         }
 
         private static IEnumerator Nothing()
@@ -76,8 +86,9 @@ namespace DarkwoodMP.World
 
         private static bool _tough;
 
-        /// <summary>"mt-tough on|off": while on, our player is healed whenever below half health (an enemy biting
-        /// them while the host's steps wait would kill them, and a death changes the story).</summary>
+        /// <summary>"mt-tough on|off": while on, our player is healed whenever
+        /// below half health (an enemy biting them while the host's steps wait
+        /// would kill them, and a death changes the story).</summary>
         private static IEnumerator Tough(string[] a, Result r)
         {
             bool on = a.Length == 0 || a[0] == "on";
@@ -108,8 +119,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"mt-die": our player dies (Player.die) and respawns; the death's story flags (player_diedAtLeastOneTime)
-        /// must reach the other games.</summary>
+        /// <summary>"mt-die": our player dies (Player.die) and respawns; the
+        /// death's story flags (player_diedAtLeastOneTime) must reach the other
+        /// games.</summary>
         private static IEnumerator Die(string[] a, Result r)
         {
             var p = P;
@@ -121,25 +133,29 @@ namespace DarkwoodMP.World
             p.die();
             float until = Time.realtimeSinceStartup + 50f;
             yield return new WaitForSeconds(2f);
-            while (Time.realtimeSinceStartup < until && !(P != null && P.alive && WorldShare.WorldReady))
+            while (Time.realtimeSinceStartup < until
+                && !(P != null && P.alive && WorldShare.WorldReady))
             {
                 yield return new WaitForSeconds(0.5f);
             }
             yield return new WaitForSeconds(FlagsSync.Interval + 2f);
-            r.Info = $"alive again {P != null && P.alive} at {Fmt(P.transform.position)}";
+            r.Info =
+                $"alive again {P != null && P.alive} at {Fmt(P.transform.position)}";
             if (P == null || !P.alive)
             {
                 r.Fail(r.Info);
             }
         }
 
-        // ---- 1. threat among several remote players ------------------------------------------------------------
+        // ---- 1. threat among several remote players -------------------------
 
         private static Character _enemy;   // host: the one mt-spawn made
         private static uint _enemyId;      // its net ID
-        // host: who it was after, in order, and for each time it was after someone, who else was nearer to it then
+        // host: who it was after, in order, and for each time it was after
+        // someone, who else was nearer to it then
         private static readonly List<string> _targets = new List<string>();
-        private static readonly Dictionary<string, HashSet<string>> _nearerWhile = new Dictionary<string, HashSet<string>>();
+        private static readonly Dictionary<string, HashSet<string>> _nearerWhile =
+            new Dictionary<string, HashSet<string>>();
 
         private static string NameOf(Transform t)
         {
@@ -159,7 +175,10 @@ namespace DarkwoodMP.World
             return t.name;
         }
 
-        /// <summary>The name a client game's player goes by on the host ("c2" is Client2, as tools/setup-client-game.sh names them).</summary>
+        /// <summary>
+        /// The name a client game's player goes by on the host ("c2" is
+        /// Client2, as tools/setup-client-game.sh names them).
+        /// </summary>
         private static string PlayerName(string who)
         {
             if (who == "host")
@@ -183,19 +202,27 @@ namespace DarkwoodMP.World
                 {
                     _targets.Add(now);
                     last = now;
-                    Plugin.Log.LogInfo($"[map] {c.name} #{_enemyId} now after {now}");
+                    Plugin.Log.LogInfo(
+                        $"[map] {c.name} #{_enemyId} now after {now}");
                 }
                 if (c.target != null && now != "-")
                 {
-                    float mine = StateDump.Flat(c.target.position - c.transform.position);
-                    var players = NetPlayerProxy.All.Values.Where(x => x != null && x.alive).Select(x => (x.OwnerName, x.transform.position)).ToList();
+                    float mine = StateDump.Flat(
+                        c.target.position - c.transform.position);
+                    var players = NetPlayerProxy.All.Values.Where(
+                        x => x != null
+                            && x.alive)
+                        .Select(x => (x.OwnerName, x.transform.position))
+                        .ToList();
                     if (P != null)
                     {
                         players.Add(("host", P.transform.position));
                     }
                     foreach (var (name, pos) in players)
                     {
-                        if (name != now && StateDump.Flat(pos - c.transform.position) + 30f < mine)
+                        if (name != now
+                            && StateDump.Flat(pos - c.transform.position)
+                                    + 30f < mine)
                         {
                             if (!_nearerWhile.TryGetValue(now, out var set))
                             {
@@ -215,11 +242,15 @@ namespace DarkwoodMP.World
             {
                 return "-";
             }
-            return string.Join(", ", Threat.Of(c).Values.Where(kv => kv.Key != null).Select(kv => $"{NameOf(kv.Key.transform)} {kv.Value:0.0}"));
+            return string.Join(
+                ", ",
+                Threat.Of(c).Values.Where(kv => kv.Key != null).Select(
+                    kv => $"{NameOf(kv.Key.transform)} {kv.Value:0.0}"));
         }
 
-        /// <summary>"mt-spawn KIND DX DZ" (host): an enemy at the centre plus (DX, DZ), not set on anyone; from now on
-        /// who it goes after is recorded.</summary>
+        /// <summary>"mt-spawn KIND DX DZ" (host): an enemy at the centre plus
+        /// (DX, DZ), not set on anyone; from now on who it goes after is
+        /// recorded.</summary>
         private static IEnumerator SpawnEnemy(string[] a, Result r)
         {
             if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
@@ -227,9 +258,13 @@ namespace DarkwoodMP.World
                 r.Fail("enemies are the host's");
                 yield break;
             }
-            var spot = MapScenarioEnemies.FreeSpot(Centre + new Vector3(F(a[1]), 0f, F(a[2])));
-            // spawnCharacterAround takes a non-zero offset times the distance as the position itself.
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, a[0], nocturnal: false, attackPlayer: false);
+            var spot = MapScenarioEnemies.FreeSpot(
+                Centre + new Vector3(F(a[1]), 0f, F(a[2])));
+            // spawnCharacterAround takes a non-zero offset times the distance
+            // as the position itself.
+            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                P.gameObject, spot, 1f, a[0], nocturnal: false,
+                attackPlayer: false);
             if (c == null)
             {
                 r.Fail($"couldn't spawn {a[0]}");
@@ -242,10 +277,14 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             NetEnemies.Instance.NetIdOf(c, out _enemyId);
             Plugin.Instance.StartCoroutine(WatchEnemy(c));
-            r.Info = $"{c.name} #{_enemyId} at {Fmt(c.transform.position)}, health {c.health}";
+            r.Info =
+                $"{c.name} #{_enemyId} at {Fmt(c.transform.position)}, health {c.health}";
         }
 
-        /// <summary>The host's enemy nearest to our player (this game's copy of it), alive or dead.</summary>
+        /// <summary>
+        /// The host's enemy nearest to our player (this game's copy of it),
+        /// alive or dead.
+        /// </summary>
         private static Character HostEnemy(bool alive, float within = 4000f)
         {
             var ne = NetEnemies.Instance;
@@ -253,12 +292,19 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return Nearest(Object.FindObjectsOfType<Character>().Where(x => x.alive == alive && NetEnemies.Eligible(x) && ne.NetIdOf(x, out _)
-                && StateDump.Flat(x.transform.position - P.transform.position) < within), P.transform.position);
+            return Nearest(
+                Object.FindObjectsOfType<Character>().Where(
+                    x => x.alive == alive && NetEnemies.Eligible(x)
+                        && ne.NetIdOf(x, out _)
+                        && StateDump.Flat(
+                            x.transform.position - P.transform.position)
+                            < within), P.transform.position);
         }
 
-        /// <summary>"mt-hit N DAMAGE [--kill]": walk to the host's enemy, hit it N times, and walk back to where we stood.
-        /// It should be alive after; with --kill, hit until it's dead (N at most), and it should be.</summary>
+        /// <summary>"mt-hit N DAMAGE [--kill]": walk to the host's enemy, hit
+        /// it N times, and walk back to where we stood. It should be alive
+        /// after; with --kill, hit until it's dead (N at most), and it should
+        /// be.</summary>
         private static IEnumerator HitEnemy(string[] a, Result r)
         {
             int n = int.Parse(a[0]);
@@ -274,13 +320,17 @@ namespace DarkwoodMP.World
             for (int i = 0; i < n && c != null && c.alive; i++)
             {
                 yield return Walk(c.transform.position, 80f);
-                AsPlayer(() => c.getHit(dmg, P.transform, false, true, true, true, false, false, false));
+                AsPlayer(
+                    () => c.getHit(
+                        dmg, P.transform, false, true, true, true, false, false,
+                        false));
                 yield return new WaitForSeconds(0.4f);
             }
             bool kill = a.Contains("--kill");
             if (kill)
             {
-                yield return new WaitForSeconds(3f); // a client settles the corpse 2 s after it dies
+                // a client settles the corpse 2 s after it dies
+                yield return new WaitForSeconds(3f);
             }
             else
             {
@@ -301,7 +351,8 @@ namespace DarkwoodMP.World
             {
                 health = c.health;
             }
-            r.Info = $"{enemyName} #{id}: hits of {dmg:0}, health {was:0} -> {health:0}, alive {c != null && c.alive}";
+            r.Info =
+                $"{enemyName} #{id}: hits of {dmg:0}, health {was:0} -> {health:0}, alive {c != null && c.alive}";
             if (kill && c != null && c.alive)
             {
                 r.Fail($"{r.Info}: still alive");
@@ -312,9 +363,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"mt-target WHO [SECS] [--nearer OTHER]" (host): within SECS (default 15) the enemy goes after WHO's
-        /// player. With --nearer OTHER: while it was after WHO, OTHER was nearer to it at some moment (it went by
-        /// threat, not by who is closest).</summary>
+        /// <summary>"mt-target WHO [SECS] [--nearer OTHER]" (host): within SECS
+        /// (default 15) the enemy goes after WHO's player. With --nearer OTHER:
+        /// while it was after WHO, OTHER was nearer to it at some moment (it
+        /// went by threat, not by who is closest).</summary>
         private static IEnumerator Target(string[] a, Result r)
         {
             var c = _enemy;
@@ -336,15 +388,20 @@ namespace DarkwoodMP.World
                 nearer = PlayerName(a[ni + 1]);
             }
             float until = Time.realtimeSinceStartup + secs;
-            while (c != null && c.alive && NameOf(c.target) != want && Time.realtimeSinceStartup < until)
+            while (c != null && c.alive && NameOf(c.target) != want
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
             if (nearer != null)
             {
-                // Give it a moment after it turned to WHO, to be overtaken by nobody and pass OTHER on the way.
+                // Give it a moment after it turned to WHO, to be overtaken by
+                // nobody and pass OTHER on the way.
                 float more = Time.realtimeSinceStartup + 4f;
-                while (c != null && c.alive && Time.realtimeSinceStartup < more && !(_nearerWhile.TryGetValue(want, out var s0) && s0.Contains(nearer)))
+                while (c != null && c.alive
+                    && Time.realtimeSinceStartup < more
+                    && !(_nearerWhile.TryGetValue(want, out var s0)
+                        && s0.Contains(nearer)))
                 {
                     yield return null;
                 }
@@ -354,7 +411,8 @@ namespace DarkwoodMP.World
             {
                 t = c.target;
             }
-            r.Info = $"after {NameOf(t)}; threat: {ThreatText(c)}; targets so far: {string.Join(" > ", _targets)}";
+            r.Info =
+                $"after {NameOf(t)}; threat: {ThreatText(c)}; targets so far: {string.Join(" > ", _targets)}";
             if (c == null || !c.alive)
             {
                 r.Fail($"{r.Info}: it's dead");
@@ -364,13 +422,18 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: not after {want}");
             }
-            else if (nearer != null && !(_nearerWhile.TryGetValue(want, out var s) && s.Contains(nearer)))
+            else if (nearer != null
+                && !(_nearerWhile.TryGetValue(want, out var s) && s.Contains(
+                    nearer)))
             {
-                r.Fail($"{r.Info}: {nearer} was never nearer to it while it was after {want} (the test shows nothing)");
+                r.Fail(
+                    $"{r.Info}: {nearer} was never nearer to it while it was after {want} (the test shows nothing)");
             }
         }
 
-        /// <summary>"mt-never WHO" (host): the enemy never went after WHO's player.</summary>
+        /// <summary>
+        /// "mt-never WHO" (host): the enemy never went after WHO's player.
+        /// </summary>
         private static IEnumerator Never(string[] a, Result r)
         {
             string who = PlayerName(a[0]);
@@ -382,7 +445,10 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>"mt-dead" (any game): our copy of the host's enemy (the one nearest us) is dead and its corpse searchable.</summary>
+        /// <summary>
+        /// "mt-dead" (any game): our copy of the host's enemy (the one nearest
+        /// us) is dead and its corpse searchable.
+        /// </summary>
         private static IEnumerator Dead(string[] a, Result r)
         {
             Character c = null;
@@ -390,7 +456,8 @@ namespace DarkwoodMP.World
             while (Time.realtimeSinceStartup < until)
             {
                 c = HostEnemy(false);
-                if (c != null && c.GetComponent<Item>() != null && c.GetComponentInChildren<Inventory>(true) != null)
+                if (c != null && c.GetComponent<Item>() != null
+                    && c.GetComponentInChildren<Inventory>(true) != null)
                 {
                     break;
                 }
@@ -404,7 +471,8 @@ namespace DarkwoodMP.World
                 {
                     livingName = alive.name;
                 }
-                r.Fail($"no dead enemy of the host's near us (a living one: {livingName})");
+                r.Fail(
+                    $"no dead enemy of the host's near us (a living one: {livingName})");
                 yield break;
             }
             var inv = c.GetComponentInChildren<Inventory>(true);
@@ -417,15 +485,17 @@ namespace DarkwoodMP.World
             {
                 loot = MapScenarioWorld.Contents(inv);
             }
-            r.Info = $"{name} #{id} dead at {spot}, searchable {searchable}, loot [{loot}]";
+            r.Info =
+                $"{name} #{id} dead at {spot}, searchable {searchable}, loot [{loot}]";
             if (c.GetComponent<Item>() == null || inv == null)
             {
                 r.Fail($"{r.Info}: its corpse can't be searched here");
             }
         }
 
-        /// <summary>"mt-corpse [--take]": walk to the host's dead enemy nearest us and open its body; with --take, take
-        /// its first thing. Fails if the host refuses.</summary>
+        /// <summary>"mt-corpse [--take]": walk to the host's dead enemy nearest
+        /// us and open its body; with --take, take its first thing. Fails if
+        /// the host refuses.</summary>
         private static IEnumerator Corpse(string[] a, Result r)
         {
             var c = HostEnemy(false);
@@ -447,11 +517,13 @@ namespace DarkwoodMP.World
             yield return Walk(c.transform.position, 90f);
             int mark = MapScenarioIssues.LogMark();
             P.openedItemInventory = inv;
-            yield return new WaitForSeconds(1.5f); // the host's contents come back (ContainerSlotsAll)
+            // the host's contents come back (ContainerSlotsAll)
+            yield return new WaitForSeconds(1.5f);
             string took = "looked";
             if (a.Contains("--take"))
             {
-                var slot = inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem));
+                var slot = inv.slots.FirstOrDefault(
+                    s => !InvItemClass.isNull(s.invItem));
                 if (slot == null)
                 {
                     took = "nothing in it";
@@ -463,10 +535,12 @@ namespace DarkwoodMP.World
                     AsPlayer(() =>
                     {
                         slot.removeItem();
-                        P.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true);
+                        P.Inventory.addItemTypeToPlayer(
+                            it.type, it.amount, dropIfNoRoom: true);
                     });
                     yield return new WaitForSeconds(1f);
-                    took = $"took {it.type} x{it.amount} (we carry {before} -> {MapScenarioWorld.CarriedOf(it.type)})";
+                    took =
+                        $"took {it.type} x{it.amount} (we carry {before} -> {MapScenarioWorld.CarriedOf(it.type)})";
                 }
             }
             if (P.openedItemInventory == inv)
@@ -474,19 +548,26 @@ namespace DarkwoodMP.World
                 P.openedItemInventory = null;
             }
             yield return new WaitForSeconds(1.5f);
-            var refused = MapScenarioIssues.LogLines().Skip(mark).FirstOrDefault(l => !l.Contains("[map]") && (l.Contains("refused") || l.Contains("is in use by")));
-            r.Info = $"{c.name} {ObjRef.Of(inv.gameObject)}: {took}; it holds [{MapScenarioWorld.Contents(inv)}]";
+            var refused = MapScenarioIssues.LogLines().Skip(mark)
+                .FirstOrDefault(
+                    l => !l.Contains("[map]")
+                        && (l.Contains("refused") || l.Contains(
+                            "is in use by")));
+            r.Info =
+                $"{c.name} {ObjRef.Of(inv.gameObject)}: {took}; it holds [{MapScenarioWorld.Contents(inv)}]";
             if (refused != null)
             {
                 r.Fail($"{r.Info}; {refused.Trim()}");
             }
         }
 
-        // ---- 2. one container slot, several players at the same moment ----------------------------------------------
+        // ---- 2. one container slot, several players at the same moment ------
 
-        /// <summary>"mt-grab CONTAINER AT": at epoch second AT, open the container and take its first thing, as the other
-        /// players do at the same moment. Replies "got TYPE" or "rolled back TYPE"; fails if what we carry and what it
-        /// holds don't agree with that (the item doubled or lost here).</summary>
+        /// <summary>"mt-grab CONTAINER AT": at epoch second AT, open the
+        /// container and take its first thing, as the other players do at the
+        /// same moment. Replies "got TYPE" or "rolled back TYPE"; fails if what
+        /// we carry and what it holds don't agree with that (the item doubled
+        /// or lost here).</summary>
         private static IEnumerator Grab(string[] a, Result r)
         {
             var inv = MapScenarioWorld.Container(a[0]);
@@ -507,9 +588,11 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             P.setOpenedItemInventory(inv); // as the game opens it
-            yield return null; // the game's open: the lock is asked for, the slots watched
+            // the game's open: the lock is asked for, the slots watched
             yield return null;
-            var slot = inv.slots.FirstOrDefault(s => s != null && !InvItemClass.isNull(s.invItem));
+            yield return null;
+            var slot = inv.slots.FirstOrDefault(
+                s => s != null && !InvItemClass.isNull(s.invItem));
             if (slot == null)
             {
                 P.openedItemInventory = null;
@@ -522,7 +605,8 @@ namespace DarkwoodMP.World
             AsPlayer(() =>
             {
                 slot.removeItem();
-                P.Inventory.addItemTypeToPlayer(item.type, item.amount, dropIfNoRoom: true);
+                P.Inventory.addItemTypeToPlayer(
+                    item.type, item.amount, dropIfNoRoom: true);
             });
             yield return new WaitForSeconds(3f);
             if (P.openedItemInventory == inv)
@@ -532,25 +616,31 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f);
             int now = MapScenarioWorld.CarriedOf(item.type);
             bool got = now > before;
-            bool back = !InvItemClass.isNull(inv.slots[si].invItem) && inv.slots[si].invItem.type == item.type;
+            bool back = !InvItemClass.isNull(inv.slots[si].invItem)
+                && inv.slots[si].invItem.type == item.type;
             string text = "rolled back";
             if (got)
             {
                 text = "got";
             }
-            r.Info = $"{text} {item.type} x{item.amount} (slot {si} of {inv.name} {MapScenarioWorld.Ref(inv)}): we carry {before} -> {now}; it holds [{MapScenarioWorld.Contents(inv)}]";
+            r.Info =
+                $"{text} {item.type} x{item.amount} (slot {si} of {inv.name} {MapScenarioWorld.Ref(inv)}): we carry {before} -> {now}; it holds [{MapScenarioWorld.Contents(inv)}]";
             if (now != before && now != before + item.amount)
             {
                 r.Fail($"{r.Info}: carried amount changed by something else");
             }
-            // Rolled back: the slot is the host's again, which the winner emptied (or still holds it, if nobody got it).
+            // Rolled back: the slot is the host's again, which the winner
+            // emptied (or still holds it, if nobody got it).
             if (got && back)
             {
                 r.Fail($"{r.Info}: we got it and it's still in the slot");
             }
         }
 
-        /// <summary>"mt-locks" (host): how many containers someone has open (each released once its player closed or left).</summary>
+        /// <summary>
+        /// "mt-locks" (host): how many containers someone has open (each
+        /// released once its player closed or left).
+        /// </summary>
         private static IEnumerator Locks(string[] a, Result r)
         {
             int n = -1;
@@ -566,7 +656,10 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>"mt-leave" (client): leave the session (as quitting to the menu does).</summary>
+        /// <summary>
+        /// "mt-leave" (client): leave the session (as quitting to the menu
+        /// does).
+        /// </summary>
         private static IEnumerator Leave(string[] a, Result r)
         {
             var s = Net.Session.Instance;
@@ -580,7 +673,10 @@ namespace DarkwoodMP.World
             r.Info = "left";
         }
 
-        /// <summary>"mt-open-free CONTAINER": open it and keep it open 3 s: nobody else is said to be using it.</summary>
+        /// <summary>
+        /// "mt-open-free CONTAINER": open it and keep it open 3 s: nobody else
+        /// is said to be using it.
+        /// </summary>
         private static IEnumerator OpenFree(string[] a, Result r)
         {
             var inv = MapScenarioWorld.Container(a[0]);
@@ -593,7 +689,10 @@ namespace DarkwoodMP.World
             float t0 = Time.realtimeSinceStartup;
             P.openedItemInventory = inv;
             yield return new WaitForSeconds(3f);
-            var msg = MapScenarioWorld.Messages.Where(m => m.at >= t0 && m.msg.Contains("is using this")).Select(m => m.msg).FirstOrDefault();
+            var msg = MapScenarioWorld.Messages.Where(
+                m => m.at >= t0
+                    && m.msg.Contains("is using this")).Select(m => m.msg)
+                .FirstOrDefault();
             if (P.openedItemInventory == inv)
             {
                 P.openedItemInventory = null;
@@ -611,10 +710,12 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- 3. one trader, two players ------------------------------------------------------------------------
+        // ---- 3. one trader, two players -------------------------------------
 
-        /// <summary>"mt-talk [--refused]": talk to the trader nearest the centre (NPC.talkTo) and stay in the dialogue
-        /// (talk-end closes it). With --refused, someone else is talking to him: we're told so and ours closes.</summary>
+        /// <summary>"mt-talk [--refused]": talk to the trader nearest the
+        /// centre (NPC.talkTo) and stay in the dialogue (talk-end closes it).
+        /// With --refused, someone else is talking to him: we're told so and
+        /// ours closes.</summary>
         private static IEnumerator Talk(string[] a, Result r)
         {
             var npc = MapScenarioWorld.Trader();
@@ -634,8 +735,13 @@ namespace DarkwoodMP.World
                 wait = 8f;
             }
             float until = Time.realtimeSinceStartup + wait;
-            bool Told() => MapScenarioIssues.LogLines().Skip(mark).Any(l => !l.Contains("[map]") && (l.Contains("is talking to them") || l.Contains("just talked to them")));
-            while (Time.realtimeSinceStartup < until && !(expectRefused && Told() && win.npc != npc))
+            bool Told() => MapScenarioIssues.LogLines().Skip(mark)
+                .Any(
+                    l => !l.Contains("[map]")
+                        && (l.Contains("is talking to them") || l.Contains(
+                            "just talked to them")));
+            while (Time.realtimeSinceStartup < until
+                && !(expectRefused && Told() && win.npc != npc))
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
@@ -647,7 +753,8 @@ namespace DarkwoodMP.World
             {
                 dialogue = "open";
             }
-            r.Info = $"{name} {id}: told someone's talking {told}, dialogue {dialogue}";
+            r.Info =
+                $"{name} {id}: told someone's talking {told}, dialogue {dialogue}";
             if (expectRefused)
             {
                 if (!told || win.npc == npc)
@@ -665,22 +772,28 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- 4. things done while a player is far away ---------------------------------------------------------
+        // ---- 4. things done while a player is far away ----------------------
 
-        /// <summary>"mt-door-drawn": the door nearest the centre is drawn as it is (an open door's body swung away from
-        /// where it sits closed, a closed one's not), not only flagged so.</summary>
+        /// <summary>"mt-door-drawn": the door nearest the centre is drawn as it
+        /// is (an open door's body swung away from where it sits closed, a
+        /// closed one's not), not only flagged so.</summary>
         private static IEnumerator DoorDrawn(string[] a, Result r)
         {
-            var door = Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && ObjRef.Of(d.gameObject).Valid), Centre);
+            var door = Nearest(
+                Object.FindObjectsOfType<Door>().Where(
+                    d => !d.destroyed && ObjRef.Of(d.gameObject).Valid),
+                Centre);
             if (door == null || door.body == null)
             {
                 r.Fail("no door");
                 yield break;
             }
-            yield return new WaitForSeconds(1f); // let a body that was just switched on settle
+            // let a body that was just switched on settle
+            yield return new WaitForSeconds(1f);
             float swung = DoorSwing(door);
             bool drawnOpen = Mathf.Abs(swung) > 15f;
-            r.Info = $"{door.name} {ObjRef.Of(door.gameObject)}: open {door.opened}, swung {swung:0} degrees, kinematic {(door.body.GetComponent<Rigidbody>() is Rigidbody rb && rb.isKinematic)}";
+            r.Info =
+                $"{door.name} {ObjRef.Of(door.gameObject)}: open {door.opened}, swung {swung:0} degrees, kinematic {(door.body.GetComponent<Rigidbody>() is Rigidbody rb && rb.isKinematic)}";
             if (drawnOpen != door.opened)
             {
                 string text = "closed";
@@ -692,13 +805,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>How far a door's body has swung on its hinge from where it sits closed (setCloseRotation puts its
-        /// local z at 90).</summary>
-        private static float DoorSwing(Door door) => Mathf.DeltaAngle(90f, door.body.localRotation.eulerAngles.z);
+        /// <summary>How far a door's body has swung on its hinge from where it
+        /// sits closed (setCloseRotation puts its local z at 90).</summary>
+        private static float DoorSwing(Door door) =>
+            Mathf.DeltaAngle(90f, door.body.localRotation.eulerAngles.z);
 
-        // ---- 5. night attackers, players in different hideouts -------------------------------------------------
+        // ---- 5. night attackers, players in different hideouts --------------
 
-        /// <summary>"mt-hideout-go": walk to the nearest hideout other than the one we're in (or nearest to the centre).</summary>
+        /// <summary>
+        /// "mt-hideout-go": walk to the nearest hideout other than the one
+        /// we're in (or nearest to the centre).
+        /// </summary>
         private static IEnumerator HideoutGo(string[] a, Result r)
         {
             var wg = Singleton<WorldGenerator>.Instance;
@@ -706,8 +823,11 @@ namespace DarkwoodMP.World
             Location to = null;
             if (wg != null)
             {
-                to = wg.locations.Where(l => l != null && l.playerBase && !l.isSubLocation && l != here)
-                    .OrderBy(l => StateDump.Flat(l.transform.position - Centre)).FirstOrDefault();
+                to = wg.locations.Where(
+                    l => l != null && l.playerBase && !l.isSubLocation
+                        && l != here)
+                    .OrderBy(l => StateDump.Flat(l.transform.position
+                            - Centre)).FirstOrDefault();
             }
             if (to == null)
             {
@@ -728,16 +848,20 @@ namespace DarkwoodMP.World
             {
                 location = now.name;
             }
-            r.Info = $"at {spot}: {location} (went to {to.name}, {StateDump.Flat(to.transform.position - Centre):0} from the centre)";
+            r.Info =
+                $"at {spot}: {location} (went to {to.name}, {StateDump.Flat(to.transform.position - Centre):0} from the centre)";
             if (now != to)
             {
                 r.Fail($"{r.Info}: not in it");
             }
         }
 
-        /// <summary>"mt-night N" (host): the night's attacker spawn (CharacterSpawner.spawnNightChar) N times. Each
-        /// occupied hideout should get one each time (until its budget is spent), aimed at the host's player if they
-        /// are in it, else at a joiner there; players sharing a hideout get no extra ones. Then they're removed again.</summary>
+        /// <summary>"mt-night N" (host): the night's attacker spawn
+        /// (CharacterSpawner.spawnNightChar) N times. Each occupied hideout
+        /// should get one each time (until its budget is spent), aimed at the
+        /// host's player if they are in it, else at a joiner there; players
+        /// sharing a hideout get no extra ones. Then they're removed
+        /// again.</summary>
         private static IEnumerator Night(string[] a, Result r)
         {
             if (Net.Session.Instance == null || !Net.Session.Instance.IsHost)
@@ -751,18 +875,23 @@ namespace DarkwoodMP.World
                 n = int.Parse(a[0]);
             }
             var spawner = Singleton<CharacterSpawner>.Instance;
-            var call = HarmonyLib.AccessTools.Method(typeof(CharacterSpawner), "spawnNightChar");
+            var call = HarmonyLib.AccessTools.Method(
+                typeof(CharacterSpawner), "spawnNightChar");
             P.whereAmI.checkWhereAmI();
             // Who is where, as the host sees it.
-            var where = new List<string> { $"host: {Name(P.whereAmI.bigLocation)}" };
+            var where =
+                new List<string> { $"host: {Name(P.whereAmI.bigLocation)}" };
             var hideouts = new HashSet<string>();
-            if (P.whereAmI.bigLocation != null && P.whereAmI.bigLocation.playerBase)
+            if (P.whereAmI.bigLocation != null
+                && P.whereAmI.bigLocation.playerBase)
             {
                 hideouts.Add(P.whereAmI.bigLocation.name);
             }
-            foreach (var px in NetPlayerProxy.All.Values.Where(x => x != null && x.alive))
+            foreach (var px in NetPlayerProxy.All.Values.Where(
+                x => x != null && x.alive))
             {
-                bool home = NightSpawns.AtHideout(px.transform.position, out var loc);
+                bool home =
+                    NightSpawns.AtHideout(px.transform.position, out var loc);
                 string note = "";
                 if (!home)
                 {
@@ -786,7 +915,10 @@ namespace DarkwoodMP.World
             }
             else
             {
-                budget = sc.currentScenario.name + ": " + string.Join(", ", sc.currentScenario.characters.Where(x => x != null).Select(x => $"{x.characterName} x{x.amount}"));
+                budget = sc.currentScenario.name + ": " + string.Join(
+                    ", ",
+                    sc.currentScenario.characters.Where(x => x != null).Select(
+                        x => $"{x.characterName} x{x.amount}"));
             }
             int max;
             if (sc.currentScenario == null)
@@ -795,11 +927,15 @@ namespace DarkwoodMP.World
             }
             else
             {
-                max = sc.currentScenario.characters.Where(x => x != null && !string.IsNullOrEmpty(x.characterName)).Sum(x => Math.Max(0, x.amount));
+                max = sc.currentScenario.characters.Where(
+                    x => x != null
+                        && !string.IsNullOrEmpty(x.characterName)).Sum(
+                            x => Math.Max(0, x.amount));
             }
             int from = NightSpawns.SentLog.Count;
             bool was = spawner.spawnNocturnalCharacters;
-            // Put back in a finally: left on, night attackers would spawn in the daytime of every later step.
+            // Put back in a finally: left on, night attackers would spawn in
+            // the daytime of every later step.
             try
             {
                 spawner.spawnNocturnalCharacters = true;
@@ -814,7 +950,8 @@ namespace DarkwoodMP.World
                 spawner.spawnNocturnalCharacters = was;
             }
             var sent = NightSpawns.SentLog.Skip(from).ToList();
-            var per = sent.GroupBy(s => s.Hideout).ToDictionary(g => g.Key, g => g.ToList());
+            var per = sent.GroupBy(s => s.Hideout).ToDictionary(
+                g => g.Key, g => g.ToList());
             r.Info = $"{string.Join("; ", where)} | {budget} | " +
                      string.Join("; ", hideouts.Select(h =>
                      {
@@ -844,7 +981,8 @@ namespace DarkwoodMP.World
                 }
                 if (got != want)
                 {
-                    r.Fail($"{r.Info}: {h} got {got} attackers from {n} spawns, wanted {want}");
+                    r.Fail(
+                        $"{r.Info}: {h} got {got} attackers from {n} spawns, wanted {want}");
                 }
             }
             foreach (var h in per.Keys)
@@ -858,7 +996,8 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: wanted players in two hideouts");
             }
-            // They'd only fight the players: away with them (the clients' copies go with the host's).
+            // They'd only fight the players: away with them (the clients'
+            // copies go with the host's).
             foreach (var s in sent)
             {
                 if (s.C != null)

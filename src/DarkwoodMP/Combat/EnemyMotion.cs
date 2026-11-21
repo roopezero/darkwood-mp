@@ -7,23 +7,31 @@ namespace DarkwoodMP.Combat
     /// <summary>
     /// Client: how the host's enemies are moved between the host's states.
     ///
-    /// Each EnemyState carries the host's clock (Time.unscaledTime) when it was sent. A client keeps each enemy's
-    /// last few states by that time, and every frame draws the enemy where the host has it now, as far as the states
-    /// tell: between the two states around that moment when the next one is already here, or else carried on from
-    /// the last one at the speed between the last two, for up to MaxAhead. The host sends about every 50-70 ms
-    /// (StateInterval, rounded up to its frames), and states come late or in bunches (TCP, the host's or our own
-    /// slow frames, a lost one on Steam's unreliable channel), so drawing from the latest arrival would make
-    /// enemies stop and jump. With the host's times the speed is the host's real speed, whenever the states came.
+    /// Each EnemyState carries the host's clock (Time.unscaledTime) when it was
+    /// sent. A client keeps each enemy's last few states by that time, and
+    /// every frame draws the enemy where the host has it now, as far as the
+    /// states tell: between the two states around that moment when the next one
+    /// is already here, or else carried on from the last one at the speed
+    /// between the last two, for up to MaxAhead. The host sends about every
+    /// 50-70 ms (StateInterval, rounded up to its frames), and states come late
+    /// or in bunches (TCP, the host's or our own slow frames, a lost one on
+    /// Steam's unreliable channel), so drawing from the latest arrival would
+    /// make enemies stop and jump. With the host's times the speed is the
+    /// host's real speed, whenever the states came.
     ///
-    /// The clock: the gap between our clock and the host's at each arrival is the host's clock offset plus how long
-    /// the state took to come. The smallest gaps are the quickest arrivals; Offset follows them (it drops at once
-    /// to a quicker one and rises slowly). Delay, how far behind that the enemies are drawn, is at most MaxDelay
-    /// (30 ms; half of how much arrivals vary).
+    /// The clock: the gap between our clock and the host's at each arrival is
+    /// the host's clock offset plus how long the state took to come. The
+    /// smallest gaps are the quickest arrivals; Offset follows them (it drops
+    /// at once to a quicker one and rises slowly). Delay, how far behind that
+    /// the enemies are drawn, is at most MaxDelay (30 ms; half of how much
+    /// arrivals vary).
     ///
-    /// Why not further behind, which is smoother (every frame between two real states): a copy of the host's enemy
-    /// is solid here, and our player can't walk through it. Drawn 0.1-0.3 s behind the host, a dog coming at our
-    /// player stands well short of where it is on the host, so our player walks into bites they seem to have dodged.
-    /// Drawn at the host's present instead, a turning enemy is a little off until the next state comes.
+    /// Why not further behind, which is smoother (every frame between two real
+    /// states): a copy of the host's enemy is solid here, and our player can't
+    /// walk through it. Drawn 0.1-0.3 s behind the host, a dog coming at our
+    /// player stands well short of where it is on the host, so our player walks
+    /// into bites they seem to have dodged. Drawn at the host's present
+    /// instead, a turning enemy is a little off until the next state comes.
     /// </summary>
     public static class EnemyMotion
     {
@@ -34,25 +42,42 @@ namespace DarkwoodMP.Combat
             public Quaternion Rot;
         }
 
-        /// <summary>One enemy's states by the host's time, oldest first.</summary>
+        /// <summary>
+        /// One enemy's states by the host's time, oldest first.
+        /// </summary>
         public sealed class Track
         {
             public readonly List<Sample> Samples = new List<Sample>(MaxSamples);
-            public Vector3 Drawn; public bool HasDrawn; // where it was drawn last frame (for the stats)
-            public float Speed; // the host's speed between the two states it's drawn between (for the stats)
+            // where it was drawn last frame (for the stats)
+            public Vector3 Drawn; public bool HasDrawn;
+            // the host's speed between the two states it's drawn between (for
+            // the stats)
+            public float Speed;
         }
 
         private const int MaxSamples = 12;
-        /// <summary>A state this long after the last (host time) starts the enemy afresh where it is: it was out of range, or switched off.</summary>
+        /// <summary>
+        /// A state this long after the last (host time) starts the enemy afresh
+        /// where it is: it was out of range, or switched off.
+        /// </summary>
         private const float Gap = 0.75f;
-        /// <summary>A move this far between two states is a teleport: drawn at once, not slid.</summary>
+        /// <summary>
+        /// A move this far between two states is a teleport: drawn at once, not
+        /// slid.
+        /// </summary>
         private const float Teleport = 600f;
-        /// <summary>How far past its last state an enemy is carried on at its speed.</summary>
+        /// <summary>
+        /// How far past its last state an enemy is carried on at its speed.
+        /// </summary>
         private const float MaxAhead = 0.15f;
         private const float MaxDelay = 0.03f;
 
         private static bool _hasClock;
-        private static float _offset, _lastSent = -1f, _interval = NetEnemies.StateInterval, _jitter, _delay = 0f;
+        private static float _offset,
+            _lastSent = -1f,
+            _interval = NetEnemies.StateInterval,
+            _jitter,
+            _delay = 0f;
 
         public static float Delay => _delay;
 
@@ -66,7 +91,10 @@ namespace DarkwoodMP.Combat
             Stats.Reset();
         }
 
-        /// <summary>A batch of states came, sent at the host's time <paramref name="sent"/>.</summary>
+        /// <summary>
+        /// A batch of states came, sent at the host's time
+        /// <paramref name="sent"/>.
+        /// </summary>
         public static void Arrived(float sent, float now)
         {
             float gap = now - sent;
@@ -82,7 +110,8 @@ namespace DarkwoodMP.Combat
             }
             else
             {
-                _offset += (gap - _offset) * 0.01f; // so a lasting rise in latency is followed, in a few seconds
+                // so a lasting rise in latency is followed, in a few seconds
+                _offset += (gap - _offset) * 0.01f;
             }
             _jitter += (Mathf.Abs(gap - _offset) - _jitter) * 0.05f;
             if (_lastSent >= 0f && sent > _lastSent && sent - _lastSent < 0.5f)
@@ -93,16 +122,22 @@ namespace DarkwoodMP.Combat
             Stats.Batch(sent, now);
         }
 
-        /// <summary>Called once a frame before the enemies are drawn: Delay moves towards what the arrivals need.</summary>
+        /// <summary>
+        /// Called once a frame before the enemies are drawn: Delay moves
+        /// towards what the arrivals need.
+        /// </summary>
         public static void Frame(float dt)
         {
             float want = Mathf.Min(_jitter * 0.5f, MaxDelay);
-            _delay = Mathf.MoveTowards(_delay, want, 0.05f * dt); // at most 5% faster or slower, so it isn't seen
+            // at most 5% faster or slower, so it isn't seen
+            _delay = Mathf.MoveTowards(_delay, want, 0.05f * dt);
             Stats.Frame(dt);
             if (World.WorldActions.Debug && Time.unscaledTime >= _nextLog)
             {
                 _nextLog = Time.unscaledTime + 30f;
-                Plugin.Log.LogInfo(FormattableString.Invariant($"[enemy] drawn {_delay * 1000f:0} ms behind the host (interval {_interval * 1000f:0} ms, arrivals vary by {_jitter * 1000f:0} ms)"));
+                Plugin.Log.LogInfo(
+                    FormattableString.Invariant(
+                        $"[enemy] drawn {_delay * 1000f:0} ms behind the host (interval {_interval * 1000f:0} ms, arrivals vary by {_jitter * 1000f:0} ms)"));
             }
         }
         private static float _nextLog;
@@ -114,13 +149,16 @@ namespace DarkwoodMP.Combat
             if (s.Count > 0)
             {
                 var last = s[s.Count - 1];
-                if (sent - last.T > Gap || (pos - last.Pos).sqrMagnitude > Teleport * Teleport)
+                if (sent - last.T > Gap
+                    || (pos - last.Pos).sqrMagnitude > Teleport * Teleport)
                 {
                     s.Clear();
                 }
-                else if (sent <= last.T) // the same moment again (a corpse's state)
+                // the same moment again (a corpse's state)
+                else if (sent <= last.T)
                 {
-                    s[s.Count - 1] = new Sample { T = last.T, Pos = pos, Rot = rot };
+                    s[s.Count - 1] =
+                        new Sample { T = last.T, Pos = pos, Rot = rot };
                     return;
                 }
             }
@@ -131,8 +169,11 @@ namespace DarkwoodMP.Combat
             s.Add(new Sample { T = sent, Pos = pos, Rot = rot });
         }
 
-        /// <summary>Where the enemy is drawn now. False when there is no state yet.</summary>
-        public static bool Where(Track t, float now, out Vector3 pos, out Quaternion rot)
+        /// <summary>
+        /// Where the enemy is drawn now. False when there is no state yet.
+        /// </summary>
+        public static bool Where(
+            Track t, float now, out Vector3 pos, out Quaternion rot)
         {
             var s = t.Samples;
             pos = default;
@@ -194,13 +235,16 @@ namespace DarkwoodMP.Combat
             return true;
         }
 
-        private static float Flat(Vector3 d) => Mathf.Sqrt(d.x * d.x + d.z * d.z);
+        private static float Flat(Vector3 d) =>
+            Mathf.Sqrt(d.x * d.x + d.z * d.z);
 
         /// <summary>
-        /// For the map test (nl-motion): how often states come and how smoothly enemies are drawn. Only counted while
-        /// On. A "stall" is a frame where an enemy the host has moving at 40 or more a second moves less than a
-        /// quarter of what it should (by the host's speed between the two states it's drawn between); a "jump", one
-        /// where it moves more than two and a half times that.
+        /// For the map test (nl-motion): how often states come and how smoothly
+        /// enemies are drawn. Only counted while On. A "stall" is a frame where
+        /// an enemy the host has moving at 40 or more a second moves less than
+        /// a quarter of what it should (by the host's speed between the two
+        /// states it's drawn between); a "jump", one where it moves more than
+        /// two and a half times that.
         /// </summary>
         public static class Stats
         {
@@ -297,7 +341,8 @@ namespace DarkwoodMP.Combat
                 float p95 = 0f;
                 if (_gaps.Count > 0)
                 {
-                    p95 = _gaps[Mathf.Min(_gaps.Count - 1, (int)(_gaps.Count * 0.95f))];
+                    p95 = _gaps[
+                        Mathf.Min(_gaps.Count - 1, (int)(_gaps.Count * 0.95f))];
                 }
                 float meanGap = 0f;
                 if (_gaps.Count > 0)
@@ -321,7 +366,8 @@ namespace DarkwoodMP.Combat
             {
                 if (Moving > 0)
                 {
-                    return FormattableString.Invariant($"{n * 100f / Moving:0.0}%");
+                    return FormattableString.Invariant(
+                        $"{n * 100f / Moving:0.0}%");
                 }
                 return "-";
             }

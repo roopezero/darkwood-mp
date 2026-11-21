@@ -12,23 +12,31 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Steps of the two-game map test for items used through the game's own code: firearms fired and reloaded at a
-    /// spawned dog (Player.attack, fireWeapon, reload), things thrown (Player.attack, throwItem), a lantern worn on
-    /// the hotbar (its light around the other player), and map items read (the places on the others' maps). The
-    /// order they run in is tools/tests/map_scenario_items2.py.
+    /// Steps of the two-game map test for items used through the game's own
+    /// code: firearms fired and reloaded at a spawned dog (Player.attack,
+    /// fireWeapon, reload), things thrown (Player.attack, throwItem), a lantern
+    /// worn on the hotbar (its light around the other player), and map items
+    /// read (the places on the others' maps). The order they run in is
+    /// tools/tests/map_scenario_items2.py.
     ///
-    /// The dogs are spawned by the host at fixed offsets from the centre (<see cref="Spots"/>) and found in the
-    /// client's game as the host's enemy nearest that spot. Waits are in real time.
+    /// The dogs are spawned by the host at fixed offsets from the centre
+    /// (<see cref="Spots"/>) and found in the client's game as the host's enemy
+    /// nearest that spot. Waits are in real time.
     /// </summary>
     public static class MapScenarioItems2
     {
-        private static readonly Dictionary<string, Vector3> Spots = new Dictionary<string, Vector3>
-        {
-            ["meat"] = new Vector3(500f, 0f, 1300f),   // the dog things are thrown at
-            ["gun"] = new Vector3(-500f, 0f, 1300f),   // the dog that's shot
-            ["fire"] = new Vector3(0f, 0f, -1300f),    // open ground for a molotov
-            ["dark"] = new Vector3(-1300f, 0f, -600f), // away from the stations' lamps, for the lantern
-        };
+        private static readonly Dictionary<string, Vector3> Spots =
+            new Dictionary<string, Vector3>
+            {
+                // the dog things are thrown at
+                ["meat"] = new Vector3(500f, 0f, 1300f),
+                // the dog that's shot
+                ["gun"] = new Vector3(-500f, 0f, 1300f),
+                // open ground for a molotov
+                ["fire"] = new Vector3(0f, 0f, -1300f),
+                // away from the stations' lamps, for the lantern
+                ["dark"] = new Vector3(-1300f, 0f, -600f),
+            };
         private static Vector3 Spot(string which)
         {
             if (Spots.TryGetValue(which, out var off))
@@ -48,24 +56,38 @@ namespace DarkwoodMP.World
             return i.type;
         }
 
-        private static readonly System.Reflection.MethodInfo AttackM = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
-        private static readonly System.Reflection.MethodInfo ReloadM = AccessTools.Method(typeof(Player), "reload", Type.EmptyTypes);
-        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem = AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
-        private static readonly AccessTools.FieldRef<Explodes, bool> ExplodesActivated = AccessTools.FieldRefAccess<Explodes, bool>("activated");
+        private static readonly System.Reflection.MethodInfo AttackM =
+            AccessTools.Method(
+                typeof(Player), "attack", new[] { typeof(float) });
+        private static readonly System.Reflection.MethodInfo ReloadM =
+            AccessTools.Method(typeof(Player), "reload", Type.EmptyTypes);
+        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem =
+            AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
+        private static readonly AccessTools.FieldRef<Explodes, bool> ExplodesActivated =
+            AccessTools.FieldRefAccess<Explodes, bool>("activated");
 
-        /// <summary>Where the mouse points, as Core.mouseWorldPosition says (while a step aims at something; null: the real mouse).</summary>
+        /// <summary>
+        /// Where the mouse points, as Core.mouseWorldPosition says (while a
+        /// step aims at something; null: the real mouse).
+        /// </summary>
         internal static Vector3? AimAt;
         internal static bool Recording;
 
-        /// <summary>The sounds the host's characters heard lately (Character.heardSound): who, where, dangerous.</summary>
-        internal static readonly List<(Character c, Vector3 pos, bool dangerous)> Heard = new List<(Character, Vector3, bool)>();
+        /// <summary>
+        /// The sounds the host's characters heard lately
+        /// (Character.heardSound): who, where, dangerous.
+        /// </summary>
+        internal static readonly List<(Character c, Vector3 pos, bool dangerous)> Heard =
+            new List<(Character, Vector3, bool)>();
 
         /// <summary>
-        /// "i2-safe on|off": our player is healed whenever it's below half health
-        /// (MapScenarioSafePatch), so it can't die. Shot dogs bite back, a gas cloud drifts and a molotov's fire
-        /// spreads: a test player dying changes the story flags the dumps compare, and nothing these steps check is
-        /// about our player's health. (It isn't made invulnerable: a dog whose bites don't land keeps chasing its
-        /// target and never goes for a lure.)
+        /// "i2-safe on|off": our player is healed whenever it's below half
+        /// health (MapScenarioSafePatch), so it can't die. Shot dogs bite back,
+        /// a gas cloud drifts and a molotov's fire spreads: a test player dying
+        /// changes the story flags the dumps compare, and nothing these steps
+        /// check is about our player's health. (It isn't made invulnerable: a
+        /// dog whose bites don't land keeps chasing its target and never goes
+        /// for a lure.)
         /// </summary>
         internal static bool Safe;
 
@@ -112,12 +134,18 @@ namespace DarkwoodMP.World
             Add("i2-map-check", MapCheck, timeout: 20f);
         }
 
-        // ---- helpers ----------------------------------------------------------------------------------------------
+        // ---- helpers --------------------------------------------------------
 
-        private static readonly Dictionary<string, Character> _dogs = new Dictionary<string, Character>();   // host: by spot
-        private static readonly Dictionary<string, uint> _dogIds = new Dictionary<string, uint>();            // client: by spot
+        // host: by spot
+        private static readonly Dictionary<string, Character> _dogs =
+            new Dictionary<string, Character>();
+        // client: by spot
+        private static readonly Dictionary<string, uint> _dogIds =
+            new Dictionary<string, uint>();
 
-        /// <summary>The dog of that spot: the host's own, or the client's copy of it.</summary>
+        /// <summary>
+        /// The dog of that spot: the host's own, or the client's copy of it.
+        /// </summary>
         private static Character DogOf(string name)
         {
             var s = Net.Session.Instance;
@@ -141,11 +169,16 @@ namespace DarkwoodMP.World
                 {
                     return had;
                 }
-                _dogIds.Remove(name); // gone or dead: the host may have spawned another for this spot
+                // gone or dead: the host may have spawned another for this spot
+                _dogIds.Remove(name);
             }
-            var c = ne.PuppetCharacters().Where(x => x != null && x.name.StartsWith("Dog"))
-                .OrderBy(x => StateDump.Flat(x.transform.position - Spot(name))).FirstOrDefault();
-            if (c != null && StateDump.Flat(c.transform.position - Spot(name)) < 600f && ne.NetIdOf(c, out id))
+            var c = ne.PuppetCharacters().Where(
+                x => x != null && x.name.StartsWith("Dog"))
+                .OrderBy(x => StateDump.Flat(x.transform.position
+                        - Spot(name))).FirstOrDefault();
+            if (c != null
+                && StateDump.Flat(c.transform.position - Spot(name)) < 600f
+                && ne.NetIdOf(c, out id))
             {
                 _dogIds[name] = id;
                 return c;
@@ -157,7 +190,8 @@ namespace DarkwoodMP.World
         {
             float until = Time.realtimeSinceStartup + 6f;
             Character c = null;
-            while ((c = DogOf(name)) == null && Time.realtimeSinceStartup < until)
+            while ((c = DogOf(name)) == null
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.3f);
             }
@@ -170,11 +204,15 @@ namespace DarkwoodMP.World
             d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
-                P.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
+                P.transform.rotation = Quaternion.Euler(
+                    90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
             }
         }
 
-        /// <summary>A spot `dist` from `target` on the side of the centre (where we come from).</summary>
+        /// <summary>
+        /// A spot `dist` from `target` on the side of the centre (where we come
+        /// from).
+        /// </summary>
         private static Vector3 Stand(Vector3 target, float dist)
         {
             var d = Centre - target;
@@ -184,8 +222,9 @@ namespace DarkwoodMP.World
                 d = Vector3.back;
             }
             d.Normalize();
-            // The host to one side and the client to the other: standing on one spot, each one's throws and shots
-            // hit the other player in the way.
+            // The host to one side and the client to the other: standing on one
+            // spot, each one's throws and shots hit the other player in the
+            // way.
             var s = Net.Session.Instance;
             var across = new Vector3(-d.z, 0f, d.x);
             float sign = 1f;
@@ -194,23 +233,29 @@ namespace DarkwoodMP.World
                 sign = -1f;
             }
             var side = across * sign;
-            return MapScenarioEnemies.FreeSpot(target + (d + side).normalized * dist);
+            return MapScenarioEnemies.FreeSpot(
+                target + (d + side).normalized * dist);
         }
 
         private static (InvSlot slot, InvItemClass was) _hotbarWas, _bagWas;
 
-        /// <summary>TYPE in a hotbar slot (a free one, else the last, its item put back by Restore), selected and in our hands.</summary>
-        private static IEnumerator TakeOut(string type, Result r, Action<InvItemClass> made = null)
+        /// <summary>
+        /// TYPE in a hotbar slot (a free one, else the last, its item put back
+        /// by Restore), selected and in our hands.
+        /// </summary>
+        private static IEnumerator TakeOut(
+            string type, Result r, Action<InvItemClass> made = null)
         {
             var p = P;
-            // A world bear trap on the way here holds our player and no item comes out until it's freed (as
-            // HealNow frees it).
+            // A world bear trap on the way here holds our player and no item
+            // comes out until it's freed (as HealNow frees it).
             if (p.inBearTrap)
             {
                 p.stopAllPerformingActionAnims();
                 yield return new WaitForSeconds(0.3f);
             }
-            int free = p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
+            int free =
+                p.Hotbar.slots.FindIndex(s => InvItemClass.isNull(s.invItem));
             if (free < 0)
             {
                 free = p.Hotbar.slots.Count - 1;
@@ -233,21 +278,29 @@ namespace DarkwoodMP.World
             }
             slot.select(noiseless: true);
             float until = Time.realtimeSinceStartup + 5f;
-            while ((InvItemClass.isNull(p.currentItem) || p.currentItem.type != type || p.switchingItem) && Time.realtimeSinceStartup < until)
+            while ((InvItemClass.isNull(p.currentItem)
+                    || p.currentItem.type != type
+                    || p.switchingItem) && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            if (InvItemClass.isNull(p.currentItem)
+                || p.currentItem.type != type)
             {
-                r.Fail($"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
+                r.Fail(
+                    $"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
             }
         }
 
-        /// <summary>N of TYPE in our bags (in a free slot, else the last, its item put back by Restore).</summary>
+        /// <summary>
+        /// N of TYPE in our bags (in a free slot, else the last, its item put
+        /// back by Restore).
+        /// </summary>
         private static void GiveBag(string type, int n)
         {
             var p = P;
-            InvSlot slot = p.Inventory.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+            InvSlot slot = p.Inventory.slots.FirstOrDefault(
+                s => InvItemClass.isNull(s.invItem));
             if (slot == null)
             {
                 slot = p.Inventory.slots.Last();
@@ -263,7 +316,9 @@ namespace DarkwoodMP.World
         }
         private static InvSlot _bagSlot;
 
-        /// <summary>The hotbar and bag slots TakeOut and GiveBag used, as they were.</summary>
+        /// <summary>
+        /// The hotbar and bag slots TakeOut and GiveBag used, as they were.
+        /// </summary>
         private static void Restore()
         {
             foreach (var (slot, was) in new[] { _hotbarWas, _bagWas })
@@ -285,20 +340,26 @@ namespace DarkwoodMP.World
         }
 
         private static List<string> LogSince(int mark, string pattern) =>
-            MapScenarioIssues.LogLines().Skip(mark).Where(l => Regex.IsMatch(l, pattern)).ToList();
+            MapScenarioIssues.LogLines().Skip(mark)
+                .Where(l => Regex.IsMatch(l, pattern)).ToList();
 
-        // ---- the dogs ---------------------------------------------------------------------------------------------
+        // ---- the dogs -------------------------------------------------------
 
-        private static readonly Dictionary<string, float> _noted = new Dictionary<string, float>();
+        private static readonly Dictionary<string, float> _noted =
+            new Dictionary<string, float>();
         private static int _mark, _shotsNoted;
-        private static HashSet<GameObject> _spawnedAtNote = new HashSet<GameObject>();
+        private static HashSet<GameObject> _spawnedAtNote =
+            new HashSet<GameObject>();
         private static HashSet<Burn> _burnsAtNote = new HashSet<Burn>();
 
         /// <summary>
-        /// "i2-dog NAME [HEALTH] [--hungry]" (host): a Dog at NAME's spot, not set on anyone (with that much health).
-        /// --hungry makes it very hungry (Character.veryHungry): it goes for food even while it's chasing someone.
-        /// A dog that has seen the thrower (the noise lure brings it within sight of them) chases them, and a chasing
-        /// dog that isn't very hungry passes over a lure (Character.checkForLure).
+        /// "i2-dog NAME [HEALTH] [--hungry]" (host): a Dog at NAME's spot, not
+        /// set on anyone (with that much health). --hungry makes it very hungry
+        /// (Character.veryHungry): it goes for food even while it's chasing
+        /// someone.
+        /// A dog that has seen the thrower (the noise lure brings it within
+        /// sight of them) chases them, and a chasing dog that isn't very hungry
+        /// passes over a lure (Character.checkForLure).
         /// </summary>
         private static IEnumerator Dog(string[] a, Result r)
         {
@@ -310,7 +371,9 @@ namespace DarkwoodMP.World
                 name = a[0];
             }
             var spot = MapScenarioEnemies.FreeSpot(Spot(name));
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, "Dog", nocturnal: false, attackPlayer: false);
+            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                P.gameObject, spot, 1f, "Dog", nocturnal: false,
+                attackPlayer: false);
             if (c == null)
             {
                 r.Fail("couldn't spawn a dog");
@@ -318,7 +381,8 @@ namespace DarkwoodMP.World
             }
             c.transform.position = spot;
             _dogs[name] = c;
-            yield return new WaitForSeconds(1.5f); // it's set up (its health is 0 until then)
+            // it's set up (its health is 0 until then)
+            yield return new WaitForSeconds(1.5f);
             if (a.Length > 1)
             {
                 c.maxHealth = F(a[1]);
@@ -330,7 +394,8 @@ namespace DarkwoodMP.World
             }
             _noted[name] = c.health;
             NetEnemies.Instance.NetIdOf(c, out uint id);
-            string info = $"{c.name} #{id} at {Fmt(c.transform.position)}, health {c.health}, eats {c.lureType}";
+            string info =
+                $"{c.name} #{id} at {Fmt(c.transform.position)}, health {c.health}, eats {c.lureType}";
             if (c.veryHungry)
             {
                 info += ", very hungry";
@@ -338,13 +403,17 @@ namespace DarkwoodMP.World
             r.Info = info;
         }
 
-        /// <summary>"i2-note [NAME]": note the dog's health here, the log's length and the other players' shots seen.</summary>
+        /// <summary>
+        /// "i2-note [NAME]": note the dog's health here, the log's length and
+        /// the other players' shots seen.
+        /// </summary>
         private static IEnumerator Note(string[] a, Result r)
         {
             _mark = MapScenarioIssues.LogMark();
             _shotsNoted = Sync.PlayerFx.ShotsSeen;
             Heard.Clear();
-            _spawnedAtNote = new HashSet<GameObject>(ThrownHits.Spawned.Where(g => g != null));
+            _spawnedAtNote = new HashSet<GameObject>(
+                ThrownHits.Spawned.Where(g => g != null));
             _burnsAtNote = new HashSet<Burn>(Object.FindObjectsOfType<Burn>());
             if (a.Length > 0)
             {
@@ -363,7 +432,10 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>"i2-hurt NAME" (host): the dog lost health since i2-note, and no hit on it was refused.</summary>
+        /// <summary>
+        /// "i2-hurt NAME" (host): the dog lost health since i2-note, and no hit
+        /// on it was refused.
+        /// </summary>
         private static IEnumerator Hurt(string[] a, Result r)
         {
             string name = "gun";
@@ -388,8 +460,10 @@ namespace DarkwoodMP.World
                 was = d.maxHealth;
             }
             var refused = LogSince(_mark, @"refused EnemyHit");
-            var capped = LogSince(_mark, @"\[authority\] .*'s hit on .* is more than");
-            r.Info = $"{d.name}: health {was:0} -> {d.health:0}, alive {d.alive}; {refused.Count} hit(s) refused, {capped.Count} capped";
+            var capped =
+                LogSince(_mark, @"\[authority\] .*'s hit on .* is more than");
+            r.Info =
+                $"{d.name}: health {was:0} -> {d.health:0}, alive {d.alive}; {refused.Count} hit(s) refused, {capped.Count} capped";
             if (!(d.health < was) && d.alive)
             {
                 r.Fail("no damage here: " + r.Info);
@@ -401,7 +475,10 @@ namespace DarkwoodMP.World
             _noted[name] = d.health;
         }
 
-        /// <summary>"i2-shots-seen MIN": at least MIN of the other player's shots were shown on their puppet since i2-note.</summary>
+        /// <summary>
+        /// "i2-shots-seen MIN": at least MIN of the other player's shots were
+        /// shown on their puppet since i2-note.
+        /// </summary>
         private static IEnumerator ShotsSeen(string[] a, Result r)
         {
             int want = 1;
@@ -410,7 +487,8 @@ namespace DarkwoodMP.World
                 want = int.Parse(a[0]);
             }
             float until = Time.realtimeSinceStartup + 5f;
-            while (Sync.PlayerFx.ShotsSeen - _shotsNoted < want && Time.realtimeSinceStartup < until)
+            while (Sync.PlayerFx.ShotsSeen - _shotsNoted < want
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.3f);
             }
@@ -422,7 +500,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"i2-kill NAME" (host): the dog killed (as by our player), so it doesn't follow anyone around later steps.</summary>
+        /// <summary>
+        /// "i2-kill NAME" (host): the dog killed (as by our player), so it
+        /// doesn't follow anyone around later steps.
+        /// </summary>
         private static IEnumerator Kill(string[] a, Result r)
         {
             string name = "gun";
@@ -439,12 +520,18 @@ namespace DarkwoodMP.World
             yield return KillAsPlayer(d, r, 1.5f);
         }
 
-        /// <summary>Our player kills C (a hit of all its health and more); WAIT seconds later it must be dead.</summary>
-        internal static IEnumerator KillAsPlayer(Character c, Result r, float wait)
+        /// <summary>
+        /// Our player kills C (a hit of all its health and more); WAIT seconds
+        /// later it must be dead.
+        /// </summary>
+        internal static IEnumerator KillAsPlayer(
+            Character c, Result r, float wait)
         {
             if (c.alive)
             {
-                AsPlayer(() => c.getHit(c.health + 500f, P.transform, false, true, false));
+                AsPlayer(
+                    () => c.getHit(
+                        c.health + 500f, P.transform, false, true, false));
             }
             yield return new WaitForSeconds(wait);
             r.Info = $"{c.name} alive {c.alive}";
@@ -454,15 +541,19 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- firearms ---------------------------------------------------------------------------------------------
+        // ---- firearms -------------------------------------------------------
 
         /// <summary>
-        /// "i2-fire TYPE NAME SHOTS": take the gun TYPE out empty, put its ammunition in our bags and reload it
-        /// (Player.reload: the game's reload animation loads it), walk near the NAME dog and fire SHOTS shots at it
-        /// (Player.attack), one per the gun's fire rate, reloading when it's empty. The host must accept every hit
-        /// (no "the host refused hit on enemy" here). With --loaded the gun starts with a full clip and the first
-        /// reload is skipped: the dog bites every second or so, each bite interrupts what the player is doing
-        /// (Player.interruptAllActions), and a gun with a long reload animation (the burst rifle) never finishes one.
+        /// "i2-fire TYPE NAME SHOTS": take the gun TYPE out empty, put its
+        /// ammunition in our bags and reload it (Player.reload: the game's
+        /// reload animation loads it), walk near the NAME dog and fire SHOTS
+        /// shots at it (Player.attack), one per the gun's fire rate, reloading
+        /// when it's empty. The host must accept every hit (no
+        /// "the host refused hit on enemy" here). With --loaded the gun starts
+        /// with a full clip and the first reload is skipped: the dog bites
+        /// every second or so, each bite interrupts what the player is doing
+        /// (Player.interruptAllActions), and a gun with a long reload animation
+        /// (the burst rifle) never finishes one.
         /// </summary>
         private static IEnumerator Fire(string[] a, Result r)
         {
@@ -518,14 +609,17 @@ namespace DarkwoodMP.World
                 {
                     int before = gun.ammo;
                     float until = Time.realtimeSinceStartup + 15f;
-                    // The dog bites while we reload, and a bite (Player.gettingHit) stops a reload starting: ask
-                    // again until it starts, as a player would press the key again.
-                    while (!p.reloading && gun.ammo == before && Time.realtimeSinceStartup < until)
+                    // The dog bites while we reload, and a bite
+                    // (Player.gettingHit) stops a reload starting: ask again
+                    // until it starts, as a player would press the key again.
+                    while (!p.reloading && gun.ammo == before
+                        && Time.realtimeSinceStartup < until)
                     {
                         AsPlayer(() => ReloadM.Invoke(p, null));
                         yield return new WaitForSeconds(0.3f);
                     }
-                    while ((p.reloading || gun.ammo == before) && Time.realtimeSinceStartup < until)
+                    while ((p.reloading || gun.ammo == before)
+                        && Time.realtimeSinceStartup < until)
                     {
                         yield return null;
                     }
@@ -542,12 +636,14 @@ namespace DarkwoodMP.World
                         bool reloading = p.reloading;
                         string kind = b.ammoType;
                         int bagged = 0;
-                        InvItemClass spare = p.Inventory.getItemInPlayer(b.ammoType);
+                        InvItemClass spare =
+                            p.Inventory.getItemInPlayer(b.ammoType);
                         if (spare != null)
                         {
                             bagged = spare.amount;
                         }
-                        r.Fail($"the {type} didn't reload ({before} -> {rounds} of {clip}, reloading {reloading}, {kind} in bags {bagged})");
+                        r.Fail(
+                            $"the {type} didn't reload ({before} -> {rounds} of {clip}, reloading {reloading}, {kind} in bags {bagged})");
                     }
                 }
                 if (loaded)
@@ -576,22 +672,28 @@ namespace DarkwoodMP.World
                         }
                     }
                     var at = dog.transform.position;
-                    if (i == 0 || StateDump.Flat(at - p.transform.position) > 260f)
+                    if (i == 0
+                        || StateDump.Flat(at - p.transform.position) > 260f)
                     {
                         yield return Walk(Stand(at, 180f), 30f);
                     }
                     at = dog.transform.position;
                     AimAt = at;
                     Face(at);
-                    // A wall between us and the dog takes every shot: step round the dog until the line of fire is
-                    // clear, as a player would.
+                    // A wall between us and the dog takes every shot: step
+                    // round the dog until the line of fire is clear, as a
+                    // player would.
                     string first = LineOfFire(p, dog, out bool clear);
                     var round = p.transform.position - at;
                     round.y = 0f;
                     for (int k = 1; k < 6 && !clear && dog != null; k++)
                     {
                         moved++;
-                        yield return Walk(MapScenarioEnemies.FreeSpot(dog.transform.position + Quaternion.Euler(0f, 60f * k, 0f) * round.normalized * 180f), 15f);
+                        yield return Walk(
+                            MapScenarioEnemies.FreeSpot(
+                                dog.transform.position + Quaternion.Euler(
+                                    0f, 60f * k, 0f) * round.normalized * 180f),
+                            15f);
                         at = dog.transform.position;
                         AimAt = at;
                         Face(at);
@@ -599,19 +701,24 @@ namespace DarkwoodMP.World
                     }
                     aimed.Add(first);
                     int ammo = gun.ammo;
-                    p.currentAim = b.minAim; // as steady as aiming makes it (Player's aim narrows it to minAim)
+                    // as steady as aiming makes it (Player's aim narrows it to
+                    // minAim)
+                    p.currentAim = b.minAim;
                     AsPlayer(() => AttackM.Invoke(p, new object[] { 1f }));
                     if (gun.ammo < ammo)
                     {
                         fired++;
                     }
-                    yield return new WaitForSeconds(Mathf.Max(b.fireRate, 0.05f) + 0.05f);
+                    yield return new WaitForSeconds(
+                        Mathf.Max(b.fireRate, 0.05f) + 0.05f);
                 }
                 yield return new WaitForSeconds(1.5f); // the host's answers
-                var sent = LogSince(mark, @"\[authority\] request \d+: hit on enemy");
+                var sent =
+                    LogSince(mark, @"\[authority\] request \d+: hit on enemy");
                 var refused = LogSince(mark, @"the host refused hit on enemy");
-                string info = $"{type} ({b.fireMode}, {b.projectileAmount} pellet(s), every {b.fireRate:0.00} s, clip {b.clipSize}, {b.ammoType}): "
-                            + $"reloads {loads}; {fired} of {shots} fired, {sent.Count} hit(s) sent to the host, {refused.Count} refused; ";
+                string info =
+                    $"{type} ({b.fireMode}, {b.projectileAmount} pellet(s), every {b.fireRate:0.00} s, clip {b.clipSize}, {b.ammoType}): "
+                        + $"reloads {loads}; {fired} of {shots} fired, {sent.Count} hit(s) sent to the host, {refused.Count} refused; ";
                 if (dog != null)
                 {
                     info += $"{dog.name} health here {dog.health:0}";
@@ -621,10 +728,14 @@ namespace DarkwoodMP.World
                     info += "the dog is gone";
                 }
                 info += "; first in the line of fire "
-                      + string.Join(", ", aimed.Distinct().Select(x => $"{x} x{aimed.Count(y => y == x)}"));
+                    + string.Join(
+                        ", ",
+                        aimed.Distinct().Select(
+                            x => $"{x} x{aimed.Count(y => y == x)}"));
                 if (moved > 0)
                 {
-                    info += $" ({moved} step(s) round the dog for a clear shot)";
+                    info +=
+                        $" ({moved} step(s) round the dog for a clear shot)";
                 }
                 r.Info = info;
                 if (fired < shots)
@@ -635,7 +746,8 @@ namespace DarkwoodMP.World
                 {
                     r.Fail(r.Info + ": " + refused[0].Trim());
                 }
-                else if (Net.Session.Instance != null && Net.Session.Instance.IsClient && sent.Count == 0)
+                else if (Net.Session.Instance != null
+                    && Net.Session.Instance.IsClient && sent.Count == 0)
                 {
                     r.Fail("no hit reached the host's dog: " + r.Info);
                 }
@@ -645,21 +757,28 @@ namespace DarkwoodMP.World
                 AimAt = null;
                 Restore();
             }
-            // (We stay there: a dog that's been shot follows the shooter, and back at the centre it ran into the
-            // stations' traps.)
+            // (We stay there: a dog that's been shot follows the shooter, and
+            // back at the centre it ran into the stations' traps.)
         }
 
-        /// <summary>What the shot's ray (Player.spawnBullet: from our player along its facing) meets first, as
-        /// "NAME@DISTANCE"; `clear` when that's the dog.</summary>
-        private static string LineOfFire(Player p, Character dog, out bool clear)
+        /// <summary>What the shot's ray (Player.spawnBullet: from our player
+        /// along its facing) meets first, as "NAME@DISTANCE"; `clear` when
+        /// that's the dog.</summary>
+        private static string LineOfFire(
+            Player p, Character dog, out bool clear)
         {
             clear = false;
-            if (!Physics.Raycast(p.transform.position + p.transform.up, p.transform.up, out var hit, 1000f, 18909185) || hit.collider == null)
+            if (!Physics.Raycast(
+                p.transform.position + p.transform.up, p.transform.up,
+                out var hit, 1000f, 18909185) || hit.collider == null)
             {
                 return "nothing";
             }
             var t = hit.collider.transform;
-            clear = dog != null && (t.GetComponent<Character>() == dog || (t.parent != null && t.parent.GetComponent<Character>() == dog));
+            clear = dog != null
+                && (t.GetComponent<Character>() == dog
+                    || (t.parent != null
+                        && t.parent.GetComponent<Character>() == dog));
             string hitName;
             if (t.parent != null)
             {
@@ -672,14 +791,16 @@ namespace DarkwoodMP.World
             return $"{hitName}@{hit.distance:0}";
         }
 
-        // ---- throwing ---------------------------------------------------------------------------------------------
+        // ---- throwing -------------------------------------------------------
 
         private static GameObject _thrown;
 
         /// <summary>
-        /// "i2-throw TYPE AT": throw TYPE at AT (a dog's name, or a spot) the way the game does: take it out, aim (the
-        /// held item, as Player's aiming makes it for a throwable) and attack (Player.attack calls Player.throwItem),
-        /// with the mouse pointing at AT. Waits for it to land.
+        /// "i2-throw TYPE AT": throw TYPE at AT (a dog's name, or a spot) the
+        /// way the game does: take it out, aim (the held item, as Player's
+        /// aiming makes it for a throwable) and attack (Player.attack calls
+        /// Player.throwItem), with the mouse pointing at AT. Waits for it to
+        /// land.
         /// </summary>
         private static IEnumerator Throw(string[] a, Result r)
         {
@@ -731,13 +852,16 @@ namespace DarkwoodMP.World
                     r.Fail($"a {type} isn't throwable");
                     yield break;
                 }
-                // As Player's aim does for a throwable (the held item, hidden, not hitting us). A bite as we aim
-                // puts the held item away (Player.hideHeldItem destroys it) and nothing is thrown: aim again.
+                // As Player's aim does for a throwable (the held item, hidden,
+                // not hitting us). A bite as we aim puts the held item away
+                // (Player.hideHeldItem destroys it) and nothing is thrown: aim
+                // again.
                 GameObject held = null;
                 bool threw = false;
                 for (int attempt = 0; attempt < 4 && !threw; attempt++)
                 {
-                    if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+                    if (InvItemClass.isNull(p.currentItem)
+                        || p.currentItem.type != type)
                     {
                         yield return TakeOut(type, r);
                         if (r.Failure != null)
@@ -745,7 +869,9 @@ namespace DarkwoodMP.World
                             yield break;
                         }
                     }
-                    held = Core.AddPrefab(p.currentItem.baseClass.item, Vector3.zero, Quaternion.Euler(90f, 0f, 0f), p.gameObject);
+                    held = Core.AddPrefab(
+                        p.currentItem.baseClass.item, Vector3.zero,
+                        Quaternion.Euler(90f, 0f, 0f), p.gameObject);
                     if (held == null)
                     {
                         r.Fail($"couldn't make a held {type}");
@@ -758,7 +884,8 @@ namespace DarkwoodMP.World
                     }
                     foreach (var hc in held.GetComponentsInChildren<Collider>())
                     {
-                        foreach (var pc in p.GetComponentsInChildren<Collider>())
+                        foreach (var pc in p
+                            .GetComponentsInChildren<Collider>())
                         {
                             Physics.IgnoreCollision(hc, pc);
                         }
@@ -773,7 +900,8 @@ namespace DarkwoodMP.World
                         AimAt = target;
                     }
                     Face(target);
-                    if (held == null || HeldItem(p) != held) // put away by a bite
+                    // put away by a bite
+                    if (held == null || HeldItem(p) != held)
                     {
                         yield return new WaitForSeconds(0.5f);
                         continue;
@@ -785,7 +913,8 @@ namespace DarkwoodMP.World
                         r.Fail($"the {type} wasn't thrown (still held)");
                         yield break;
                     }
-                    threw = InvItemClass.isNull(p.currentItem) || p.currentItem.amount < had;
+                    threw = InvItemClass.isNull(p.currentItem)
+                        || p.currentItem.amount < had;
                     if (!threw)
                     {
                         if (held != null)
@@ -797,22 +926,26 @@ namespace DarkwoodMP.World
                 }
                 if (!threw)
                 {
-                    r.Fail($"the {type} was never thrown (put away by bites each time)");
+                    r.Fail(
+                        $"the {type} was never thrown (put away by bites each time)");
                     yield break;
                 }
                 _thrown = held;
-                // A gas bomb thrown at a dog right beside us can break on it at once: gone before we look.
+                // A gas bomb thrown at a dog right beside us can break on it at
+                // once: gone before we look.
                 ThrownItem ti = null;
                 if (held != null)
                 {
                     ti = held.GetComponent<ThrownItem>();
                 }
                 float until = Time.realtimeSinceStartup + 6f;
-                while (held != null && ti != null && !ti.onGround && Time.realtimeSinceStartup < until)
+                while (held != null && ti != null && !ti.onGround
+                    && Time.realtimeSinceStartup < until)
                 {
                     yield return null;
                 }
-                string prefix = $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: ";
+                string prefix =
+                    $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: ";
                 string landed;
                 if (held == null)
                 {
@@ -820,7 +953,8 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    landed = $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}";
+                    landed =
+                        $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}";
                 }
                 r.Info = prefix + landed;
             }
@@ -832,11 +966,14 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
         }
 
-        private static readonly HashSet<GameObject> _seenBefore = new HashSet<GameObject>();
+        private static readonly HashSet<GameObject> _seenBefore =
+            new HashSet<GameObject>();
 
         /// <summary>
-        /// "i2-seen TYPE AT [lands|fire|off]": the other player's TYPE came here (ThrownHits.Copies) and landed near AT;
-        /// "fire": something caught fire there or it left fire behind; "off": it went off (Explodes) or is gone.
+        /// "i2-seen TYPE AT [lands|fire|off]": the other player's TYPE came
+        /// here (ThrownHits.Copies) and landed near AT;
+        /// "fire": something caught fire there or it left fire behind; "off":
+        /// it went off (Explodes) or is gone.
         /// </summary>
         private static IEnumerator Seen(string[] a, Result r)
         {
@@ -851,7 +988,8 @@ namespace DarkwoodMP.World
             {
                 want = a[2];
             }
-            var it = Singleton<ItemsDatabase>.Instance.getItem(type, instantiate: false);
+            var it = Singleton<ItemsDatabase>.Instance.getItem(
+                type, instantiate: false);
             if (it == null || it.item == null)
             {
                 r.Fail($"no {type} in the database");
@@ -876,7 +1014,9 @@ namespace DarkwoodMP.World
             float until = Time.realtimeSinceStartup + 8f;
             while (copy == null && Time.realtimeSinceStartup < until)
             {
-                copy = ThrownHits.Copies.FirstOrDefault(g => g != null && !_seenBefore.Contains(g) && g.name.StartsWith(prefab, StringComparison.Ordinal));
+                copy = ThrownHits.Copies.FirstOrDefault(
+                    g => g != null && !_seenBefore.Contains(g)
+                        && g.name.StartsWith(prefab, StringComparison.Ordinal));
                 if (copy == null)
                 {
                     yield return new WaitForSeconds(0.2f);
@@ -885,12 +1025,15 @@ namespace DarkwoodMP.World
             bool gone = false;
             if (copy == null)
             {
-                // It may have been and gone already (a gas bomb or a molotov is destroyed as it breaks): the log says
-                // it came; what it left is looked for where it was thrown.
-                var came = LogSince(_mark, $@"\[world\] .* threw {Regex.Escape(type)}\s*$");
+                // It may have been and gone already (a gas bomb or a molotov is
+                // destroyed as it breaks): the log says it came; what it left
+                // is looked for where it was thrown.
+                var came = LogSince(
+                    _mark, $@"\[world\] .* threw {Regex.Escape(type)}\s*$");
                 if (came.Count == 0)
                 {
-                    r.Fail($"no copy of the other player's {type} here (none since i2-note)");
+                    r.Fail(
+                        $"no copy of the other player's {type} here (none since i2-note)");
                     yield break;
                 }
                 gone = true;
@@ -932,9 +1075,16 @@ namespace DarkwoodMP.World
                 {
                     landed = off = true;
                 }
-                // (new since i2-note: what earlier throws left there doesn't count)
-                fire = ThrownHits.Spawned.Any(g => g != null && !_spawnedAtNote.Contains(g) && StateDump.Flat(g.transform.position - last) < 400f)
-                    || Object.FindObjectsOfType<Burn>().Any(b => b != null && !_burnsAtNote.Contains(b) && b.GetComponent<Player>() == null && StateDump.Flat(b.transform.position - last) < 400f);
+                // (new since i2-note: what earlier throws left there doesn't
+                // count)
+                fire = ThrownHits.Spawned.Any(
+                    g => g != null && !_spawnedAtNote.Contains(g)
+                        && StateDump.Flat(g.transform.position - last) < 400f)
+                    || Object.FindObjectsOfType<Burn>().Any(
+                        b => b != null && !_burnsAtNote.Contains(b)
+                            && b.GetComponent<Player>() == null
+                            && StateDump.Flat(b.transform.position - last)
+                                < 400f);
                 bool condition;
                 if (want == "lands")
                 {
@@ -969,7 +1119,8 @@ namespace DarkwoodMP.World
                 }
                 shownName = prefab + goneNote;
             }
-            r.Info = $"{shownName} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
+            r.Info =
+                $"{shownName} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
             bool ok;
             if (want == "lands")
             {
@@ -1002,16 +1153,25 @@ namespace DarkwoodMP.World
             }
             if (want == "fire" && r.Failure == null)
             {
-                // A molotov's gasoline is the host's (Containers.ThrownSpawns): here it's the one the host shared,
-                // and every fire the host lit in it is found.
+                // A molotov's gasoline is the host's (Containers.ThrownSpawns):
+                // here it's the one the host shared, and every fire the host
+                // lit in it is found.
                 yield return new WaitForSeconds(1f);
-                var fuel = Object.FindObjectsOfType<Liquid>().Where(l => l != null && l.name.StartsWith("Gasoline") && StateDump.Flat(l.transform.position - last) < 400f).ToList();
-                int shared = fuel.Count(l => ObjRef.Of(l.gameObject).K == ObjRef.Kind.Spawned);
+                var fuel = Object.FindObjectsOfType<Liquid>()
+                    .Where(
+                        l => l != null && l.name.StartsWith("Gasoline")
+                            && StateDump.Flat(l.transform.position - last)
+                                < 400f).ToList();
+                int shared = fuel.Count(
+                    l => ObjRef.Of(l.gameObject).K == ObjRef.Kind.Spawned);
                 var lost = LogSince(_mark, @"got LiquidLit .*not found here");
-                r.Info += $"; gasoline here {fuel.Count} ({shared} shared, {fuel.Count(l => l.burning)} burning), {lost.Count} fire(s) not found";
+                r.Info +=
+                    $"; gasoline here {fuel.Count} ({shared} shared, {fuel.Count(l => l.burning)} burning), {lost.Count} fire(s) not found";
                 if (fuel.Count == 0 || shared < fuel.Count)
                 {
-                    r.Fail("the molotov's gasoline isn't the shared one: " + r.Info);
+                    r.Fail(
+                        "the molotov's gasoline isn't the shared one: "
+                            + r.Info);
                 }
                 else if (lost.Count > 0)
                 {
@@ -1020,7 +1180,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"i2-heard NAME" (host): the NAME dog heard a sound (not a dangerous one) from the thrown thing since i2-note.</summary>
+        /// <summary>
+        /// "i2-heard NAME" (host): the NAME dog heard a sound (not a dangerous
+        /// one) from the thrown thing since i2-note.
+        /// </summary>
         private static IEnumerator HeardStep(string[] a, Result r)
         {
             string food = "meat";
@@ -1035,7 +1198,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             float until = Time.realtimeSinceStartup + 6f;
-            while (!Heard.Any(h => h.c == d && !h.dangerous) && Time.realtimeSinceStartup < until)
+            while (!Heard.Any(h => h.c == d && !h.dangerous)
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.2f);
             }
@@ -1057,7 +1221,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"i2-eats NAME" (host): the NAME dog goes for the thrown lure and eats it up.</summary>
+        /// <summary>
+        /// "i2-eats NAME" (host): the NAME dog goes for the thrown lure and
+        /// eats it up.
+        /// </summary>
         private static IEnumerator Eats(string[] a, Result r)
         {
             string food = "meat";
@@ -1071,7 +1238,11 @@ namespace DarkwoodMP.World
                 r.Fail("no dog");
                 yield break;
             }
-            var lure = Object.FindObjectsOfType<Lure>().Where(l => l != null).OrderBy(l => StateDump.Flat(l.transform.position - d.transform.position)).FirstOrDefault();
+            var lure = Object.FindObjectsOfType<Lure>().Where(l => l != null)
+                .OrderBy(
+                    l => StateDump.Flat(
+                        l.transform.position
+                            - d.transform.position)).FirstOrDefault();
             if (lure == null)
             {
                 r.Fail("no lure here");
@@ -1086,8 +1257,9 @@ namespace DarkwoodMP.World
                 ate |= d.eating;
                 yield return new WaitForSeconds(0.2f);
             }
-            // A piece of meat lasts the game a long while (its health is in the thousands, one bite a frame of the
-            // eating loop): once the dog is eating, leave it one bite, which the dog's own next bite takes.
+            // A piece of meat lasts the game a long while (its health is in the
+            // thousands, one bite a frame of the eating loop): once the dog is
+            // eating, leave it one bite, which the dog's own next bite takes.
             if (lure != null && ate && lure.health > 1)
             {
                 lure.health = 1;
@@ -1106,7 +1278,8 @@ namespace DarkwoodMP.World
             {
                 text = $"still there (health {lure.health})";
             }
-            r.Info = $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {text}";
+            r.Info =
+                $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {text}";
             if (lure != null && d != null)
             {
                 string targetName = "nothing";
@@ -1114,7 +1287,8 @@ namespace DarkwoodMP.World
                 {
                     targetName = d.target.name;
                 }
-                r.Info += $"; the dog is {d.behaviour} after {targetName}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
+                r.Info +=
+                    $"; the dog is {d.behaviour} after {targetName}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
             }
             if (lure != null)
             {
@@ -1122,7 +1296,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"i2-gone TYPE": our thrown TYPE (the last i2-throw) is gone from this game (eaten in the host's).</summary>
+        /// <summary>
+        /// "i2-gone TYPE": our thrown TYPE (the last i2-throw) is gone from
+        /// this game (eaten in the host's).
+        /// </summary>
         private static IEnumerator Gone(string[] a, Result r)
         {
             float until = Time.realtimeSinceStartup + 10f;
@@ -1136,7 +1313,8 @@ namespace DarkwoodMP.World
             }
             else
             {
-                r.Info = $"{_thrown.name} still at {Fmt(_thrown.transform.position)}";
+                r.Info =
+                    $"{_thrown.name} still at {Fmt(_thrown.transform.position)}";
             }
             if (_thrown != null)
             {
@@ -1144,7 +1322,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"i2-gassed NAME" (host): the NAME dog was caught in the gas (the effect on it, or health lost since i2-note).</summary>
+        /// <summary>
+        /// "i2-gassed NAME" (host): the NAME dog was caught in the gas (the
+        /// effect on it, or health lost since i2-note).
+        /// </summary>
         private static IEnumerator Gassed(string[] a, Result r)
         {
             string name = "meat";
@@ -1169,32 +1350,42 @@ namespace DarkwoodMP.World
             }
             bool gas = false;
             float until = Time.realtimeSinceStartup + 6f;
-            while (!(gas = d.effects != null && d.effects.hasEffectType(CharacterEffectType.gas)) && d.health >= was && Time.realtimeSinceStartup < until)
+            while (!(gas = d.effects != null && d.effects.hasEffectType(
+                CharacterEffectType.gas)) && d.health >= was
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.2f);
             }
-            r.Info = $"{d.name}: gas effect {gas}, health {was:0} -> {d.health:0}";
+            r.Info =
+                $"{d.name}: gas effect {gas}, health {was:0} -> {d.health:0}";
             if (!gas && d.health >= was)
             {
                 r.Fail(r.Info);
             }
         }
 
-        // ---- the lantern ------------------------------------------------------------------------------------------
+        // ---- the lantern ----------------------------------------------------
 
         private static (InvSlot slot, InvItemClass was) _lanternWas;
 
-        /// <summary>"i2-lantern on|off": a lantern put on our hotbar (lit, as the game does for one there) or taken off.</summary>
+        /// <summary>
+        /// "i2-lantern on|off": a lantern put on our hotbar (lit, as the game
+        /// does for one there) or taken off.
+        /// </summary>
         private static IEnumerator Lantern(string[] a, Result r)
         {
             var p = P;
             bool on = a.Length == 0 || a[0] == "on";
             var ctl = Singleton<Controller>.Instance;
-            var slot = p.Hotbar.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == "lantern");
+            var slot = p.Hotbar.slots.FirstOrDefault(
+                s => !InvItemClass.isNull(s.invItem)
+                    && s.invItem.type == "lantern");
             if (on && slot == null)
             {
-                // A free slot, else the last one not in hand (its item put back when the lantern comes off).
-                InvSlot free = p.Hotbar.slots.LastOrDefault(s => InvItemClass.isNull(s.invItem) && !s.selected);
+                // A free slot, else the last one not in hand (its item put back
+                // when the lantern comes off).
+                InvSlot free = p.Hotbar.slots.LastOrDefault(
+                    s => InvItemClass.isNull(s.invItem) && !s.selected);
                 if (free == null)
                 {
                     free = p.Hotbar.slots.LastOrDefault(s => !s.selected);
@@ -1231,7 +1422,8 @@ namespace DarkwoodMP.World
                 _lanternWas = (null, null);
             }
             yield return new WaitForSeconds(0.5f);
-            bool lit = ctl.logicLights.Contains(p.lightDot) && p.lightDot.lightsPlayer;
+            bool lit =
+                ctl.logicLights.Contains(p.lightDot) && p.lightDot.lightsPlayer;
             string text = "off";
             if (on)
             {
@@ -1242,14 +1434,18 @@ namespace DarkwoodMP.World
             {
                 dot = "lit";
             }
-            r.Info = $"lantern {text}: our light dot {dot}, radius {p.lightDot.LightRadius:0}";
+            r.Info =
+                $"lantern {text}: our light dot {dot}, radius {p.lightDot.LightRadius:0}";
             if (lit != on)
             {
                 r.Fail(r.Info);
             }
         }
 
-        /// <summary>"i2-lit yes|no" (host): the other player's puppet shows a lantern light, and their stand-in stands in light (Core.isInLight).</summary>
+        /// <summary>
+        /// "i2-lit yes|no" (host): the other player's puppet shows a lantern
+        /// light, and their stand-in stands in light (Core.isInLight).
+        /// </summary>
         private static IEnumerator Lit(string[] a, Result r)
         {
             bool want = a.Length == 0 || a[0] == "yes";
@@ -1262,7 +1458,8 @@ namespace DarkwoodMP.World
             {
                 if (ps != null)
                 {
-                    rp = ps.Remotes.Values.FirstOrDefault(x => x.Owner != Sync.PlayerSync.DummyId);
+                    rp = ps.Remotes.Values.FirstOrDefault(
+                        x => x.Owner != Sync.PlayerSync.DummyId);
                 }
                 else
                 {
@@ -1298,8 +1495,10 @@ namespace DarkwoodMP.World
                         pos = Vector3.zero;
                     }
                 }
-                inLight = rp != null && Core.isInLight(pos, mustBeWalkable: false);
-                if ((shown == want && inLight == want) || Time.realtimeSinceStartup > until)
+                inLight =
+                    rp != null && Core.isInLight(pos, mustBeWalkable: false);
+                if ((shown == want && inLight == want)
+                    || Time.realtimeSinceStartup > until)
                 {
                     break;
                 }
@@ -1324,53 +1523,82 @@ namespace DarkwoodMP.World
             {
                 copy = "stand-in";
             }
-            r.Info = $"{name}: lantern light on their puppet {shown} (radius {lanternShown:0}), their {copy} in light {inLight}";
+            r.Info =
+                $"{name}: lantern light on their puppet {shown} (radius {lanternShown:0}), their {copy} in light {inLight}";
             if (shown != want || inLight != want)
             {
                 r.Fail(r.Info);
             }
         }
 
-        // ---- map items --------------------------------------------------------------------------------------------
+        // ---- map items ------------------------------------------------------
 
-        private static readonly string[] Maps = { "map_radioTower", "map_trainWreck", "map_villageTree", "map_pigShed", "map_mushrooms", "map_dziury", "map_borderBurned", "map_piotrekPigsheds", "map_doctorEntrance", "map", "map_bio2", "map_bio3", "map_doctor_ch2" };
+        private static readonly string[] Maps =
+        {
+            "map_radioTower",
+            "map_trainWreck",
+            "map_villageTree",
+            "map_pigShed",
+            "map_mushrooms",
+            "map_dziury",
+            "map_borderBurned",
+            "map_piotrekPigsheds",
+            "map_doctorEntrance",
+            "map",
+            "map_bio2",
+            "map_bio3",
+            "map_doctor_ch2"
+        };
         private static string _map;
 
         private static List<Location> PlacesOf(string type)
         {
-            var it = Singleton<ItemsDatabase>.Instance.getItem(type, instantiate: false);
+            var it = Singleton<ItemsDatabase>.Instance.getItem(
+                type, instantiate: false);
             var wg = Singleton<WorldGenerator>.Instance;
             if (it == null || !it.isMap || wg == null)
             {
                 return new List<Location>();
             }
-            return it.locations.Where(n => n != null).Select(n => wg.getLocation(n)).Where(l => l != null).ToList();
+            return it.locations.Where(n => n != null)
+                .Select(n => wg.getLocation(n)).Where(l => l != null).ToList();
         }
 
         private static bool Shown(Location l)
         {
             var el = l.GetComponent<MapElement>();
-            return Singleton<UI>.Instance.journal.locationsDict.ContainsKey(Core.getTrueLocationName(l.name)) && (el == null || el.isOnMap);
+            return Singleton<UI>.Instance.journal.locationsDict.ContainsKey(
+                Core.getTrueLocationName(l.name)) && (el == null || el.isOnMap);
         }
 
-        /// <summary>"i2-map-pick": the first map item none of whose places are in our journal yet (the same one in both games).</summary>
+        /// <summary>
+        /// "i2-map-pick": the first map item none of whose places are in our
+        /// journal yet (the same one in both games).
+        /// </summary>
         private static IEnumerator MapPick(string[] a, Result r)
         {
             var j = Singleton<UI>.Instance.journal;
             _map = Maps.FirstOrDefault(m =>
             {
                 var ls = PlacesOf(m);
-                return ls.Count > 0 && ls.All(l => !j.locationsDict.ContainsKey(Core.getTrueLocationName(l.name)));
+                return ls.Count > 0
+                    && ls.All(
+                        l => !j.locationsDict.ContainsKey(
+                            Core.getTrueLocationName(l.name)));
             });
             if (_map == null)
             {
                 r.Fail("every map's places are in the journal already");
                 yield break;
             }
-            r.Info = $"{_map}: {string.Join(", ", PlacesOf(_map).Select(l => l.name))}";
+            r.Info =
+                $"{_map}: {string.Join(", ", PlacesOf(_map).Select(l => l.name))}";
         }
 
-        /// <summary>"i2-map-use": read the picked map (InvItemClass.use: its places in the journal and on the map).</summary>
+        /// <summary>
+        /// "i2-map-use": read the picked map (InvItemClass.use: its places in
+        /// the journal and on the map).
+        /// </summary>
         private static IEnumerator MapUse(string[] a, Result r)
         {
             if (_map == null)
@@ -1378,7 +1606,8 @@ namespace DarkwoodMP.World
                 r.Fail("no map picked");
                 yield break;
             }
-            // In our bags, as a map is read from there (use() takes it out of its slot).
+            // In our bags, as a map is read from there (use() takes it out of
+            // its slot).
             GiveBag(_map, 1);
             var item = _bagSlot.invItem;
             try
@@ -1407,7 +1636,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"i2-map-check": the other player's picked map's places are in our journal and shown on our map.</summary>
+        /// <summary>
+        /// "i2-map-check": the other player's picked map's places are in our
+        /// journal and shown on our map.
+        /// </summary>
         private static IEnumerator MapCheck(string[] a, Result r)
         {
             if (_map == null)
@@ -1416,7 +1648,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var ls = PlacesOf(_map);
-            float until = Time.realtimeSinceStartup + 12f; // the story state goes out every couple of seconds
+            // the story state goes out every couple of seconds
+            float until = Time.realtimeSinceStartup + 12f;
             while (!ls.All(Shown) && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.5f);
@@ -1425,7 +1658,8 @@ namespace DarkwoodMP.World
             r.Info = $"{_map}: " + string.Join(", ", ls.Select(l =>
             {
                 string name = l.name;
-                bool inJournal = j.locationsDict.ContainsKey(Core.getTrueLocationName(l.name));
+                bool inJournal = j.locationsDict.ContainsKey(
+                    Core.getTrueLocationName(l.name));
                 MapElement element = l.GetComponent<MapElement>();
                 string onMap = "no element";
                 if (element != null)
@@ -1441,8 +1675,12 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>The map test aims with the mouse at what a step points it at (Player.throwItem's distance, its facing).</summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.mouseWorldPosition), new[] { typeof(bool) })]
+    /// <summary>
+    /// The map test aims with the mouse at what a step points it at
+    /// (Player.throwItem's distance, its facing).
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Core), nameof(Core.mouseWorldPosition), new[] { typeof(bool) })]
     static class MapScenarioAimPatch
     {
         static void Postfix(ref Vector3 __result)
@@ -1455,13 +1693,17 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>The map test's i2-safe: our player healed whenever it's below half health (in Player.setHealth, before the game checks for a death).</summary>
+    /// <summary>
+    /// The map test's i2-safe: our player healed whenever it's below half
+    /// health (in Player.setHealth, before the game checks for a death).
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.setHealth))]
     static class MapScenarioSafePatch
     {
         internal static void Postfix(Player __instance)
         {
-            if (!MapScenarioItems2.Safe || __instance == null || !__instance.alive)
+            if (!MapScenarioItems2.Safe || __instance == null
+                || !__instance.alive)
             {
                 return;
             }
@@ -1472,11 +1714,21 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>The map test: what the host's characters heard (Character.heardSound).</summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.heardSound), new[] { typeof(Vector3), typeof(float), typeof(bool), typeof(float), typeof(bool) })]
+    /// <summary>
+    /// The map test: what the host's characters heard (Character.heardSound).
+    /// </summary>
+    [HarmonyPatch(typeof(Character), nameof(Character.heardSound), new[]
+    {
+        typeof(Vector3),
+        typeof(float),
+        typeof(bool),
+        typeof(float),
+        typeof(bool)
+    })]
     static class MapScenarioHeardPatch
     {
-        static void Postfix(Character __instance, Vector3 Position, bool dangerousSound)
+        static void Postfix(
+            Character __instance, Vector3 Position, bool dangerousSound)
         {
             if (!MapScenarioItems2.Recording)
             {

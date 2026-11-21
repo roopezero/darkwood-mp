@@ -8,26 +8,34 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// The host's enemies, shown on its clients. The host runs every enemy; a client runs none of its own.
+    /// The host's enemies, shown on its clients. The host runs every enemy; a
+    /// client runs none of its own.
     ///
-    /// Host: every non-NPC Character gets a net id. Each client is told about the ones near it (within
-    /// RelevantRange of its proxy) with EnemySpawn, then gets EnemyState for them twenty times a second (the host's clock, position,
-    /// rotation, alive, and each sprite animator's clip and frame), EnemySound for the sounds they make, and
-    /// EnemyDespawn when one goes out of its range, or a while after it died (its corpse then stays put).
-    /// A corpse is sent to each client once, when it first comes within its range (one that was already dead when
-    /// they joined, or that they walked away from before it settled): EnemySpawn, one EnemyState that says it's
-    /// dead, and EnemyDespawn keeping the corpse, then what it holds. The client's corpse stays until the host's
-    /// is gone.
+    /// Host: every non-NPC Character gets a net id. Each client is told about
+    /// the ones near it (within RelevantRange of its proxy) with EnemySpawn,
+    /// then gets EnemyState for them twenty times a second (the host's clock,
+    /// position, rotation, alive, and each sprite animator's clip and frame),
+    /// EnemySound for the sounds they make, and EnemyDespawn when one goes out
+    /// of its range, or a while after it died (its corpse then stays put).
+    /// A corpse is sent to each client once, when it first comes within its
+    /// range (one that was already dead when they joined, or that they walked
+    /// away from before it settled): EnemySpawn, one EnemyState that says it's
+    /// dead, and EnemyDespawn keeping the corpse, then what it holds. The
+    /// client's corpse stays until the host's is gone.
     ///
-    /// Client: its own non-NPC characters are frozen as they start (their AI, pathfinding and physics off, their
-    /// animators' frame events cleared so they can't attack or make sounds) and hidden. A spawned enemy is the
-    /// client's own copy of it from the save, found by its save id, or else made from its prefab; it's then shown
-    /// and driven by the host's states, playing the same animation clips. Damage the client deals it (melee,
-    /// bullets, fire...) goes to the host as EnemyHit instead of being applied, and the host applies it with the
-    /// client's proxy as the attacker, so the enemy reacts to, and gains threat for, that player.
+    /// Client: its own non-NPC characters are frozen as they start (their AI,
+    /// pathfinding and physics off, their animators' frame events cleared so
+    /// they can't attack or make sounds) and hidden. A spawned enemy is the
+    /// client's own copy of it from the save, found by its save id, or else
+    /// made from its prefab; it's then shown and driven by the host's states,
+    /// playing the same animation clips. Damage the client deals it (melee,
+    /// bullets, fire...) goes to the host as EnemyHit instead of being applied,
+    /// and the host applies it with the client's proxy as the attacker, so the
+    /// enemy reacts to, and gains threat for, that player.
     ///
-    /// NPCs (traders, quest characters) are each player's own while they're friendly. One that turns on a player
-    /// is run by the host as one of these enemies until it calms down (Combat.HostileNpcs).
+    /// NPCs (traders, quest characters) are each player's own while they're
+    /// friendly. One that turns on a player is run by the host as one of these
+    /// enemies until it calms down (Combat.HostileNpcs).
     /// </summary>
     public sealed class NetEnemies
     {
@@ -47,7 +55,8 @@ namespace DarkwoodMP.Combat
             session.Register(MsgType.EnemyDespawn, OnDespawn);
             session.Register(MsgType.EnemySound, OnSound);
             session.Register(MsgType.EnemyHit, OnHit);
-            session.Register(MsgType.PlayerNoise, PlayerNoisePatch.OnRemoteNoise);
+            session.Register(
+                MsgType.PlayerNoise, PlayerNoisePatch.OnRemoteNoise);
             session.Register(MsgType.PlayerCue, PlayerCues.OnCue);
             session.Register(MsgType.EnemyBlood, OnBlood);
             session.Register(MsgType.EnemyArmor, OnArmor);
@@ -77,44 +86,63 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// One of the characters the host runs and its clients show: every creature, and an NPC while it's hostile
-        /// (Combat.HostileNpcs: the host's copy turned on a player, or a client's copy is one the host runs).
+        /// One of the characters the host runs and its clients show: every
+        /// creature, and an NPC while it's hostile (Combat.HostileNpcs: the
+        /// host's copy turned on a player, or a client's copy is one the host
+        /// runs).
         /// </summary>
-        public static bool Eligible(Character c) => c != null && (c.npc == null || HostileNpcs.Running(c));
+        public static bool Eligible(Character c) =>
+            c != null && (c.npc == null || HostileNpcs.Running(c));
 
         /// <summary>
-        /// Still in the fight: alive, or in a pre-death stage (Character.hasPreDeath: alive is false, but it crawls
-        /// with health left until a hit finishes it or it bleeds out; getHit and the player's melee still hit it).
+        /// Still in the fight: alive, or in a pre-death stage
+        /// (Character.hasPreDeath: alive is false, but it crawls with health
+        /// left until a hit finishes it or it bleeds out; getHit and the
+        /// player's melee still hit it).
         /// </summary>
-        public static bool InPlay(Character c) => c != null && (c.alive || (c.hasPreDeath && c.health > 0f));
+        public static bool InPlay(Character c) =>
+            c != null && (c.alive || (c.hasPreDeath && c.health > 0f));
 
         /// <summary>
-        /// Client: a character of an area only this player is in: a dream of its own (the shared level dream is the
-        /// host's, World.Locations.SharedDream), or a separate location
-        /// the host didn't place for us (World.Locations.HostRunsHere), or anything still in a scene of its own. The
-        /// host doesn't run it, so it runs here, as in single player. A separate location the host placed is the
-        /// host's to run, as the world is (it loads it at the same spot even when its player isn't there): our
-        /// characters there are frozen and the host's are shown.
+        /// Client: a character of an area only this player is in: a dream of
+        /// its own (the shared level dream is the host's,
+        /// World.Locations.SharedDream), or a separate location the host didn't
+        /// place for us (World.Locations.HostRunsHere), or anything still in a
+        /// scene of its own. The host doesn't run it, so it runs here, as in
+        /// single player. A separate location the host placed is the host's to
+        /// run, as the world is (it loads it at the same spot even when its
+        /// player isn't there): our characters there are frozen and the host's
+        /// are shown.
         /// </summary>
-        public static bool LocalOnly(Character c) => c != null && LocalOnly(c.gameObject);
+        public static bool LocalOnly(Character c) =>
+            c != null && LocalOnly(c.gameObject);
 
-        /// <summary>Client: a thing in an area only this player is in (as for a character, above).</summary>
+        /// <summary>
+        /// Client: a thing in an area only this player is in (as for a
+        /// character, above).
+        /// </summary>
         public static bool LocalOnly(GameObject go)
         {
             if (go == null)
             {
                 return false;
             }
-            if (go.scene != UnityEngine.SceneManagement.SceneManager.GetActiveScene())
+            if (go.scene
+                != UnityEngine.SceneManagement.SceneManager.GetActiveScene())
             {
                 return true;
             }
-            // In the dream's own place: also while our player is still on the way in (a stage's start event fires
-            // before the player stands there), when the distance below doesn't tell yet. Not a shared level dream's
-            // (or the epilogue's): the host runs those (World.Locations.SharedDream); a prologue stage each game runs.
+            // In the dream's own place: also while our player is still on the
+            // way in (a stage's start event fires before the player stands
+            // there), when the distance below doesn't tell yet. Not a shared
+            // level dream's (or the epilogue's): the host runs those
+            // (World.Locations.SharedDream); a prologue stage each game runs.
             var d = Singleton<Dreams>.Instance;
-            if (d != null && d.dreamLocation != null && (d.dreaming || d.dreamPrepared || d.switchingDream) && go.transform.IsChildOf(d.dreamLocation.transform)
-                && (World.DreamSync.Shared == null || World.Prologue.IsStage(World.DreamSync.Shared)))
+            if (d != null && d.dreamLocation != null
+                && (d.dreaming || d.dreamPrepared || d.switchingDream)
+                && go.transform.IsChildOf(d.dreamLocation.transform)
+                && (World.DreamSync.Shared == null || World.Prologue.IsStage(
+                    World.DreamSync.Shared)))
             {
                 return true;
             }
@@ -123,10 +151,15 @@ namespace DarkwoodMP.Combat
                 return false;
             }
             var p = Player.Instance;
-            return p != null && (go.transform.position - p.transform.position).sqrMagnitude < 4000f * 4000f;
+            return p != null
+                && (go.transform.position - p.transform.position).sqrMagnitude
+                    < 4000f * 4000f;
         }
 
-        /// <summary>Client: undo Freeze, for a character that turned out to be in an area of our own.</summary>
+        /// <summary>
+        /// Client: undo Freeze, for a character that turned out to be in an
+        /// area of our own.
+        /// </summary>
         public static void Thaw(Character c)
         {
             if (c == null || !Frozen.Remove(c))
@@ -159,7 +192,8 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"{c.name} didn't start cleanly: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"{c.name} didn't start cleanly: {e.Message}");
             }
             finally
             {
@@ -169,8 +203,10 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: start a shown character's idle loop again (CharacterSounds.OnEnable's), stopped while it was hidden:
-        /// its sleeping one while the host's is asleep (Character.sleeping, sent in EnemyState), as enableComponents picks.
+        /// Client: start a shown character's idle loop again
+        /// (CharacterSounds.OnEnable's), stopped while it was hidden: its
+        /// sleeping one while the host's is asleep (Character.sleeping, sent in
+        /// EnemyState), as enableComponents picks.
         /// </summary>
         private static void PlayIdleLoop(Character c)
         {
@@ -193,13 +229,15 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't start {c.name}'s idle sound: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't start {c.name}'s idle sound: {e.Message}");
             }
         }
 
         public void Update()
         {
-            if (_session.IsHost && _session.Peers.Count > 0 && WorldShare.InWorld)
+            if (_session.IsHost && _session.Peers.Count > 0
+                && WorldShare.InWorld)
             {
                 HostUpdate();
             }
@@ -211,8 +249,9 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client, every frame: each of the host's enemies drawn where the host has it now, by the host's clock and its
-        /// last states (EnemyMotion), so they move at the host's speed whenever its states come.
+        /// Client, every frame: each of the host's enemies drawn where the host
+        /// has it now, by the host's clock and its last states (EnemyMotion),
+        /// so they move at the host's speed whenever its states come.
         /// </summary>
         private void MovePuppets()
         {
@@ -220,7 +259,8 @@ namespace DarkwoodMP.Combat
             EnemyMotion.Frame(dt);
             foreach (var p in _puppets.Values)
             {
-                if (p.C != null && p.DiedAt >= 0f && !p.Settled && now - p.DiedAt > DeathAnimTime)
+                if (p.C != null && p.DiedAt >= 0f && !p.Settled
+                    && now - p.DiedAt > DeathAnimTime)
                 {
                     Settle(p);
                 }
@@ -230,7 +270,8 @@ namespace DarkwoodMP.Combat
                 }
                 if (!p.C.gameObject.activeSelf && !p.Settled)
                 {
-                    Plugin.Log.LogInfo($"[enemy] the host's {p.C.name} #{p.Id} was switched off here: on again");
+                    Plugin.Log.LogInfo(
+                        $"[enemy] the host's {p.C.name} #{p.Id} was switched off here: on again");
                     p.C.gameObject.SetActive(true);
                 }
                 if (!EnemyMotion.Where(p.Motion, now, out var pos, out var rot))
@@ -244,9 +285,11 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: a copy's shadow, placed as Character.Update places it (the copy's Update doesn't run): not turned
-        /// with the body unless rotateShadow, at shadow height, lowered once it's dead. A flier's shadow is offset by
-        /// its altitude, which the host doesn't send, so it's left as it is.
+        /// Client: a copy's shadow, placed as Character.Update places it (the
+        /// copy's Update doesn't run): not turned with the body unless
+        /// rotateShadow, at shadow height, lowered once it's dead. A flier's
+        /// shadow is offset by its altitude, which the host doesn't send, so
+        /// it's left as it is.
         /// </summary>
         private static void AlignShadow(Character c)
         {
@@ -259,7 +302,8 @@ namespace DarkwoodMP.Combat
             {
                 sh.eulerAngles = new Vector3(90f, 0f, 0f);
             }
-            var at = c.transform.position + new Vector3(c.shadowOffset.x, 0f, c.shadowOffset.z);
+            var at = c.transform.position + new Vector3(
+                c.shadowOffset.x, 0f, c.shadowOffset.z);
             PosType posType;
             if (c.alive)
             {
@@ -269,7 +313,8 @@ namespace DarkwoodMP.Combat
             {
                 posType = PosType.low1;
             }
-            sh.position = Core.getYPos(at, posType, randomize: false) + c.posSeed;
+            sh.position =
+                Core.getYPos(at, posType, randomize: false) + c.posSeed;
         }
 
         // =====================================================================
@@ -281,23 +326,35 @@ namespace DarkwoodMP.Combat
             public uint Id;
             public Character C;
             public float DiedAt = -1f;
-            public float CalmSince = -1f; // an NPC: when it stopped being hostile
+            // an NPC: when it stopped being hostile
+            public float CalmSince = -1f;
             public List<tk2dSpriteAnimator> Animators;
             public List<int> AnimatorPaths;
-            public string Loop = ""; // the loop it was playing at the last LoopCheck
-            public bool Armor; // it wore shadow armour at the last ArmorSync: what the clients that know it were told
+            // the loop it was playing at the last LoopCheck
+            public string Loop = "";
+            // it wore shadow armour at the last ArmorSync: what the clients
+            // that know it were told
+            public bool Armor;
         }
 
         private uint _nextId = 1;
-        private readonly Dictionary<Character, Tracked> _byCharHost = new Dictionary<Character, Tracked>();
-        private readonly Dictionary<uint, Tracked> _byIdHost = new Dictionary<uint, Tracked>();
-        private readonly Dictionary<ulong, HashSet<uint>> _known = new Dictionary<ulong, HashSet<uint>>();
-        // Corpses each client was told to keep (EnemyDespawn with keep corpse): not sent again.
-        private readonly Dictionary<ulong, HashSet<uint>> _corpseKnown = new Dictionary<ulong, HashSet<uint>>();
+        private readonly Dictionary<Character, Tracked> _byCharHost =
+            new Dictionary<Character, Tracked>();
+        private readonly Dictionary<uint, Tracked> _byIdHost =
+            new Dictionary<uint, Tracked>();
+        private readonly Dictionary<ulong, HashSet<uint>> _known =
+            new Dictionary<ulong, HashSet<uint>>();
+        // Corpses each client was told to keep (EnemyDespawn with keep corpse):
+        // not sent again.
+        private readonly Dictionary<ulong, HashSet<uint>> _corpseKnown =
+            new Dictionary<ulong, HashSet<uint>>();
         private float _nextScan, _nextState;
         private readonly PacketWriter _batch = new PacketWriter();
         private readonly PacketWriter _one = new PacketWriter();
-        /// <summary>Corpses sent to one client in one state pass at most (a joiner can have dozens near them).</summary>
+        /// <summary>
+        /// Corpses sent to one client in one state pass at most (a joiner can
+        /// have dozens near them).
+        /// </summary>
         private const int CorpsesPerPass = 4;
 
         private void HostUpdate()
@@ -311,7 +368,8 @@ namespace DarkwoodMP.Combat
                     if (Eligible(c) && !_byCharHost.ContainsKey(c))
                     {
                         var t = new Tracked { Id = _nextId++, C = c };
-                        Animators(c.transform, out t.Animators, out t.AnimatorPaths);
+                        Animators(
+                            c.transform, out t.Animators, out t.AnimatorPaths);
                         _byCharHost[c] = t;
                         _byIdHost[t.Id] = t;
                         if (c.npc != null)
@@ -328,7 +386,8 @@ namespace DarkwoodMP.Combat
                         gone.Add(kv.Key);
                         continue;
                     }
-                    // An NPC that calmed down (and stayed calm a while) is each player's own again.
+                    // An NPC that calmed down (and stayed calm a while) is each
+                    // player's own again.
                     if (kv.Key.npc == null || !InPlay(kv.Key))
                     {
                         continue;
@@ -379,13 +438,17 @@ namespace DarkwoodMP.Combat
 
             foreach (var peer in _session.Peers)
             {
-                if (!NetPlayerProxy.All.TryGetValue(peer, out var proxy) || proxy == null)
+                if (!NetPlayerProxy.All.TryGetValue(peer, out var proxy)
+                    || proxy == null)
                 {
                     continue;
                 }
-                // Away (a dream, or a separate location we haven't got where they have it): their own game runs the
-                // enemies there (LocalOnly), so none of ours go to them; what they have of ours waits for their return.
-                // In a location we run for them (proxy.InLocation) they get ours there, by the same range check.
+                // Away (a dream, or a separate location we haven't got where
+                // they have it): their own game runs the enemies there
+                // (LocalOnly), so none of ours go to them; what they have of
+                // ours waits for their return. In a location we run for them
+                // (proxy.InLocation) they get ours there, by the same range
+                // check.
                 if (proxy.Away)
                 {
                     continue;
@@ -402,7 +465,9 @@ namespace DarkwoodMP.Combat
                 int corpsesSent = 0;
 
                 var w = _batch.Begin(MsgType.EnemyState);
-                w.W.Write(now); // the host's clock, which the client draws them by (EnemyMotion)
+                // the host's clock, which the client draws them by
+                // (EnemyMotion)
+                w.W.Write(now);
                 long countPos = w.Length;
                 w.W.Write((ushort)0);
                 int count = 0;
@@ -419,15 +484,21 @@ namespace DarkwoodMP.Combat
                         t.DiedAt = Time.time;
                     }
                     bool dead = t.DiedAt >= 0;
-                    bool corpseDone = dead && Time.time - t.DiedAt > CorpseLinger;
-                    bool near = c.gameObject.activeInHierarchy && (c.transform.position - at).sqrMagnitude < RelevantRange * RelevantRange;
+                    bool corpseDone =
+                        dead && Time.time - t.DiedAt > CorpseLinger;
+                    bool near = c.gameObject.activeInHierarchy
+                        && (c.transform.position - at).sqrMagnitude
+                            < RelevantRange * RelevantRange;
                     if (dead && corpses.Contains(t.Id))
                     {
-                        continue; // it has it, settled or not (sending it again would make a second body)
+                        // it has it, settled or not (sending it again would
+                        // make a second body)
+                        continue;
                     }
                     if (corpseDone && !known.Contains(t.Id))
                     {
-                        // A corpse it never saw settle: it gets it once it's near.
+                        // A corpse it never saw settle: it gets it once it's
+                        // near.
                         if (near && corpsesSent < CorpsesPerPass)
                         {
                             SendCorpse(peer, t);
@@ -438,7 +509,8 @@ namespace DarkwoodMP.Combat
                     }
                     if (corpseDone || !near)
                     {
-                        // Out of range, or settled: the dead stay where they fell (the client settles it now if it hadn't).
+                        // Out of range, or settled: the dead stay where they
+                        // fell (the client settles it now if it hadn't).
                         if (known.Contains(t.Id))
                         {
                             drop.Add((t.Id, dead));
@@ -472,20 +544,29 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>One of the loops CharacterSounds.playIdleLoop plays for this character.</summary>
+        /// <summary>
+        /// One of the loops CharacterSounds.playIdleLoop plays for this
+        /// character.
+        /// </summary>
         private static bool IsLoop(CharacterSounds snd, string audio) =>
-            snd != null && (audio == snd.idleLoop || audio == snd.idleLoopAggressive || audio == snd.aggressive
-                            || audio == snd.defensive || audio == snd.sleeping || audio == snd.escapingLoop);
+            snd != null
+                && (audio == snd.idleLoop || audio == snd.idleLoopAggressive
+                    || audio == snd.aggressive
+                    || audio == snd.defensive || audio == snd.sleeping
+                    || audio == snd.escapingLoop);
 
         private float _nextLoopCheck, _nextLoopResend;
         private const float LoopCheckInterval = 0.5f, LoopResendInterval = 2f;
 
         /// <summary>
-        /// Host: the loop each living enemy plays, made sure of in the clients' games. EnemySound tells them as a loop
-        /// starts or is stopped by playIdleLoop(""), but a loop also stops other ways (destroySounds, playIdleLoop
-        /// underground or under water), an unreliable EnemySound can be lost, and a client's copy starts its idle
-        /// loop by itself when it's switched on again (CharacterSounds.OnEnable). So a change of loop goes reliably,
-        /// and every couple of seconds each client is told the loop again (the same loop is a no-op there).
+        /// Host: the loop each living enemy plays, made sure of in the clients'
+        /// games. EnemySound tells them as a loop starts or is stopped by
+        /// playIdleLoop(""), but a loop also stops other ways (destroySounds,
+        /// playIdleLoop underground or under water), an unreliable EnemySound
+        /// can be lost, and a client's copy starts its idle loop by itself when
+        /// it's switched on again (CharacterSounds.OnEnable). So a change of
+        /// loop goes reliably, and every couple of seconds each client is told
+        /// the loop again (the same loop is a no-op there).
         /// </summary>
         private void LoopCheck(float now)
         {
@@ -507,7 +588,8 @@ namespace DarkwoodMP.Combat
                     loop = c.sounds.idleAudioObject;
                 }
                 string cur = "";
-                if (loop != null && loop.IsPlaying() && !string.IsNullOrEmpty(loop.audioID))
+                if (loop != null && loop.IsPlaying()
+                    && !string.IsNullOrEmpty(loop.audioID))
                 {
                     cur = loop.audioID;
                 }
@@ -528,7 +610,10 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>What kind of character it is: its prefab's name, as the save system knows it.</summary>
+        /// <summary>
+        /// What kind of character it is: its prefab's name, as the save system
+        /// knows it.
+        /// </summary>
         internal static string KindOf(Character c)
         {
             var save = c.GetComponent<SaveableObject>();
@@ -539,7 +624,10 @@ namespace DarkwoodMP.Combat
             return c.name.Replace("(Clone)", "").Trim();
         }
 
-        /// <summary>Whether a character wears shadow armour now (ShadowArmor.die destroys the component).</summary>
+        /// <summary>
+        /// Whether a character wears shadow armour now (ShadowArmor.die
+        /// destroys the component).
+        /// </summary>
         private static bool HasArmor(Character c)
         {
             ShadowArmor a = null;
@@ -551,9 +639,11 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Host: the clients that know this enemy are told when its shadow armour is put on (CharacterSpawner adds it
-        /// to a chapter 2+ night spawn after spawning it) or dies (light, or a hit). Only the host decides that: a
-        /// client's copy shows the armour and never checks light or takes damage (ShadowArmorCopyPatch).
+        /// Host: the clients that know this enemy are told when its shadow
+        /// armour is put on (CharacterSpawner adds it to a chapter 2+ night
+        /// spawn after spawning it) or dies (light, or a hit). Only the host
+        /// decides that: a client's copy shows the armour and never checks
+        /// light or takes damage (ShadowArmorCopyPatch).
         /// </summary>
         private void ArmorSync(Tracked t)
         {
@@ -580,16 +670,20 @@ namespace DarkwoodMP.Combat
             {
                 text = "on";
             }
-            Plugin.Log.LogInfo($"[enemy] {t.Id} {t.C.name}: shadow armour {text}");
+            Plugin.Log.LogInfo(
+                $"[enemy] {t.Id} {t.C.name}: shadow armour {text}");
         }
 
         private void SendSpawn(ulong peer, Tracked t)
         {
             var c = t.C;
-            ArmorSync(t); // first, so that the others that know it were told what this one is told
+            // first, so that the others that know it were told what this one is
+            // told
+            ArmorSync(t);
             var save = c.GetComponent<SaveableObject>();
             string name = KindOf(c);
-            // The prefab's path under Resources/Prefabs, as the save system knows it (Core.AddPrefab's argument).
+            // The prefab's path under Resources/Prefabs, as the save system
+            // knows it (Core.AddPrefab's argument).
             var sm = Singleton<SaveManager>.Instance;
             string path;
             if (sm != null && sm.prefabDictionary.TryGetValue(name, out var p))
@@ -619,21 +713,27 @@ namespace DarkwoodMP.Combat
             }
             w.W.Write((byte)armorFlag);
             _session.SendTo(peer, w, Channel.Control, reliable: true);
-            // The loop it's playing now (one that started before it was sent, e.g. an NPC's aggressive one as it
-            // turned hostile): after the spawn, on the same channel, so it comes after it.
+            // The loop it's playing now (one that started before it was sent,
+            // e.g. an NPC's aggressive one as it turned hostile): after the
+            // spawn, on the same channel, so it comes after it.
             AudioObject loop = null;
             if (c.sounds != null)
             {
                 loop = c.sounds.idleAudioObject;
             }
-            if (loop != null && loop.IsPlaying() && !string.IsNullOrEmpty(loop.audioID))
+            if (loop != null && loop.IsPlaying()
+                && !string.IsNullOrEmpty(loop.audioID))
             {
                 SendSound(peer, t.Id, loop.audioID, 1f, reliable: true);
             }
         }
 
-        /// <summary>EnemySound: reliable on the control channel, or unreliable on the state channel.</summary>
-        private void SendSound(ulong peer, uint id, string audio, float volume, bool reliable)
+        /// <summary>
+        /// EnemySound: reliable on the control channel, or unreliable on the
+        /// state channel.
+        /// </summary>
+        private void SendSound(
+            ulong peer, uint id, string audio, float volume, bool reliable)
         {
             var w = _session.Begin(MsgType.EnemySound);
             w.W.Write(id);
@@ -651,7 +751,9 @@ namespace DarkwoodMP.Combat
             _session.SendTo(peer, w, channel, reliable);
         }
 
-        /// <summary>Host: the clients that have this enemy (it's near them).</summary>
+        /// <summary>
+        /// Host: the clients that have this enemy (it's near them).
+        /// </summary>
         private IEnumerable<ulong> Knowing(uint id)
         {
             foreach (var kv in _known)
@@ -664,9 +766,10 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Host: a corpse the client doesn't have, sent as an enemy that is shown, dead and then kept (it settles
-        /// at once there, on the host's last frames of its death), then what it holds. All on the reliable channel,
-        /// so they come in this order.
+        /// Host: a corpse the client doesn't have, sent as an enemy that is
+        /// shown, dead and then kept (it settles at once there, on the host's
+        /// last frames of its death), then what it holds. All on the reliable
+        /// channel, so they come in this order.
         /// </summary>
         private void SendCorpse(ulong peer, Tracked t)
         {
@@ -720,7 +823,8 @@ namespace DarkwoodMP.Combat
                     SendDespawn(kv.Key, id, keepCorpse: false);
                 }
             }
-            foreach (var kv in _corpseKnown) // the host's corpse is gone, so theirs goes too
+            // the host's corpse is gone, so theirs goes too
+            foreach (var kv in _corpseKnown)
             {
                 if (kv.Value.Remove(id))
                 {
@@ -787,7 +891,10 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>Host: an enemy was hit and bled; the clients that see it get the splat too (their hits included).</summary>
+        /// <summary>
+        /// Host: an enemy was hit and bled; the clients that see it get the
+        /// splat too (their hits included).
+        /// </summary>
         public void HostBlood(Character c, float yRot)
         {
             if (!_byCharHost.TryGetValue(c, out var t))
@@ -818,7 +925,9 @@ namespace DarkwoodMP.Combat
             uint id = r.R.ReadUInt32();
             float y = r.R.ReadSingle();
             bool water = r.R.ReadByte() != 0;
-            if (_predictedBlood.TryGetValue(id, out float at) && Time.realtimeSinceStartup - at < 1f) // shown already
+            // shown already
+            if (_predictedBlood.TryGetValue(id, out float at)
+                && Time.realtimeSinceStartup - at < 1f)
             {
                 _predictedBlood.Remove(id);
                 return;
@@ -830,11 +939,16 @@ namespace DarkwoodMP.Combat
                 {
                     prefab = "FX/Bloodsplats/Shotsplat";
                 }
-                Core.AddPrefab(prefab, p.C.transform.position, Quaternion.Euler(90f, y, 0f), null);
+                Core.AddPrefab(
+                    prefab, p.C.transform.position,
+                    Quaternion.Euler(90f, y, 0f), null);
             }
         }
 
-        /// <summary>Host: the players that have this enemy (it's near them), for things only they need to see.</summary>
+        /// <summary>
+        /// Host: the players that have this enemy (it's near them), for things
+        /// only they need to see.
+        /// </summary>
         public List<ulong> PeersSeeing(Character c)
         {
             if (c == null || !_byCharHost.TryGetValue(c, out var t))
@@ -844,7 +958,10 @@ namespace DarkwoodMP.Combat
             return Knowing(t.Id).ToList();
         }
 
-        /// <summary>Host: the net ID the clients know this enemy by (false if it isn't tracked).</summary>
+        /// <summary>
+        /// Host: the net ID the clients know this enemy by (false if it isn't
+        /// tracked).
+        /// </summary>
         public bool IdOf(Character c, out uint id)
         {
             id = 0;
@@ -856,7 +973,10 @@ namespace DarkwoodMP.Combat
             return true;
         }
 
-        /// <summary>Client: our copy of the host's enemy with this net ID (null if we haven't got it).</summary>
+        /// <summary>
+        /// Client: our copy of the host's enemy with this net ID (null if we
+        /// haven't got it).
+        /// </summary>
         public Character PuppetOf(uint id)
         {
             if (_puppets.TryGetValue(id, out var p))
@@ -878,7 +998,9 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>Host: an enemy made a sound; tell the clients that can see it.</summary>
+        /// <summary>
+        /// Host: an enemy made a sound; tell the clients that can see it.
+        /// </summary>
         public void HostSound(Transform parent, string audioId, float volume)
         {
             var c = parent.GetComponentInParent<Character>();
@@ -909,7 +1031,8 @@ namespace DarkwoodMP.Combat
                 World.Authority.Refuse("that enemy isn't alive here");
                 return;
             }
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null)
+            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
+                || proxy == null)
             {
                 World.Authority.Refuse("no stand-in for that player yet");
                 return;
@@ -918,14 +1041,19 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Host, in a request's handler: a player's hit on one of our characters (an enemy, or an NPC that's still
-        /// friendly here), checked (reach, hit rate) and capped by their weapon, applied with their stand-in as the
-        /// attacker, so it reacts to them and gains threat for them.
+        /// Host, in a request's handler: a player's hit on one of our
+        /// characters (an enemy, or an NPC that's still friendly here), checked
+        /// (reach, hit rate) and capped by their weapon, applied with their
+        /// stand-in as the attacker, so it reacts to them and gains threat for
+        /// them.
         /// </summary>
-        internal void ApplyHit(ulong from, NetPlayerProxy proxy, Character c, float damage, byte f, List<InvItemEffect> effects, string weaponJson)
+        internal void ApplyHit(
+            ulong from, NetPlayerProxy proxy, Character c, float damage, byte f,
+            List<InvItemEffect> effects, string weaponJson)
         {
             var weapon = Weapon(weaponJson);
-            bool ranged = weapon != null && weapon.baseClass != null && !weapon.baseClass.isMelee;
+            bool ranged = weapon != null && weapon.baseClass != null
+                && !weapon.baseClass.isMelee;
             float reach;
             if (ranged)
             {
@@ -969,23 +1097,35 @@ namespace DarkwoodMP.Combat
                 {
                     weaponType = "bare hands";
                 }
-                log.LogInfo($"[authority] {hitter}'s hit on {target}: {damage:0} is more than {weaponType} can do; {applied:0}");
+                log.LogInfo(
+                    $"[authority] {hitter}'s hit on {target}: {damage:0} is more than {weaponType} can do; {applied:0}");
             }
-            World.Authority.Result(applied.ToString("0", System.Globalization.CultureInfo.InvariantCulture));
-            // The bar isn't shown for another player's hit (getHit would, as byPlayer); as for any hit not by our
-            // player, it shows if we have that enemy selected, and an open bar is refreshed.
+            World.Authority.Result(
+                applied.ToString(
+                    "0", System.Globalization.CultureInfo.InvariantCulture));
+            // The bar isn't shown for another player's hit (getHit would, as
+            // byPlayer); as for any hit not by our player, it shows if we have
+            // that enemy selected, and an open bar is refreshed.
             if (applied > 0f)
             {
-                // A death this hit causes sets off the character's onDeath as that player's doing (World.ScriptedEvents.Cause).
-                // Its onGetAttackedByPlayer triggers are the hitter's to set off (their part, ours and the shared
-                // one, as any trigger of theirs): left to them, and the result tells them (ScriptedEvents.Attacked).
+                // A death this hit causes sets off the character's onDeath as
+                // that player's doing (World.ScriptedEvents.Cause). Its
+                // onGetAttackedByPlayer triggers are the hitter's to set off
+                // (their part, ours and the shared one, as any trigger of
+                // theirs): left to them, and the result tells them
+                // (ScriptedEvents.Attacked).
                 var wasCause = World.ScriptedEvents.Cause;
                 World.ScriptedEvents.Cause = from;
                 int left;
                 try
                 {
-                    left = ScriptedEvents.LeavingToActor(ScriptedEvents.HitTypes, () =>
-                        c.getHit(applied, proxy.transform, canCutInHalf: (f & 1) != 0, byPlayer: true, canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0, dontShowHealthBar: true));
+                    left = ScriptedEvents.LeavingToActor(
+                        ScriptedEvents.HitTypes, () =>
+                        c.getHit(
+                            applied, proxy.transform,
+                            canCutInHalf: (f & 1) != 0, byPlayer: true,
+                            canInterrupt: (f & 4) != 0, normalHit: (f & 8) != 0,
+                            dontShowHealthBar: true));
                 }
                 finally
                 {
@@ -993,31 +1133,43 @@ namespace DarkwoodMP.Combat
                 }
                 if (left > 0)
                 {
-                    World.Authority.Result(applied.ToString("0", System.Globalization.CultureInfo.InvariantCulture) + ScriptedEvents.Attacked);
+                    World.Authority.Result(
+                        applied.ToString(
+                            "0",
+                            System.Globalization.CultureInfo.InvariantCulture)
+                            + ScriptedEvents.Attacked);
                 }
                 if (c != null)
                 {
-                    HealthBar(c, show: Player.Instance != null && Player.Instance.selectedObject == c.transform);
+                    HealthBar(
+                        c,
+                        show: Player.Instance != null
+                            && Player.Instance.selectedObject == c.transform);
                 }
             }
             if (c != null && c.effects != null)
             {
                 foreach (var e in WeaponEffects(weapon, effects))
                 {
-                    c.effects.activate(e); // bleeding, burning... from their weapon
+                    // bleeding, burning... from their weapon
+                    c.effects.activate(e);
                 }
             }
         }
 
-        private static readonly Dictionary<InvItem, List<InvItemEffect>> _weaponEffects = new Dictionary<InvItem, List<InvItemEffect>>();
+        private static readonly Dictionary<InvItem, List<InvItemEffect>> _weaponEffects =
+            new Dictionary<InvItem, List<InvItemEffect>>();
 
         /// <summary>
-        /// Of the effects a hit came with, those the weapon's class can cause, with the class's own numbers rather
-        /// than the sent ones: its melee sensors' effects (MeleeSensor.effects) and its flames' (Flame.effect: a
-        /// firearm's shot is its `item` prefab, which Player.spawnBullet spawns, a flamethrower's flame among them;
-        /// also its muzzle and particle prefabs). Bare hands cause none.
+        /// Of the effects a hit came with, those the weapon's class can cause,
+        /// with the class's own numbers rather than the sent ones: its melee
+        /// sensors' effects (MeleeSensor.effects) and its flames'
+        /// (Flame.effect: a firearm's shot is its `item` prefab, which
+        /// Player.spawnBullet spawns, a flamethrower's flame among them; also
+        /// its muzzle and particle prefabs). Bare hands cause none.
         /// </summary>
-        private static List<InvItemEffect> WeaponEffects(InvItemClass weapon, List<InvItemEffect> sent)
+        private static List<InvItemEffect> WeaponEffects(
+            InvItemClass weapon, List<InvItemEffect> sent)
         {
             var result = new List<InvItemEffect>();
             InvItem b = null;
@@ -1037,7 +1189,15 @@ namespace DarkwoodMP.Combat
                 {
                     shot = b.item;
                 }
-                foreach (var o in new[] { b.meleeSensor, b.meleeSensorSpecial, shot, b.muzzlePrefab, b.muzzleParticles, b._particleEmitter })
+                foreach (var o in new[]
+                {
+                    b.meleeSensor,
+                    b.meleeSensorSpecial,
+                    shot,
+                    b.muzzlePrefab,
+                    b.muzzleParticles,
+                    b._particleEmitter
+                })
                 {
                     GameObject go = o as GameObject;
                     if (go == null)
@@ -1052,7 +1212,8 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
-                    foreach (var ms in go.GetComponentsInChildren<MeleeSensor>(true))
+                    foreach (var ms in go.GetComponentsInChildren<MeleeSensor>(
+                        true))
                     {
                         if (ms.effects != null)
                         {
@@ -1081,7 +1242,8 @@ namespace DarkwoodMP.Combat
                 int i = left.FindIndex(x => x.type == e.type);
                 if (i < 0)
                 {
-                    Plugin.Log.LogInfo($"[authority] a hit with {weapon.type} came with {e.type}, which it doesn't cause; dropped");
+                    Plugin.Log.LogInfo(
+                        $"[authority] a hit with {weapon.type} came with {e.type}, which it doesn't cause; dropped");
                     continue;
                 }
                 result.Add(left[i]);
@@ -1090,17 +1252,27 @@ namespace DarkwoodMP.Combat
             return result;
         }
 
-        /// <summary>How far a melee hit reaches (generous: the positions the host has are a little late).</summary>
+        /// <summary>
+        /// How far a melee hit reaches (generous: the positions the host has
+        /// are a little late).
+        /// </summary>
         private const float MeleeReach = 500f;
-        /// <summary>Most hits a player lands in a second with a melee weapon or bare hands (or a slow gun).</summary>
+        /// <summary>
+        /// Most hits a player lands in a second with a melee weapon or bare
+        /// hands (or a slow gun).
+        /// </summary>
         private const int MaxHitsPerSecond = 24;
-        private readonly Dictionary<ulong, Queue<float>> _hitTimes = new Dictionary<ulong, Queue<float>>();
+        private readonly Dictionary<ulong, Queue<float>> _hitTimes =
+            new Dictionary<ulong, Queue<float>>();
 
         /// <summary>
-        /// Most hits a second this weapon lands, by the host's numbers for its type: each of a gun's shots sends a hit
-        /// for every pellet that lands (InvItem.projectileAmount, Player.fireWeapon), and it fires at most once per
-        /// fireRate seconds (at most every 0.05 s for automatic and burst fire, 0.15 s for one shot a click), with half again as a margin for hits
-        /// that arrive bunched up. Never under MaxHitsPerSecond.
+        /// Most hits a second this weapon lands, by the host's numbers for its
+        /// type: each of a gun's shots sends a hit for every pellet that lands
+        /// (InvItem.projectileAmount, Player.fireWeapon), and it fires at most
+        /// once per fireRate seconds (at most every 0.05 s for automatic and
+        /// burst fire, 0.15 s for one shot a click), with half again as a
+        /// margin for hits that arrive bunched up. Never under
+        /// MaxHitsPerSecond.
         /// </summary>
         private static int MaxHits(InvItemClass weapon)
         {
@@ -1113,16 +1285,21 @@ namespace DarkwoodMP.Combat
             {
                 return MaxHitsPerSecond;
             }
-            // A gun fired one shot per click (oneShot, semiAuto) has its fireRate at 0 or near it: its pump or
-            // bolt animation, and the clicks, keep it under about 7 shots a second.
-            bool auto = b.fireMode == InvItem.FireMode.fullAuto || b.fireMode == InvItem.FireMode.burst;
+            // A gun fired one shot per click (oneShot, semiAuto) has its
+            // fireRate at 0 or near it: its pump or bolt animation, and the
+            // clicks, keep it under about 7 shots a second.
+            bool auto = b.fireMode == InvItem.FireMode.fullAuto
+                || b.fireMode == InvItem.FireMode.burst;
             float minRate = 0.15f;
             if (auto)
             {
                 minRate = 0.05f;
             }
             float shots = 1f / Mathf.Max(b.fireRate, minRate);
-            return Mathf.Max(MaxHitsPerSecond, Mathf.CeilToInt(Mathf.Max(1, b.projectileAmount) * shots * 1.5f));
+            return Mathf.Max(
+                MaxHitsPerSecond,
+                Mathf.CeilToInt(
+                    Mathf.Max(1, b.projectileAmount) * shots * 1.5f));
         }
 
         private bool HitRateOk(ulong from, InvItemClass weapon)
@@ -1144,7 +1321,10 @@ namespace DarkwoodMP.Combat
             return true;
         }
 
-        /// <summary>The weapon a hit came with (InvItemClass.SaveState as JSON; null for bare hands or one we can't read).</summary>
+        /// <summary>
+        /// The weapon a hit came with (InvItemClass.SaveState as JSON; null for
+        /// bare hands or one we can't read).
+        /// </summary>
         private static InvItemClass Weapon(string json)
         {
             if (string.IsNullOrEmpty(json))
@@ -1153,7 +1333,9 @@ namespace DarkwoodMP.Combat
             }
             try
             {
-                var st = Newtonsoft.Json.JsonConvert.DeserializeObject<InvItemClass.SaveState>(json);
+                var st =
+                    Newtonsoft.Json.JsonConvert
+                        .DeserializeObject<InvItemClass.SaveState>(json);
                 var it = new InvItemClass();
                 st.loadValues(it);
                 if (InvItemClass.isNull(it) || it.baseClass == null)
@@ -1169,9 +1351,11 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// The most damage this weapon can deal in one hit, by the game's own numbers for its class: its damage or
-        /// special damage, with every damage upgrade its class offers (InvItem.upgrades; not the upgrades the hit
-        /// says it has, which the client sends), doubled by the Strong skill's effect, with a margin.
+        /// The most damage this weapon can deal in one hit, by the game's own
+        /// numbers for its class: its damage or special damage, with every
+        /// damage upgrade its class offers (InvItem.upgrades; not the upgrades
+        /// the hit says it has, which the client sends), doubled by the Strong
+        /// skill's effect, with a margin.
         /// Bare hands: as the game's weakest weapons.
         /// </summary>
         public static float DamageCap(InvItemClass weapon)
@@ -1204,13 +1388,17 @@ namespace DarkwoodMP.Combat
         // Client
         // =====================================================================
 
-        /// <summary>A client in the host's world: its own enemies don't run, the host's are shown.</summary>
+        /// <summary>
+        /// A client in the host's world: its own enemies don't run, the host's
+        /// are shown.
+        /// </summary>
         public static bool ClientMode
         {
             get
             {
                 var s = Session.Instance;
-                return s != null && s.IsClient && s.Connected && SaveRedirect.Active;
+                return s != null && s.IsClient && s.Connected
+                    && SaveRedirect.Active;
             }
         }
 
@@ -1218,21 +1406,30 @@ namespace DarkwoodMP.Combat
         {
             public uint Id;
             public Character C;
-            public bool Ours; // made from the prefab here, rather than our copy from the save
-            public readonly Dictionary<int, tk2dSpriteAnimator> Animators = new Dictionary<int, tk2dSpriteAnimator>();
+            // made from the prefab here, rather than our copy from the save
+            public bool Ours;
+            public readonly Dictionary<int, tk2dSpriteAnimator> Animators =
+                new Dictionary<int, tk2dSpriteAnimator>();
             public bool Has; // it has had a state
-            public float DiedAt = -1f; public bool Settled; // dead: the corpse made lootable once its death has played
-            public bool Cut; // cut in half on the host (Character.cutMeInHalf): its lower half is a new enemy, this part no corpse
-            public bool Unculled; public Location HomeLoc; // taken out of our culling while the host sends it (Uncull)
+            // dead: the corpse made lootable once its death has played
+            public float DiedAt = -1f; public bool Settled;
+            // cut in half on the host (Character.cutMeInHalf): its lower half
+            // is a new enemy, this part no corpse
+            public bool Cut;
+            // taken out of our culling while the host sends it (Uncull)
+            public bool Unculled; public Location HomeLoc;
             public readonly EnemyMotion.Track Motion = new EnemyMotion.Track();
         }
 
         /// <summary>
-        /// Client: take a shown copy out of our own culling. Our WorldGrid culls only around our player, so a copy
-        /// 1600-3000 away (still within the host's RelevantRange) would be switched off by its node being left
-        /// (Cullable.hide, tryToHideMoveable) or by its location's characters being switched off
-        /// (Location.activateCharacters), and nothing would switch it on again while the host moves it: we'd be hit
-        /// by an enemy we can't see. While the host sends it, its EnemyDespawn decides when it goes.
+        /// Client: take a shown copy out of our own culling. Our WorldGrid
+        /// culls only around our player, so a copy 1600-3000 away (still within
+        /// the host's RelevantRange) would be switched off by its node being
+        /// left (Cullable.hide, tryToHideMoveable) or by its location's
+        /// characters being switched off (Location.activateCharacters), and
+        /// nothing would switch it on again while the host moves it: we'd be
+        /// hit by an enemy we can't see. While the host sends it, its
+        /// EnemyDespawn decides when it goes.
         /// </summary>
         private static void Uncull(Puppet p)
         {
@@ -1270,15 +1467,17 @@ namespace DarkwoodMP.Combat
                 }
                 loc.objects.Remove(go);
             }
-            // Under a location's characters holder it would go off with the location's children: put it where the
-            // game puts characters that left their location (a holder that's never switched off).
+            // Under a location's characters holder it would go off with the
+            // location's children: put it where the game puts characters that
+            // left their location (a holder that's never switched off).
             CharacterSpawner instance = Singleton<CharacterSpawner>.Instance;
             GameObject holder = null;
             if (instance != null)
             {
                 holder = instance.charactersEscapedFromLocationHolder;
             }
-            if (holder != null && go.transform.parent != null && go.transform.parent != holder.transform)
+            if (holder != null && go.transform.parent != null
+                && go.transform.parent != holder.transform)
             {
                 c.disconnectFromLocation();
             }
@@ -1294,11 +1493,15 @@ namespace DarkwoodMP.Combat
                 {
                     name = parent.name;
                 }
-                Plugin.Log.LogWarning($"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {name})");
+                Plugin.Log.LogWarning(
+                    $"[enemy] the host's {c.name} #{p.Id} is still switched off here (under {name})");
             }
         }
 
-        /// <summary>Client: the host stopped sending a copy: our culling looks after it again, at the spot it's at now.</summary>
+        /// <summary>
+        /// Client: the host stopped sending a copy: our culling looks after it
+        /// again, at the spot it's at now.
+        /// </summary>
         private static void Recull(Puppet p)
         {
             var c = p.C;
@@ -1334,19 +1537,28 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't put {c.name} back into the culling: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't put {c.name} back into the culling: {e.Message}");
             }
         }
 
-        private readonly Dictionary<uint, Puppet> _puppets = new Dictionary<uint, Puppet>();
-        private readonly Dictionary<Character, Puppet> _byChar = new Dictionary<Character, Puppet>();
+        private readonly Dictionary<uint, Puppet> _puppets =
+            new Dictionary<uint, Puppet>();
+        private readonly Dictionary<Character, Puppet> _byChar =
+            new Dictionary<Character, Puppet>();
         private float _nextSweep;
 
-        // Corpses the host told us to leave where they fell: still known by id, for their loot.
-        private readonly Dictionary<uint, Puppet> _corpses = new Dictionary<uint, Puppet>();
-        private readonly Dictionary<Character, uint> _corpseIds = new Dictionary<Character, uint>();
+        // Corpses the host told us to leave where they fell: still known by id,
+        // for their loot.
+        private readonly Dictionary<uint, Puppet> _corpses =
+            new Dictionary<uint, Puppet>();
+        private readonly Dictionary<Character, uint> _corpseIds =
+            new Dictionary<Character, uint>();
 
-        /// <summary>The net id of one of the host's enemies (host: tracked; client: shown, or its corpse).</summary>
+        /// <summary>
+        /// The net id of one of the host's enemies (host: tracked; client:
+        /// shown, or its corpse).
+        /// </summary>
         public bool NetIdOf(Character c, out uint id)
         {
             id = 0;
@@ -1367,12 +1579,18 @@ namespace DarkwoodMP.Combat
             return _corpseIds.TryGetValue(c, out id);
         }
 
-        /// <summary>Client: this is a copy of one of the host's enemies that we made from its prefab (one spawned
-        /// while playing), rather than our own copy from the save.</summary>
-        public bool MadeHere(Character c) => c != null && _byChar.TryGetValue(c, out var p) && p.Ours;
+        /// <summary>Client: this is a copy of one of the host's enemies that we
+        /// made from its prefab (one spawned while playing), rather than our
+        /// own copy from the save.</summary>
+        public bool MadeHere(Character c) =>
+            c != null && _byChar.TryGetValue(c, out var p) && p.Ours;
 
-        /// <summary>Client: a corpse of one of the host's enemies that the host told us to keep (EnemyDespawn with keep corpse).</summary>
-        internal bool KeptCorpse(Character c) => c != null && _corpseIds.ContainsKey(c);
+        /// <summary>
+        /// Client: a corpse of one of the host's enemies that the host told us
+        /// to keep (EnemyDespawn with keep corpse).
+        /// </summary>
+        internal bool KeptCorpse(Character c) =>
+            c != null && _corpseIds.ContainsKey(c);
 
         public Character CharacterOf(uint id)
         {
@@ -1395,12 +1613,15 @@ namespace DarkwoodMP.Combat
             return null;
         }
 
-        /// <summary>Host: enemies the clients know of that died at least this long ago.</summary>
+        /// <summary>
+        /// Host: enemies the clients know of that died at least this long ago.
+        /// </summary>
         public IEnumerable<Character> HostDeadSince(float seconds)
         {
             foreach (var t in _byCharHost.Values)
             {
-                if (t.C != null && t.DiedAt >= 0 && Time.time - t.DiedAt >= seconds)
+                if (t.C != null && t.DiedAt >= 0
+                    && Time.time - t.DiedAt >= seconds)
                 {
                     yield return t.C;
                 }
@@ -1418,7 +1639,10 @@ namespace DarkwoodMP.Combat
             return false;
         }
 
-        /// <summary>Client: stop one of our own characters from acting, and hide it until the host says it's there.</summary>
+        /// <summary>
+        /// Client: stop one of our own characters from acting, and hide it
+        /// until the host says it's there.
+        /// </summary>
         public static void Freeze(Character c, bool hide)
         {
             if (c == null)
@@ -1443,7 +1667,8 @@ namespace DarkwoodMP.Combat
                 rb.isKinematic = true;
                 rb.velocity = Vector3.zero;
             }
-            foreach (var a in c.GetComponentsInChildren<tk2dSpriteAnimator>(true))
+            foreach (var a in c.GetComponentsInChildren<tk2dSpriteAnimator>(
+                true))
             {
                 a.AnimationEventTriggered = null;
                 a.AnimationCompleted = null;
@@ -1460,15 +1685,20 @@ namespace DarkwoodMP.Combat
             Frozen.Add(c);
         }
 
-        public static readonly HashSet<Character> Frozen = new HashSet<Character>();
+        public static readonly HashSet<Character> Frozen =
+            new HashSet<Character>();
 
         /// <summary>
-        /// Client: our own characters hidden while the host runs the world there (frozen ones, and our save's copies
-        /// of host enemies the host stopped sending). They stay in their location's lists, so the game switches them
-        /// off and on with their area, and each time CharacterSounds.OnEnable starts their idle loop again
-        /// (ClientHiddenSilentPatch keeps them silent): a dead dog camp's dogs barked on in a joiner's game.
+        /// Client: our own characters hidden while the host runs the world
+        /// there (frozen ones, and our save's copies of host enemies the host
+        /// stopped sending). They stay in their location's lists, so the game
+        /// switches them off and on with their area, and each time
+        /// CharacterSounds.OnEnable starts their idle loop again
+        /// (ClientHiddenSilentPatch keeps them silent): a dead dog camp's dogs
+        /// barked on in a joiner's game.
         /// </summary>
-        public static readonly HashSet<Character> Hidden = new HashSet<Character>();
+        public static readonly HashSet<Character> Hidden =
+            new HashSet<Character>();
 
         private static void Hide(Character c)
         {
@@ -1476,9 +1706,13 @@ namespace DarkwoodMP.Combat
             Hidden.Add(c);
         }
 
-        private static readonly System.Reflection.FieldInfo FovLightField = HarmonyLib.AccessTools.Field(typeof(Player), "FOVLight");
+        private static readonly System.Reflection.FieldInfo FovLightField =
+            HarmonyLib.AccessTools.Field(typeof(Player), "FOVLight");
 
-        /// <summary>The layers our player's view (Player.FOVLight, a Light2D) is cut by: its rays stop at colliders on these.</summary>
+        /// <summary>
+        /// The layers our player's view (Player.FOVLight, a Light2D) is cut by:
+        /// its rays stop at colliders on these.
+        /// </summary>
         internal static int FovShadowMask()
         {
             Light2D l = null;
@@ -1499,7 +1733,10 @@ namespace DarkwoodMP.Combat
             return 0;
         }
 
-        /// <summary>A character's switched-on colliders that cut our player's view (on FovShadowMask's layers), by path under it.</summary>
+        /// <summary>
+        /// A character's switched-on colliders that cut our player's view (on
+        /// FovShadowMask's layers), by path under it.
+        /// </summary>
         internal static List<string> FovBlockers(Character c, int mask)
         {
             var list = new List<string>();
@@ -1509,7 +1746,9 @@ namespace DarkwoodMP.Combat
             }
             foreach (var col in c.GetComponentsInChildren<Collider>(true))
             {
-                if (col == null || !col.enabled || !col.gameObject.activeInHierarchy || (mask & (1 << col.gameObject.layer)) == 0)
+                if (col == null || !col.enabled
+                    || !col.gameObject.activeInHierarchy
+                    || (mask & (1 << col.gameObject.layer)) == 0)
                 {
                     continue;
                 }
@@ -1522,7 +1761,8 @@ namespace DarkwoodMP.Combat
                 {
                     path = col.transform.name;
                 }
-                for (var t = col.transform.parent; t != null && t != c.transform; t = t.parent)
+                for (var t = col.transform.parent; t != null
+                    && t != c.transform; t = t.parent)
                 {
                     path = t.name + "/" + path;
                 }
@@ -1531,7 +1771,8 @@ namespace DarkwoodMP.Combat
                 {
                     text = ":trigger";
                 }
-                list.Add($"{path}:{col.GetType().Name}:{col.gameObject.layer}{text}");
+                list.Add(
+                    $"{path}:{col.GetType().Name}:{col.gameObject.layer}{text}");
             }
             list.Sort(System.StringComparer.Ordinal);
             return list;
@@ -1545,18 +1786,25 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            var sizes = c.GetComponentsInChildren<Collider>(true).Where(x => x != null && x.enabled && (mask & (1 << x.gameObject.layer)) != 0)
-                .Select(x => $"{x.name} {x.bounds.size.x:0}x{x.bounds.size.z:0}");
-            Plugin.Log.LogInfo($"[enemy] {c.name} {when}: colliders on the view's shadow layers (mask {mask}): {string.Join(", ", b)}; sizes {string.Join(", ", sizes)}");
+            var sizes = c.GetComponentsInChildren<Collider>(true).Where(
+                x => x != null && x.enabled
+                    && (mask & (1 << x.gameObject.layer)) != 0)
+                .Select(
+                    x => $"{x.name} {x.bounds.size.x:0}x{x.bounds.size.z:0}");
+            Plugin.Log.LogInfo(
+                $"[enemy] {c.name} {when}: colliders on the view's shadow layers (mask {mask}): {string.Join(", ", b)}; sizes {string.Join(", ", sizes)}");
         }
 
         /// <summary>
-        /// Client: the renderers and colliders SetVisible(false) switched off, per character, so showing it again switches
-        /// on just those. Switching on everything under a character woke parts the game keeps off (and a corpse's parts
-        /// its die2 destroys on the host): a collider on the view's shadow layers then cut the player's view to nothing
-        /// beside the corpse.
+        /// Client: the renderers and colliders SetVisible(false) switched off,
+        /// per character, so showing it again switches on just those. Switching
+        /// on everything under a character woke parts the game keeps off (and a
+        /// corpse's parts its die2 destroys on the host): a collider on the
+        /// view's shadow layers then cut the player's view to nothing beside
+        /// the corpse.
         /// </summary>
-        private static readonly Dictionary<Character, List<Component>> _switchedOff = new Dictionary<Character, List<Component>>();
+        private static readonly Dictionary<Character, List<Component>> _switchedOff =
+            new Dictionary<Character, List<Component>>();
 
         private static void SetVisible(Character c, bool on)
         {
@@ -1602,7 +1850,10 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>Catch characters that started before we were in client mode (e.g. rejoining in the same world).</summary>
+        /// <summary>
+        /// Catch characters that started before we were in client mode (e.g.
+        /// rejoining in the same world).
+        /// </summary>
         private void ClientSweep()
         {
             if (Time.unscaledTime < _nextSweep)
@@ -1649,11 +1900,14 @@ namespace DarkwoodMP.Combat
             Character c = null;
             bool ours = false;
             var sm = Singleton<SaveManager>.Instance;
-            // Our copy of it from the save, when the host's save id names the same character here: only ids from
-            // the save we loaded are the same in both games (SharedIds), and even then it has to be the same kind
-            // of creature. The host sends an NPC only while it's hostile there (HostileNpcs): ours is then frozen and
-            // shown as the host's.
-            if (uid > 0 && uid < World.SharedIds.ResolveLimit && sm != null && sm.uniqueIdDict.TryGetValue(uid, out var tr) && tr != null)
+            // Our copy of it from the save, when the host's save id names the
+            // same character here: only ids from the save we loaded are the
+            // same in both games (SharedIds), and even then it has to be the
+            // same kind of creature. The host sends an NPC only while it's
+            // hostile there (HostileNpcs): ours is then frozen and shown as the
+            // host's.
+            if (uid > 0 && uid < World.SharedIds.ResolveLimit && sm != null
+                && sm.uniqueIdDict.TryGetValue(uid, out var tr) && tr != null)
             {
                 c = tr.GetComponent<Character>();
                 if (c != null && _byChar.ContainsKey(c))
@@ -1669,25 +1923,33 @@ namespace DarkwoodMP.Combat
                     {
                         npcNote = "";
                     }
-                    log.LogInfo($"Save id {uid} is our {kind}{npcNote}, not the host's {name}: making it from its prefab");
+                    log.LogInfo(
+                        $"Save id {uid} is our {kind}{npcNote}, not the host's {name}: making it from its prefab");
                     c = null;
                 }
             }
-            // An NPC made while playing (a scripted spawn runs in every game) has a save id of its own in each game:
-            // ours is the one of that kind near where the host's is.
+            // An NPC made while playing (a scripted spawn runs in every game)
+            // has a save id of its own in each game: ours is the one of that
+            // kind near where the host's is.
             if (c == null)
             {
-                c = HostileNpcs.OurCopy(name, pos, x => _byChar.ContainsKey(x), KindOf);
+                c = HostileNpcs.OurCopy(
+                    name, pos, x => _byChar.ContainsKey(x), KindOf);
             }
             if (c == null)
             {
                 GameObject go = null;
-                foreach (var candidate in new[] { prefab, "Characters/" + name })
+                foreach (var candidate in new[]
+                {
+                    prefab,
+                    "Characters/" + name
+                })
                 {
                     var res = Resources.Load("Prefabs/" + candidate);
                     if (res != null)
                     {
-                        go = Core.AddPrefab(res, pos, rot, null, worldSpace: true);
+                        go = Core.AddPrefab(
+                            res, pos, rot, null, worldSpace: true);
                         break;
                     }
                 }
@@ -1706,13 +1968,15 @@ namespace DarkwoodMP.Combat
                     {
                         Object.Destroy(go);
                     }
-                    Plugin.Log.LogWarning($"Couldn't make the host's enemy {name} ({prefab})");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't make the host's enemy {name} ({prefab})");
                     return;
                 }
                 var save = c.GetComponent<SaveableObject>();
                 if (save != null)
                 {
-                    save.dontSave = true; // it's the host's; don't write it into this world's save
+                    // it's the host's; don't write it into this world's save
+                    save.dontSave = true;
                 }
             }
             var p = new Puppet { Id = id, C = c, Ours = ours };
@@ -1720,7 +1984,8 @@ namespace DarkwoodMP.Combat
             Uncull(p);
             Freeze(c, hide: false);
             SetVisible(c, true);
-            Hidden.Remove(c); // shown as the host's now: its idle loop plays again
+            // shown as the host's now: its idle loop plays again
+            Hidden.Remove(c);
             PlayIdleLoop(c);
             c.transform.SetPositionAndRotation(pos, rot);
             Animators(c.transform, out var list, out var paths);
@@ -1745,11 +2010,14 @@ namespace DarkwoodMP.Combat
             {
                 switched = ", switched on";
             }
-            Plugin.Log.LogInfo($"Showing the host's {name} #{id} ({text}{switched}); {Frozen.Count} of our own characters are frozen");
+            Plugin.Log.LogInfo(
+                $"Showing the host's {name} #{id} ({text}{switched}); {Frozen.Count} of our own characters are frozen");
             LogFovBlockers(c, $"#{id} shown");
         }
 
-        /// <summary>Client: EnemyArmor, the host's enemy's shadow armour put on or gone.</summary>
+        /// <summary>
+        /// Client: EnemyArmor, the host's enemy's shadow armour put on or gone.
+        /// </summary>
         private void OnArmor(ulong from, PacketReader r)
         {
             if (from != _session.HostId || !ClientMode)
@@ -1765,10 +2033,12 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: a copy wears shadow armour as the host's enemy does. The armour only shows its effect: its light
-        /// check and damage do nothing on a copy (ShadowArmorCopyPatch), and it goes when the host's does (EnemyArmor),
-        /// fading as the game's ShadowArmor.die makes it. A copy from our save may wear armour the host's no longer
-        /// does; that goes at once.
+        /// Client: a copy wears shadow armour as the host's enemy does. The
+        /// armour only shows its effect: its light check and damage do
+        /// nothing on a copy (ShadowArmorCopyPatch), and it goes when the
+        /// host's does (EnemyArmor), fading as the game's ShadowArmor.die makes
+        /// it. A copy from our save may wear armour the host's no longer does;
+        /// that goes at once.
         /// </summary>
         internal static void SetArmor(Character c, bool on, bool fade)
         {
@@ -1777,8 +2047,10 @@ namespace DarkwoodMP.Combat
                 var a = c.GetComponent<ShadowArmor>();
                 if (on && a == null)
                 {
-                    c.shadowArmor = c.gameObject.AddComponent<ShadowArmor>(); // its Start makes the effect
-                    Plugin.Log.LogInfo($"[enemy] {c.name}: shadow armour shown");
+                    // its Start makes the effect
+                    c.shadowArmor = c.gameObject.AddComponent<ShadowArmor>();
+                    Plugin.Log.LogInfo(
+                        $"[enemy] {c.name}: shadow armour shown");
                 }
                 else if (!on && a != null)
                 {
@@ -1795,11 +2067,15 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't change {c.name}'s shadow armour: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't change {c.name}'s shadow armour: {e.Message}");
             }
         }
 
-        /// <summary>Client: a ShadowArmor on a copy of the host's enemy, or on one of our own frozen characters.</summary>
+        /// <summary>
+        /// Client: a ShadowArmor on a copy of the host's enemy, or on one of
+        /// our own frozen characters.
+        /// </summary>
         internal static bool IsCopy(ShadowArmor a)
         {
             var s = Session.Instance;
@@ -1808,7 +2084,9 @@ namespace DarkwoodMP.Combat
                 return false;
             }
             var c = a.GetComponent<Character>();
-            return c != null && (Frozen.Contains(c) || (Instance != null && Instance._byChar.ContainsKey(c)));
+            return c != null
+                && (Frozen.Contains(c)
+                    || (Instance != null && Instance._byChar.ContainsKey(c)));
         }
 
         private void OnState(ulong from, PacketReader r)
@@ -1827,7 +2105,9 @@ namespace DarkwoodMP.Combat
                 Vector3 pos = r.ReadVector3();
                 Quaternion rot = ReadRot(r);
                 int bits = r.R.ReadByte();
-                bool alive = (bits & 1) != 0, asleep = (bits & 2) != 0, cut = (bits & 4) != 0;
+                bool alive = (bits & 1) != 0,
+                    asleep = (bits & 2) != 0,
+                    cut = (bits & 4) != 0;
                 float healthFraction = r.R.ReadSingle();
                 int an = r.R.ReadByte();
                 _puppets.TryGetValue(id, out var p);
@@ -1837,7 +2117,9 @@ namespace DarkwoodMP.Combat
                     int clip = r.R.ReadInt32();
                     int frame = r.R.ReadUInt16();
                     bool playing = r.R.ReadByte() != 0;
-                    if (p != null && !p.Settled && p.Animators.TryGetValue(path, out var a) && a != null)
+                    if (p != null && !p.Settled
+                        && p.Animators.TryGetValue(path, out var a)
+                        && a != null)
                     {
                         ApplyAnim(a, clip, frame, playing);
                     }
@@ -1846,7 +2128,8 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                // Drawn by the host's time (EnemyMotion), frame by frame (MovePuppets).
+                // Drawn by the host's time (EnemyMotion), frame by frame
+                // (MovePuppets).
                 EnemyMotion.Add(p.Motion, sent, pos, rot);
                 p.Has = true;
                 if (alive)
@@ -1855,16 +2138,19 @@ namespace DarkwoodMP.Combat
                 }
                 if (alive && p.C.sleeping != asleep)
                 {
-                    // Asleep or awake as the host's is, with the idle loop to match (a mimic's sleeping one).
+                    // Asleep or awake as the host's is, with the idle loop to
+                    // match (a mimic's sleeping one).
                     p.C.sleeping = asleep;
-                    // Waking, the host's own loop (idle, or aggressive as it comes at someone) comes as an EnemySound,
-                    // maybe before this: only the sleeping one is replaced.
+                    // Waking, the host's own loop (idle, or aggressive as it
+                    // comes at someone) comes as an EnemySound, maybe before
+                    // this: only the sleeping one is replaced.
                     AudioObject loop = null;
                     if (p.C.sounds != null)
                     {
                         loop = p.C.sounds.idleAudioObject;
                     }
-                    if (asleep || loop == null || !loop.IsPlaying() || loop.audioID == p.C.sounds.sleeping)
+                    if (asleep || loop == null || !loop.IsPlaying()
+                        || loop.audioID == p.C.sounds.sleeping)
                     {
                         PlayIdleLoop(p.C);
                     }
@@ -1875,29 +2161,37 @@ namespace DarkwoodMP.Combat
                 }
                 if (!alive && p.DiedAt < 0f)
                 {
-                    // Out of play as on the host: a character with a pre-death stage would still count as in it here
+                    // Out of play as on the host: a character with a pre-death
+                    // stage would still count as in it here
                     // (Character.hasPreDeath with health left).
                     if (p.C.maxHealth > 0f)
                     {
-                        p.C.health = Mathf.Min(p.C.health, Mathf.Clamp01(healthFraction) * p.C.maxHealth);
+                        p.C.health = Mathf.Min(
+                            p.C.health,
+                            Mathf.Clamp01(healthFraction) * p.C.maxHealth);
                     }
                     p.C.alive = false;
                     p.DiedAt = Time.unscaledTime;
                     StopSounds(p.C, keepDeathSound: true);
-                    // What's attached to it (the human spider's sound_loop) goes as it dies, as die2 does on the host.
+                    // What's attached to it (the human spider's sound_loop)
+                    // goes as it dies, as die2 does on the host.
                     try
                     {
                         p.C.removeAttachedGameObjects();
                     }
                     catch (System.Exception e)
                     {
-                        Plugin.Log.LogWarning($"Couldn't remove what's attached to {p.C.name}: {e.Message}");
+                        Plugin.Log.LogWarning(
+                            $"Couldn't remove what's attached to {p.C.name}: {e.Message}");
                     }
-                    // The human spiders' sound_loop child (an Item with ItemSounds) is gone from the host's copy as it
-                    // dies (seen in the map test, 0.5 s after); a copy's frozen scripts never remove it.
+                    // The human spiders' sound_loop child (an Item with
+                    // ItemSounds) is gone from the host's copy as it dies (seen
+                    // in the map test, 0.5 s after); a copy's frozen scripts
+                    // never remove it.
                     foreach (var it in p.C.GetComponentsInChildren<Item>(true))
                     {
-                        if (it != null && it.gameObject != p.C.gameObject && it.GetComponent<ItemSounds>() != null)
+                        if (it != null && it.gameObject != p.C.gameObject
+                            && it.GetComponent<ItemSounds>() != null)
                         {
                             Object.Destroy(it.gameObject);
                         }
@@ -1915,17 +2209,21 @@ namespace DarkwoodMP.Combat
                     {
                         text = " (cut in half)";
                     }
-                    Plugin.Log.LogInfo($"[enemy] {p.Id} died{text}: sounds stopped");
+                    Plugin.Log.LogInfo(
+                        $"[enemy] {p.Id} died{text}: sounds stopped");
                 }
             }
         }
 
         /// <summary>
-        /// Client: silence a copy of the host's enemy, as Character.die2 does on the host (sounds.destroySounds).
-        /// The copy never runs die2, so without this its own idle loop (started by CharacterSounds.OnEnable) and
-        /// the loops the host relayed (a dog's barking, which the host stops in its die2) went on playing over the
-        /// corpse; and Settle's destroyComponents destroys CharacterSounds without stopping its loop, which left it
-        /// playing for good. Its coroutines are stopped too, as die2 does.
+        /// Client: silence a copy of the host's enemy, as Character.die2 does
+        /// on the host (sounds.destroySounds). The copy never runs die2, so
+        /// without this its own idle loop (started by CharacterSounds.OnEnable)
+        /// and the loops the host relayed (a dog's barking, which the host
+        /// stops in its die2) went on playing over the corpse; and Settle's
+        /// destroyComponents destroys CharacterSounds without stopping its
+        /// loop, which left it playing for good. Its coroutines are stopped
+        /// too, as die2 does.
         /// </summary>
         private static void StopSounds(Character c, bool keepDeathSound)
         {
@@ -1946,13 +2244,17 @@ namespace DarkwoodMP.Combat
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't stop {c.name}'s sounds: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't stop {c.name}'s sounds: {e.Message}");
                 }
             }
-            // Sounds played on it (the relayed ones and its own) are AudioObjects under it.
+            // Sounds played on it (the relayed ones and its own) are
+            // AudioObjects under it.
             foreach (var ao in c.GetComponentsInChildren<AudioObject>(true))
             {
-                if (ao == null || (keepDeathSound && !string.IsNullOrEmpty(death) && ao.audioID == death))
+                if (ao == null
+                    || (keepDeathSound && !string.IsNullOrEmpty(death)
+                        && ao.audioID == death))
                 {
                     continue;
                 }
@@ -1966,8 +2268,9 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: the host's health for a copy, and its health bar as the game does for a hit not by our player:
-        /// shown if the player has it selected, and refreshed if it's the one shown.
+        /// Client: the host's health for a copy, and its health bar as the game
+        /// does for a hit not by our player: shown if the player has it
+        /// selected, and refreshed if it's the one shown.
         /// </summary>
         private static void SetHealth(Character c, float fraction)
         {
@@ -1982,10 +2285,16 @@ namespace DarkwoodMP.Combat
             }
             bool lost = hp < c.health;
             c.health = hp;
-            HealthBar(c, show: lost && Player.Instance != null && Player.Instance.selectedObject == c.transform);
+            HealthBar(
+                c,
+                show: lost && Player.Instance != null
+                    && Player.Instance.selectedObject == c.transform);
         }
 
-        /// <summary>Show an enemy's health bar (as Character.getHit does for a hit by the player), or refresh it if it's showing.</summary>
+        /// <summary>
+        /// Show an enemy's health bar (as Character.getHit does for a hit by
+        /// the player), or refresh it if it's showing.
+        /// </summary>
         private static void HealthBar(Character c, bool show)
         {
             EnemyHealthBar bar = null;
@@ -2010,13 +2319,16 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't show {c.name}'s health bar: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't show {c.name}'s health bar: {e.Message}");
             }
         }
 
         /// <summary>
-        /// Client: what Character.die2 does to how a dying character looks, for a copy (which never runs die2): its
-        /// particles (a burning one's flames) stop, its shadow fades out, and so does a shadow armour's effect.
+        /// Client: what Character.die2 does to how a dying character looks, for
+        /// a copy (which never runs die2): its particles (a burning one's
+        /// flames) stop, its shadow fades out, and so does a shadow armour's
+        /// effect.
         /// </summary>
         private static void DeathLooks(Character c)
         {
@@ -2031,9 +2343,11 @@ namespace DarkwoodMP.Combat
                 }
                 if (c.shadow != null)
                 {
-                    Core.tweenColor(c.shadow.gameObject, new Color(1f, 1f, 1f, 0f), 1f);
+                    Core.tweenColor(
+                        c.shadow.gameObject, new Color(1f, 1f, 1f, 0f), 1f);
                 }
-                var armor = c.GetComponent<ShadowArmor>(); // its shadow armour's effect fades, as die2 does
+                // its shadow armour's effect fades, as die2 does
+                var armor = c.GetComponent<ShadowArmor>();
                 if (armor != null)
                 {
                     armor.die();
@@ -2041,17 +2355,22 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't play {c.name}'s death here: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't play {c.name}'s death here: {e.Message}");
             }
         }
 
         /// <summary>
-        /// Client: a separate location's characters were switched off (left) or on again (entered) here. The game does
-        /// that to the corpses of the location's own characters (Location.activateCharacters: SetActive false, then
-        /// true), so on the host a corpse's play-on-awake particles (a ChomperRed's) start again when its location is
-        /// entered again. A copy we made from its prefab isn't one of the location's characters, so it would stay as it
-        /// was: the dead ones of those standing in the location are switched off and on with it, as the host's are.
-        /// Living copies stay as they are: the host runs them while a joiner is in their location.
+        /// Client: a separate location's characters were switched off (left) or
+        /// on again (entered) here. The game does that to the corpses of the
+        /// location's own characters (Location.activateCharacters: SetActive
+        /// false, then true), so on the host a corpse's play-on-awake particles
+        /// (a ChomperRed's) start again when its location is entered again. A
+        /// copy we made from its prefab isn't one of the location's characters,
+        /// so it would stay as it was: the dead ones of those standing in the
+        /// location are switched off and on with it, as the host's are. Living
+        /// copies stay as they are: the host runs them while a joiner is in
+        /// their location.
         /// </summary>
         internal void LocationCharacters(Location loc, bool active)
         {
@@ -2061,7 +2380,8 @@ namespace DarkwoodMP.Combat
             }
             foreach (var p in _corpses.Values.Concat(_puppets.Values).ToList())
             {
-                if (p == null || !p.Ours || p.C == null || p.C.alive || p.C.gameObject.activeSelf == active)
+                if (p == null || !p.Ours || p.C == null || p.C.alive
+                    || p.C.gameObject.activeSelf == active)
                 {
                     continue;
                 }
@@ -2073,7 +2393,10 @@ namespace DarkwoodMP.Combat
                 string again = "";
                 if (active)
                 {
-                    again = string.Join(", ", p.C.GetComponentsInChildren<ParticleSystem>().Where(ps => ps.isEmitting).Select(ps => ps.name));
+                    again = string.Join(
+                        ", ",
+                        p.C.GetComponentsInChildren<ParticleSystem>()
+                            .Where(ps => ps.isEmitting).Select(ps => ps.name));
                 }
                 string text = "off";
                 if (active)
@@ -2085,25 +2408,35 @@ namespace DarkwoodMP.Combat
                 {
                     note = "; playing again: " + again;
                 }
-                Plugin.Log.LogInfo($"[enemy] the host's corpse #{p.Id} ({p.C.name}) switched {text} with {Core.getTrueLocationName(loc.name)}{note}");
+                Plugin.Log.LogInfo(
+                    $"[enemy] the host's corpse #{p.Id} ({p.C.name}) switched {text} with {Core.getTrueLocationName(loc.name)}{note}");
             }
         }
 
-        /// <summary>How long the host's death animation is shown before the corpse is settled here.</summary>
+        /// <summary>
+        /// How long the host's death animation is shown before the corpse is
+        /// settled here.
+        /// </summary>
         private const float DeathAnimTime = 2f;
 
         private static readonly System.Reflection.MethodInfo[] CorpseSteps =
         {
-            HarmonyLib.AccessTools.Method(typeof(Character), "destroyComponents"),
-            HarmonyLib.AccessTools.Method(typeof(Character), "destroyComponents2"),
-            HarmonyLib.AccessTools.Method(typeof(Character), "setDeathCollider"),
+            HarmonyLib.AccessTools.Method(
+                typeof(Character), "destroyComponents"),
+            HarmonyLib.AccessTools.Method(
+                typeof(Character), "destroyComponents2"),
+            HarmonyLib.AccessTools.Method(
+                typeof(Character), "setDeathCollider"),
         };
 
         /// <summary>
-        /// Client: one of the host's enemies died, and its death has played. In the game it's the end of the death
-        /// animation that turns the body into a lootable corpse (Character.animationCompleted: destroyComponents,
-        /// destroyComponents2, setDeathCollider); a copy's animation callbacks are off, so that's done here, once.
-        /// After it the copy's frames are left on the last one rather than replayed from the host's updates.
+        /// Client: one of the host's enemies died, and its death has played. In
+        /// the game it's the end of the death animation that turns the body
+        /// into a lootable corpse (Character.animationCompleted:
+        /// destroyComponents, destroyComponents2, setDeathCollider); a copy's
+        /// animation callbacks are off, so that's done here, once. After it the
+        /// copy's frames are left on the last one rather than replayed from the
+        /// host's updates.
         /// </summary>
         private static void Settle(Puppet p)
         {
@@ -2115,15 +2448,22 @@ namespace DarkwoodMP.Combat
             }
             foreach (var a in p.Animators.Values)
             {
-                if (a == null || a.CurrentClip == null || a.CurrentClip.frames == null || a.CurrentClip.frames.Length == 0)
+                if (a == null || a.CurrentClip == null
+                    || a.CurrentClip.frames == null
+                    || a.CurrentClip.frames.Length == 0)
                 {
                     continue;
                 }
-                a.SetFrame(a.CurrentClip.frames.Length - 1, triggerEvent: false);
+                a.SetFrame(
+                    a.CurrentClip.frames.Length - 1, triggerEvent: false);
                 a.Pause();
             }
-            StopSounds(c, keepDeathSound: true); // destroyComponents destroys CharacterSounds without stopping its loop
-            SetVisible(c, true); // whatever a hide switched off (it's shown already; this only makes sure)
+            // destroyComponents destroys CharacterSounds without stopping its
+            // loop
+            StopSounds(c, keepDeathSound: true);
+            // whatever a hide switched off (it's shown already; this only makes
+            // sure)
+            SetVisible(c, true);
             DieBody(c);
             if (p.Cut)
             {
@@ -2132,8 +2472,10 @@ namespace DarkwoodMP.Combat
             }
             if (c.animator == null)
             {
-                // No sprite animation (the worms): the end of a death animation never comes in the host's game either,
-                // so its corpse is never made lootable there; only what dying itself does (die2) to the collider.
+                // No sprite animation (the worms): the end of a death animation
+                // never comes in the host's game either, so its corpse is never
+                // made lootable there; only what dying itself does (die2) to
+                // the collider.
                 if (c.collider != null)
                 {
                     if (!c.dontSwitchColliderTriggerOnDeath)
@@ -2142,7 +2484,8 @@ namespace DarkwoodMP.Combat
                     }
                     c.collider.enabled = true;
                 }
-                Plugin.Log.LogInfo($"The host's {c.name} #{p.Id} died: it has no death animation, so its body isn't searchable (as on the host)");
+                Plugin.Log.LogInfo(
+                    $"The host's {c.name} #{p.Id} died: it has no death animation, so its body isn't searchable (as on the host)");
                 return;
             }
             foreach (var step in CorpseSteps)
@@ -2178,28 +2521,34 @@ namespace DarkwoodMP.Combat
                         {
                             message = e.Message;
                         }
-                        Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse ({step.Name}): {message}");
+                        Plugin.Log.LogWarning(
+                            $"Couldn't settle {c.name}'s corpse ({step.Name}): {message}");
                     }
                 }
             }
             string data;
             if (c.GetComponent<Item>() != null)
             {
-                data = $"The host's {c.name} #{p.Id} died: its corpse can be searched here";
+                data =
+                    $"The host's {c.name} #{p.Id} died: its corpse can be searched here";
             }
             else
             {
-                data = $"The host's {c.name} #{p.Id} died, but its corpse couldn't be made searchable here";
+                data =
+                    $"The host's {c.name} #{p.Id} died, but its corpse couldn't be made searchable here";
             }
             Plugin.Log.LogInfo(data);
             LogFovBlockers(c, $"#{p.Id} settled");
         }
 
         /// <summary>
-        /// Client: what Character.die2 does to a dying character's body, for a copy (which never runs die2): its body
-        /// collider is on and walked through (unless the kind keeps it solid), its hit collider goes (unless it has a pre-death, which keeps it alive a while longer), its Selectable when it
-        /// isn't selectable dead, and its InSightOfPlayer. Logs the parts on the view's shadow layers that are off here,
-        /// which Settle used to switch on.
+        /// Client: what Character.die2 does to a dying character's body, for a
+        /// copy (which never runs die2): its body collider is on and walked
+        /// through (unless the kind keeps it solid), its hit collider goes
+        /// (unless it has a pre-death, which keeps it alive a while longer),
+        /// its Selectable when it isn't selectable dead, and its
+        /// InSightOfPlayer. Logs the parts on the view's shadow layers that are
+        /// off here, which Settle used to switch on.
         /// </summary>
         private static void DieBody(Character c)
         {
@@ -2207,7 +2556,10 @@ namespace DarkwoodMP.Combat
             {
                 int mask = FovShadowMask();
                 var off = c.GetComponentsInChildren<Collider>(true)
-                    .Where(x => x != null && !x.enabled && (mask & (1 << x.gameObject.layer)) != 0).Select(x => $"{x.name}:{x.gameObject.layer}").ToList();
+                    .Where(
+                        x => x != null && !x.enabled
+                            && (mask & (1 << x.gameObject.layer)) != 0)
+                    .Select(x => $"{x.name}:{x.gameObject.layer}").ToList();
                 var hit = c.hitCollider;
                 string text;
                 if (hit == null)
@@ -2223,7 +2575,8 @@ namespace DarkwoodMP.Combat
                     }
                     text = $"{hit.name} layer {hit.layer}{cuts}";
                 }
-                Plugin.Log.LogInfo($"[enemy] {c.name} dies here: hit collider {text}, " +
+                Plugin.Log.LogInfo(
+                    $"[enemy] {c.name} dies here: hit collider {text}, " +
                                    $"pre-death {c.hasPreDeath}; switched-off parts on the view's shadow layers (mask {mask}): [{string.Join(", ", off)}]");
                 if (c.collider != null)
                 {
@@ -2256,13 +2609,15 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s body as die2 does: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't settle {c.name}'s body as die2 does: {e.Message}");
             }
         }
 
         /// <summary>
-        /// Client: how a copy cut in half on the host looks as it starts: what Character.cutMeInHalf does to the
-        /// upper part (its particles stop; it doesn't fade its shadow as a death does). The lower half is a new
+        /// Client: how a copy cut in half on the host looks as it starts: what
+        /// Character.cutMeInHalf does to the upper part (its particles stop; it
+        /// doesn't fade its shadow as a death does). The lower half is a new
         /// enemy on the host, shown here as any other.
         /// </summary>
         private static void CutLooks(Character c)
@@ -2279,17 +2634,21 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't play {c.name}'s cut here: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't play {c.name}'s cut here: {e.Message}");
             }
         }
 
         // destroyComponents and destroyComponents2, without setDeathCollider.
-        private static readonly System.Reflection.MethodInfo[] CutSteps = { CorpseSteps[0], CorpseSteps[1] };
+        private static readonly System.Reflection.MethodInfo[] CutSteps =
+            { CorpseSteps[0], CorpseSteps[1] };
 
         /// <summary>
-        /// Client: the upper part of a copy cut in half on the host, once its cut has played: as on the host
-        /// (cutMeInHalf, then its Cut_half animation's end), no corpse: no Item to search, its inventory went with the
-        /// lower half (the host's new enemy), its selectable and capsule are gone, and it lies flat.
+        /// Client: the upper part of a copy cut in half on the host, once its
+        /// cut has played: as on the host (cutMeInHalf, then its Cut_half
+        /// animation's end), no corpse: no Item to search, its inventory went
+        /// with the lower half (the host's new enemy), its selectable and
+        /// capsule are gone, and it lies flat.
         /// </summary>
         private static void SettleCut(Puppet p)
         {
@@ -2316,7 +2675,8 @@ namespace DarkwoodMP.Combat
                     {
                         message = e.Message;
                     }
-                    Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut ({step.Name}): {message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't settle {c.name}'s cut ({step.Name}): {message}");
                 }
             }
             try
@@ -2348,23 +2708,31 @@ namespace DarkwoodMP.Combat
                     c.collider.isTrigger = true;
                 }
                 var t = c.transform;
-                t.localPosition = new Vector3(t.localPosition.x, -1f, t.localPosition.z);
+                t.localPosition =
+                    new Vector3(t.localPosition.x, -1f, t.localPosition.z);
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s cut: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't settle {c.name}'s cut: {e.Message}");
             }
-            Plugin.Log.LogInfo($"The host's {c.name} #{p.Id} was cut in half: its lower half is the host's, nothing to search here");
+            Plugin.Log.LogInfo(
+                $"The host's {c.name} #{p.Id} was cut in half: its lower half is the host's, nothing to search here");
         }
 
-        private static readonly System.Reflection.MethodInfo YPosAfterDeath = HarmonyLib.AccessTools.Method(typeof(Character), "setYPosAfterDeath");
+        private static readonly System.Reflection.MethodInfo YPosAfterDeath =
+            HarmonyLib.AccessTools.Method(
+                typeof(Character), "setYPosAfterDeath");
 
         /// <summary>
-        /// Client: Character.setDeathCollider stopped part way on a copy (it threw). Its first step, the Item that
-        /// makes the corpse searchable, is done by then; the rest is done here, each part only if what it needs is
-        /// there: the body becomes a trigger (or our player bumps into a corpse the host's player walks through),
-        /// takes the death collider of the clip it ended on, stops counting as active, and lies at a corpse's height.
-        /// An NPC's death (its flags, its death inventory) comes from the host.
+        /// Client: Character.setDeathCollider stopped part way on a copy (it
+        /// threw). Its first step, the Item that makes the corpse searchable,
+        /// is done by then; the rest is done here, each part only if what it
+        /// needs is there: the body becomes a trigger (or our player bumps into
+        /// a corpse the host's player walks through), takes the death collider
+        /// of the clip it ended on, stops counting as active, and lies at a
+        /// corpse's height. An NPC's death (its flags, its death inventory)
+        /// comes from the host.
         /// </summary>
         private static void DeathColliderRest(Character c, System.Exception why)
         {
@@ -2372,7 +2740,8 @@ namespace DarkwoodMP.Combat
             {
                 if (c.GetComponent<Item>() == null)
                 {
-                    c.gameObject.AddComponent<Item>().name = c.name.ToLower() + "_corpse";
+                    c.gameObject.AddComponent<Item>().name =
+                        c.name.ToLower() + "_corpse";
                 }
                 if (!c.dontSwitchColliderTriggerOnDeath && c.collider != null)
                 {
@@ -2384,7 +2753,8 @@ namespace DarkwoodMP.Combat
                 {
                     clip = a.CurrentClip.name;
                 }
-                if (clip != null && c.capsuleCollider != null && c.deathColliders != null)
+                if (clip != null && c.capsuleCollider != null
+                    && c.deathColliders != null)
                 {
                     foreach (var dc in c.deathColliders)
                     {
@@ -2438,7 +2808,8 @@ namespace DarkwoodMP.Combat
                         trimmedLine = line.Trim();
                     }
                 }
-                Plugin.Log.LogInfo($"{c.name}'s corpse settled here by the mod: the game's setDeathCollider stopped ({why.Message}; " +
+                Plugin.Log.LogInfo(
+                    $"{c.name}'s corpse settled here by the mod: the game's setDeathCollider stopped ({why.Message}; " +
                                    $"animator {text}, clip {shownClip}, collider {colliderState}, " +
                                    $"capsule {capsuleState}, death colliders {count}; at {trimmedLine}); trigger now {(c.collider != null && c.collider.isTrigger)}");
             }
@@ -2454,13 +2825,16 @@ namespace DarkwoodMP.Combat
                 {
                     message = e.Message;
                 }
-                Plugin.Log.LogWarning($"Couldn't settle {c.name}'s corpse: {message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't settle {c.name}'s corpse: {message}");
             }
         }
 
-        private static void ApplyAnim(tk2dSpriteAnimator a, int clipHash, int frame, bool playing)
+        private static void ApplyAnim(
+            tk2dSpriteAnimator a, int clipHash, int frame, bool playing)
         {
-            a.AnimationEventTriggered = CopyFrameEvent; // never let a puppet's frames act (attack, sound) here
+            // never let a puppet's frames act (attack, sound) here
+            a.AnimationEventTriggered = CopyFrameEvent;
             a.AnimationCompleted = null;
             if (clipHash == 0 || a.Library == null)
             {
@@ -2473,15 +2847,22 @@ namespace DarkwoodMP.Combat
                 {
                     if (clip != null && StableHash.Of(clip.name) == clipHash)
                     {
-                        a.PlayFromFrame(clip, Mathf.Clamp(frame, 0, Mathf.Max(0, clip.frames.Length - 1)));
+                        a.PlayFromFrame(
+                            clip,
+                            Mathf.Clamp(
+                                frame, 0,
+                                Mathf.Max(0, clip.frames.Length - 1)));
                         break;
                     }
                 }
             }
-            // More than 2 frames off: move the copy's clip time to the host's frame. (SetFrame would change only the
-            // sprite shown; the next animator update goes back to the copy's own clip time, so the copy flicked to
-            // the host's frame and back on every update and stayed off, as a world rabbit did 3 frames ahead.)
-            else if (Mathf.Abs(a.CurrentFrame - frame) > 2 && cur.frames != null && frame < cur.frames.Length)
+            // More than 2 frames off: move the copy's clip time to the host's
+            // frame. (SetFrame would change only the sprite shown; the next
+            // animator update goes back to the copy's own clip time, so the
+            // copy flicked to the host's frame and back on every update and
+            // stayed off, as a world rabbit did 3 frames ahead.)
+            else if (Mathf.Abs(a.CurrentFrame - frame) > 2
+                && cur.frames != null && frame < cur.frames.Length)
             {
                 a.PlayFromFrame(cur, frame);
             }
@@ -2496,11 +2877,13 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Client: a copy's animation events. Of what Character.OnAniEvent does, only "TweenShadows" (fading the
-        /// character's extra shadows out or in with the animation) is played here: it changes how the copy looks and
-        /// nothing else. Attacks, sounds and the rest are the host's.
+        /// Client: a copy's animation events. Of what Character.OnAniEvent
+        /// does, only "TweenShadows" (fading the character's extra shadows out
+        /// or in with the animation) is played here: it changes how the copy
+        /// looks and nothing else. Attacks, sounds and the rest are the host's.
         /// </summary>
-        private static void CopyFrameEvent(tk2dSpriteAnimator a, tk2dSpriteAnimationClip clip, int frame)
+        private static void CopyFrameEvent(
+            tk2dSpriteAnimator a, tk2dSpriteAnimationClip clip, int frame)
         {
             try
             {
@@ -2525,7 +2908,8 @@ namespace DarkwoodMP.Combat
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't play a copy's TweenShadows: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't play a copy's TweenShadows: {e.Message}");
             }
         }
 
@@ -2539,7 +2923,8 @@ namespace DarkwoodMP.Combat
             bool keepCorpse = r.R.ReadByte() != 0;
             if (!_puppets.TryGetValue(id, out var p))
             {
-                // The host's corpse is gone (it was destroyed there): so is ours.
+                // The host's corpse is gone (it was destroyed there): so is
+                // ours.
                 if (keepCorpse || !_corpses.TryGetValue(id, out p))
                 {
                     return;
@@ -2550,9 +2935,11 @@ namespace DarkwoodMP.Combat
                     return;
                 }
                 _corpseIds.Remove(p.C);
-                Plugin.Log.LogInfo($"The host's corpse #{id} ({p.C.name}) is gone there: removed here");
-                // Destroyed, our copy from the save too: the host's is out of its world for good, and a hidden copy
-                // would still be in ours (its body searchable by name, saved with our world).
+                Plugin.Log.LogInfo(
+                    $"The host's corpse #{id} ({p.C.name}) is gone there: removed here");
+                // Destroyed, our copy from the save too: the host's is out of
+                // its world for good, and a hidden copy would still be in ours
+                // (its body searchable by name, saved with our world).
                 World.Containers.CloseIfOpen(p.C.gameObject);
                 Object.Destroy(p.C.gameObject);
                 return;
@@ -2575,13 +2962,17 @@ namespace DarkwoodMP.Combat
                 return;
             }
             StopSounds(p.C, keepDeathSound: false);
-            // An NPC the host calmed down (or one out of our range): our copy of it is ours to run again.
-            if (p.C.npc != null && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours))
+            // An NPC the host calmed down (or one out of our range): our copy
+            // of it is ours to run again.
+            if (p.C.npc != null
+                && HostileNpcs.ClientStopped(p.C, id, ours: p.Ours))
             {
                 Recull(p);
                 return;
             }
-            World.Containers.CloseIfOpen(p.C.gameObject); // its window, if our player has its corpse open: gone or hidden, it is gone for us
+            // its window, if our player has its corpse open: gone or hidden, it
+            // is gone for us
+            World.Containers.CloseIfOpen(p.C.gameObject);
             if (p.Ours)
             {
                 Object.Destroy(p.C.gameObject);
@@ -2606,15 +2997,20 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            // Once it's dead here, only its death cry still plays (it can arrive just after the state that said so);
-            // a bark or a loop from before the host's die2, arriving late, would go on over the corpse.
-            if (p.DiedAt >= 0f && (p.C.sounds == null || audio != p.C.sounds.death))
+            // Once it's dead here, only its death cry still plays (it can
+            // arrive just after the state that said so); a bark or a loop from
+            // before the host's die2, arriving late, would go on over the
+            // corpse.
+            if (p.DiedAt >= 0f
+                && (p.C.sounds == null || audio != p.C.sounds.death))
             {
                 return;
             }
-            // One of its loops (CharacterSounds.playIdleLoop: idle, aggressive while it chases, defensive, sleeping,
-            // escaping) takes the place of the copy's loop, as on the host. Played as a sound it would go on beside
-            // the copy's idle loop, and nothing would stop it. "" is the host's loop stopping (HostLoopStopPatch).
+            // One of its loops (CharacterSounds.playIdleLoop: idle, aggressive
+            // while it chases, defensive, sleeping, escaping) takes the place
+            // of the copy's loop, as on the host. Played as a sound it would go
+            // on beside the copy's idle loop, and nothing would stop it. "" is
+            // the host's loop stopping (HostLoopStopPatch).
             var snd = p.C.sounds;
             if (string.IsNullOrEmpty(audio))
             {
@@ -2626,7 +3022,8 @@ namespace DarkwoodMP.Combat
                     }
                     catch (System.Exception e)
                     {
-                        Plugin.Log.LogWarning($"Couldn't stop {p.C.name}'s loop: {e.Message}");
+                        Plugin.Log.LogWarning(
+                            $"Couldn't stop {p.C.name}'s loop: {e.Message}");
                     }
                 }
                 return;
@@ -2639,15 +3036,20 @@ namespace DarkwoodMP.Combat
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't play {p.C.name}'s loop {audio}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't play {p.C.name}'s loop {audio}: {e.Message}");
                 }
                 return;
             }
             AudioController.Play(audio, p.C.transform, volume);
         }
 
-        /// <summary>Client: we hit a host's enemy; the host applies it.</summary>
-        public void ClientHit(uint id, float damage, bool cut, bool byPlayer, bool interrupt, bool normal, List<InvItemEffect> effects)
+        /// <summary>
+        /// Client: we hit a host's enemy; the host applies it.
+        /// </summary>
+        public void ClientHit(
+            uint id, float damage, bool cut, bool byPlayer, bool interrupt,
+            bool normal, List<InvItemEffect> effects)
         {
             var w = _session.Begin(MsgType.EnemyHit);
             w.W.Write(id);
@@ -2683,7 +3085,8 @@ namespace DarkwoodMP.Combat
             }
             else
             {
-                s = Newtonsoft.Json.JsonConvert.SerializeObject(new InvItemClass.SaveState(item, 0));
+                s = Newtonsoft.Json.JsonConvert.SerializeObject(
+                    new InvItemClass.SaveState(item, 0));
             }
             w.WriteStr(s);
             _puppets.TryGetValue(id, out var p);
@@ -2692,14 +3095,16 @@ namespace DarkwoodMP.Combat
             {
                 hit = p.C;
             }
-            World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}", (ok, reason, result) =>
+            World.Authority.Request(w, $"hit on enemy #{id} for {damage:0}",
+                (ok, reason, result) =>
             {
                 if (ok)
                 {
                     ScriptedEvents.HitApplied(hit, result);
                 }
             });
-            // Our own hit shows its health bar, as getHit does; the host's health for it follows in its next state.
+            // Our own hit shows its health bar, as getHit does; the host's
+            // health for it follows in its next state.
             if (p == null || p.C == null)
             {
                 return;
@@ -2708,23 +3113,34 @@ namespace DarkwoodMP.Combat
             {
                 HealthBar(p.C, show: true);
             }
-            // Predicted: the blood shows at once; the host's for this hit (a moment later) isn't shown again.
-            Core.AddPrefab("FX/Bloodsplats/Shotsplat_stay", p.C.transform.position, Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f), null);
+            // Predicted: the blood shows at once; the host's for this hit (a
+            // moment later) isn't shown again.
+            Core.AddPrefab(
+                "FX/Bloodsplats/Shotsplat_stay", p.C.transform.position,
+                Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f),
+                null);
             _predictedBlood[id] = Time.realtimeSinceStartup;
         }
 
-        private readonly Dictionary<uint, float> _predictedBlood = new Dictionary<uint, float>();
+        private readonly Dictionary<uint, float> _predictedBlood =
+            new Dictionary<uint, float>();
 
-        /// <summary>Client: the effects of the weapon hitting right now (set around a player's MeleeSensor hit).</summary>
+        /// <summary>
+        /// Client: the effects of the weapon hitting right now (set around a
+        /// player's MeleeSensor hit).
+        /// </summary>
         public static List<InvItemEffect> HitEffects;
 
-        // ---- shared helpers ------------------------------------------------------
+        // ---- shared helpers -------------------------------------------------
 
-        private static void Animators(Transform root, out List<tk2dSpriteAnimator> list, out List<int> paths)
+        private static void Animators(
+            Transform root, out List<tk2dSpriteAnimator> list,
+            out List<int> paths)
         {
             list = new List<tk2dSpriteAnimator>();
             paths = new List<int>();
-            foreach (var a in root.GetComponentsInChildren<tk2dSpriteAnimator>(true))
+            foreach (var a in root.GetComponentsInChildren<tk2dSpriteAnimator>(
+                true))
             {
                 string p;
                 if (a.transform == root)
@@ -2737,7 +3153,8 @@ namespace DarkwoodMP.Combat
                 }
                 if (a.transform != root)
                 {
-                    for (var t = a.transform.parent; t != null && t != root; t = t.parent)
+                    for (var t = a.transform.parent; t != null
+                        && t != root; t = t.parent)
                     {
                         p = t.name + "/" + p;
                     }
@@ -2754,18 +3171,23 @@ namespace DarkwoodMP.Combat
             w.W.Write(q.z);
             w.W.Write(q.w);
         }
-        private static Quaternion ReadRot(PacketReader r) => new Quaternion(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+        private static Quaternion ReadRot(PacketReader r) => new Quaternion(
+            r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
+            r.R.ReadSingle());
     }
 
     /// <summary>
-    /// The characters that are active now, as Object.FindObjectsOfType&lt;Character&gt;() finds them, without
-    /// searching every object in the scene (that took about 50 ms in a loaded world, twice a second on the host).
-    /// Every character passes Character.OnEnable (no kind of character has its own), which lists it here; the
-    /// destroyed ones drop out and the inactive ones are skipped.
+    /// The characters that are active now, as
+    /// Object.FindObjectsOfType&lt;Character&gt;() finds them, without
+    /// searching every object in the scene (that took about 50 ms in a loaded
+    /// world, twice a second on the host). Every character passes
+    /// Character.OnEnable (no kind of character has its own), which lists it
+    /// here; the destroyed ones drop out and the inactive ones are skipped.
     /// </summary>
     public static class AllCharacters
     {
-        private static readonly HashSet<Character> _all = new HashSet<Character>();
+        private static readonly HashSet<Character> _all =
+            new HashSet<Character>();
         private static readonly List<Character> _now = new List<Character>();
 
         internal static void Add(Character c)
@@ -2776,7 +3198,9 @@ namespace DarkwoodMP.Combat
             }
         }
 
-        /// <summary>A list reused on each call: use it before calling again.</summary>
+        /// <summary>
+        /// A list reused on each call: use it before calling again.
+        /// </summary>
         public static List<Character> Active()
         {
             _now.Clear();
@@ -2795,6 +3219,7 @@ namespace DarkwoodMP.Combat
     [HarmonyLib.HarmonyPatch(typeof(Character), "OnEnable")]
     static class AllCharactersPatch
     {
-        static void Postfix(Character __instance) => AllCharacters.Add(__instance);
+        static void Postfix(Character __instance) =>
+            AllCharacters.Add(__instance);
     }
 }

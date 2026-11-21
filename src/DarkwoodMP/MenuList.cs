@@ -6,8 +6,8 @@ using UnityEngine;
 namespace DarkwoodMP
 {
     /// <summary>
-    /// Hooks for the mod's own menu windows, so the main menu and the pause menu (MenuList) can open them and know
-    /// when one is up.
+    /// Hooks for the mod's own menu windows, so the main menu and the pause
+    /// menu (MenuList) can open them and know when one is up.
     ///
     /// - <see cref="OpenStartGame"/>: the main menu's Start Game. Until it's set, Start Game opens the game's own
     ///   profiles screen (continue a profile or start a new one).
@@ -34,12 +34,16 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>One of the mod's windows is up over the menus (a registered one, the co-op panel or a ConfirmDialog).</summary>
+        /// <summary>
+        /// One of the mod's windows is up over the menus (a registered one, the
+        /// co-op panel or a ConfirmDialog).
+        /// </summary>
         public static bool AnyOpen
         {
             get
             {
-                if (ConfirmDialog.Open || (Plugin.Instance != null && Plugin.Instance.PanelOpen))
+                if (ConfirmDialog.Open
+                    || (Plugin.Instance != null && Plugin.Instance.PanelOpen))
                 {
                     return true;
                 }
@@ -74,26 +78,35 @@ namespace DarkwoodMP
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"A menu window failed to draw: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"A menu window failed to draw: {e.Message}");
                 }
             }
         }
     }
 
     /// <summary>
-    /// The main menu's and the pause menu's entries as Half-Life's main menu has them: a column of words in the lower
-    /// left, in the game's pixel font (PixelFont, drawn larger than the co-op windows' text), over the game's own
-    /// backdrop, logo and version lines (MenuLayout). The game's own entries (pictures of words, tk2d buttons) stay in
-    /// the menu but are hidden and can't be clicked; the entries here call what they did, so the game's screens
-    /// (profiles, options, help, credits) open as before. The list is shown only while the menu's first page
-    /// (MainMenu.Menu0) is, with none of the game's boxes over it, and fades with the logo and the black screen.
+    /// The main menu's and the pause menu's entries as Half-Life's main menu
+    /// has them: a column of words in the lower left, in the game's pixel font
+    /// (PixelFont, drawn larger than the co-op windows' text), over the game's
+    /// own backdrop, logo and version lines (MenuLayout). The game's own
+    /// entries (pictures of words, tk2d buttons) stay in the menu but are
+    /// hidden and can't be clicked; the entries here call what they did, so the
+    /// game's screens (profiles, options, help, credits) open as before. The
+    /// list is shown only while the menu's first page (MainMenu.Menu0) is, with
+    /// none of the game's boxes over it, and fades with the logo and the black
+    /// screen.
     ///
-    /// Main menu: Start Game, Join Game (the server browser; Plugin.OpenJoin), Options, Credits, Quit.
-    /// Pause menu: Resume, Multiplayer (the co-op panel), Help (the game's controls pages), Options, Back to main menu,
-    /// Quit. Leaving a world asks first (ConfirmDialog), as the game did; quitting from the main menu asks too.
+    /// Main menu: Start Game, Join Game (the server browser; Plugin.OpenJoin),
+    /// Options, Credits, Quit.
+    /// Pause menu: Resume, Multiplayer (the co-op panel), Help (the game's
+    /// controls pages), Options, Back to main menu, Quit. Leaving a world asks
+    /// first (ConfirmDialog), as the game did; quitting from the main menu asks
+    /// too.
     ///
-    /// Mouse: hover lights a word, a click runs it. Keyboard and controller: up and down (arrows, W/S, the d-pad)
-    /// choose, Enter (or A) runs it; Escape is the game's (it closes the pause menu).
+    /// Mouse: hover lights a word, a click runs it. Keyboard and controller: up
+    /// and down (arrows, W/S, the d-pad) choose, Enter (or A) runs it; Escape
+    /// is the game's (it closes the pause menu).
     /// </summary>
     public static class MenuList
     {
@@ -106,8 +119,10 @@ namespace DarkwoodMP
 
         private static readonly List<Entry> _entries = new List<Entry>();
         private static bool _pause;
-        private static int _selected = -1;     // chosen with the keyboard or controller (-1: none, the mouse decides)
-        private static Action _pending;        // a click from OnGUI, run in the next Update
+        // chosen with the keyboard or controller (-1: none, the mouse decides)
+        private static int _selected = -1;
+        // a click from OnGUI, run in the next Update
+        private static Action _pending;
         private static float _alpha;
         private static bool _shown;
         private static float _nextPad;
@@ -116,13 +131,22 @@ namespace DarkwoodMP
         /// <summary>The list is on the screen now.</summary>
         public static bool Shown => _shown;
 
-        /// <summary>Screen pixels per font pixel for the entries: 3 at 1080 lines, 2 at 720.</summary>
-        private static int TextScale => Mathf.Max(1, Mathf.RoundToInt(Screen.height / 360f));
+        /// <summary>
+        /// Screen pixels per font pixel for the entries: 3 at 1080 lines, 2 at
+        /// 720.
+        /// </summary>
+        private static int TextScale =>
+            Mathf.Max(1, Mathf.RoundToInt(Screen.height / 360f));
 
-        private const float Bottom = 0.20f;  // the last entry's middle above the bottom, as a share of the height
-        private const float RowLines = 1.6f; // the distance between entries, in lines
+        // the last entry's middle above the bottom, as a share of the height
+        private const float Bottom = 0.20f;
+        // the distance between entries, in lines
+        private const float RowLines = 1.6f;
 
-        /// <summary>Every frame (Plugin.Update): hide the game's entries, work out the list, take keys, run a click.</summary>
+        /// <summary>
+        /// Every frame (Plugin.Update): hide the game's entries, work out the
+        /// list, take keys, run a click.
+        /// </summary>
         public static void Update()
         {
             var mm = Singleton<MainMenu>.Instance;
@@ -159,36 +183,57 @@ namespace DarkwoodMP
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"[menu] an entry failed: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"[menu] an entry failed: {e.Message}");
                 }
             }
         }
 
-        private static bool InWorldMenu() => Singleton<WorldGenerator>.Instance != null;
+        private static bool InWorldMenu() =>
+            Singleton<WorldGenerator>.Instance != null;
 
         private static void Build()
         {
             _entries.Clear();
             if (_pause)
             {
-                Add("Resume", () => GameButton(Go(Singleton<MainMenu>.Instance.ResumeBtn)));
+                Add(
+                    "Resume",
+                    () => GameButton(
+                        Go(Singleton<MainMenu>.Instance.ResumeBtn)));
                 Add("Multiplayer", () => Plugin.Instance.OpenPanel());
-                Add("Help", () => GameButton(Go(Singleton<MainMenu>.Instance.HelpBtn)));
+                Add(
+                    "Help",
+                    () => GameButton(Go(Singleton<MainMenu>.Instance.HelpBtn)));
                 Add("Options", Options);
-                Add("Back to main menu", () => ConfirmDialog.Ask("Back to main menu", "Leave this world for the main menu? " + LeaveText(), "Yes", ToMainMenu));
-                Add("Quit", () => ConfirmDialog.Ask("Quit", "Quit Darkwood? " + LeaveText(), "Yes", Quit));
+                Add(
+                    "Back to main menu",
+                    () => ConfirmDialog.Ask(
+                        "Back to main menu",
+                        "Leave this world for the main menu? " + LeaveText(),
+                        "Yes", ToMainMenu));
+                Add(
+                    "Quit",
+                    () => ConfirmDialog.Ask(
+                        "Quit", "Quit Darkwood? " + LeaveText(), "Yes", Quit));
             }
             else
             {
                 Add("Start Game", StartGame);
                 Add("Join Game", () => Plugin.Instance.OpenJoin());
                 Add("Options", Options);
-                Add("Credits", () => GameButton(Singleton<MainMenu>.Instance.creditsBtn));
-                Add("Quit", () => ConfirmDialog.Ask("Quit", "Quit Darkwood?", "Yes", Quit));
+                Add(
+                    "Credits",
+                    () => GameButton(Singleton<MainMenu>.Instance.creditsBtn));
+                Add(
+                    "Quit",
+                    () => ConfirmDialog.Ask(
+                        "Quit", "Quit Darkwood?", "Yes", Quit));
             }
         }
 
-        private static void Add(string label, Action run) => _entries.Add(new Entry { Label = label, Run = run });
+        private static void Add(string label, Action run) =>
+            _entries.Add(new Entry { Label = label, Run = run });
 
         private static void StartGame()
         {
@@ -214,7 +259,10 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>Click one of the game's own (hidden) entries, as a mouse click on it does (Button.getClicked).</summary>
+        /// <summary>
+        /// Click one of the game's own (hidden) entries, as a mouse click on it
+        /// does (Button.getClicked).
+        /// </summary>
         private static void GameButton(GameObject go)
         {
             global::Button b = null;
@@ -239,20 +287,25 @@ namespace DarkwoodMP
             b.getClicked(force: true);
         }
 
-        /// <summary>What leaving the world loses, as the game's own box said it (the time since the last save).</summary>
+        /// <summary>
+        /// What leaving the world loses, as the game's own box said it (the
+        /// time since the last save).
+        /// </summary>
         private static string LeaveText()
         {
             string s;
             WorldShare instance = WorldShare.Instance;
             if (instance != null && instance.PlayingHostCopy)
             {
-                s = "This is your copy of the host's world: your own saves are untouched.";
+                s = "This is your copy of the host's world: your own saves are "
+                    + "untouched.";
             }
             else
             {
                 try
                 {
-                    var since = DateTime.Now - Singleton<SaveManager>.Instance.lastTimeSaved;
+                    var since = DateTime.Now
+                        - Singleton<SaveManager>.Instance.lastTimeSaved;
                     string ago;
                     if (since.TotalHours >= 1)
                     {
@@ -290,7 +343,10 @@ namespace DarkwoodMP
             return s;
         }
 
-        /// <summary>As the game's box did on Yes (MainMenu.confirmBoxYes): the sound faded, then back to the main menu.</summary>
+        /// <summary>
+        /// As the game's box did on Yes (MainMenu.confirmBoxYes): the sound
+        /// faded, then back to the main menu.
+        /// </summary>
         private static void ToMainMenu()
         {
             var c = Singleton<Controller>.Instance;
@@ -314,11 +370,15 @@ namespace DarkwoodMP
             Core.quitGame();
         }
 
-        /// <summary>The menu's first page is up with nothing of the game's over it; how visible (the logo's fade, the black screen's).</summary>
+        /// <summary>
+        /// The menu's first page is up with nothing of the game's over it; how
+        /// visible (the logo's fade, the black screen's).
+        /// </summary>
         private static bool Visible(MainMenu mm, out float alpha)
         {
             alpha = 0f;
-            if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy || !Core.mainMenu)
+            if (mm == null || mm.Menu0 == null || !mm.Menu0.activeInHierarchy
+                || !Core.mainMenu)
             {
                 return false;
             }
@@ -327,7 +387,11 @@ namespace DarkwoodMP
                 return false; // credits starting, a world loading
             }
             foreach (var box in new[] { mm.confirmBox, mm.applySettingsBox, mm.newGameBox, mm.resolutionBox, mm.earlyAccessBox, mm.gammaBox, mm.helpBox,
-                                        mm.profilesMenu, mm.gameProfileAdvanced, mm.restartBox, mm.newVerBox, mm.profileErrorBox, mm.profileCorruptedBox, mm.OptionsMenu })
+                                        mm.profilesMenu, mm.gameProfileAdvanced,
+                                        mm.restartBox, mm.newVerBox,
+                                        mm.profileErrorBox,
+                                        mm.profileCorruptedBox,
+                                        mm.OptionsMenu })
             {
                 if (box != null && box.activeInHierarchy)
                 {
@@ -347,7 +411,8 @@ namespace DarkwoodMP
             }
             var ui = Singleton<UI>.Instance;
             tk2dSprite black = null;
-            if (ui != null && ui.blackScreenTop != null && ui.blackScreenTop.activeInHierarchy)
+            if (ui != null && ui.blackScreenTop != null
+                && ui.blackScreenTop.activeInHierarchy)
             {
                 black = ui.blackScreenTop.GetComponent<tk2dSprite>();
             }
@@ -358,23 +423,39 @@ namespace DarkwoodMP
             return alpha > 0.02f;
         }
 
-        /// <summary>The game's entries stay (its code places, fades and enables them) but aren't drawn and can't be clicked.</summary>
+        /// <summary>
+        /// The game's entries stay (its code places, fades and enables them)
+        /// but aren't drawn and can't be clicked.
+        /// </summary>
         private static void HideGameButtons(MainMenu mm)
         {
             foreach (var go in GameEntries(mm))
             {
                 Hide(go);
             }
-            // With a controller, the game's A would click the hidden entries (MainMenu.controllerButtons).
-            if (mm.controllerButtons != null && mm.controllerButtons.Count > 0 && IsMenu0List(mm))
+            // With a controller, the game's A would click the hidden entries
+            // (MainMenu.controllerButtons).
+            if (mm.controllerButtons != null && mm.controllerButtons.Count > 0
+                && IsMenu0List(mm))
             {
                 mm.controllerButtons.Clear();
             }
         }
 
-        /// <summary>The game's own entries in both menus (some are null in one of them).</summary>
+        /// <summary>
+        /// The game's own entries in both menus (some are null in one of them).
+        /// </summary>
         private static GameObject[] GameEntries(MainMenu mm) =>
-            new[] { mm.playBtn, mm.optionsBtn, mm.creditsBtn, mm.quitBtn, mm.mainMenuBtn, Go(mm.ResumeBtn), Go(mm.HelpBtn) };
+            new[]
+            {
+                mm.playBtn,
+                mm.optionsBtn,
+                mm.creditsBtn,
+                mm.quitBtn,
+                mm.mainMenuBtn,
+                Go(mm.ResumeBtn),
+                Go(mm.HelpBtn)
+            };
 
         private static GameObject Go(Component c)
         {
@@ -397,8 +478,10 @@ namespace DarkwoodMP
             return true;
         }
 
-        private static readonly List<Renderer> _renderers = new List<Renderer>();
-        private static readonly List<Collider> _colliders = new List<Collider>();
+        private static readonly List<Renderer> _renderers =
+            new List<Renderer>();
+        private static readonly List<Collider> _colliders =
+            new List<Collider>();
 
         private static void Hide(GameObject go)
         {
@@ -429,20 +512,23 @@ namespace DarkwoodMP
             }
         }
 
-        // ---- keys and the controller ---------------------------------------------------------------
+        // ---- keys and the controller ----------------------------------------
 
         private static void Keys()
         {
             int dir = 0;
-            if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W))
+            if (Input.GetKeyDown(KeyCode.UpArrow)
+                || Input.GetKeyDown(KeyCode.W))
             {
                 dir = -1;
             }
-            if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S))
+            if (Input.GetKeyDown(KeyCode.DownArrow)
+                || Input.GetKeyDown(KeyCode.S))
             {
                 dir = 1;
             }
-            bool run = Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+            bool run = Input.GetKeyDown(KeyCode.Return)
+                || Input.GetKeyDown(KeyCode.KeypadEnter);
             try
             {
                 InputScript instance = Singleton<InputScript>.Instance;
@@ -494,7 +580,8 @@ namespace DarkwoodMP
                 }
                 else
                 {
-                    _selected = (_selected + dir + _entries.Count) % _entries.Count;
+                    _selected =
+                        (_selected + dir + _entries.Count) % _entries.Count;
                 }
             }
             if (run && _selected >= 0 && _selected < _entries.Count)
@@ -509,9 +596,12 @@ namespace DarkwoodMP
             _pending = e.Run;
         }
 
-        // ---- drawing ---------------------------------------------------------------------------------
+        // ---- drawing --------------------------------------------------------
 
-        /// <summary>Draw the list (Plugin.OnGUI, with MenuSkin's skin, before the windows).</summary>
+        /// <summary>
+        /// Draw the list (Plugin.OnGUI, with MenuSkin's skin, before the
+        /// windows).
+        /// </summary>
         public static void OnGUI()
         {
             if (!_shown || _entries.Count == 0)
@@ -519,9 +609,13 @@ namespace DarkwoodMP
                 return;
             }
             int sc = TextScale;
-            float line = PixelFont.LineAt(sc), step = Mathf.Round(line * RowLines);
-            float x = Mathf.Round(Screen.width * MenuLayout.Left); // the column's left edge is the logo's
-            float y = Mathf.Round(Screen.height * (1f - Bottom) - step * (_entries.Count - 1) - line / 2f);
+            float line = PixelFont.LineAt(sc),
+                step = Mathf.Round(line * RowLines);
+            // the column's left edge is the logo's
+            float x = Mathf.Round(Screen.width * MenuLayout.Left);
+            float y = Mathf.Round(
+                Screen.height * (1f - Bottom) - step * (_entries.Count - 1)
+                    - line / 2f);
             bool active = !MenuWindows.AnyOpen;
             var e = Event.current;
             if (e.type == EventType.MouseMove || e.type == EventType.MouseDown)
@@ -537,7 +631,8 @@ namespace DarkwoodMP
                 var en = _entries[i];
                 float w = PixelFont.Width(en.Label, PixelFont.Kind.Title, sc);
                 // The word, with a margin round it that takes the mouse too.
-                en.Rect = new Rect(x - 6 * sc, y - (step - line) / 2f, w + 12 * sc, step);
+                en.Rect = new Rect(
+                    x - 6 * sc, y - (step - line) / 2f, w + 12 * sc, step);
                 bool hover = false;
                 if (active)
                 {
@@ -550,7 +645,8 @@ namespace DarkwoodMP
                         hover = en.Rect.Contains(e.mousePosition);
                     }
                 }
-                if (active && GUI.Button(en.Rect, GUIContent.none, MenuSkin.Plain))
+                if (active
+                    && GUI.Button(en.Rect, GUIContent.none, MenuSkin.Plain))
                 {
                     Fire(en);
                 }
@@ -568,21 +664,27 @@ namespace DarkwoodMP
                     c = MenuSkin.Dim;
                 }
                 c.a *= _alpha;
-                PixelFont.Draw(new Rect(x, y, w + 2 * sc, line), en.Label, c, TextAnchor.MiddleLeft, PixelFont.Kind.Title, sc);
+                PixelFont.Draw(
+                    new Rect(x, y, w + 2 * sc, line), en.Label, c,
+                    TextAnchor.MiddleLeft, PixelFont.Kind.Title, sc);
                 y += step;
             }
         }
 
-        // ---- for the tests ---------------------------------------------------------------------------
+        // ---- for the tests --------------------------------------------------
 
-        /// <summary>For the tests: the list, where each entry is and whether it would take a click now.</summary>
+        /// <summary>
+        /// For the tests: the list, where each entry is and whether it would
+        /// take a click now.
+        /// </summary>
         public static string Check()
         {
             var mm = Singleton<MainMenu>.Instance;
             var parts = new List<string>();
             foreach (var en in _entries)
             {
-                parts.Add($"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} {en.Rect.width:0}x{en.Rect.height:0}");
+                parts.Add(
+                    $"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} {en.Rect.width:0}x{en.Rect.height:0}");
             }
             string text = "main menu";
             if (_pause)
@@ -623,7 +725,10 @@ namespace DarkwoodMP
             return true;
         }
 
-        /// <summary>For the tests: click the entry with this word, as the mouse does. False if the list hasn't got it or isn't shown.</summary>
+        /// <summary>
+        /// For the tests: click the entry with this word, as the mouse does.
+        /// False if the list hasn't got it or isn't shown.
+        /// </summary>
         public static bool Click(string label)
         {
             if (!_shown || MenuWindows.AnyOpen)
@@ -632,7 +737,8 @@ namespace DarkwoodMP
             }
             foreach (var en in _entries)
             {
-                if (string.Equals(en.Label, label, StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(
+                    en.Label, label, StringComparison.OrdinalIgnoreCase))
                 {
                     Fire(en);
                     return true;

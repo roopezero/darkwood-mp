@@ -5,9 +5,10 @@ using System.Security.Cryptography;
 namespace DarkwoodMP.Net
 {
     /// <summary>
-    /// No accounts, as in goasis: the mod makes a random player key on first start and gives it to every host
-    /// it joins, which knows the player by it. Kept in BepInEx/config/DarkwoodMP.player.key — keep it secret,
-    /// and copy it to another computer to be the same player there.
+    /// No accounts, as in goasis: the mod makes a random player key on first
+    /// start and gives it to every host it joins, which knows the player by it.
+    /// Kept in BepInEx/config/DarkwoodMP.player.key — keep it secret, and copy
+    /// it to another computer to be the same player there.
     /// </summary>
     public static class PlayerKey
     {
@@ -25,20 +26,25 @@ namespace DarkwoodMP.Net
                     }
                 }
                 var bytes = new byte[32];
-                // Qualified: the game has a RandomNumberGenerator of its own in the global namespace.
-                using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+                // Qualified: the game has a RandomNumberGenerator of its own in
+                // the global namespace.
+                using (var rng =
+                    System.Security.Cryptography.RandomNumberGenerator.Create())
                 {
                     rng.GetBytes(bytes);
                 }
-                string key = BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
+                string key = BitConverter.ToString(bytes).Replace("-", "")
+                    .ToLowerInvariant();
                 File.WriteAllText(path, key);
                 Plugin.Log.LogInfo($"Made a new player key in {path}");
                 return key;
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError($"Couldn't read or write the player key ({e.Message}); using a temporary one");
-                return Guid.NewGuid().ToString("N") + Guid.NewGuid().ToString("N");
+                Plugin.Log.LogError(
+                    $"Couldn't read or write the player key ({e.Message}); using a temporary one");
+                return Guid.NewGuid().ToString("N") + Guid.NewGuid()
+                    .ToString("N");
             }
         }
     }

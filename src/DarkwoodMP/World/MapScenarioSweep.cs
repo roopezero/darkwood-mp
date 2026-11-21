@@ -8,7 +8,8 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for leftover sync bugs (the order is tools/tests/map_scenario_sweep.py):
+    /// Map test steps for leftover sync bugs (the order is
+    /// tools/tests/map_scenario_sweep.py):
     /// - a story flag set while flag sharing is paused (inputs forbidden, as while the player is dying) reaches the
     ///   other game once it resumes (FlagsSync keeps what it last sent through such a pause);
     /// - an enemy's loop stopped by other means than playIdleLoop("") (destroySounds) stops in the client's copy too
@@ -28,19 +29,26 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "sweep-flag-paused N": with inputs forbidden (which pauses flag sharing, as the death screen does), set the
-        /// Nth story flag (by name, leaving out the player's own "player_" ones) the other way; then allow inputs
-        /// again. The other game must get it.
+        /// "sweep-flag-paused N": with inputs forbidden (which pauses flag
+        /// sharing, as the death screen does), set the Nth story flag (by name,
+        /// leaving out the player's own "player_" ones) the other way; then
+        /// allow inputs again. The other game must get it.
         /// </summary>
         private static IEnumerator FlagPaused(string[] a, Result r)
         {
             var f = Singleton<Flags>.Instance;
             var dict = StateDump.FlagsDict(f);
-            // One the world's database has that isn't set yet (a fresh save has only a few set), and isn't about the
-            // player, a chapter or a death.
-            string[] skip = { "player", "chapter", "died", "dead", "kill", "dream" };
-            IOrderedEnumerable<string> names = f.database.worldFlags.Where(x => x != null && !string.IsNullOrEmpty(x.name) && !dict.ContainsKey(x.name)
-                    && !skip.Any(k => x.name.IndexOf(k, StringComparison.OrdinalIgnoreCase) >= 0))
+            // One the world's database has that isn't set yet (a fresh save has
+            // only a few set), and isn't about the player, a chapter or a
+            // death.
+            string[] skip =
+                { "player", "chapter", "died", "dead", "kill", "dream" };
+            IOrderedEnumerable<string> names = f.database.worldFlags.Where(
+                x => x != null && !string.IsNullOrEmpty(x.name)
+                    && !dict.ContainsKey(x.name)
+                    && !skip.Any(
+                        k => x.name.IndexOf(
+                            k, StringComparison.OrdinalIgnoreCase) >= 0))
                 .Select(x => x.name).OrderBy(x => x, StringComparer.Ordinal);
             int offset = 0;
             if (a.Length > 0)
@@ -60,22 +68,28 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(1f);
                 if (WorldShare.WorldReady)
                 {
-                    r.Fail("flag sharing didn't pause (WorldReady with inputs forbidden)");
+                    r.Fail(
+                        "flag sharing didn't pause (WorldReady with inputs "
+                            + "forbidden)");
                     yield break;
                 }
                 f.setFlag(name, true);
-                // Longer than FlagsSync.Interval, so a flush happens while sharing is paused.
-                yield return new WaitForSecondsRealtime(FlagsSync.Interval + 1.5f);
+                // Longer than FlagsSync.Interval, so a flush happens while
+                // sharing is paused.
+                yield return new WaitForSecondsRealtime(
+                    FlagsSync.Interval + 1.5f);
             }
             finally
             {
                 Core.forbidInputs = was;
             }
             // WorldReady comes back 2 s after, then the next flush sends it.
-            yield return new WaitForSecondsRealtime(2f + FlagsSync.Interval + 1.5f);
+            yield return new WaitForSecondsRealtime(
+                2f + FlagsSync.Interval + 1.5f);
             bool set = dict.TryGetValue(name, out var fl) && fl.isTrue;
             r.Info = $"{name} set {set} while sharing was paused";
-            // Not set here: the compare that follows would agree on "not set in either" and test nothing.
+            // Not set here: the compare that follows would agree on
+            // "not set in either" and test nothing.
             if (!set)
             {
                 r.Fail(r.Info);
@@ -96,7 +110,10 @@ namespace DarkwoodMP.World
             return "";
         }
 
-        /// <summary>"sweep-loop-stop": the host's enemy nearest to us stops its loop by destroySounds (no playIdleLoop).</summary>
+        /// <summary>
+        /// "sweep-loop-stop": the host's enemy nearest to us stops its loop by
+        /// destroySounds (no playIdleLoop).
+        /// </summary>
         private static IEnumerator LoopStop(string[] a, Result r)
         {
             var c = MapScenarioWorld.HostEnemyNear(2500f);
@@ -105,17 +122,26 @@ namespace DarkwoodMP.World
                 r.Fail("no enemy with sounds here");
                 yield break;
             }
-            // A loop playing first (a dog's idle one can be none): the first of its loops it has.
+            // A loop playing first (a dog's idle one can be none): the first of
+            // its loops it has.
             var snd = c.sounds;
-            string play = new[] { snd.idleLoop, snd.defensive, snd.escapingLoop, snd.sleeping }.FirstOrDefault(x => !string.IsNullOrEmpty(x));
+            string play = new[]
+            {
+                snd.idleLoop,
+                snd.defensive,
+                snd.escapingLoop,
+                snd.sleeping
+            }.FirstOrDefault(x => !string.IsNullOrEmpty(x));
             if (play == null)
             {
                 r.Fail($"{c.name} has no loop");
                 yield break;
             }
-            // It plays one as it comes at us; its AI can replace one we start at once,
-            // and can stop it again (Character.setBehaviour plays the next behaviour's loop, or none): wait until one
-            // has played for a second without a break, so the clients have it, starting ours again when none plays.
+            // It plays one as it comes at us; its AI can replace one we start
+            // at once, and can stop it again (Character.setBehaviour plays the
+            // next behaviour's loop, or none): wait until one has played for a
+            // second without a break, so the clients have it, starting ours
+            // again when none plays.
             float until = Time.unscaledTime + 10f, next = 0f, since = -1f;
             string was = "", seen = "";
             while (Time.unscaledTime < until)
@@ -150,8 +176,10 @@ namespace DarkwoodMP.World
             snd.destroySounds();
             yield return new WaitForSecondsRealtime(1.5f);
             string after = LoopOf(c);
-            r.Info = $"{c.name} {ObjRef.Of(c.gameObject)}: loop '{was}' stopped, now '{after}'";
-            // A loop playing here again (not stopped, or the AI started one): the enemies compare wouldn't test the stop.
+            r.Info =
+                $"{c.name} {ObjRef.Of(c.gameObject)}: loop '{was}' stopped, now '{after}'";
+            // A loop playing here again (not stopped, or the AI started one):
+            // the enemies compare wouldn't test the stop.
             if (after != "")
             {
                 r.Fail(r.Info);
@@ -159,15 +187,24 @@ namespace DarkwoodMP.World
         }
 
         private static Door DoorAtCentre() =>
-            Nearest(Object.FindObjectsOfType<Door>().Where(d => !d.destroyed && !d.barricaded && d.body != null && !(d.GetComponent<Locked>() is Locked l && l.locked)
-                && !(d.GetComponent<Padlock>() is Padlock pl && pl.locked) && ObjRef.Of(d.gameObject).Valid), Centre);
+            Nearest(
+                Object.FindObjectsOfType<Door>().Where(
+                    d => !d.destroyed && !d.barricaded && d.body != null
+                        && !(d.GetComponent<Locked>() is Locked l && l.locked)
+                        && !(d.GetComponent<Padlock>() is Padlock pl
+                            && pl.locked)
+                        && ObjRef.Of(d.gameObject).Valid), Centre);
 
         /// <summary>
-        /// "sweep-push-door [ANGLE]": open the door nearest the centre (as our player), wait for its leaf to swing
-        /// open, stand behind its hinge (out of its swing) and turn the leaf by physics (its angular velocity, as
-        /// walking into it does) until it's ANGLE degrees (default 40) from shut, and leave it at rest. DoorPush must
-        /// send where it rests. Where a walk would leave the leaf depends on the path, so the turn is given here, and
-        /// the push counts as our player's (DoorPush.TestTouch) whether or not the walk got within its touch distance.
+        /// "sweep-push-door [ANGLE]": open the door nearest the centre (as our
+        /// player), wait for its leaf to swing open, stand behind its hinge
+        /// (out of its swing) and turn the leaf by physics (its angular
+        /// velocity, as walking into it does) until it's ANGLE degrees (default
+        /// 40) from shut, and leave it at rest. DoorPush must send where it
+        /// rests. Where a walk would leave the leaf depends on the path, so the
+        /// turn is given here, and the push counts as our player's
+        /// (DoorPush.TestTouch) whether or not the walk got within its touch
+        /// distance.
         /// </summary>
         private static IEnumerator PushDoor(string[] a, Result r)
         {
@@ -195,14 +232,16 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(1f);
             if (!d.opened || !DoorLeaf.Turned(d))
             {
-                r.Fail($"{d.name} didn't swing open (open={d.opened}, leaf at {DoorLeaf.Angle(d):0})");
+                r.Fail(
+                    $"{d.name} didn't swing open (open={d.opened}, leaf at {DoorLeaf.Angle(d):0})");
                 yield break;
             }
             yield return new WaitForSecondsRealtime(0.5f);
             float opened = DoorLeaf.Angle(d);
             if (Mathf.Abs(opened - target) < 8f)
             {
-                r.Fail($"{d.name} swung open to {opened:0}, too near {target:0} to tell a push");
+                r.Fail(
+                    $"{d.name} swung open to {opened:0}, too near {target:0} to tell a push");
                 yield break;
             }
             var rb = d.body.GetComponent<Rigidbody>();
@@ -212,8 +251,9 @@ namespace DarkwoodMP.World
                 r.Fail($"{d.name}'s leaf has no rigidbody or hinge");
                 yield break;
             }
-            // Behind the hinge, away from where the leaf points: the leaf is fastened there and doesn't swing there,
-            // so our player doesn't stop the turn.
+            // Behind the hinge, away from where the leaf points: the leaf is
+            // fastened there and doesn't swing there, so our player doesn't
+            // stop the turn.
             var u = d.body.position - hinge.connectedAnchor;
             u.y = 0f;
             if (u.sqrMagnitude < 1f)
@@ -224,7 +264,8 @@ namespace DarkwoodMP.World
             DoorPush.TestTouch = d;
             try
             {
-                // Turn it about the hinge (world up) towards the target, as a walk into it would.
+                // Turn it about the hinge (world up) towards the target, as a
+                // walk into it would.
                 float last = DoorLeaf.Angle(d), sign = 1f;
                 until = Time.unscaledTime + 8f;
                 while (d.opened && Time.unscaledTime < until)
@@ -239,32 +280,42 @@ namespace DarkwoodMP.World
                     {
                         break;
                     }
-                    if (Mathf.Abs(now - last) > 0.3f && (now > last) != (target > now))
+                    if (Mathf.Abs(now - last) > 0.3f
+                        && (now > last) != (target > now))
                     {
                         sign = -sign; // going the wrong way
                     }
                     last = now;
-                    rb.angularVelocity = new Vector3(0f, sign * Mathf.Clamp(Mathf.Abs(now - target) * 0.05f, 0.4f, 2f), 0f);
+                    rb.angularVelocity = new Vector3(
+                        0f,
+                        sign * Mathf.Clamp(
+                            Mathf.Abs(now - target) * 0.05f, 0.4f, 2f),
+                        0f);
                 }
                 if (rb != null)
                 {
                     rb.angularVelocity = Vector3.zero;
                     rb.velocity = Vector3.zero;
                 }
-                yield return new WaitForSecondsRealtime(2f); // DoorPush's rest time, and the send
+                // DoorPush's rest time, and the send
+                yield return new WaitForSecondsRealtime(2f);
             }
             finally
             {
                 DoorPush.TestTouch = null;
             }
-            r.Info = $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {opened:0} -> {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0}, wanted {target:0}), open={d.opened}, we are {StateDump.Flat(P.transform.position - hinge.connectedAnchor):0} from the hinge";
+            r.Info =
+                $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {opened:0} -> {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0}, wanted {target:0}), open={d.opened}, we are {StateDump.Flat(P.transform.position - hinge.connectedAnchor):0} from the hinge";
             if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - target) > 4f)
             {
                 r.Fail($"{r.Info}: not turned to {target:0}");
             }
         }
 
-        /// <summary>"sweep-door-leaf ANGLE": the leaf of the door nearest the centre is ANGLE degrees (within 5) from shut here, within the timeout.</summary>
+        /// <summary>
+        /// "sweep-door-leaf ANGLE": the leaf of the door nearest the centre is
+        /// ANGLE degrees (within 5) from shut here, within the timeout.
+        /// </summary>
         private static IEnumerator DoorLeafIs(string[] a, Result r)
         {
             float want = 40f;
@@ -279,11 +330,13 @@ namespace DarkwoodMP.World
                 yield break;
             }
             float until = Time.unscaledTime + 10f;
-            while (Time.unscaledTime < until && !(d.opened && Mathf.Abs(DoorLeaf.Angle(d) - want) <= 5f))
+            while (Time.unscaledTime < until
+                && !(d.opened && Mathf.Abs(DoorLeaf.Angle(d) - want) <= 5f))
             {
                 yield return null;
             }
-            r.Info = $"{d.name} {ObjRef.Of(d.gameObject)} open={d.opened}, leaf at {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0})";
+            r.Info =
+                $"{d.name} {ObjRef.Of(d.gameObject)} open={d.opened}, leaf at {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0})";
             if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - want) > 5f)
             {
                 r.Fail($"{r.Info}: not at {want:0}");

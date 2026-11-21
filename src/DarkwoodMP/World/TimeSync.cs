@@ -5,18 +5,23 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// One clock for everyone: the host's. The host sends its day and time (TimeSync: u32 day, u16 minute) every
-    /// second. A client's own clock doesn't run (Controller.DoUpdateTime off); it steps to the host's a minute at a
-    /// time, calling the game's refreshTime() for each, so dusk, night, dawn and their events come as they would
-    /// have (a big jump, such as the host sleeping, goes straight there).
+    /// One clock for everyone: the host's. The host sends its day and time
+    /// (TimeSync: u32 day, u16 minute) every second. A client's own clock
+    /// doesn't run (Controller.DoUpdateTime off); it steps to the host's a
+    /// minute at a time, calling the game's refreshTime() for each, so dusk,
+    /// night, dawn and their events come as they would have (a big jump, such
+    /// as the host sleeping, goes straight there).
     ///
-    /// Dreams: the game stops the clock in a dream (Controller.FixedUpdate) and sets CurrentTime to the dream's own
-    /// time, keeping the world's in Dreams.timeCopy until waking. So a dreaming host sends timeCopy, and the world's
-    /// clock stands still for everyone until the host wakes, as it does in the game. A dream outcome with a custom
-    /// end time (DreamPreset outcome customEndTime) sets the host's clock on waking, and that becomes everyone's
-    /// world time on purpose: the host decides it. A dreaming joiner's dream time is its own: it doesn't step while
-    /// dreaming, and on waking (when the game puts its clock back to timeCopy) the next TimeSync steps it to the
-    /// host's time, running the minutes it missed.
+    /// Dreams: the game stops the clock in a dream (Controller.FixedUpdate) and
+    /// sets CurrentTime to the dream's own time, keeping the world's in
+    /// Dreams.timeCopy until waking. So a dreaming host sends timeCopy, and the
+    /// world's clock stands still for everyone until the host wakes, as it does
+    /// in the game. A dream outcome with a custom end time (DreamPreset outcome
+    /// customEndTime) sets the host's clock on waking, and that becomes
+    /// everyone's world time on purpose: the host decides it. A dreaming
+    /// joiner's dream time is its own: it doesn't step while dreaming, and on
+    /// waking (when the game puts its clock back to timeCopy) the next TimeSync
+    /// steps it to the host's time, running the minutes it missed.
     /// </summary>
     public sealed class TimeSync
     {
@@ -35,7 +40,9 @@ namespace DarkwoodMP.World
         public void Update()
         {
             var ctl = Singleton<Controller>.Instance;
-            if (_session.IsHost && _session.Peers.Count > 0 && WorldShare.InWorld && ctl != null && Time.unscaledTime >= _nextSend)
+            if (_session.IsHost && _session.Peers.Count > 0
+                && WorldShare.InWorld && ctl != null
+                && Time.unscaledTime >= _nextSend)
             {
                 _nextSend = Time.unscaledTime + 1f;
                 var w = _session.Begin(MsgType.TimeSync);
@@ -59,7 +66,8 @@ namespace DarkwoodMP.World
             {
                 if (ctl.DoUpdateTime)
                 {
-                    ctl.DoUpdateTime = false; // the game turns it back on at times; keep it off
+                    // the game turns it back on at times; keep it off
+                    ctl.DoUpdateTime = false;
                 }
                 _clockStopped = true;
             }
@@ -89,18 +97,22 @@ namespace DarkwoodMP.World
             var dreams = Singleton<Dreams>.Instance;
             if (dreams != null && (dreams.dreaming || dreams.switchingDream))
             {
-                // The clock shows the dream's time; the world's waits in timeCopy, and catches up after waking.
+                // The clock shows the dream's time; the world's waits in
+                // timeCopy, and catches up after waking.
                 if (WorldActions.Debug && !_dreamLogged)
                 {
-                    Plugin.Log.LogInfo($"[world] dreaming: the clock waits (host at day {day} {time}, world time kept {dreams.timeCopy:0})");
+                    Plugin.Log.LogInfo(
+                        $"[world] dreaming: the clock waits (host at day {day} {time}, world time kept {dreams.timeCopy:0})");
                 }
                 _dreamLogged = true;
                 return;
             }
             _dreamLogged = false;
 
-            // Minutes the client is behind, round the clock. (Darkwood counts a new day at dawn, in startDay, not at
-            // midnight, so 1440 * day + minute isn't monotonic; the minute of the day, round the clock, is.)
+            // Minutes the client is behind, round the clock. (Darkwood counts a
+            // new day at dawn, in startDay, not at midnight, so 1440 * day +
+            // minute isn't monotonic; the minute of the day, round the clock,
+            // is.)
             int behind = ((time - ctl.CurrentTime) % 1440 + 1440) % 1440;
             if (behind == 0 && ctl.day == day)
             {
@@ -111,7 +123,8 @@ namespace DarkwoodMP.World
                 for (int i = 0; i < behind; i++)
                 {
                     ctl.CurrentTime++;
-                    ctl.refreshTime(); // wraps at 1440; at dawn startDay() counts the new day
+                    // wraps at 1440; at dawn startDay() counts the new day
+                    ctl.refreshTime();
                 }
                 if (ctl.day != day)
                 {
@@ -119,7 +132,8 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug && behind > 1)
                 {
-                    Plugin.Log.LogInfo($"[world] clock stepped {behind} minutes to day {ctl.day} {ctl.CurrentTime}");
+                    Plugin.Log.LogInfo(
+                        $"[world] clock stepped {behind} minutes to day {ctl.day} {ctl.CurrentTime}");
                 }
                 return;
             }
@@ -129,7 +143,8 @@ namespace DarkwoodMP.World
             ctl.refreshTime(afterGameLoad: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] clock jumped to day {ctl.day} {ctl.CurrentTime}");
+                Plugin.Log.LogInfo(
+                    $"[world] clock jumped to day {ctl.day} {ctl.CurrentTime}");
             }
         }
     }

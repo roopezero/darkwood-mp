@@ -6,25 +6,32 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// PlayerDamage, host -> client: an enemy on the host hit this client's proxy.
+    /// PlayerDamage, host -> client: an enemy on the host hit this client's
+    /// proxy.
     ///   f32 damage, u8 flags (1: shadow), str attacker, u8 n, n x effect
     ///   effect: i32 type, f32 startDelay, f32 duration, f32 modifier, f32 interval, u8 flags
     ///           (1 stopsBleeding, 2 stopsPoison, 4 hasPoisonOverlay), str activateSound
-    /// The client applies it to its own Player as the game would have, effects (bleeding, poison...) included.
+    /// The client applies it to its own Player as the game would have, effects
+    /// (bleeding, poison...) included.
     /// </summary>
     public static class PlayerDamage
     {
-        public static void Register(Session s) => s.Register(MsgType.PlayerDamage, OnDamage);
+        public static void Register(Session s) =>
+            s.Register(MsgType.PlayerDamage, OnDamage);
 
-        public static void Send(ulong owner, float damage, Transform attacker, bool shadow, List<InvItemEffect> effects)
+        public static void Send(
+            ulong owner, float damage, Transform attacker, bool shadow,
+            List<InvItemEffect> effects)
         {
             string from = "?";
             if (attacker != null)
             {
                 from = attacker.name;
             }
-            // A friendly NPC is each player's own: one the host doesn't run as an enemy (Combat.HostileNpcs) hits the
-            // joiner with the joiner's own copy, so the host's copy's hit on the proxy would be a second one.
+            // A friendly NPC is each player's own: one the host doesn't run as
+            // an enemy (Combat.HostileNpcs) hits the joiner with the joiner's
+            // own copy, so the host's copy's hit on the proxy would be a second
+            // one.
             Character npc = null;
             if (attacker != null)
             {
@@ -34,7 +41,8 @@ namespace DarkwoodMP.Combat
             {
                 if (Threat.Debug)
                 {
-                    Plugin.Log.LogInfo($"[threat] {from} (an NPC) hit a remote player's stand-in: left to that player's own copy of it");
+                    Plugin.Log.LogInfo(
+                        $"[threat] {from} (an NPC) hit a remote player's stand-in: left to that player's own copy of it");
                 }
                 return;
             }
@@ -45,7 +53,8 @@ namespace DarkwoodMP.Combat
                 {
                     effectNote = $" (+{effects.Count} effects)";
                 }
-                Plugin.Log.LogInfo($"[dummy] hit for {damage:0} by {from}" + effectNote);
+                Plugin.Log.LogInfo(
+                    $"[dummy] hit for {damage:0} by {from}" + effectNote);
                 PlayerSync instance = PlayerSync.Instance;
                 if (instance != null)
                 {
@@ -72,7 +81,8 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>u8 n, n x effect (see the class's summary).</summary>
-        public static void WriteEffects(PacketWriter w, List<InvItemEffect> effects)
+        public static void WriteEffects(
+            PacketWriter w, List<InvItemEffect> effects)
         {
             int n;
             if (effects == null)

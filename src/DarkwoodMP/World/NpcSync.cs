@@ -6,17 +6,24 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Where the NPCs stand. NPCs run in every game, so one that walks (a follower such as Doctor_follower, a
-    /// scripted move, one that wanders) would end up somewhere else in each. The host's NPC is the one that counts:
-    /// the host checks a joiner's talk (TalkLock) and NPC kills (NpcDied) against where its own copy is. So the host
-    /// sends where its NPCs are (NpcPos): those that moved, twice a second, and all of them every few seconds (for a
-    /// joiner that just came in, and for a copy a joiner's game moved by itself). Clients keep their copies there.
+    /// Where the NPCs stand. NPCs run in every game, so one that walks (a
+    /// follower such as Doctor_follower, a scripted move, one that wanders)
+    /// would end up somewhere else in each. The host's NPC is the one that
+    /// counts:
+    /// the host checks a joiner's talk (TalkLock) and NPC kills (NpcDied)
+    /// against where its own copy is. So the host sends where its NPCs are
+    /// (NpcPos): those that moved, twice a second, and all of them every few
+    /// seconds (for a joiner that just came in, and for a copy a joiner's game
+    /// moved by itself). Clients keep their copies there.
     ///
-    /// Only NPCs with a save id shared by every game (SharedIds) are sent: the morning trader and the wolf are put in
-    /// each player's hideout by each game, and are matched by name instead (TraderSync, TalkLock). NPCs that NetEnemies
-    /// runs (a hostile one, if it does) go by its enemy states instead. A host's NPC in a part of the world it has
-    /// switched off (its object inactive) is sent too, where it stands there, so a client that has that part on
-    /// doesn't let its copy walk off by itself (a follower after the client's own player, say).
+    /// Only NPCs with a save id shared by every game (SharedIds) are sent: the
+    /// morning trader and the wolf are put in each player's hideout by each
+    /// game, and are matched by name instead (TraderSync, TalkLock). NPCs that
+    /// NetEnemies runs (a hostile one, if it does) go by its enemy states
+    /// instead. A host's NPC in a part of the world it has switched off (its
+    /// object inactive) is sent too, where it stands there, so a client that
+    /// has that part on doesn't let its copy walk off by itself (a follower
+    /// after the client's own player, say).
     /// </summary>
     public sealed class NpcSync
     {
@@ -24,17 +31,24 @@ namespace DarkwoodMP.World
         private readonly Session _session;
 
         /// <summary>Host: where each NPC was when last sent.</summary>
-        private readonly Dictionary<int, Vector2> _sent = new Dictionary<int, Vector2>();
+        private readonly Dictionary<int, Vector2> _sent =
+            new Dictionary<int, Vector2>();
         /// <summary>Client: where the host has each NPC.</summary>
-        private readonly Dictionary<int, Vector2> _target = new Dictionary<int, Vector2>();
+        private readonly Dictionary<int, Vector2> _target =
+            new Dictionary<int, Vector2>();
         private float _nextMoved, _nextAll;
-        /// <summary>Host: the NPCs with a shared save id, active or not (found again every AllEvery seconds).</summary>
+        /// <summary>
+        /// Host: the NPCs with a shared save id, active or not (found again
+        /// every AllEvery seconds).
+        /// </summary>
         private readonly List<(int id, NPC npc)> _npcs = new List<(int, NPC)>();
 
         private const float Moved = 30f;        // sent when it moved this far
         private const float MovedEvery = 0.5f, AllEvery = 4f;
-        private const float Snap = 600f;        // a client's copy this far off is put there at once
-        private const float Close = 15f;        // and this close is left alone
+        // a client's copy this far off is put there at once
+        private const float Snap = 600f;
+        // and this close is left alone
+        private const float Close = 15f;
 
         public NpcSync(Session session)
         {
@@ -63,7 +77,8 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            return NetEnemies.Instance == null || !NetEnemies.Instance.NetIdOf(c, out _);
+            return NetEnemies.Instance == null
+                || !NetEnemies.Instance.NetIdOf(c, out _);
         }
 
         public void Update()
@@ -104,7 +119,8 @@ namespace DarkwoodMP.World
                 }
                 var pos = c.transform.position;
                 var p = new Vector2(pos.x, pos.z);
-                bool moved = !_sent.TryGetValue(id, out var was) || (p - was).sqrMagnitude > Moved * Moved;
+                bool moved = !_sent.TryGetValue(id, out var was)
+                    || (p - was).sqrMagnitude > Moved * Moved;
                 if (!moved && !all)
                 {
                     continue;
@@ -132,8 +148,9 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The game's save ids list every saveable object, switched on or off (FindObjectsOfType would leave out
-        /// the NPCs in parts of the world the host has switched off).
+        /// The game's save ids list every saveable object, switched on or off
+        /// (FindObjectsOfType would leave out the NPCs in parts of the world
+        /// the host has switched off).
         /// </summary>
         private void FindNpcs()
         {
@@ -145,7 +162,8 @@ namespace DarkwoodMP.World
             }
             foreach (var kv in sm.uniqueIdDict)
             {
-                if (kv.Key <= 0 || kv.Key >= SharedIds.SendLimit || kv.Value == null)
+                if (kv.Key <= 0 || kv.Key >= SharedIds.SendLimit
+                    || kv.Value == null)
                 {
                     continue;
                 }
@@ -175,10 +193,12 @@ namespace DarkwoodMP.World
         private readonly List<int> _gone = new List<int>();
 
         /// <summary>
-        /// The world grid shows and hides things by the grid node they're registered to: one that moved while hidden
-        /// would stay hidden with its old node (or show far from it). Register it to the node where it is now, as the
-        /// game does for a moving thing when it's hidden (CullableObject.tryToHideMoveable), and show or hide it as
-        /// that node is.
+        /// The world grid shows and hides things by the grid node they're
+        /// registered to: one that moved while hidden would stay hidden with
+        /// its old node (or show far from it). Register it to the node where it
+        /// is now, as the game does for a moving thing when it's hidden
+        /// (CullableObject.tryToHideMoveable), and show or hide it as that node
+        /// is.
         /// </summary>
         private static void Recull(GameObject go, Vector3 at)
         {
@@ -220,7 +240,8 @@ namespace DarkwoodMP.World
             float dt = Time.deltaTime;
             foreach (var kv in _target)
             {
-                if (!sm.uniqueIdDict.TryGetValue(kv.Key, out var so) || so == null)
+                if (!sm.uniqueIdDict.TryGetValue(kv.Key, out var so)
+                    || so == null)
                 {
                     continue;
                 }
@@ -244,11 +265,13 @@ namespace DarkwoodMP.World
                     Recull(c.gameObject, to);
                     if (WorldActions.Debug)
                     {
-                        Plugin.Log.LogInfo($"[world] {npc.name} is at the host's {to.x:0},{to.z:0} ({d:0} away)");
+                        Plugin.Log.LogInfo(
+                            $"[world] {npc.name} is at the host's {to.x:0},{to.z:0} ({d:0} away)");
                     }
                     continue;
                 }
-                t.position = Vector3.MoveTowards(pos, to, Mathf.Max(250f, d * 4f) * dt);
+                t.position =
+                    Vector3.MoveTowards(pos, to, Mathf.Max(250f, d * 4f) * dt);
             }
             foreach (var id in _gone)
             {

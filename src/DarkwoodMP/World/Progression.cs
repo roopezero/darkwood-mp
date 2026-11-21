@@ -12,53 +12,72 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Shared progression: every player has the same essence and the same number of levels to take, and each picks
-    /// their own skills.
+    /// Shared progression: every player has the same essence and the same
+    /// number of levels to take, and each picks their own skills.
     ///
-    /// Darkwood counts essence from the start of the game (Player.experience) against cumulative requirements
-    /// (Player.levelRequirements[level]). Cooking essence at a stove (InvItemClass.consumeExp) fills the bar; a full
-    /// bar gives a skill point, the level (SkillsMenu.showHideTiers raises Player.currentLevel) and the skill choice.
+    /// Darkwood counts essence from the start of the game (Player.experience)
+    /// against cumulative requirements (Player.levelRequirements[level]).
+    /// Cooking essence at a stove (InvItemClass.consumeExp) fills the bar; a
+    /// full bar gives a skill point, the level (SkillsMenu.showHideTiers raises
+    /// Player.currentLevel) and the skill choice.
     ///
-    /// Here the host keeps the shared essence and the shared level (the most levels anyone has taken). A client's
-    /// cooking is a request (EssenceAdd) that the host adds to the shared essence, or refuses while the shared bar is
-    /// full. Each player's Player.currentLevel is their own (it is in their character, with their skills), and their
-    /// Player.experience is set to the shared essence, but no further than their own next level: so a player behind
-    /// the shared level sees a full bar at the stove, and takes the level there. Everyone ends up with the same levels
-    /// and points; the skills are each player's.
+    /// Here the host keeps the shared essence and the shared level (the most
+    /// levels anyone has taken). A client's cooking is a request (EssenceAdd)
+    /// that the host adds to the shared essence, or refuses while the shared
+    /// bar is full. Each player's Player.currentLevel is their own (it is in
+    /// their character, with their skills), and their Player.experience is set
+    /// to the shared essence, but no further than their own next level: so a
+    /// player behind the shared level sees a full bar at the stove, and takes
+    /// the level there. Everyone ends up with the same levels and points; the
+    /// skills are each player's.
     ///
-    /// The stove only gives the level and its skill point (TakeLevelAtStove, in place of the game's skill choice):
-    /// the points are spent on the Skills panel, anywhere (World.SkillTree, SkillsPanel).
+    /// The stove only gives the level and its skill point (TakeLevelAtStove, in
+    /// place of the game's skill choice):
+    /// the points are spent on the Skills panel, anywhere (World.SkillTree,
+    /// SkillsPanel).
     ///
-    /// A skill reset at the stove (a button while the stove's menu is open) takes back all of a player's chosen
-    /// skills, good and negative, and gives back their points to spend anew; the levels stay. It can be done only in
-    /// the morning, from dawn until the player first walks out of their hideout (Controller.isAfterNight, the same
-    /// time AfterNight holds the clock for), and once a day (Controller.day). The host checks both for a client: its
-    /// PlayerState says whether it is in its morning. A new player's character starts with no skills
-    /// (World.Characters), and takes the shared levels at the stove.
+    /// A skill reset at the stove (a button while the stove's menu is open)
+    /// takes back all of a player's chosen skills, good and negative, and gives
+    /// back their points to spend anew; the levels stay. It can be done only in
+    /// the morning, from dawn until the player first walks out of their hideout
+    /// (Controller.isAfterNight, the same time AfterNight holds the clock for),
+    /// and once a day (Controller.day). The host checks both for a client: its
+    /// PlayerState says whether it is in its morning. A new player's character
+    /// starts with no skills (World.Characters), and takes the shared levels at
+    /// the stove.
     ///
-    /// The host writes the shared essence, level and reset days beside its save (prof&lt;id&gt;/darkwoodmp_progress.json)
-    /// when its game saves. It starts sharing once someone joins a world that has no such file yet, from the host's
-    /// own essence and level.
+    /// The host writes the shared essence, level and reset days beside its save
+    /// (prof&lt;id&gt;/darkwoodmp_progress.json) when its game saves. It starts
+    /// sharing once someone joins a world that has no such file yet, from the
+    /// host's own essence and level.
     ///
-    /// Playing alone (no session), the stove's reset works the same way, with the player as the only one: the first
-    /// reset starts the file from the player's own essence and level, and from then on the game's essence is kept
-    /// there, so the levels taken back can be taken again at the stove (one at a time, as the bar fills each time).
+    /// Playing alone (no session), the stove's reset works the same way, with
+    /// the player as the only one: the first reset starts the file from the
+    /// player's own essence and level, and from then on the game's essence is
+    /// kept there, so the levels taken back can be taken again at the stove
+    /// (one at a time, as the bar fills each time).
     /// </summary>
     public static class Progression
     {
         private static Session S => Session.Instance;
 
         /// <summary>Playing alone: no co-op session, in a world.</summary>
-        private static bool Solo => (S == null || !S.Active) && WorldShare.InWorld && !NetEnemies.ClientMode;
+        private static bool Solo => (S == null || !S.Active)
+            && WorldShare.InWorld && !NetEnemies.ClientMode;
 
         private sealed class Saved
         {
             public int Exp;
             public int Level;
-            public Dictionary<string, int> Resets = new Dictionary<string, int>(); // hash of player key ("host": the host) -> day
+            // hash of player key ("host": the host) -> day
+            public Dictionary<string, int> Resets =
+                new Dictionary<string, int>();
         }
 
-        /// <summary>The shared essence and level (host: its own; client: what the host last said).</summary>
+        /// <summary>
+        /// The shared essence and level (host: its own; client: what the host
+        /// last said).
+        /// </summary>
         public static int SharedExp { get; private set; }
         public static int SharedLevel { get; private set; }
         private static bool _known;       // client: the host has sent the state
@@ -82,7 +101,7 @@ namespace DarkwoodMP.World
             };
         }
 
-        // ---- levels ---------------------------------------------------------------------------------
+        // ---- levels ---------------------------------------------------------
 
         private static int Req(Player p, int level)
         {
@@ -94,10 +113,16 @@ namespace DarkwoodMP.World
             return reqs[Mathf.Clamp(level, 0, reqs.Count - 1)];
         }
 
-        /// <summary>The essence a player with this own level sees: the shared essence, up to their next level.</summary>
-        private static int Display(Player p, int ownLevel) => Math.Min(SharedExp, Req(p, ownLevel));
+        /// <summary>
+        /// The essence a player with this own level sees: the shared essence,
+        /// up to their next level.
+        /// </summary>
+        private static int Display(Player p, int ownLevel) =>
+            Math.Min(SharedExp, Req(p, ownLevel));
 
-        /// <summary>The most levels the shared essence allows: level L needs Req(L - 1).</summary>
+        /// <summary>
+        /// The most levels the shared essence allows: level L needs Req(L - 1).
+        /// </summary>
         private static int Allowed(Player p)
         {
             int max = 0;
@@ -113,7 +138,10 @@ namespace DarkwoodMP.World
             return l;
         }
 
-        /// <summary>The most levels a player can have now: the shared level, or what the shared essence allows.</summary>
+        /// <summary>
+        /// The most levels a player can have now: the shared level, or what the
+        /// shared essence allows.
+        /// </summary>
         internal static int MostLevels(Player p)
         {
             if (p == null)
@@ -136,9 +164,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool BarFull(Player p) => SharedLevel > 7 || SharedExp >= Req(p, SharedLevel);
+        private static bool BarFull(Player p) =>
+            SharedLevel > 7 || SharedExp >= Req(p, SharedLevel);
 
-        /// <summary>Set our player's essence to what the shared essence shows them, and refresh an open stove menu.</summary>
+        /// <summary>
+        /// Set our player's essence to what the shared essence shows them, and
+        /// refresh an open stove menu.
+        /// </summary>
         private static void Apply(Player p)
         {
             if (p == null)
@@ -155,18 +187,21 @@ namespace DarkwoodMP.World
             var skills = Singleton<SkillsMenu>.Instance;
             try
             {
-                if (menu != null && p.inLevelingMenu && menu.openedAndTweened && menu.LevelingLiquid != null && (skills == null || !skills.opened))
+                if (menu != null && p.inLevelingMenu && menu.openedAndTweened
+                    && menu.LevelingLiquid != null
+                    && (skills == null || !skills.opened))
                 {
                     menu.updateLiquid();
                 }
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[progress] couldn't refresh the stove: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[progress] couldn't refresh the stove: {e.Message}");
             }
         }
 
-        // ---- host -----------------------------------------------------------------------------------
+        // ---- host -----------------------------------------------------------
 
         private static string SavedPath()
         {
@@ -175,16 +210,23 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            return Path.Combine(Path.Combine(sm.baseSaveDirectory, "prof" + Core.currentProfile.id), "darkwoodmp_progress.json");
+            return Path.Combine(
+                Path.Combine(
+                    sm.baseSaveDirectory, "prof" + Core.currentProfile.id),
+                "darkwoodmp_progress.json");
         }
 
-        /// <summary>Host: the shared progression of this world, loaded or started (when someone is playing with us); null: none.</summary>
+        /// <summary>
+        /// Host: the shared progression of this world, loaded or started (when
+        /// someone is playing with us); null: none.
+        /// </summary>
         private static Saved HostSaved(bool start, bool alone = false)
         {
             var s = S;
             var p = Player.Instance;
             bool solo = Solo;
-            if ((!solo && (s == null || !s.IsHost)) || !WorldShare.InWorld || WorldShare.Loading || p == null || NetEnemies.ClientMode)
+            if ((!solo && (s == null || !s.IsHost)) || !WorldShare.InWorld
+                || WorldShare.Loading || p == null || NetEnemies.ClientMode)
             {
                 return null;
             }
@@ -201,12 +243,14 @@ namespace DarkwoodMP.World
                 {
                     if (File.Exists(path))
                     {
-                        _saved = JsonConvert.DeserializeObject<Saved>(File.ReadAllText(path));
+                        _saved = JsonConvert.DeserializeObject<Saved>(
+                            File.ReadAllText(path));
                     }
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"[progress] couldn't read {path}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"[progress] couldn't read {path}: {e.Message}");
                 }
                 if (_saved != null)
                 {
@@ -216,7 +260,8 @@ namespace DarkwoodMP.World
                     }
                     SharedExp = _saved.Exp;
                     SharedLevel = _saved.Level;
-                    Plugin.Log.LogInfo($"[progress] this world's shared essence {SharedExp}, level {SharedLevel}");
+                    Plugin.Log.LogInfo(
+                        $"[progress] this world's shared essence {SharedExp}, level {SharedLevel}");
                 }
             }
             bool begin = false;
@@ -233,10 +278,12 @@ namespace DarkwoodMP.World
             }
             if (begin)
             {
-                _saved = new Saved { Exp = p.experience, Level = p.currentLevel };
+                _saved =
+                    new Saved { Exp = p.experience, Level = p.currentLevel };
                 SharedExp = _saved.Exp;
                 SharedLevel = _saved.Level;
-                Plugin.Log.LogInfo($"[progress] shared progression starts from yours: essence {SharedExp}, level {SharedLevel}");
+                Plugin.Log.LogInfo(
+                    $"[progress] shared progression starts from yours: essence {SharedExp}, level {SharedLevel}");
             }
             return _saved;
         }
@@ -257,7 +304,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Host: someone's character was just sent; send them the shared progression after it.</summary>
+        /// <summary>
+        /// Host: someone's character was just sent; send them the shared
+        /// progression after it.
+        /// </summary>
         public static void HostSendTo(ulong peer)
         {
             if (HostSaved(start: true) != null)
@@ -266,7 +316,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Host: take in our own player's essence and level, tell everyone when they changed, and show ours.</summary>
+        /// <summary>
+        /// Host: take in our own player's essence and level, tell everyone when
+        /// they changed, and show ours.
+        /// </summary>
         private static void HostSync()
         {
             var saved = HostSaved(start: true);
@@ -275,14 +328,16 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            int exp = Math.Max(SharedExp, p.experience), level = Math.Max(SharedLevel, p.currentLevel);
+            int exp = Math.Max(SharedExp, p.experience),
+                level = Math.Max(SharedLevel, p.currentLevel);
             if (exp != SharedExp || level != SharedLevel)
             {
                 SharedExp = saved.Exp = exp;
                 SharedLevel = saved.Level = level;
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[progress] shared essence {SharedExp}, level {SharedLevel}");
+                    Plugin.Log.LogInfo(
+                        $"[progress] shared essence {SharedExp}, level {SharedLevel}");
                 }
                 if (!Solo)
                 {
@@ -292,20 +347,26 @@ namespace DarkwoodMP.World
             Apply(p);
         }
 
-        /// <summary>Host: the game saved; write the shared progression beside it.</summary>
+        /// <summary>
+        /// Host: the game saved; write the shared progression beside it.
+        /// </summary>
         public static void OnHostSaved()
         {
-            if (WorldShare.Snapshotting || NetEnemies.ClientMode || _saved == null || _savedPath == null || _savedPath != SavedPath())
+            if (WorldShare.Snapshotting || NetEnemies.ClientMode
+                || _saved == null || _savedPath == null
+                || _savedPath != SavedPath())
             {
                 return;
             }
             try
             {
-                File.WriteAllText(_savedPath, JsonConvert.SerializeObject(_saved));
+                File.WriteAllText(
+                    _savedPath, JsonConvert.SerializeObject(_saved));
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"[progress] couldn't write {_savedPath}: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"[progress] couldn't write {_savedPath}: {e.Message}");
             }
         }
 
@@ -326,12 +387,15 @@ namespace DarkwoodMP.World
             if (BarFull(p))
             {
                 SendState(from);
-                Authority.Refuse("the shared essence bar is full: someone has to take the level at a stove");
+                Authority.Refuse(
+                    "the shared essence bar is full: someone has to take the "
+                        + "level at a stove");
                 return;
             }
             SharedExp += amount;
             _saved.Exp = SharedExp;
-            Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} cooked {amount} essence: shared {SharedExp}");
+            Plugin.Log.LogInfo(
+                $"[progress] {S.NameOf(from)} cooked {amount} essence: shared {SharedExp}");
             SendState(0);
             Apply(p);
         }
@@ -347,7 +411,8 @@ namespace DarkwoodMP.World
             int allowed = Allowed(p);
             if (level > allowed)
             {
-                Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} says level {level}; the shared essence allows {allowed}");
+                Plugin.Log.LogInfo(
+                    $"[progress] {S.NameOf(from)} says level {level}; the shared essence allows {allowed}");
             }
             level = Math.Min(level, allowed);
             if (level <= SharedLevel)
@@ -355,7 +420,8 @@ namespace DarkwoodMP.World
                 return;
             }
             SharedLevel = _saved.Level = level;
-            Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} took level {level}: everyone can take it at a stove");
+            Plugin.Log.LogInfo(
+                $"[progress] {S.NameOf(from)} took level {level}: everyone can take it at a stove");
             SendState(0);
         }
 
@@ -368,7 +434,9 @@ namespace DarkwoodMP.World
                 {
                     hashed = "";
                 }
-                return WorldFiles.Hex(sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(0, 32);
+                return WorldFiles.Hex(
+                    sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(
+                        0, 32);
             }
         }
 
@@ -384,9 +452,14 @@ namespace DarkwoodMP.World
             }
         }
 
-        public const string NotMorning = "Skills can only be reset in the morning, before you leave your hideout";
+        public const string NotMorning =
+            "Skills can only be reset in the morning, before you leave your "
+                + "hideout";
 
-        /// <summary>Whether this player (0: ours) is in their morning: after dawn, not yet out of their hideout (Controller.isAfterNight).</summary>
+        /// <summary>
+        /// Whether this player (0: ours) is in their morning: after dawn, not
+        /// yet out of their hideout (Controller.isAfterNight).
+        /// </summary>
         internal static bool InMorning(ulong peer)
         {
             if (peer == 0)
@@ -394,10 +467,14 @@ namespace DarkwoodMP.World
                 return AfterNight.Local;
             }
             var sync = Sync.PlayerSync.Instance;
-            return sync != null && sync.Remotes.TryGetValue(peer, out var rp) && rp.Last != null && rp.Last.AfterNight;
+            return sync != null && sync.Remotes.TryGetValue(peer, out var rp)
+                && rp.Last != null && rp.Last.AfterNight;
         }
 
-        /// <summary>Host: whether this player (key hash, or "host"; peer 0: ours) may reset now; if so, it counts as today's.</summary>
+        /// <summary>
+        /// Host: whether this player (key hash, or "host"; peer 0: ours) may
+        /// reset now; if so, it counts as today's.
+        /// </summary>
         private static bool TakeReset(string who, ulong peer, out string why)
         {
             why = null;
@@ -432,15 +509,19 @@ namespace DarkwoodMP.World
                 Authority.Refuse(why);
                 return;
             }
-            Plugin.Log.LogInfo($"[progress] {S.NameOf(from)} reset their skills (day {Today})");
+            Plugin.Log.LogInfo(
+                $"[progress] {S.NameOf(from)} reset their skills (day {Today})");
         }
 
-        // ---- client ---------------------------------------------------------------------------------
+        // ---- client ---------------------------------------------------------
 
-        /// <summary>The host, or playing alone: our game keeps the shared progression.</summary>
+        /// <summary>
+        /// The host, or playing alone: our game keeps the shared progression.
+        /// </summary>
         private static bool HostSide => (S != null && S.IsHost) || Solo;
 
-        private static bool ClientActive => NetEnemies.ClientMode && WorldShare.InWorld && _known;
+        private static bool ClientActive =>
+            NetEnemies.ClientMode && WorldShare.InWorld && _known;
 
         private static void OnState(ulong from, PacketReader r)
         {
@@ -460,12 +541,16 @@ namespace DarkwoodMP.World
                 {
                     yours = player.currentLevel;
                 }
-                Plugin.Log.LogInfo($"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {yours}");
+                Plugin.Log.LogInfo(
+                    $"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {yours}");
             }
             Apply(Player.Instance);
         }
 
-        /// <summary>Client: tell the host our own level (after a level, a reset, our character's arrival).</summary>
+        /// <summary>
+        /// Client: tell the host our own level (after a level, a reset, our
+        /// character's arrival).
+        /// </summary>
         private static void SendLevel(Player p)
         {
             if (!NetEnemies.ClientMode || p == null)
@@ -477,7 +562,9 @@ namespace DarkwoodMP.World
             S.SendToHost(w, Channel.Control, reliable: true);
         }
 
-        /// <summary>Client: our character came from the host (World.Characters).</summary>
+        /// <summary>
+        /// Client: our character came from the host (World.Characters).
+        /// </summary>
         public static void AfterCharacter(Player p)
         {
             SendLevel(p);
@@ -487,7 +574,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Either side: our player cooked essence (amount: what it added to Player.experience).</summary>
+        /// <summary>
+        /// Either side: our player cooked essence (amount: what it added to
+        /// Player.experience).
+        /// </summary>
         internal static void Cooked(int amount)
         {
             var p = Player.Instance;
@@ -497,7 +587,8 @@ namespace DarkwoodMP.World
             }
             if (ClientActive)
             {
-                SharedExp += amount; // predicted; the host's ProgressState follows
+                // predicted; the host's ProgressState follows
+                SharedExp += amount;
                 var w = S.Begin(MsgType.EssenceAdd);
                 w.W.Write(amount);
                 Authority.Request(w, $"cook {amount} essence");
@@ -508,7 +599,9 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Either side: our player took a level (SkillsMenu.confirmSkills).</summary>
+        /// <summary>
+        /// Either side: our player took a level (SkillsMenu.confirmSkills).
+        /// </summary>
         internal static void LevelTaken()
         {
             var p = Player.Instance;
@@ -523,7 +616,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Call every frame: the host takes in what its own game did by itself (picked-up essence, a loaded save).</summary>
+        /// <summary>
+        /// Call every frame: the host takes in what its own game did by itself
+        /// (picked-up essence, a loaded save).
+        /// </summary>
         public static void Update()
         {
             if (Time.unscaledTime < _nextSync)
@@ -532,8 +628,10 @@ namespace DarkwoodMP.World
             }
             _nextSync = Time.unscaledTime + 1f;
             var s = S;
-            // Back at the main menu: forget the world's file, so a reload (maybe of an older save) reads it again.
-            if (!WorldShare.InWorld && (s == null || !s.Active) && _savedPath != null)
+            // Back at the main menu: forget the world's file, so a reload
+            // (maybe of an older save) reads it again.
+            if (!WorldShare.InWorld && (s == null || !s.Active)
+                && _savedPath != null)
             {
                 _saved = null;
                 _savedPath = null;
@@ -552,13 +650,16 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- the stove's level ----------------------------------------------------------------------
+        // ---- the stove's level ----------------------------------------------
 
         /// <summary>
-        /// The stove's full bar (LevelingMenu.checkIfWantToLevel -> SkillsMenu.showHideTiers): take the level and its
-        /// skill point, without the game's skill choice (the point is spent on the Skills panel). The rest is what
-        /// SkillsMenu.confirmSkills does after a choice: the bar starts again (and gives the next level if it's still
-        /// full), and levels 2, 3, 5, 6 and 7 bring their dream (only the host's in co-op, World.DreamSync).
+        /// The stove's full bar (LevelingMenu.checkIfWantToLevel ->
+        /// SkillsMenu.showHideTiers): take the level and its skill point,
+        /// without the game's skill choice (the point is spent on the Skills
+        /// panel). The rest is what SkillsMenu.confirmSkills does after a
+        /// choice: the bar starts again (and gives the next level if it's still
+        /// full), and levels 2, 3, 5, 6 and 7 bring their dream (only the
+        /// host's in co-op, World.DreamSync).
         /// </summary>
         internal static void TakeLevelAtStove()
         {
@@ -571,10 +672,13 @@ namespace DarkwoodMP.World
             p.currentLevel++;
             p.gainSaturation(5f);
             var d = Singleton<Dreams>.Instance;
-            bool client = d != null && NetEnemies.ClientMode && Hideouts.Together, was = d != null && d.disabled;
+            bool client = d != null && NetEnemies.ClientMode
+                && Hideouts.Together,
+                was = d != null && d.disabled;
             if (client)
             {
-                d.disabled = true; // a client's level brings no dream of its own
+                // a client's level brings no dream of its own
+                d.disabled = true;
             }
             try
             {
@@ -594,7 +698,8 @@ namespace DarkwoodMP.World
                     {
                         d.wantToDream = true;
                         d.hadDreamAtLvl2 = true;
-                        d.startTransition.dreamToTransitionTo = "dream_bunker_underground_01";
+                        d.startTransition.dreamToTransitionTo =
+                            "dream_bunker_underground_01";
                     }
                     if (l == 3 && !d.hadDreamAtLvl3)
                     {
@@ -617,7 +722,10 @@ namespace DarkwoodMP.World
                         d.hadDreamAtLvl7 = true;
                     }
                 }
-                if (d != null && d.wantToDream && (!Core.randomGeneration || d.hasUnspawnedRandomPresetForChapter(Singleton<WorldGenerator>.Instance.chapterID)))
+                if (d != null && d.wantToDream
+                    && (!Core.randomGeneration
+                        || d.hasUnspawnedRandomPresetForChapter(
+                            Singleton<WorldGenerator>.Instance.chapterID)))
                 {
                     Core.forbidInputs = true;
                     if (Singleton<CamMain>.Instance != null)
@@ -642,16 +750,19 @@ namespace DarkwoodMP.World
             }
             DreamSync.AfterConfirm(d);
             LevelTaken();
-            Plugin.Log.LogInfo($"[progress] took level {p.currentLevel} at the stove: {SkillTree.Points(p)} skill points to spend");
-            p.displayMessage($"A skill point to spend: press {SkillsPanel.KeyName} for the Skills");
+            Plugin.Log.LogInfo(
+                $"[progress] took level {p.currentLevel} at the stove: {SkillTree.Points(p)} skill points to spend");
+            p.displayMessage(
+                $"A skill point to spend: press {SkillsPanel.KeyName} for the Skills");
         }
 
-        // ---- skill reset ----------------------------------------------------------------------------
+        // ---- skill reset ----------------------------------------------------
 
         /// <summary>
-        /// Take back all of a player's chosen skills (good and negative). keepLevel: the levels stay, and the points
-        /// come back to spend again (a reset); otherwise Player.currentLevel goes to 0 (a new character, which takes
-        /// the shared levels at the stove).
+        /// Take back all of a player's chosen skills (good and negative).
+        /// keepLevel: the levels stay, and the points come back to spend again
+        /// (a reset); otherwise Player.currentLevel goes to 0 (a new character,
+        /// which takes the shared levels at the stove).
         /// </summary>
         public static void ClearSkills(Player p, bool keepLevel = false)
         {
@@ -717,14 +828,17 @@ namespace DarkwoodMP.World
             {
                 p.currentLevel = 0;
             }
-            Plugin.Log.LogInfo($"[progress] skills reset: {n} taken back, level {p.currentLevel}");
+            Plugin.Log.LogInfo(
+                $"[progress] skills reset: {n} taken back, level {p.currentLevel}");
         }
 
         private static bool CanResetHere(Player p)
         {
             var menu = StoveMenu;
             var skills = Singleton<SkillsMenu>.Instance;
-            return p != null && p.inLevelingMenu && menu != null && menu.openedAndTweened && !menu.wantToLevel && (skills == null || !skills.opened);
+            return p != null && p.inLevelingMenu && menu != null
+                && menu.openedAndTweened && !menu.wantToLevel
+                && (skills == null || !skills.opened);
         }
 
         private static bool _waitingReset;
@@ -743,7 +857,8 @@ namespace DarkwoodMP.World
                     return;
                 }
                 _waitingReset = true;
-                Authority.Request(S.Begin(MsgType.SkillReset), "reset skills", (ok, reason, _) =>
+                Authority.Request(S.Begin(MsgType.SkillReset), "reset skills",
+                    (ok, reason, _) =>
                 {
                     _waitingReset = false;
                     if (ok)
@@ -757,7 +872,8 @@ namespace DarkwoodMP.World
                         {
                             instance.displayMessage(reason);
                         }
-                        Plugin.Log.LogInfo($"[progress] reset refused: {reason}");
+                        Plugin.Log.LogInfo(
+                            $"[progress] reset refused: {reason}");
                     }
                 }, inventory: false);
                 return;
@@ -787,11 +903,13 @@ namespace DarkwoodMP.World
             {
                 HostSync();
             }
-            p.displayMessage($"Skills reset: {SkillTree.Points(p)} skill points to spend ({SkillsPanel.KeyName})");
+            p.displayMessage(
+                $"Skills reset: {SkillTree.Points(p)} skill points to spend ({SkillsPanel.KeyName})");
         }
 
-        /// <summary>At our stove: the levels waiting, the points to spend, and the reset button in the morning, in the
-        /// mod's menu style, with a window box behind them so they read over the world.</summary>
+        /// <summary>At our stove: the levels waiting, the points to spend, and
+        /// the reset button in the morning, in the mod's menu style, with a
+        /// window box behind them so they read over the world.</summary>
         public static void OnGUI()
         {
             var p = Player.Instance;
@@ -813,7 +931,8 @@ namespace DarkwoodMP.World
             }
             if (points > 0)
             {
-                lines.Add($"Skill points to spend: {points} ({SkillsPanel.KeyName}: Skills)");
+                lines.Add(
+                    $"Skill points to spend: {points} ({SkillsPanel.KeyName}: Skills)");
             }
             if (lines.Count == 0 && !morning)
             {
@@ -829,7 +948,8 @@ namespace DarkwoodMP.World
             {
                 button = "Asking the host...";
             }
-            float w = PixelFont.Width("Reset skills (mornings, once a day)") + 24 * s;
+            float w =
+                PixelFont.Width("Reset skills (mornings, once a day)") + 24 * s;
             foreach (var l in lines)
             {
                 w = Math.Max(w, PixelFont.Width(l) + 2 * pad);
@@ -844,12 +964,15 @@ namespace DarkwoodMP.World
                 }
             }
             float h = 2 * pad + lines.Count * line + row;
-            float x = Mathf.Round((Screen.width - w) / 2f), y = Mathf.Round(Screen.height - h - 40 * s);
+            float x = Mathf.Round((Screen.width - w) / 2f),
+                y = Mathf.Round(Screen.height - h - 40 * s);
             GUI.Box(new Rect(x, y, w, h), GUIContent.none, MenuSkin.Window);
             float ly = y + pad;
             foreach (var l in lines)
             {
-                Ui.Label(new Rect(x + pad, ly, w - 2 * pad, line), l, MenuSkin.Bright, TextAnchor.MiddleCenter);
+                Ui.Label(
+                    new Rect(x + pad, ly, w - 2 * pad, line), l,
+                    MenuSkin.Bright, TextAnchor.MiddleCenter);
                 ly += line;
             }
             if (morning)
@@ -858,7 +981,9 @@ namespace DarkwoodMP.World
                 {
                     ly += pad;
                 }
-                if (Ui.Button(new Rect(x + pad, ly, w - 2 * pad, Ui.RowH), button, !_waitingReset))
+                if (Ui.Button(
+                    new Rect(x + pad, ly, w - 2 * pad, Ui.RowH), button,
+                    !_waitingReset))
                 {
                     ResetHere();
                 }
@@ -866,12 +991,17 @@ namespace DarkwoodMP.World
             GUI.skin = skin;
         }
 
-        /// <summary>For tests: reset our skills at the stove as the button does.</summary>
+        /// <summary>
+        /// For tests: reset our skills at the stove as the button does.
+        /// </summary>
         internal static void TestReset() => ResetHere();
         internal static bool TestCanReset => CanResetHere(Player.Instance);
         internal static bool TestWaitingReset => _waitingReset;
 
-        /// <summary>For tests: give our player this many levels and the essence they need (and a skill chosen for each).</summary>
+        /// <summary>
+        /// For tests: give our player this many levels and the essence they
+        /// need (and a skill chosen for each).
+        /// </summary>
         internal static void TestGiveLevels(int n, bool chooseSkills = true)
         {
             var p = Player.Instance;
@@ -900,7 +1030,10 @@ namespace DarkwoodMP.World
             p.experience = Req(p, p.currentLevel - 1);
         }
 
-        /// <summary>For tests: our level, essence, the shared numbers and how many skills are chosen.</summary>
+        /// <summary>
+        /// For tests: our level, essence, the shared numbers and how many
+        /// skills are chosen.
+        /// </summary>
         internal static string TestState()
         {
             var p = Player.Instance;
@@ -925,7 +1058,10 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>The stove's full bar gives the level and its point, not the game's skill choice (Progression.TakeLevelAtStove).</summary>
+    /// <summary>
+    /// The stove's full bar gives the level and its point, not the game's skill
+    /// choice (Progression.TakeLevelAtStove).
+    /// </summary>
     [HarmonyPatch(typeof(SkillsMenu), nameof(SkillsMenu.showHideTiers))]
     static class StoveLevelPatch
     {

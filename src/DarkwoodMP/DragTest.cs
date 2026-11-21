@@ -6,13 +6,18 @@ using UnityEngine;
 namespace DarkwoodMP
 {
     /// <summary>
-    /// "--dwmp-test-drag" (Plugin): moving and resizing a UiWindow with made-up mouse events, in the main menu (issue
-    /// #18: slow drags felt stuck). Each case presses on the title bar (or the grip), moves the mouse in many small steps
-    /// or a few big ones, one event a frame, lets go, and checks that the window moved (or grew) exactly as far as the
-    /// mouse did. The moves and the release go through UiWindow.OnGUI as real ones do, and the window reads the mouse
-    /// from them (UiWindow.TestMouse) instead of from Input. The press on the title bar is started with UiWindow.BeginDrag: Unity calls a window function with the frame's real event, and a made-up event
-    /// put in place inside it arrived as an Ignore event, so that press (and Unity's GUI.DragWindow) can't be tried this
-    /// way. Logs "[drag]" lines, ending with "[drag] done".
+    /// "--dwmp-test-drag" (Plugin): moving and resizing a UiWindow with made-up
+    /// mouse events, in the main menu (issue #18: slow drags felt stuck). Each
+    /// case presses on the title bar (or the grip), moves the mouse in many
+    /// small steps or a few big ones, one event a frame, lets go, and checks
+    /// that the window moved (or grew) exactly as far as the mouse did. The
+    /// moves and the release go through UiWindow.OnGUI as real ones do, and the
+    /// window reads the mouse from them (UiWindow.TestMouse) instead of from
+    /// Input. The press on the title bar is started with UiWindow.BeginDrag:
+    /// Unity calls a window function with the frame's real event, and a made-up
+    /// event put in place inside it arrived as an Ignore event, so that press
+    /// (and Unity's GUI.DragWindow) can't be tried this way. Logs "[drag]"
+    /// lines, ending with "[drag] done".
     /// </summary>
     internal static class DragTest
     {
@@ -21,7 +26,10 @@ namespace DarkwoodMP
         private static readonly Queue<Event> _events = new Queue<Event>();
         private static int _fails;
 
-        /// <summary>Called last in Plugin.OnGUI. One made-up event replaces each frame's Repaint, before the window takes it.</summary>
+        /// <summary>
+        /// Called last in Plugin.OnGUI. One made-up event replaces each frame's
+        /// Repaint, before the window takes it.
+        /// </summary>
         public static void OnGUI()
         {
             if (_win == null || !_win.Open)
@@ -41,7 +49,8 @@ namespace DarkwoodMP
             }
             if (_events.Count > 0 && Event.current.type == EventType.Repaint)
             {
-                Event.current = _events.Dequeue();   // the window isn't drawn this frame
+                // the window isn't drawn this frame
+                Event.current = _events.Dequeue();
                 _mouse = Event.current.mousePosition;
             }
             _win.OnGUI();
@@ -55,14 +64,23 @@ namespace DarkwoodMP
             {
                 clicks = 1;
             }
-            return new Event { type = type, mousePosition = at, delta = delta, button = 0, clickCount = clicks };
+            return new Event
+            {
+                type = type,
+                mousePosition = at,
+                delta = delta,
+                button = 0,
+                clickCount = clicks
+            };
         }
 
         /// <summary>
-        /// "--dwmp-test-drag-real": the test window stays open in the main menu for a real mouse (a tool outside the
-        /// game presses on its title bar and moves). Each frame with the button held logs the frame time, the mouse
-        /// (Input and the last GUI event), the window's place, how far the window is from where the mouse puts it,
-        /// how many drag events came and the cursor's lock state ("[drag-real]" lines).
+        /// "--dwmp-test-drag-real": the test window stays open in the main menu
+        /// for a real mouse (a tool outside the game presses on its title bar
+        /// and moves). Each frame with the button held logs the frame time, the
+        /// mouse (Input and the last GUI event), the window's place, how far
+        /// the window is from where the mouse puts it, how many drag events
+        /// came and the cursor's lock state ("[drag-real]" lines).
         /// </summary>
         public static IEnumerator RunReal()
         {
@@ -80,14 +98,17 @@ namespace DarkwoodMP
                 }
             };
             _win.Show();
-            Plugin.Log.LogInfo($"[drag-real] ready: screen {Screen.width}x{Screen.height}, window at (200, 200), title bar to y {200 + 20 * UiWindow.S}");
+            Plugin.Log.LogInfo(
+                $"[drag-real] ready: screen {Screen.width}x{Screen.height}, window at (200, 200), title bar to y {200 + 20 * UiWindow.S}");
             float t0 = Time.realtimeSinceStartup;
             bool held = false;
             Vector2 grab = default, start = default;
             while (Time.realtimeSinceStartup - t0 < 120f)
             {
                 yield return null;
-                var m = new Vector2(Input.mousePosition.x, Screen.height - Input.mousePosition.y);
+                var m = new Vector2(
+                    Input.mousePosition.x,
+                    Screen.height - Input.mousePosition.y);
                 bool down = Input.GetMouseButton(0);
                 if (down && !held)
                 {
@@ -96,7 +117,8 @@ namespace DarkwoodMP
                 }
                 if (down || held)
                 {
-                    Plugin.Log.LogInfo($"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} mouse {m.x:0.#},{m.y:0.#} ev {_lastEv.x:0.#},{_lastEv.y:0.#} drags {_drags} win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size {_win.Rect.width:0.#}x{_win.Rect.height:0.#} off {(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
+                    Plugin.Log.LogInfo(
+                        $"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} mouse {m.x:0.#},{m.y:0.#} ev {_lastEv.x:0.#},{_lastEv.y:0.#} drags {_drags} win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size {_win.Rect.width:0.#}x{_win.Rect.height:0.#} off {(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
                 }
                 _drags = 0;
                 held = down;
@@ -108,7 +130,10 @@ namespace DarkwoodMP
         }
 
         private static bool _real;
-        /// <summary>The test window is open: the mouse cursor is shown over it as over the mod's other windows.</summary>
+        /// <summary>
+        /// The test window is open: the mouse cursor is shown over it as over
+        /// the mod's other windows.
+        /// </summary>
         internal static bool WindowOpen => _win != null && _win.Open;
         private static Vector2 _mouse;
         private static int _drags;
@@ -159,7 +184,8 @@ namespace DarkwoodMP
                 }
                 if (c.resize)
                 {
-                    _events.Enqueue(Mouse(EventType.MouseDown, from, Vector2.zero));
+                    _events.Enqueue(
+                        Mouse(EventType.MouseDown, from, Vector2.zero));
                 }
                 else
                 {
@@ -168,9 +194,15 @@ namespace DarkwoodMP
                 }
                 for (int i = 1; i <= c.steps; i++)
                 {
-                    _events.Enqueue(Mouse(EventType.MouseDrag, from + dir * (c.step * i), dir * c.step));
+                    _events.Enqueue(
+                        Mouse(
+                            EventType.MouseDrag, from + dir * (c.step * i),
+                            dir * c.step));
                 }
-                _events.Enqueue(Mouse(EventType.MouseUp, from + dir * (c.step * c.steps), Vector2.zero));
+                _events.Enqueue(
+                    Mouse(
+                        EventType.MouseUp, from + dir * (c.step * c.steps),
+                        Vector2.zero));
                 while (_events.Count > 0)
                 {
                     yield return null;
@@ -188,7 +220,8 @@ namespace DarkwoodMP
                 {
                     got = after.position - before.position;
                 }
-                bool ok = Mathf.Abs(got.x - want.x) < 0.01f && Mathf.Abs(got.y - want.y) < 0.01f;
+                bool ok = Mathf.Abs(got.x - want.x) < 0.01f
+                    && Mathf.Abs(got.y - want.y) < 0.01f;
                 if (!ok)
                 {
                     _fails++;
@@ -203,7 +236,8 @@ namespace DarkwoodMP
                 {
                     change = "grew";
                 }
-                Log($"{text} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {change} ({got.x:0.##}, {got.y:0.##})");
+                Log(
+                    $"{text} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {change} ({got.x:0.##}, {got.y:0.##})");
                 _win.Close();
                 yield return null;
             }

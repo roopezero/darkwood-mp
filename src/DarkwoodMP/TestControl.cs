@@ -13,9 +13,10 @@ using UnityEngine;
 namespace DarkwoodMP
 {
     /// <summary>
-    /// "--dwmp-test-control PORT": one game runs a whole test run, and tools/run-test.sh tells it what to do before
-    /// each test, over a TCP connection on 127.0.0.1 (never from another machine). One command per line, its
-    /// words separated by tabs; each gets one line back.
+    /// "--dwmp-test-control PORT": one game runs a whole test run, and
+    /// tools/run-test.sh tells it what to do before each test, over a TCP
+    /// connection on 127.0.0.1 (never from another machine). One command per
+    /// line, its words separated by tabs; each gets one line back.
     ///
     ///   title TEXT        show TEXT at the top of the screen ("Test (3/15): host-world - ...")      -> ok
     ///   reset             stop the last test, leave its session and world, wait for the main menu   -> ready
@@ -31,7 +32,8 @@ namespace DarkwoodMP
         public static string Title { get; private set; }
 
         private static Plugin _plugin;
-        private static readonly ConcurrentQueue<(string line, ReplyWriter reply)> _commands = new ConcurrentQueue<(string, ReplyWriter)>();
+        private static readonly ConcurrentQueue<(string line, ReplyWriter reply)> _commands =
+            new ConcurrentQueue<(string, ReplyWriter)>();
         private static bool _busy;
 
         public static void Start(Plugin plugin, int port)
@@ -54,7 +56,11 @@ namespace DarkwoodMP
                     {
                         return;
                     }
-                    new Thread(() => Serve(c)) { IsBackground = true, Name = "DarkwoodMP test control" }.Start();
+                    new Thread(() => Serve(c))
+                    {
+                        IsBackground = true,
+                        Name = "DarkwoodMP test control"
+                    }.Start();
                 }
             })
             {
@@ -73,7 +79,12 @@ namespace DarkwoodMP
                     {
                         using (var reader = new StreamReader(s, Encoding.UTF8))
                         {
-                            using (var writer = new StreamWriter(s, new UTF8Encoding(false)) { AutoFlush = true, NewLine = "\n" })
+                            using (var writer = new StreamWriter(
+                                s, new UTF8Encoding(false))
+                            {
+                                AutoFlush = true,
+                                NewLine = "\n"
+                            })
                             {
                                 string line;
                                 while ((line = reader.ReadLine()) != null)
@@ -94,7 +105,10 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>Replies from the main thread, then lets the connection's thread read the next command.</summary>
+        /// <summary>
+        /// Replies from the main thread, then lets the connection's thread read
+        /// the next command.
+        /// </summary>
         private sealed class ReplyWriter : StreamWriter
         {
             private readonly StreamWriter _to;
@@ -119,7 +133,10 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>Called every frame (Plugin.Update): runs the commands that came in, one at a time.</summary>
+        /// <summary>
+        /// Called every frame (Plugin.Update): runs the commands that came in,
+        /// one at a time.
+        /// </summary>
         public static void Update()
         {
             if (_busy || !_commands.TryDequeue(out var cmd))
@@ -134,12 +151,15 @@ namespace DarkwoodMP
             }
             catch (Exception e)
             {
-                // Without a reply the connection's thread waits for ever, and a set _busy stops every later command.
+                // Without a reply the connection's thread waits for ever, and a
+                // set _busy stops every later command.
                 Plugin.Log.LogWarning($"[test control] {words[0]}: {e}");
                 _busy = false;
                 if (!cmd.reply.Sent)
                 {
-                    cmd.reply.WriteLine($"fail {e.GetType().Name}: {e.Message}".Replace("\r", " ").Replace("\n", " "));
+                    cmd.reply.WriteLine(
+                        $"fail {e.GetType().Name}: {e.Message}".Replace(
+                            "\r", " ").Replace("\n", " "));
                 }
             }
         }
@@ -175,7 +195,8 @@ namespace DarkwoodMP
                     }
                     _busy = true;
                     var doReply = reply;
-                    _plugin.StartCoroutine(MapScenario.Run(words[1], words.Skip(2).ToArray(), line =>
+                    _plugin.StartCoroutine(MapScenario.Run(words[1],
+                        words.Skip(2).ToArray(), line =>
                     {
                         _busy = false;
                         doReply.WriteLine(line);
@@ -186,24 +207,29 @@ namespace DarkwoodMP
                     {
                         if (words.Length < 2)
                         {
-                            throw new ArgumentException("usage: dump PATH [X Z R]");
+                            throw new ArgumentException(
+                                "usage: dump PATH [X Z R]");
                         }
                         Vector3? at = null;
                         float radius = StateDump.DefaultRadius;
                         if (words.Length >= 4)
                         {
-                            at = new Vector3(MapScenario.F(words[2]), 0f, MapScenario.F(words[3]));
+                            at = new Vector3(
+                                MapScenario.F(words[2]), 0f,
+                                MapScenario.F(words[3]));
                         }
                         if (words.Length >= 5)
                         {
                             radius = MapScenario.F(words[4]);
                         }
-                        reply.WriteLine("ok " + StateDump.Write(words[1], at, radius));
+                        reply.WriteLine(
+                            "ok " + StateDump.Write(words[1], at, radius));
                     }
                     catch (Exception e)
                     {
                         Plugin.Log.LogWarning($"[test control] dump: {e}");
-                        reply.WriteLine($"fail {e.GetType().Name}: {e.Message}");
+                        reply.WriteLine(
+                            $"fail {e.GetType().Name}: {e.Message}");
                     }
                     break;
                 case "wait":
@@ -235,8 +261,11 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>Wait for something to happen in this game ("wait EVENT SECS").</summary>
-        private static IEnumerator Wait(string what, float secs, int count, StreamWriter reply)
+        /// <summary>
+        /// Wait for something to happen in this game ("wait EVENT SECS").
+        /// </summary>
+        private static IEnumerator Wait(
+            string what, float secs, int count, StreamWriter reply)
         {
             Func<bool> done;
             switch (what)
@@ -249,7 +278,8 @@ namespace DarkwoodMP
                     break;
                 default:
                     _busy = false;
-                    reply.WriteLine($"fail unknown event {what} (world-ready, player-joined)");
+                    reply.WriteLine(
+                        $"fail unknown event {what} (world-ready, player-joined)");
                     yield break;
             }
             float until = Time.realtimeSinceStartup + secs;
@@ -266,12 +296,14 @@ namespace DarkwoodMP
             reply.WriteLine(answer);
         }
 
-        /// <summary>Host: how many players have joined and are out of loading (their PlayerState no longer comes from
-        /// the loading spot at x = 75000, and they aren't away).</summary>
+        /// <summary>Host: how many players have joined and are out of loading
+        /// (their PlayerState no longer comes from the loading spot at
+        /// x = 75000, and they aren't away).</summary>
         private static int PlayersIn()
         {
             var s = Net.Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0 || !WorldShare.WorldReady)
+            if (s == null || !s.IsHost || s.Peers.Count == 0
+                || !WorldShare.WorldReady)
             {
                 return 0;
             }
@@ -283,13 +315,17 @@ namespace DarkwoodMP
             int n = 0;
             foreach (var kv in ps.Remotes)
             {
-                if (kv.Key == Sync.PlayerSync.DummyId || !s.Peers.Contains(kv.Key))
+                if (kv.Key == Sync.PlayerSync.DummyId
+                    || !s.Peers.Contains(kv.Key))
                 {
                     continue;
                 }
                 var last = kv.Value.Last;
-                // In the world, or with us in the prologue's stage (a place on the far-off grid, World.Prologue).
-                if (last != null && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away) || World.Prologue.InStage))
+                // In the world, or with us in the prologue's stage (a place on
+                // the far-off grid, World.Prologue).
+                if (last != null
+                    && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away)
+                        || World.Prologue.InStage))
                 {
                     n++;
                 }
@@ -297,7 +333,10 @@ namespace DarkwoodMP
             return n;
         }
 
-        /// <summary>Back to a clean main menu: the last test stopped, its session left, its world closed.</summary>
+        /// <summary>
+        /// Back to a clean main menu: the last test stopped, its session left,
+        /// its world closed.
+        /// </summary>
         private static IEnumerator Reset(StreamWriter reply)
         {
             try
@@ -308,12 +347,15 @@ namespace DarkwoodMP
             {
                 Plugin.Log.LogWarning($"[test control] reset: {e}");
             }
-            // The next test's area is the test world's again, not one a step of the last test moved it to (a game
-            // kept between map items, e.g. map:prologue's "centre-me").
+            // The next test's area is the test world's again, not one a step of
+            // the last test moved it to (a game kept between map items, e.g.
+            // map:prologue's "centre-me").
             MapScenario.ResetCentre();
-            // A world still loading is let finish first: leaving in the middle of it isn't something the game does.
+            // A world still loading is let finish first: leaving in the middle
+            // of it isn't something the game does.
             float until = Time.realtimeSinceStartup + 90f;
-            while (!WorldShare.InWorld && !WorldShare.MainMenuReady() && Time.realtimeSinceStartup < until)
+            while (!WorldShare.InWorld && !WorldShare.MainMenuReady()
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
@@ -334,12 +376,14 @@ namespace DarkwoodMP
                 yield return null;
             }
             until = Time.realtimeSinceStartup + 90f;
-            while ((!WorldShare.MainMenuReady() || SaveRedirect.Active) && Time.realtimeSinceStartup < until)
+            while ((!WorldShare.MainMenuReady() || SaveRedirect.Active)
+                && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
             Plugin.Instance.SetPanel(false);
-            MapScenarioIssues.MarkLogStart(); // the next test's log scans start here
+            // the next test's log scans start here
+            MapScenarioIssues.MarkLogStart();
             _busy = false;
             string answer = "error: no main menu after 90 s";
             if (WorldShare.MainMenuReady())
@@ -349,7 +393,10 @@ namespace DarkwoodMP
             reply.WriteLine(answer);
         }
 
-        /// <summary>Called from Plugin.OnGUI: the test's title along the top of the screen.</summary>
+        /// <summary>
+        /// Called from Plugin.OnGUI: the test's title along the top of the
+        /// screen.
+        /// </summary>
         public static void OnGUI()
         {
             if (string.IsNullOrEmpty(Title))
@@ -358,7 +405,12 @@ namespace DarkwoodMP
             }
             if (_style == null)
             {
-                _style = new GUIStyle(GUI.skin.label) { fontSize = 22, alignment = TextAnchor.MiddleCenter, wordWrap = true };
+                _style = new GUIStyle(GUI.skin.label)
+                {
+                    fontSize = 22,
+                    alignment = TextAnchor.MiddleCenter,
+                    wordWrap = true
+                };
                 _style.normal.textColor = Color.white;
                 _back = new Texture2D(1, 1);
                 _back.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.75f));

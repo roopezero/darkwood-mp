@@ -6,16 +6,20 @@ using UnityEngine;
 namespace DarkwoodMP
 {
     /// <summary>
-    /// "--dwmp-profile-mod": what the mod's own per-frame work costs. Each part of Plugin.Update is timed, and
-    /// every 10 seconds the log gets each part's average per frame, the mod's total (average and worst frame)
-    /// and the game's average frame. Harmony patches inside the game's code aren't included.
+    /// "--dwmp-profile-mod": what the mod's own per-frame work costs. Each part
+    /// of Plugin.Update is timed, and every 10 seconds the log gets each part's
+    /// average per frame, the mod's total (average and worst frame) and the
+    /// game's average frame. Harmony patches inside the game's code aren't
+    /// included.
     /// </summary>
     public static class ModProfiler
     {
         public static bool Enabled;
         private static readonly Stopwatch _sw = new Stopwatch();
-        private static readonly Dictionary<string, double> _ms = new Dictionary<string, double>();
-        private static readonly Dictionary<string, double> _worst = new Dictionary<string, double>();
+        private static readonly Dictionary<string, double> _ms =
+            new Dictionary<string, double>();
+        private static readonly Dictionary<string, double> _worst =
+            new Dictionary<string, double>();
         private static double _frameMod, _worstMod, _frames;
         private static float _frameTime, _since;
 
@@ -27,7 +31,9 @@ namespace DarkwoodMP
             }
         }
 
-        /// <summary>The time since Begin or the last Mark goes to this part.</summary>
+        /// <summary>
+        /// The time since Begin or the last Mark goes to this part.
+        /// </summary>
         public static void Mark(string part)
         {
             if (!Enabled)
@@ -65,8 +71,13 @@ namespace DarkwoodMP
             }
             _since = Time.unscaledTime;
             double total = _ms.Values.Sum();
-            string parts = string.Join(", ", _ms.OrderByDescending(kv => kv.Value).Take(10).Select(kv => $"{kv.Key} {kv.Value / _frames:0.000} (worst {_worst[kv.Key]:0.0})"));
-            Plugin.Log.LogInfo($"[profile-mod] {_frames} frames, {_frameTime / _frames * 1000f:0.0} ms each; the mod {total / _frames:0.000} ms a frame (worst {_worstMod:0.00}): {parts}");
+            string parts = string.Join(
+                ", ",
+                _ms.OrderByDescending(kv => kv.Value).Take(10)
+                    .Select(
+                        kv => $"{kv.Key} {kv.Value / _frames:0.000} (worst {_worst[kv.Key]:0.0})"));
+            Plugin.Log.LogInfo(
+                $"[profile-mod] {_frames} frames, {_frameTime / _frames * 1000f:0.0} ms each; the mod {total / _frames:0.000} ms a frame (worst {_worstMod:0.00}): {parts}");
             _ms.Clear();
             _worst.Clear();
             _frames = 0;

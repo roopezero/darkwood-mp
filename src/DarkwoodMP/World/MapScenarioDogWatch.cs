@@ -11,8 +11,9 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps that log what the enemies near the players do and why ([dogwatch] lines), to find what wakes
-    /// the save's sleeping and eating dogs.
+    /// Map test steps that log what the enemies near the players do and why
+    /// ([dogwatch] lines), to find what wakes the save's sleeping and eating
+    /// dogs.
     ///   dw-on / dw-off   start / stop the watch in this game. Host: each enemy near a player, when its sleeping,
     ///                    waking, eating, behaviour, target or life changes, with how far it is from each player;
     ///                    what woke or alerted it (Character.wakeup / beAlerted / the sounds it heard, with their
@@ -97,15 +98,18 @@ namespace DarkwoodMP.World
                 {
                     aniNote = " ani:" + c.customAni;
                 }
-                parts.Add($"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{eatingNote}{aniNote}");
+                parts.Add(
+                    $"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{eatingNote}{aniNote}");
             }
             Plugin.Log.LogInfo("[dogwatch] list: " + string.Join("; ", parts));
-            return parts.Count + " enemies: " + string.Join("; ", parts.Take(30));
+            return parts.Count + " enemies: " + string.Join(
+                "; ", parts.Take(30));
         }
 
         internal static string Id(Character c)
         {
-            if (NetEnemies.Instance != null && NetEnemies.Instance.NetIdOf(c, out uint id))
+            if (NetEnemies.Instance != null
+                && NetEnemies.Instance.NetIdOf(c, out uint id))
             {
                 return id.ToString();
             }
@@ -118,19 +122,24 @@ namespace DarkwoodMP.World
             return $"{p.x - c.x:0},{p.z - c.z:0}";
         }
 
-        /// <summary>How far from each player (host's own and the proxies), as "host 120 / client 45 (proxy at x,z)".</summary>
+        /// <summary>
+        /// How far from each player (host's own and the proxies), as "host 120
+        /// / client 45 (proxy at x,z)".
+        /// </summary>
         internal static string Dists(Vector3 p)
         {
             var parts = new List<string>();
             if (Player.Instance != null)
             {
-                parts.Add($"me {StateDump.Flat(Player.Instance.transform.position - p):0}");
+                parts.Add(
+                    $"me {StateDump.Flat(Player.Instance.transform.position - p):0}");
             }
             foreach (var px in NetPlayerProxy.All.Values)
             {
                 if (px != null)
                 {
-                    parts.Add($"{px.OwnerName} {StateDump.Flat(px.transform.position - p):0} (at {Rel(px.transform.position)})");
+                    parts.Add(
+                        $"{px.OwnerName} {StateDump.Flat(px.transform.position - p):0} (at {Rel(px.transform.position)})");
                 }
             }
             return string.Join(" / ", parts);
@@ -177,7 +186,8 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            return StateDump.Flat(c.transform.position - MapScenario.Centre) < 3000f;
+            return StateDump.Flat(c.transform.position - MapScenario.Centre)
+                < 3000f;
         }
 
         private sealed class Watch : MonoBehaviour
@@ -188,11 +198,13 @@ namespace DarkwoodMP.World
                 public Character.Behaviour B;
                 public Transform T;
             }
-            private static readonly Dictionary<Character, St> _last = new Dictionary<Character, St>();
+            private static readonly Dictionary<Character, St> _last =
+                new Dictionary<Character, St>();
             private static float _next, _nextScan, _nextPos;
             private static List<Character> _list = new List<Character>();
             public static int Wakes, Alerts, Changes, Close;
-            private static readonly HashSet<uint> _closeNow = new HashSet<uint>();
+            private static readonly HashSet<uint> _closeNow =
+                new HashSet<uint>();
 
             public static void Reset()
             {
@@ -204,7 +216,8 @@ namespace DarkwoodMP.World
             }
             public static void Woke() => Wakes++;
             public static void Alerted() => Alerts++;
-            public static string Summary() => $"wakes {Wakes}, alerts {Alerts}, state changes {Changes}, close contacts {Close}";
+            public static string Summary() =>
+                $"wakes {Wakes}, alerts {Alerts}, state changes {Changes}, close contacts {Close}";
 
             private void Update()
             {
@@ -233,7 +246,12 @@ namespace DarkwoodMP.World
                 if (Time.unscaledTime >= _nextScan)
                 {
                     _nextScan = Time.unscaledTime + 3f;
-                    _list = Object.FindObjectsOfType<Character>().Where(c => c != null && c.npc == null && StateDump.Flat(c.transform.position - MapScenario.Centre) < 3000f).ToList();
+                    _list = Object.FindObjectsOfType<Character>()
+                        .Where(
+                            c => c != null && c.npc == null
+                                && StateDump.Flat(
+                                    c.transform.position - MapScenario.Centre)
+                                    < 3000f).ToList();
                 }
                 foreach (var c in _list)
                 {
@@ -241,8 +259,22 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    var st = new St { Sleep = c.sleeping, Waking = c.wakingUp, Eat = c.eating, Alive = c.alive, Ani = c.playingCustomAni, Atk = c.attacking, B = c.behaviour, T = c.target };
-                    if (_last.TryGetValue(c, out var o) && o.Sleep == st.Sleep && o.Waking == st.Waking && o.Eat == st.Eat && o.Alive == st.Alive && o.Ani == st.Ani && o.Atk == st.Atk && (o.B == st.B || o.Eat && st.Eat) && o.T == st.T)
+                    var st = new St
+                    {
+                        Sleep = c.sleeping,
+                        Waking = c.wakingUp,
+                        Eat = c.eating,
+                        Alive = c.alive,
+                        Ani = c.playingCustomAni,
+                        Atk = c.attacking,
+                        B = c.behaviour,
+                        T = c.target
+                    };
+                    if (_last.TryGetValue(c, out var o) && o.Sleep == st.Sleep
+                        && o.Waking == st.Waking && o.Eat == st.Eat
+                        && o.Alive == st.Alive && o.Ani == st.Ani
+                        && o.Atk == st.Atk && (o.B == st.B || o.Eat && st.Eat)
+                        && o.T == st.T)
                     {
                         continue;
                     }
@@ -296,7 +328,8 @@ namespace DarkwoodMP.World
                     {
                         target = st.T.name;
                     }
-                    Plugin.Log.LogInfo($"[dogwatch] {name}#{label} at {place}: {dead}{asleep}{waking}{eating}{ani}{attacking}{st.B} -> {target}; {Dists(c.transform.position)}");
+                    Plugin.Log.LogInfo(
+                        $"[dogwatch] {name}#{label} at {place}: {dead}{asleep}{waking}{eating}{ani}{attacking}{st.B} -> {target}; {Dists(c.transform.position)}");
                 }
                 if (Time.unscaledTime >= _nextPos)
                 {
@@ -311,9 +344,11 @@ namespace DarkwoodMP.World
                             string myPlace = "-";
                             if (Player.Instance != null)
                             {
-                                myPlace = Rel(Player.Instance.transform.position);
+                                myPlace =
+                                    Rel(Player.Instance.transform.position);
                             }
-                            Plugin.Log.LogInfo($"[dogwatch] t {now:0.0}: proxy {owner} at {proxyPlace}, me at {myPlace}");
+                            Plugin.Log.LogInfo(
+                                $"[dogwatch] t {now:0.0}: proxy {owner} at {proxyPlace}, me at {myPlace}");
                         }
                     }
                 }
@@ -350,7 +385,8 @@ namespace DarkwoodMP.World
                             {
                                 asleep = " asleep";
                             }
-                            Plugin.Log.LogInfo($"[dogwatch] our player touches the host's {name} #{id}: {d:0} apart, it at {place}{asleep}, we at {Rel(at)}");
+                            Plugin.Log.LogInfo(
+                                $"[dogwatch] our player touches the host's {name} #{id}: {d:0} apart, it at {place}{asleep}, we at {Rel(at)}");
                         }
                     }
                     else
@@ -369,7 +405,8 @@ namespace DarkwoodMP.World
                 }
                 if (log && near.Count > 0)
                 {
-                    Plugin.Log.LogInfo($"[dogwatch] t {Time.unscaledTime:0.0}: we at {Rel(at)}; near: {string.Join(", ", near)}");
+                    Plugin.Log.LogInfo(
+                        $"[dogwatch] t {Time.unscaledTime:0.0}: we at {Rel(at)}; near: {string.Join(", ", near)}");
                 }
             }
         }
@@ -379,7 +416,8 @@ namespace DarkwoodMP.World
         {
             static void Prefix(Character __instance)
             {
-                if (!Watched(__instance) || !__instance.sleeping || __instance.wakingUp)
+                if (!Watched(__instance) || !__instance.sleeping
+                    || __instance.wakingUp)
                 {
                     return;
                 }
@@ -393,14 +431,17 @@ namespace DarkwoodMP.World
                 {
                     source = Threat.NoiseSource.name;
                 }
-                Plugin.Log.LogInfo($"[dogwatch] WAKE {name}#{label} at {place} by {caller}; noise source {source}; {Dists(__instance.transform.position)}");
+                Plugin.Log.LogInfo(
+                    $"[dogwatch] WAKE {name}#{label} at {place} by {caller}; noise source {source}; {Dists(__instance.transform.position)}");
             }
         }
 
         [HarmonyPatch(typeof(Character), nameof(Character.beAlerted))]
         static class AlertPatch
         {
-            static void Prefix(Character __instance, Transform destTarget, bool isAggressiveAction)
+            static void Prefix(
+                Character __instance, Transform destTarget,
+                bool isAggressiveAction)
             {
                 if (!Watched(__instance) || __instance.target == destTarget)
                 {
@@ -425,13 +466,22 @@ namespace DarkwoodMP.World
                 {
                     target = destTarget.name;
                 }
-                Plugin.Log.LogInfo($"[dogwatch] ALERT {name}#{label} at {place}{asleep}{eating} at {target} aggressive {isAggressiveAction} by {Caller()}; {Dists(__instance.transform.position)}");
+                Plugin.Log.LogInfo(
+                    $"[dogwatch] ALERT {name}#{label} at {place}{asleep}{eating} at {target} aggressive {isAggressiveAction} by {Caller()}; {Dists(__instance.transform.position)}");
             }
         }
 
-        private static readonly Dictionary<int, float> _heardAt = new Dictionary<int, float>();
+        private static readonly Dictionary<int, float> _heardAt =
+            new Dictionary<int, float>();
 
-        [HarmonyPatch(typeof(Character), nameof(Character.heardSound), new[] { typeof(Vector3), typeof(float), typeof(bool), typeof(float), typeof(bool) })]
+        [HarmonyPatch(typeof(Character), nameof(Character.heardSound), new[]
+        {
+            typeof(Vector3),
+            typeof(float),
+            typeof(bool),
+            typeof(float),
+            typeof(bool)
+        })]
         static class HearPatch
         {
             static void Prefix(Character __instance, out float __state)
@@ -446,15 +496,19 @@ namespace DarkwoodMP.World
                 }
             }
 
-            static void Postfix(Character __instance, Vector3 Position, float soundRange, bool dangerousSound, float volume, float __state)
+            static void Postfix(
+                Character __instance, Vector3 Position, float soundRange,
+                bool dangerousSound, float volume, float __state)
             {
                 if (!Watched(__instance))
                 {
                     return;
                 }
-                bool crossed = __instance.hearingCounter >= 1f && __state < 1f || dangerousSound;
+                bool crossed = __instance.hearingCounter >= 1f && __state < 1f
+                    || dangerousSound;
                 int id = __instance.GetInstanceID();
-                if (!crossed && _heardAt.TryGetValue(id, out var t) && Time.unscaledTime - t < 2f)
+                if (!crossed && _heardAt.TryGetValue(id, out var t)
+                    && Time.unscaledTime - t < 2f)
                 {
                     return;
                 }
@@ -478,13 +532,15 @@ namespace DarkwoodMP.World
                 }
                 float counter = __instance.hearingCounter;
                 string origin = Rel(Position);
-                float distance = StateDump.Flat(Position - __instance.transform.position);
+                float distance =
+                    StateDump.Flat(Position - __instance.transform.position);
                 string source = "-";
                 if (Threat.NoiseSource != null)
                 {
                     source = Threat.NoiseSource.name;
                 }
-                Plugin.Log.LogInfo($"[dogwatch] HEARD {name}#{label}{asleep}{eating} {loud}counter {__state:0.00}->{counter:0.00} from {origin} ({distance:0} away) range {soundRange:0} vol {volume:0.00} danger {dangerousSound} source {source} by {Caller()}");
+                Plugin.Log.LogInfo(
+                    $"[dogwatch] HEARD {name}#{label}{asleep}{eating} {loud}counter {__state:0.00}->{counter:0.00} from {origin} ({distance:0} away) range {soundRange:0} vol {volume:0.00} danger {dangerousSound} source {source} by {Caller()}");
             }
         }
     }

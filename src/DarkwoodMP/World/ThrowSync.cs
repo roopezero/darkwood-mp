@@ -8,23 +8,31 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Thrown things (molotovs, pipe bombs, rocks, flares...), shared. When a player throws one (Player.throwItem),
-    /// the same item is thrown in every other game, from the same spot, with the same velocity and target, so
-    /// everyone sees it fly, land, explode and burn. One dropped at the player's feet instead (Player.dropItem:
-    /// a dropOnReleaseAim item when the player stops aiming, or a held throwable when the player is interrupted)
-    /// is sent the same way with distance -1, and dropped (ThrownItem.dropMe) where it fell in the other games.
+    /// Thrown things (molotovs, pipe bombs, rocks, flares...), shared. When a
+    /// player throws one (Player.throwItem), the same item is thrown in every
+    /// other game, from the same spot, with the same velocity and target, so
+    /// everyone sees it fly, land, explode and burn. One dropped at the
+    /// player's feet instead (Player.dropItem:
+    /// a dropOnReleaseAim item when the player stops aiming, or a held
+    /// throwable when the player is interrupted) is sent the same way with
+    /// distance -1, and dropped (ThrownItem.dropMe) where it fell in the other
+    /// games.
     ///
-    /// Who it hurts is the host's to decide, as with every other hit on its enemies: the host's copy (or its own
-    /// throw) deals the damage, and on a client nothing a thrown thing does to the host's enemies is sent as a hit
-    /// (not its impact, its explosion, or the flames it leaves; see ThrownHits).
+    /// Who it hurts is the host's to decide, as with every other hit on its
+    /// enemies: the host's copy (or its own throw) deals the damage, and on a
+    /// client nothing a thrown thing does to the host's enemies is sent as a
+    /// hit (not its impact, its explosion, or the flames it leaves; see
+    /// ThrownHits).
     ///
-    /// Something thrown that can be picked up again (a knife, a brick) lands only in the thrower's game: the
-    /// others' copies fly and hit, then go, so it isn't there to pick up twice.
+    /// Something thrown that can be picked up again (a knife, a brick) lands
+    /// only in the thrower's game: the others' copies fly and hit, then go, so
+    /// it isn't there to pick up twice.
     /// </summary>
     public sealed class ThrowSync
     {
         private readonly Session _session;
-        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem = AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
+        private static readonly AccessTools.FieldRef<Player, GameObject> HeldItem =
+            AccessTools.FieldRefAccess<Player, GameObject>("heldItem");
 
         public static ThrowSync Instance { get; private set; }
 
@@ -37,7 +45,10 @@ namespace DarkwoodMP.World
 
         internal static GameObject Held(Player p) => HeldItem(p);
 
-        /// <summary>What the player holds ready to throw or drop, and its item type (before Player.throwItem / dropItem).</summary>
+        /// <summary>
+        /// What the player holds ready to throw or drop, and its item type
+        /// (before Player.throwItem / dropItem).
+        /// </summary>
         internal static (GameObject go, string type) Holding(Player p)
         {
             var cur = p.currentItem;
@@ -54,10 +65,14 @@ namespace DarkwoodMP.World
             return (held, type);
         }
 
-        /// <summary>The local player threw it (called after Player.throwItem).</summary>
-        internal void Thrown(string type, GameObject go, Vector3 from, bool dropped = false)
+        /// <summary>
+        /// The local player threw it (called after Player.throwItem).
+        /// </summary>
+        internal void Thrown(
+            string type, GameObject go, Vector3 from, bool dropped = false)
         {
-            if (!WorldActions.Sharing || go == null || string.IsNullOrEmpty(type))
+            if (!WorldActions.Sharing || go == null
+                || string.IsNullOrEmpty(type))
             {
                 return;
             }
@@ -95,7 +110,9 @@ namespace DarkwoodMP.World
             {
                 distance = Vector3.Distance(ti.landTarget, from);
             }
-            Write(w, _session.LocalId, type, go.transform.position, go.transform.rotation, vel, target, distance);
+            Write(
+                w, _session.LocalId, type, go.transform.position,
+                go.transform.rotation, vel, target, distance);
             if (_session.IsHost)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
@@ -115,7 +132,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>The copy of a throw doesn't collide with its thrower's stand-in (the host's proxy) or puppet.</summary>
+        /// <summary>
+        /// The copy of a throw doesn't collide with its thrower's stand-in (the
+        /// host's proxy) or puppet.
+        /// </summary>
         private static void IgnoreThrower(GameObject go, ulong by)
         {
             var mine = go.GetComponentsInChildren<Collider>(true);
@@ -124,13 +144,17 @@ namespace DarkwoodMP.World
                 return;
             }
             var theirs = new List<Collider>();
-            if (NetPlayerProxy.All.TryGetValue(by, out var proxy) && proxy != null)
+            if (NetPlayerProxy.All.TryGetValue(by, out var proxy)
+                && proxy != null)
             {
                 theirs.AddRange(proxy.GetComponentsInChildren<Collider>(true));
             }
-            if (PlayerSync.Instance != null && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp) && rp.Root != null)
+            if (PlayerSync.Instance != null
+                && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp)
+                && rp.Root != null)
             {
-                theirs.AddRange(rp.Root.GetComponentsInChildren<Collider>(true));
+                theirs.AddRange(
+                    rp.Root.GetComponentsInChildren<Collider>(true));
             }
             foreach (var a in mine)
             {
@@ -144,10 +168,15 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>The distance sent for something dropped at the player's feet (Player.dropItem), not thrown.</summary>
+        /// <summary>
+        /// The distance sent for something dropped at the player's feet
+        /// (Player.dropItem), not thrown.
+        /// </summary>
         private const float Dropped = -1f;
 
-        private static void Write(PacketWriter w, ulong by, string type, Vector3 pos, Quaternion rot, Vector3 vel, Vector3 target, float distance)
+        private static void Write(
+            PacketWriter w, ulong by, string type, Vector3 pos, Quaternion rot,
+            Vector3 vel, Vector3 target, float distance)
         {
             w.W.Write(by);
             w.WriteStr(type);
@@ -175,13 +204,16 @@ namespace DarkwoodMP.World
             ulong by = r.R.ReadUInt64();
             string type = r.ReadStr();
             var pos = r.ReadVector3();
-            var rot = new Quaternion(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var rot = new Quaternion(
+                r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
+                r.R.ReadSingle());
             var vel = r.ReadVector3();
             var target = r.ReadVector3();
             float distance = r.R.ReadSingle();
             if (s.IsHost && !Authority.Near(from, pos, 400f))
             {
-                Plugin.Log.LogInfo($"[authority] {s.NameOf(from)} threw a {type} from where they aren't: not thrown");
+                Plugin.Log.LogInfo(
+                    $"[authority] {s.NameOf(from)} threw a {type} from where they aren't: not thrown");
                 return;
             }
             if (s.IsHost)
@@ -204,18 +236,23 @@ namespace DarkwoodMP.World
             }
             if (item == null || item.item == null)
             {
-                Plugin.Log.LogWarning($"Someone threw a {type}, which this game doesn't know");
+                Plugin.Log.LogWarning(
+                    $"Someone threw a {type}, which this game doesn't know");
                 return;
             }
 
-            // Who threw it, as the game's code sees them: the host's proxy for them (the AI's view of that player,
-            // so the host's enemies blame the right player), else their puppet.
+            // Who threw it, as the game's code sees them: the host's proxy for
+            // them (the AI's view of that player, so the host's enemies blame
+            // the right player), else their puppet.
             Transform thrower = null;
-            if (NetPlayerProxy.All.TryGetValue(by, out var proxy) && proxy != null)
+            if (NetPlayerProxy.All.TryGetValue(by, out var proxy)
+                && proxy != null)
             {
                 thrower = proxy.transform;
             }
-            else if (PlayerSync.Instance != null && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp) && rp.Root != null)
+            else if (PlayerSync.Instance != null
+                && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp)
+                && rp.Root != null)
             {
                 thrower = rp.Root.transform;
             }
@@ -247,13 +284,16 @@ namespace DarkwoodMP.World
             {
                 ren.enabled = true;
             }
-            // The thrower's game makes it inside their player and keeps it from hitting them (Player's aim:
-            // Physics.IgnoreCollision with the player). The copy starts inside their stand-in here: without the same,
-            // a molotov or gas bomb broke on the thrower at once and set them alight.
+            // The thrower's game makes it inside their player and keeps it from
+            // hitting them (Player's aim: Physics.IgnoreCollision with the
+            // player). The copy starts inside their stand-in here: without the
+            // same, a molotov or gas bomb broke on the thrower at once and set
+            // them alight.
             IgnoreThrower(go, by);
             if (distance < 0f)
             {
-                // Dropped, as Player.dropItem does it: it lies where it fell and goes off after its delay.
+                // Dropped, as Player.dropItem does it: it lies where it fell
+                // and goes off after its delay.
                 rb.velocity = Vector3.zero;
                 ti.objectThatSpawnedMe = thrower;
                 var dex = go.GetComponent<Explodes>();
@@ -269,7 +309,8 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] {s.NameOf(by)} dropped {type}");
+                    Plugin.Log.LogInfo(
+                        $"[world] {s.NameOf(by)} dropped {type}");
                 }
                 return;
             }
@@ -295,11 +336,14 @@ namespace DarkwoodMP.World
             ThrownHits.Copies.Add(go);
             if (item.recoverableAfterThrown)
             {
-                Object.Destroy(go, ti.flyTime + 2f); // the thrower's lands; this one goes
+                // the thrower's lands; this one goes
+                Object.Destroy(go, ti.flyTime + 2f);
             }
             else if (s.IsHost)
             {
-                Core.addToSaveable(go, isDynamic: true); // a flare left burning, a spent molotov: the host's world keeps it
+                // a flare left burning, a spent molotov: the host's world keeps
+                // it
+                Core.addToSaveable(go, isDynamic: true);
             }
             if (WorldActions.Debug)
             {
@@ -309,22 +353,29 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// Player.dropItem: an item that's dropped when the player stops aiming (InvItem.dropOnReleaseAim), or the
-    /// held throwable when the player is interrupted (force), falls at the player's feet; it's sent like a throw.
+    /// Player.dropItem: an item that's dropped when the player stops aiming
+    /// (InvItem.dropOnReleaseAim), or the held throwable when the player is
+    /// interrupted (force), falls at the player's feet; it's sent like a throw.
     /// </summary>
     [HarmonyPatch(typeof(Player), "dropItem")]
     static class PlayerDropPatch
     {
-        static void Prefix(Player __instance, out (GameObject go, string type) __state) => __state = ThrowSync.Holding(__instance);
+        static void Prefix(
+            Player __instance,
+            out (GameObject go, string type) __state) => __state =
+                ThrowSync.Holding(__instance);
 
-        static void Postfix(Player __instance, (GameObject go, string type) __state)
+        static void Postfix(
+            Player __instance, (GameObject go, string type) __state)
         {
             if (__state.go != null && ThrowSync.Held(__instance) == null)
             {
                 ThrowSync instance = ThrowSync.Instance;
                 if (instance != null)
                 {
-                    instance.Thrown(__state.type, __state.go, __instance.transform.position, dropped: true);
+                    instance.Thrown(
+                        __state.type, __state.go, __instance.transform.position,
+                        dropped: true);
                 }
             }
         }
@@ -333,40 +384,59 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Player), "throwItem")]
     static class PlayerThrowPatch
     {
-        static void Prefix(Player __instance, out (GameObject go, string type) __state) => __state = ThrowSync.Holding(__instance);
+        static void Prefix(
+            Player __instance,
+            out (GameObject go, string type) __state) => __state =
+                ThrowSync.Holding(__instance);
 
-        static void Postfix(Player __instance, (GameObject go, string type) __state)
+        static void Postfix(
+            Player __instance, (GameObject go, string type) __state)
         {
             if (__state.go != null)
             {
                 ThrowSync instance = ThrowSync.Instance;
                 if (instance != null)
                 {
-                    instance.Thrown(__state.type, __state.go, __instance.transform.position);
+                    instance.Thrown(
+                        __state.type, __state.go,
+                        __instance.transform.position);
                 }
             }
         }
     }
 
     /// <summary>
-    /// A client's game sends no hits on the host's enemies from anything thrown: the host's copy of the throw
-    /// hits them there. That covers the impact (ThrownItem.onCollide), the explosion (Explodes), what it leaves
-    /// burning (flames spawned while it lands or explodes), and the client's own player being caught in an
-    /// explosion, which the host's copy reports through the client's proxy.
+    /// A client's game sends no hits on the host's enemies from anything
+    /// thrown: the host's copy of the throw hits them there. That covers the
+    /// impact (ThrownItem.onCollide), the explosion (Explodes), what it leaves
+    /// burning (flames spawned while it lands or explodes), and the client's
+    /// own player being caught in an explosion, which the host's copy reports
+    /// through the client's proxy.
     /// </summary>
     public static class ThrownHits
     {
         /// <summary>Copies of others' throws in this game.</summary>
-        public static readonly HashSet<GameObject> Copies = new HashSet<GameObject>();
-        /// <summary>What thrown things spawned as they landed or exploded (fire, fuel...), in this game.</summary>
-        public static readonly HashSet<GameObject> Spawned = new HashSet<GameObject>();
+        public static readonly HashSet<GameObject> Copies =
+            new HashSet<GameObject>();
+        /// <summary>
+        /// What thrown things spawned as they landed or exploded (fire,
+        /// fuel...), in this game.
+        /// </summary>
+        public static readonly HashSet<GameObject> Spawned =
+            new HashSet<GameObject>();
 
-        /// <summary>How deep in a thrown thing's impact or explosion we are.</summary>
+        /// <summary>
+        /// How deep in a thrown thing's impact or explosion we are.
+        /// </summary>
         public static int Depth;
-        /// <summary>The flame touching something right now (Flame.onCollideWith).</summary>
+        /// <summary>
+        /// The flame touching something right now (Flame.onCollideWith).
+        /// </summary>
         public static Flame CurrentFlame;
 
-        /// <summary>Whether a hit happening now comes from something thrown.</summary>
+        /// <summary>
+        /// Whether a hit happening now comes from something thrown.
+        /// </summary>
         public static bool Now()
         {
             if (Depth > 0)
@@ -418,7 +488,9 @@ namespace DarkwoodMP.World
         {
             yield return AccessTools.Method(typeof(Explodes), "explode");
             yield return AccessTools.Method(typeof(Explodes), "spawnObjects");
-            yield return AccessTools.Method(typeof(Explodes), nameof(Explodes.onActivate), new System.Type[0]);
+            yield return AccessTools.Method(
+                typeof(Explodes), nameof(Explodes.onActivate),
+                new System.Type[0]);
         }
         static void Prefix() => ThrownHits.Depth++;
         static void Postfix() => ThrownHits.Depth--;
@@ -433,27 +505,35 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// A flame touching something (Flame.onCollideWith). Noted for ThrownHits, and:
-    /// on the host, an enemy's flame on a proxy hurts that player (EnemyAreaHits.FlameTouch);
-    /// on a client, our own weapon's flame (a flamethrower) sends its burn with the hit on the host's enemy
-    /// (NetEnemies.HitEffects), and a door, window or furniture it sets alight goes to the host as a request
+    /// A flame touching something (Flame.onCollideWith). Noted for ThrownHits,
+    /// and:
+    /// on the host, an enemy's flame on a proxy hurts that player
+    /// (EnemyAreaHits.FlameTouch);
+    /// on a client, our own weapon's flame (a flamethrower) sends its burn with
+    /// the hit on the host's enemy (NetEnemies.HitEffects), and a door, window
+    /// or furniture it sets alight goes to the host as a request
     /// (FireSync.ClientIgnited).
     /// </summary>
     [HarmonyPatch(typeof(Flame), "onCollideWith")]
     static class FlameTouchPatch
     {
-        static void Prefix(Flame __instance, Transform _transform, Collider _collider, out GameObject __state)
+        static void Prefix(
+            Flame __instance, Transform _transform, Collider _collider,
+            out GameObject __state)
         {
             ThrownHits.CurrentFlame = __instance;
             __state = null;
             EnemyAreaHits.FlameTouch(__instance, _transform, _collider);
-            if (!NetEnemies.ClientMode || __instance == null || !__instance.isActive || !EnemyAreaHits.ByLocalPlayer(__instance))
+            if (!NetEnemies.ClientMode || __instance == null
+                || !__instance.isActive
+                || !EnemyAreaHits.ByLocalPlayer(__instance))
             {
                 return;
             }
             if (__instance.effect != null)
             {
-                NetEnemies.HitEffects = new List<InvItemEffect> { __instance.effect };
+                NetEnemies.HitEffects =
+                    new List<InvItemEffect> { __instance.effect };
             }
             var target = FireSync.Flammable(_transform, _collider);
             if (target != null && target.GetComponent<Burn>() == null)
@@ -484,14 +564,33 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Note what a landing or exploding thrown thing spawns (fire, fuel), so its flames count as thrown.</summary>
+    /// <summary>
+    /// Note what a landing or exploding thrown thing spawns (fire, fuel), so
+    /// its flames count as thrown.
+    /// </summary>
     [HarmonyPatch]
     static class ThrownSpawnPatch
     {
         static IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
-            yield return AccessTools.Method(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) });
+            yield return AccessTools.Method(typeof(Core),
+                nameof(Core.AddPrefab), new[]
+            {
+                typeof(Object),
+                typeof(Vector3),
+                typeof(Quaternion),
+                typeof(GameObject),
+                typeof(bool)
+            });
+            yield return AccessTools.Method(typeof(Core),
+                nameof(Core.AddPrefab), new[]
+            {
+                typeof(string),
+                typeof(Vector3),
+                typeof(Quaternion),
+                typeof(GameObject),
+                typeof(bool)
+            });
         }
 
         static void Postfix(GameObject __result)
@@ -503,20 +602,37 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Client: an explosion that catches our own player is the host's to report (through our proxy there), effects included.</summary>
+    /// <summary>
+    /// Client: an explosion that catches our own player is the host's to report
+    /// (through our proxy there), effects included.
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.getHit),
-        new[] { typeof(float), typeof(Transform), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool), typeof(bool) })]
+        new[]
+        {
+            typeof(float),
+            typeof(Transform),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool),
+            typeof(bool)
+        })]
     static class ClientExplosionSelfHitPatch
     {
         static bool Prefix() => !HostReports();
 
         /// <summary>
-        /// Client: whether what's hitting our player now is an explosion, which the host reports through our proxy
-        /// (EnemyAreaHits.Explosion). Not while we're away in a place of our own (a location, a dream): explosions there
-        /// happen only here.
+        /// Client: whether what's hitting our player now is an explosion, which
+        /// the host reports through our proxy (EnemyAreaHits.Explosion). Not
+        /// while we're away in a place of our own (a location, a dream):
+        /// explosions there happen only here.
         /// </summary>
         internal static bool HostReports() =>
-            NetEnemies.ClientMode && ThrownHits.Depth > 0 && ThrownHits.CurrentFlame == null && !EnemyAreaHits.PlayerAway() && InExplosion();
+            NetEnemies.ClientMode && ThrownHits.Depth > 0
+                && ThrownHits.CurrentFlame == null
+                && !EnemyAreaHits.PlayerAway() && InExplosion();
 
         private static bool InExplosion()
         {
@@ -546,9 +662,13 @@ namespace DarkwoodMP.World
     static class ClientExplosionSelfEffectPatch
     {
         static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
-            AccessTools.GetDeclaredMethods(typeof(CharacterEffects)).FindAll(m => m.Name == nameof(CharacterEffects.activate));
+            AccessTools.GetDeclaredMethods(typeof(CharacterEffects)).FindAll(
+                m => m.Name == nameof(CharacterEffects.activate));
 
         static bool Prefix(CharacterEffects __instance) =>
-            !(ThrownHits.Depth > 0 && __instance != null && Player.Instance != null && __instance == Player.Instance.effects && ClientExplosionSelfHitPatch.HostReports());
+            !(ThrownHits.Depth > 0 && __instance != null
+                    && Player.Instance != null
+                    && __instance == Player.Instance.effects
+                    && ClientExplosionSelfHitPatch.HostReports());
     }
 }

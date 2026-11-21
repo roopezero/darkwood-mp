@@ -5,19 +5,25 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// Host: shadow armour (ShadowArmor.checkIfInLight) is hurt by light, and a flashlight shone on it sets its
-    /// character on the player holding it. The game finds the flashlight by raycasting for the host's player's
-    /// "FlashlightCollider", so another player's beam neither counted as "a flashlight" nor set the enemy on them.
-    /// This does the game's check, and then the same for each other player whose flashlight is on: a beam ahead
-    /// of their puppet as large as the game's flashlight box gets (BeamOn). Their beam hurts the armour and sets
-    /// the character on that player.
+    /// Host: shadow armour (ShadowArmor.checkIfInLight) is hurt by light, and a
+    /// flashlight shone on it sets its character on the player holding it. The
+    /// game finds the flashlight by raycasting for the host's player's
+    /// "FlashlightCollider", so another player's beam neither counted as
+    /// "a flashlight" nor set the enemy on them. This does the game's check,
+    /// and then the same for each other player whose flashlight is on: a beam
+    /// ahead of their puppet as large as the game's flashlight box gets
+    /// (BeamOn). Their beam hurts the armour and sets the character on that
+    /// player.
     /// </summary>
     [HarmonyPatch(typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight))]
     static class ShadowArmorJoinerLightPatch
     {
-        private static readonly AccessTools.FieldRef<ShadowArmor, float> RefreshRate = AccessTools.FieldRefAccess<ShadowArmor, float>("damageRefreshRate");
+        private static readonly AccessTools.FieldRef<ShadowArmor, float> RefreshRate =
+            AccessTools.FieldRefAccess<ShadowArmor, float>("damageRefreshRate");
         private static readonly System.Action<ShadowArmor, bool> Particles =
-            AccessTools.MethodDelegate<System.Action<ShadowArmor, bool>>(AccessTools.Method(typeof(ShadowArmor), "switchDamageParticles"));
+            AccessTools.MethodDelegate<System.Action<ShadowArmor, bool>>(
+                AccessTools.Method(
+                    typeof(ShadowArmor), "switchDamageParticles"));
 
         static void Postfix(ShadowArmor __instance)
         {
@@ -36,9 +42,12 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
-            // The game's own check already hurt it if the spot is lit (the puppet's beam lights the graph too); a beam
-            // the graph doesn't show as lit still counts, as the host's flashlight's box does.
-            bool hurtAlready = Core.isInLight(a.transform.position, mustBeWalkable: false) || a.GetComponent<Burn>() != null;
+            // The game's own check already hurt it if the spot is lit (the
+            // puppet's beam lights the graph too); a beam the graph doesn't
+            // show as lit still counts, as the host's flashlight's box does.
+            bool hurtAlready = Core.isInLight(
+                a.transform.position, mustBeWalkable: false)
+                || a.GetComponent<Burn>() != null;
             if (!hurtAlready)
             {
                 Particles(a, true);
@@ -57,17 +66,20 @@ namespace DarkwoodMP.Combat
                 }
                 if (Threat.Debug)
                 {
-                    Plugin.Log.LogInfo($"[threat] {c.name}'s shadow armour is in {proxy.OwnerName}'s flashlight: goes for them");
+                    Plugin.Log.LogInfo(
+                        $"[threat] {c.name}'s shadow armour is in {proxy.OwnerName}'s flashlight: goes for them");
                 }
             }
         }
 
         /// <summary>
-        /// The other player whose flashlight beam covers this spot. The game's box (Player.flashlightCollider) is the
-        /// host's own and is only sized while the host holds a flashlight (a square of side clamp(distance to the
-        /// cursor, 100, 1000), that far ahead; 1 x 1 otherwise), so it can't stand for a joiner's beam. A joiner's
-        /// is taken as the largest such box ahead of their puppet: from beside them to MaxBeam ahead, widening
-        /// with distance (the cursor's distance isn't sent).
+        /// The other player whose flashlight beam covers this spot. The game's
+        /// box (Player.flashlightCollider) is the host's own and is only sized
+        /// while the host holds a flashlight (a square of side clamp(distance
+        /// to the cursor, 100, 1000), that far ahead; 1 x 1 otherwise), so it
+        /// can't stand for a joiner's beam. A joiner's is taken as the largest
+        /// such box ahead of their puppet: from beside them to MaxBeam ahead,
+        /// widening with distance (the cursor's distance isn't sent).
         /// </summary>
         internal static NetPlayerProxy BeamOn(Vector3 pos)
         {
@@ -82,12 +94,14 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
-                if (!ps.Remotes.TryGetValue(proxy.Owner, out var rp) || rp.Root == null)
+                if (!ps.Remotes.TryGetValue(proxy.Owner, out var rp)
+                    || rp.Root == null)
                 {
                     continue;
                 }
                 var last = rp.Last;
-                if (last == null || !last.Flashlight || !last.Alive || last.Spectating)
+                if (last == null || !last.Flashlight || !last.Alive
+                    || last.Spectating)
                 {
                     continue;
                 }
@@ -99,11 +113,19 @@ namespace DarkwoodMP.Combat
             return null;
         }
 
-        /// <summary>How far ahead a joiner's flashlight reaches (the game's box: up to 1000 ahead and 500 past that).</summary>
+        /// <summary>
+        /// How far ahead a joiner's flashlight reaches (the game's box: up to
+        /// 1000 ahead and 500 past that).
+        /// </summary>
         public const float MaxBeam = 1500f;
 
-        /// <summary>Whether a spot is in the beam of a flashlight held by a player standing as `root` (players are rotated Euler(90, yaw, 0): local up is ahead).</summary>
-        internal static bool InBeam(Transform root, Vector3 pos, out float ahead, out float aside)
+        /// <summary>
+        /// Whether a spot is in the beam of a flashlight held by a player
+        /// standing as `root` (players are rotated Euler(90, yaw, 0): local up
+        /// is ahead).
+        /// </summary>
+        internal static bool InBeam(
+            Transform root, Vector3 pos, out float ahead, out float aside)
         {
             Vector3 fwd = root.TransformDirection(Vector3.up);
             fwd.y = 0f;
@@ -117,24 +139,31 @@ namespace DarkwoodMP.Combat
             fwd.Normalize();
             ahead = Vector3.Dot(rel, fwd);
             aside = Vector3.Cross(fwd, rel).magnitude;
-            return ahead >= -50f && ahead <= MaxBeam && aside <= Mathf.Max(100f, ahead * 0.5f + 50f);
+            return ahead >= -50f && ahead <= MaxBeam
+                && aside <= Mathf.Max(100f, ahead * 0.5f + 50f);
         }
     }
 
     /// <summary>
-    /// Client: shadow armour on a copy of the host's enemy (NetEnemies.SetArmor) or on one of our frozen characters
-    /// only shows its effect. Its light check (which would hurt it, set it on our player and show its health bar) and
-    /// its damage do nothing: the host's armour takes them, and the host says when it dies (EnemyArmor).
+    /// Client: shadow armour on a copy of the host's enemy
+    /// (NetEnemies.SetArmor) or on one of our frozen characters only shows its
+    /// effect. Its light check (which would hurt it, set it on our player and
+    /// show its health bar) and its damage do nothing: the host's armour takes
+    /// them, and the host says when it dies (EnemyArmor).
     /// </summary>
     [HarmonyPatch]
     static class ShadowArmorCopyPatch
     {
         static System.Collections.Generic.IEnumerable<System.Reflection.MethodBase> TargetMethods()
         {
-            yield return AccessTools.Method(typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight));
-            yield return AccessTools.Method(typeof(ShadowArmor), nameof(ShadowArmor.damageMe), new[] { typeof(float), typeof(bool) });
+            yield return AccessTools.Method(
+                typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight));
+            yield return AccessTools.Method(
+                typeof(ShadowArmor), nameof(ShadowArmor.damageMe),
+                new[] { typeof(float), typeof(bool) });
         }
 
-        static bool Prefix(ShadowArmor __instance) => !NetEnemies.IsCopy(__instance);
+        static bool Prefix(ShadowArmor __instance) =>
+            !NetEnemies.IsCopy(__instance);
     }
 }

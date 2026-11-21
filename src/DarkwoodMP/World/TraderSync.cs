@@ -8,32 +8,44 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// What traders have for sale, the same for everyone. A trader stocks up at random when they appear and on
-    /// each new day (NPC.randomizeTraderInv). That's the host's game's to do: a client's doesn't, and asks the host
-    /// instead (TraderAsk); the host sends what its trader has (TraderStock) when asked and whenever it restocks.
+    /// What traders have for sale, the same for everyone. A trader stocks up at
+    /// random when they appear and on each new day (NPC.randomizeTraderInv).
+    /// That's the host's game's to do: a client's doesn't, and asks the host
+    /// instead (TraderAsk); the host sends what its trader has (TraderStock)
+    /// when asked and whenever it restocks.
     ///
-    /// Traders are named by the NPC's name and ObjRef, not as containers: NPCs live in each player's game separately.
-    /// One from the shared save (a Saved ref) is that one only: a new chapter-1 world has three "wolfman" traders
-    /// (the two camps and the wolf's hideout), each with his own stock. Any other (the morning trader, the wolf,
-    /// which each game spawns at its own player's hideout, with another id in each) is the nearest of that name to
-    /// where the sender's stands that isn't one from the shared save. Stock for a trader that hasn't appeared
-    /// in a client's game yet is kept until they do.
+    /// Traders are named by the NPC's name and ObjRef, not as containers: NPCs
+    /// live in each player's game separately. One from the shared save (a Saved
+    /// ref) is that one only: a new chapter-1 world has three "wolfman" traders
+    /// (the two camps and the wolf's hideout), each with his own stock. Any
+    /// other (the morning trader, the wolf, which each game spawns at its own
+    /// player's hideout, with another id in each) is the nearest of that name
+    /// to where the sender's stands that isn't one from the shared save. Stock
+    /// for a trader that hasn't appeared in a client's game yet is kept until
+    /// they do.
     ///
-    /// Trades: the game moves the things traded through the trade window's two exchange inventories, straight into
-    /// the trader's inventory (DialogueWindow.acceptTrade), so the container sharing never sees them. After an
-    /// accepted trade the trading game sends the trader's whole stock and what was taken and given (TraderTrade).
-    /// A client's is a request: the host checks its own trader is there, the player is near their copy of him,
-    /// he had what they took, the new stock is his old one less that plus what they gave, and his reputation (the
-    /// host's) pays for it, as acceptTrade checks; then it takes that stock and passes it on. Refused, the host sends
-    /// its stock (TraderStock) and the client's player gives back what they got and gets back what they gave.
-    /// The trade's reputation change travels with it, and each game adds it to the trader's reputation (which
-    /// FlagsSync otherwise shares as changes), so two trades close together both count.
+    /// Trades: the game moves the things traded through the trade window's two
+    /// exchange inventories, straight into the trader's inventory
+    /// (DialogueWindow.acceptTrade), so the container sharing never sees them.
+    /// After an accepted trade the trading game sends the trader's whole stock
+    /// and what was taken and given (TraderTrade).
+    /// A client's is a request: the host checks its own trader is there, the
+    /// player is near their copy of him, he had what they took, the new stock
+    /// is his old one less that plus what they gave, and his reputation (the
+    /// host's) pays for it, as acceptTrade checks; then it takes that stock and
+    /// passes it on. Refused, the host sends its stock (TraderStock) and the
+    /// client's player gives back what they got and gets back what they gave.
+    /// The trade's reputation change travels with it, and each game adds it to
+    /// the trader's reputation (which FlagsSync otherwise shares as changes),
+    /// so two trades close together both count.
     /// </summary>
     public sealed class TraderSync
     {
         public static TraderSync Instance { get; private set; }
         private readonly Session _session;
-        private readonly Dictionary<string, string> _waiting = new Dictionary<string, string>(); // client: stock for traders not here yet
+        // client: stock for traders not here yet
+        private readonly Dictionary<string, string> _waiting =
+            new Dictionary<string, string>();
 
         public TraderSync(Session session)
         {
@@ -50,7 +62,10 @@ namespace DarkwoodMP.World
             };
         }
 
-        /// <summary>Client: a trader would stock up here. Use the host's stock: what came already, or ask.</summary>
+        /// <summary>
+        /// Client: a trader would stock up here. Use the host's stock: what
+        /// came already, or ask.
+        /// </summary>
         internal void ClientStocking(NPC npc)
         {
             if (!_session.Connected || npc == null)
@@ -65,26 +80,33 @@ namespace DarkwoodMP.World
                 return;
             }
             var w = _session.Begin(MsgType.TraderAsk);
-            WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
+            WriteWho(
+                w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
             _session.SendToHost(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] asked the host what {npc.name} has");
+                Plugin.Log.LogInfo(
+                    $"[world] asked the host what {npc.name} has");
             }
         }
 
         /// <summary>Host: this trader restocked; everyone gets it.</summary>
         internal void HostStocked(NPC npc)
         {
-            if (!_session.IsHost || _session.Peers.Count == 0 || npc == null || Inv(npc) == null)
+            if (!_session.IsHost || _session.Peers.Count == 0 || npc == null
+                || Inv(npc) == null)
             {
                 return;
             }
             Send(npc, to: 0, StockOf(npc));
         }
 
-        /// <summary>Which trader a message is about: his name, his ObjRef, where he stands in the sender's game (x, z).</summary>
-        private static void WriteWho(PacketWriter w, string name, ObjRef r, Vector3 at)
+        /// <summary>
+        /// Which trader a message is about: his name, his ObjRef, where he
+        /// stands in the sender's game (x, z).
+        /// </summary>
+        private static void WriteWho(
+            PacketWriter w, string name, ObjRef r, Vector3 at)
         {
             w.WriteStr(name);
             r.Write(w);
@@ -92,14 +114,19 @@ namespace DarkwoodMP.World
             w.W.Write(at.z);
         }
 
-        private static (string name, ObjRef r, Vector3 at) ReadWho(PacketReader r)
+        private static (string name, ObjRef r, Vector3 at) ReadWho(
+            PacketReader r)
         {
             string name = r.ReadStr();
             var o = ObjRef.Read(r);
-            return (name, o, new Vector3(r.R.ReadSingle(), 0f, r.R.ReadSingle()));
+            return (name, o, new Vector3(
+                r.R.ReadSingle(), 0f, r.R.ReadSingle()));
         }
 
-        /// <summary>What stock waiting for a trader is kept under: a shared-save trader by his ref, any other by name.</summary>
+        /// <summary>
+        /// What stock waiting for a trader is kept under: a shared-save trader
+        /// by his ref, any other by name.
+        /// </summary>
         private static string Key(string name, ObjRef r)
         {
             if (r.K == ObjRef.Kind.Saved)
@@ -109,8 +136,10 @@ namespace DarkwoodMP.World
             return name;
         }
 
-        /// <summary>A trader's inventory. NPC.inventory is set when he first comes to life (NPC.init), so one in a part
-        /// of the world this game hasn't run yet has it only as his component, which init then takes.</summary>
+        /// <summary>A trader's inventory. NPC.inventory is set when he first
+        /// comes to life (NPC.init), so one in a part of the world this game
+        /// hasn't run yet has it only as his component, which init then
+        /// takes.</summary>
         internal static Inventory Inv(NPC n)
         {
             if (n.inventory != null)
@@ -120,12 +149,14 @@ namespace DarkwoodMP.World
             return n.GetComponent<Inventory>();
         }
 
-        private static string StockOf(NPC npc) => JsonConvert.SerializeObject(new Inventory.SaveState(Inv(npc)));
+        private static string StockOf(NPC npc) =>
+            JsonConvert.SerializeObject(new Inventory.SaveState(Inv(npc)));
 
         private void Send(NPC npc, ulong to, string stock = null)
         {
             var w = _session.Begin(MsgType.TraderStock);
-            WriteWho(w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
+            WriteWho(
+                w, npc.name, ObjRef.Of(npc.gameObject), npc.transform.position);
             string sent = stock;
             if (sent == null)
             {
@@ -142,7 +173,8 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent what {npc.name} has ({Inv(npc).getAllItems().Count} items)");
+                Plugin.Log.LogInfo(
+                    $"[world] sent what {npc.name} has ({Inv(npc).getAllItems().Count} items)");
             }
         }
 
@@ -161,34 +193,49 @@ namespace DarkwoodMP.World
             }
             if (who.K == ObjRef.Kind.Saved)
             {
-                return; // one from the shared save that isn't here (yet): no copy of ours
+                // one from the shared save that isn't here (yet): no copy of
+                // ours
+                return;
             }
-            // The morning trader in a joiner's hideout, which this game has no copy of (our player wasn't in that
-            // hideout at dawn): we put our own there, as the game's morning does (Location.spawnTrader). Its stock is
-            // ours to roll (it stocks up when it appears, and HostStocked sends it to everyone), and their trades with
-            // him are checked against it.
+            // The morning trader in a joiner's hideout, which this game has no
+            // copy of (our player wasn't in that hideout at dawn): we put our
+            // own there, as the game's morning does (Location.spawnTrader). Its
+            // stock is ours to roll (it stocks up when it appears, and
+            // HostStocked sends it to everyone), and their trades with him are
+            // checked against it.
             if (SpawnHostCopy(name, at, from))
             {
                 return;
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] {_session.NameOf(from)} asked about {name}, who isn't here yet");
+                Plugin.Log.LogInfo(
+                    $"[world] {_session.NameOf(from)} asked about {name}, who isn't here yet");
             }
         }
 
-        // ---- the host's copies of joiners' morning traders -------------------------------------------
+        // ---- the host's copies of joiners' morning traders ------------------
 
-        /// <summary>Host: the traders we put in a joiner's hideout for their morning, and when.</summary>
-        private readonly List<(Location loc, NPC npc, float since)> _copies = new List<(Location, NPC, float)>();
+        /// <summary>
+        /// Host: the traders we put in a joiner's hideout for their morning,
+        /// and when.
+        /// </summary>
+        private readonly List<(Location loc, NPC npc, float since)> _copies =
+            new List<(Location, NPC, float)>();
         private float _nextCheck;
-        /// <summary>A joiner's PlayerState says they're in a morning a moment after their trader appears: wait this long.</summary>
+        /// <summary>
+        /// A joiner's PlayerState says they're in a morning a moment after
+        /// their trader appears: wait this long.
+        /// </summary>
         private const float CopyGrace = 10f;
 
         private bool SpawnHostCopy(string name, Vector3 at, ulong from)
         {
-            // The wolf comes to a hideout in the morning too (Location.spawnWolf), but he isn't one to trade with.
-            if (name.IndexOf("wolf", System.StringComparison.OrdinalIgnoreCase) >= 0)
+            // The wolf comes to a hideout in the morning too
+            // (Location.spawnWolf), but he isn't one to trade with.
+            if (name
+                .IndexOf("wolf", System.StringComparison.OrdinalIgnoreCase)
+                >= 0)
             {
                 return false;
             }
@@ -206,11 +253,13 @@ namespace DarkwoodMP.World
             float bestD = 300f * 300f;
             foreach (var loc in Object.FindObjectsOfType<Location>(true))
             {
-                if (loc == null || !loc.playerBase || loc.traderPosition == null)
+                if (loc == null || !loc.playerBase
+                    || loc.traderPosition == null)
                 {
                     continue;
                 }
-                float d = WorldActions.FlatSq(loc.traderPosition.transform.position, at);
+                float d = WorldActions.FlatSq(
+                    loc.traderPosition.transform.position, at);
                 if (d < bestD)
                 {
                     bestD = d;
@@ -229,7 +278,8 @@ namespace DarkwoodMP.World
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't put {name} in {best.name}: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't put {name} in {best.name}: {e.Message}");
                 return false;
             }
             if (npc == null)
@@ -238,7 +288,8 @@ namespace DarkwoodMP.World
             }
             if (npc.name != name)
             {
-                Plugin.Log.LogInfo($"[world] {_session.NameOf(from)} asked about {name}, but {best.name}'s morning trader here is {npc.name}");
+                Plugin.Log.LogInfo(
+                    $"[world] {_session.NameOf(from)} asked about {name}, but {best.name}'s morning trader here is {npc.name}");
                 if (!had)
                 {
                     best.despawnTrader();
@@ -246,13 +297,16 @@ namespace DarkwoodMP.World
                 return false;
             }
             _copies.Add((best, npc, Time.unscaledTime));
-            Plugin.Log.LogInfo($"[world] {_session.NameOf(from)}'s morning: our own {name} is in {best.name} too");
+            Plugin.Log.LogInfo(
+                $"[world] {_session.NameOf(from)}'s morning: our own {name} is in {best.name} too");
             return true;
         }
 
         /// <summary>
-        /// Host, every frame: a copy we put in a joiner's hideout goes when no joiner is in a morning any more (their
-        /// endAfterNight took theirs away), unless our own player's morning is there. A dead one stays, as a body does.
+        /// Host, every frame: a copy we put in a joiner's hideout goes when no
+        /// joiner is in a morning any more (their endAfterNight took theirs
+        /// away), unless our own player's morning is there. A dead one stays,
+        /// as a body does.
         /// </summary>
         internal void HostUpdate()
         {
@@ -267,7 +321,8 @@ namespace DarkwoodMP.World
             {
                 foreach (var kv in sync.Remotes)
                 {
-                    if (kv.Key != Sync.PlayerSync.DummyId && kv.Value.Last != null && kv.Value.Last.AfterNight)
+                    if (kv.Key != Sync.PlayerSync.DummyId
+                        && kv.Value.Last != null && kv.Value.Last.AfterNight)
                     {
                         someone = true;
                         break;
@@ -294,12 +349,15 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
-                if (c != null && c.isAfterNight && p != null && p.whereAmI != null && p.whereAmI.bigLocation == loc) // ours now
+                // ours now
+                if (c != null && c.isAfterNight && p != null
+                    && p.whereAmI != null && p.whereAmI.bigLocation == loc)
                 {
                     _copies.RemoveAt(i);
                     continue;
                 }
-                Plugin.Log.LogInfo($"[world] no joiner is in a morning: our {npc.name} leaves {loc.name}");
+                Plugin.Log.LogInfo(
+                    $"[world] no joiner is in a morning: our {npc.name} leaves {loc.name}");
                 if (loc.trader == npc.gameObject)
                 {
                     loc.despawnTrader();
@@ -326,16 +384,25 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- trades ---------------------------------------------------------------------------------
-
-        /// <summary>Stock applied from the host, per trader: a refused trade the host sent no stock for is undone here.</summary>
-        private static readonly Dictionary<int, int> _applied = new Dictionary<int, int>(); // by the NPC's instance id
+        // ---- trades ---------------------------------------------------------
 
         /// <summary>
-        /// Our player's trade with this trader was accepted (the stock in npc.inventory is the result): share it.
-        /// took/gave: item type -> count; repChange: what the trade did to the reputation (undone if refused).
+        /// Stock applied from the host, per trader: a refused trade the host
+        /// sent no stock for is undone here.
         /// </summary>
-        internal void LocalTrade(NPC npc, Dictionary<string, int> took, Dictionary<string, int> gave, int repChange)
+        // by the NPC's instance id
+        private static readonly Dictionary<int, int> _applied =
+            new Dictionary<int, int>();
+
+        /// <summary>
+        /// Our player's trade with this trader was accepted (the stock in
+        /// npc.inventory is the result): share it. took/gave: item type ->
+        /// count; repChange: what the trade did to the reputation (undone if
+        /// refused).
+        /// </summary>
+        internal void LocalTrade(
+            NPC npc, Dictionary<string, int> took, Dictionary<string, int> gave,
+            int repChange)
         {
             if (!_session.Connected || npc == null || npc.inventory == null)
             {
@@ -352,10 +419,13 @@ namespace DarkwoodMP.World
             {
                 instance.Absorb(name, repChange);
             }
-            // Reputation our player earned just before (in the same dialogue, or since the last two-second FlagsDelta)
-            // goes first, on the same reliable Control channel, so the host's copy has it when it checks the trade's
-            // (CheckReputation). The trade's own change was absorbed above, so it isn't sent twice. Before WriteTrade:
-            // the flush builds its message with Session.Begin, in the same writer the trade's is built in.
+            // Reputation our player earned just before (in the same dialogue,
+            // or since the last two-second FlagsDelta) goes first, on the same
+            // reliable Control channel, so the host's copy has it when it
+            // checks the trade's (CheckReputation). The trade's own change was
+            // absorbed above, so it isn't sent twice. Before WriteTrade: the
+            // flush builds its message with Session.Begin, in the same writer
+            // the trade's is built in.
             if (!_session.IsHost)
             {
                 FlagsSync flags = FlagsSync.Instance;
@@ -367,7 +437,8 @@ namespace DarkwoodMP.World
             var at = npc.transform.position;
             var who = ObjRef.Of(npc.gameObject);
             var w = WriteTrade(name, who, at, took, gave, stock, repChange);
-            Plugin.Log.LogInfo($"Traded with {name}: took {Text(took)}, gave {Text(gave)}");
+            Plugin.Log.LogInfo(
+                $"Traded with {name}: took {Text(took)}, gave {Text(gave)}");
             if (_session.IsHost)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
@@ -375,7 +446,8 @@ namespace DarkwoodMP.World
             }
 
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
-            var change = new Dictionary<string, int>(); // for InventoryWatch.Undo: + what the player got, - what they gave
+            // for InventoryWatch.Undo: + what the player got, - what they gave
+            var change = new Dictionary<string, int>();
             foreach (var kv in took)
             {
                 change[kv.Key] = kv.Value;
@@ -435,7 +507,8 @@ namespace DarkwoodMP.World
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't undo the trade with {name}: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't undo the trade with {name}: {e.Message}");
                 }
                 finally
                 {
@@ -444,7 +517,9 @@ namespace DarkwoodMP.World
             }, inventory: false);
         }
 
-        private PacketWriter WriteTrade(string name, ObjRef who, Vector3 at, Dictionary<string, int> took, Dictionary<string, int> gave, string stock, int repChange)
+        private PacketWriter WriteTrade(
+            string name, ObjRef who, Vector3 at, Dictionary<string, int> took,
+            Dictionary<string, int> gave, string stock, int repChange)
         {
             var w = _session.Begin(MsgType.TraderTrade);
             WriteWho(w, name, who, at);
@@ -489,7 +564,8 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
-                // the reputation is in the NPC's state, here whether he is or not
+                // the reputation is in the NPC's state, here whether he is or
+                // not
                 FlagsSync instance = FlagsSync.Instance;
                 if (instance != null)
                 {
@@ -502,7 +578,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            // Host: a client's trade, as a request, checked against our copy of that trader.
+            // Host: a client's trade, as a request, checked against our copy of
+            // that trader.
             var npc = Find(name, who, at);
             if (npc == null)
             {
@@ -531,16 +608,25 @@ namespace DarkwoodMP.World
             {
                 flags.AddReputation(name, repChange);
             }
-            Plugin.Log.LogInfo($"{_session.NameOf(from)} traded with {name}: took {Text(took)}, gave {Text(gave)}, reputation {repChange:+0;-0;0}");
-            _session.Broadcast(WriteTrade(name, ObjRef.Of(npc.gameObject), npc.transform.position, took, gave, stock, repChange), Channel.Control, reliable: true, except: from);
+            Plugin.Log.LogInfo(
+                $"{_session.NameOf(from)} traded with {name}: took {Text(took)}, gave {Text(gave)}, reputation {repChange:+0;-0;0}");
+            _session.Broadcast(
+                WriteTrade(
+                    name, ObjRef.Of(npc.gameObject), npc.transform.position,
+                    took, gave, stock, repChange),
+                Channel.Control, reliable: true, except: from);
         }
 
         /// <summary>
-        /// Host: why the trade's reputation change can't be (null: it can). As acceptTrade, his reputation (the host's)
-        /// must pay for it; and taking only can't raise it, nor giving only lower it. (The items' values depend on their
-        /// state, which the host doesn't have, so the amount itself isn't recomputed.)
+        /// Host: why the trade's reputation change can't be (null: it can). As
+        /// acceptTrade, his reputation (the host's) must pay for it; and taking
+        /// only can't raise it, nor giving only lower it. (The items' values
+        /// depend on their state, which the host doesn't have, so the amount
+        /// itself isn't recomputed.)
         /// </summary>
-        private static string CheckReputation(string name, Dictionary<string, int> took, Dictionary<string, int> gave, int repChange)
+        private static string CheckReputation(
+            string name, Dictionary<string, int> took,
+            Dictionary<string, int> gave, int repChange)
         {
             Flags instance = Singleton<Flags>.Instance;
             Flags.NPCState st = null;
@@ -568,15 +654,19 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>Host: why this trade can't be (null: it can). He must have had what was taken, and the new stock
-        /// must be his stock less that, plus what was given.</summary>
-        private static string Check(Inventory inv, Dictionary<string, int> took, Dictionary<string, int> gave, string stock)
+        /// <summary>Host: why this trade can't be (null: it can). He must have
+        /// had what was taken, and the new stock must be his stock less that,
+        /// plus what was given.</summary>
+        private static string Check(
+            Inventory inv, Dictionary<string, int> took,
+            Dictionary<string, int> gave, string stock)
         {
             var have = TraderTradePatch.Count(inv);
             Inventory.SaveState state;
             try
             {
-                state = JsonConvert.DeserializeObject<Inventory.SaveState>(stock);
+                state =
+                    JsonConvert.DeserializeObject<Inventory.SaveState>(stock);
             }
             catch (System.Exception e)
             {
@@ -663,11 +753,16 @@ namespace DarkwoodMP.World
             {
                 instance.Apply(Inv(npc), stock);
             }
-            Plugin.Log.LogInfo($"{npc.name} has the host's stock: {Inv(npc).getAllItems().Count} items");
+            Plugin.Log.LogInfo(
+                $"{npc.name} has the host's stock: {Inv(npc).getAllItems().Count} items");
         }
 
-        /// <summary>The host's stock goes to our copy of that trader. False: he isn't here.</summary>
-        private static bool ApplyTo(string name, ObjRef who, Vector3 at, string stock)
+        /// <summary>
+        /// The host's stock goes to our copy of that trader. False: he isn't
+        /// here.
+        /// </summary>
+        private static bool ApplyTo(
+            string name, ObjRef who, Vector3 at, string stock)
         {
             var n = Find(name, who, at);
             if (n == null)
@@ -679,9 +774,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Our copy of the trader another game names: by his ref, if it names one of that name here; else, unless he
-        /// is one from the shared save (whose ref names only him), the nearest of that name to where the other game
-        /// has him, leaving out the shared-save traders of that name (each of those is the one his ref names).
+        /// Our copy of the trader another game names: by his ref, if it names
+        /// one of that name here; else, unless he is one from the shared save
+        /// (whose ref names only him), the nearest of that name to where the
+        /// other game has him, leaving out the shared-save traders of that name
+        /// (each of those is the one his ref names).
         /// </summary>
         private static NPC Find(string name, ObjRef who, Vector3 at)
         {
@@ -720,7 +817,10 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>A trader stocking up (appearing, a new day): the host's game does it and sends it; a client's asks.</summary>
+    /// <summary>
+    /// A trader stocking up (appearing, a new day): the host's game does it and
+    /// sends it; a client's asks.
+    /// </summary>
     [HarmonyPatch(typeof(NPC), "randomizeTraderInv")]
     static class TraderStockPatch
     {
@@ -754,8 +854,10 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>An accepted trade (DialogueWindow.acceptTrade moves what's in the two exchange windows to the trader
-    /// and to the player): share the trader's new stock. What was in the windows before is what was traded.</summary>
+    /// <summary>An accepted trade (DialogueWindow.acceptTrade moves what's in
+    /// the two exchange windows to the trader and to the player): share the
+    /// trader's new stock. What was in the windows before is what was
+    /// traded.</summary>
     [HarmonyPatch(typeof(DialogueWindow), nameof(DialogueWindow.acceptTrade))]
     static class TraderTradePatch
     {
@@ -779,17 +881,23 @@ namespace DarkwoodMP.World
             return d;
         }
 
-        static void Prefix(DialogueWindow __instance, out (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
+        static void Prefix(
+            DialogueWindow __instance,
+            out (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
         {
             __state = default;
-            if (__instance == null || __instance.npc == null || WorldActions.Replaying)
+            if (__instance == null || __instance.npc == null
+                || WorldActions.Replaying)
             {
                 return;
             }
-            __state = (Count(__instance.exchangeTrader), Count(__instance.exchangePlayer), __instance.npc.reputation);
+            __state = (Count(__instance.exchangeTrader), Count(
+                __instance.exchangePlayer), __instance.npc.reputation);
         }
 
-        static void Postfix(DialogueWindow __instance, (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
+        static void Postfix(
+            DialogueWindow __instance,
+            (Dictionary<string, int> took, Dictionary<string, int> gave, int rep) __state)
         {
             var (took, gave, rep) = __state;
             if (took == null || __instance.npc == null)
@@ -800,15 +908,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            // Accepted: both windows were emptied. Not accepted (not enough reputation, no room): the things are still in them.
-            if (Count(__instance.exchangeTrader).Count != 0 || Count(__instance.exchangePlayer).Count != 0)
+            // Accepted: both windows were emptied. Not accepted (not enough
+            // reputation, no room): the things are still in them.
+            if (Count(__instance.exchangeTrader).Count != 0
+                || Count(__instance.exchangePlayer).Count != 0)
             {
                 return;
             }
             TraderSync instance = TraderSync.Instance;
             if (instance != null)
             {
-                instance.LocalTrade(__instance.npc, took, gave, __instance.npc.reputation - rep);
+                instance.LocalTrade(
+                    __instance.npc, took, gave,
+                    __instance.npc.reputation - rep);
             }
         }
     }

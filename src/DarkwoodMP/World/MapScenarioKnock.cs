@@ -11,10 +11,12 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for loose things knocked about (DragSync's pushed objects; tools/tests/map_scenario_knock.py).
-    /// A host's enemy, the client's player and the host's player each push one of the save's dropped items by the
-    /// test centre, and the module then compares the dropped items in both games: an item both games move must come
-    /// to rest at the same place in each.
+    /// Map test steps for loose things knocked about (DragSync's pushed
+    /// objects; tools/tests/map_scenario_knock.py).
+    /// A host's enemy, the client's player and the host's player each push one
+    /// of the save's dropped items by the test centre, and the module then
+    /// compares the dropped items in both games: an item both games move must
+    /// come to rest at the same place in each.
     ///
     ///   kn-info [R]          the dropped items within R (250) of the centre: where, their body and colliders, and
     ///                        whether DragSync watches them. The first call notes their order (nearest first), which
@@ -28,8 +30,9 @@ namespace DarkwoodMP.World
     ///                        the joiner is still loading, away from where the snapshot has it. That is what the test
     ///                        world's kit does when it doesn't fit the host's bags and a client joins at once.
     ///
-    /// The dropped items are on layer 25, which players' and enemies' bodies don't collide with: kn-player and
-    /// kn-enemy check that walking through them changes nothing between the games.
+    /// The dropped items are on layer 25, which players' and enemies' bodies
+    /// don't collide with: kn-player and kn-enemy check that walking through
+    /// them changes nothing between the games.
     /// </summary>
     public static class MapScenarioKnock
     {
@@ -44,12 +47,19 @@ namespace DarkwoodMP.World
             Add("kn-slide", Slide, timeout: 10f);
         }
 
-        /// <summary>X and Z to one decimal (finer than MapScenario.Fmt: these items move a few units).</summary>
-        private static string Fmt1(Vector3 p) => FormattableString.Invariant($"{p.x:0.0} {p.z:0.0}");
+        /// <summary>
+        /// X and Z to one decimal (finer than MapScenario.Fmt: these items move
+        /// a few units).
+        /// </summary>
+        private static string Fmt1(Vector3 p) =>
+            FormattableString.Invariant($"{p.x:0.0} {p.z:0.0}");
 
         private static IEnumerable<Item> Dropped(float radius) =>
-            StateDump.All<Item>().Where(i => i != null && i.gameObject.name.StartsWith("DroppedItem", StringComparison.Ordinal)
-                && StateDump.Flat(i.transform.position - Centre) < radius);
+            StateDump.All<Item>().Where(
+                i => i != null
+                    && i.gameObject.name.StartsWith(
+                        "DroppedItem", StringComparison.Ordinal)
+                    && StateDump.Flat(i.transform.position - Centre) < radius);
 
         private static string Ref(Item i) => ObjRef.Of(i.gameObject).ToString();
 
@@ -78,31 +88,41 @@ namespace DarkwoodMP.World
             var sb = new StringBuilder();
             var inv = i.GetComponent<Inventory>();
             string type = "?";
-            if (inv != null && inv.slots.Count > 0 && !InvItemClass.isNull(inv.slots[0].invItem))
+            if (inv != null && inv.slots.Count > 0
+                && !InvItemClass.isNull(inv.slots[0].invItem))
             {
                 type = inv.slots[0].invItem.type;
             }
             var b = i.GetComponent<Rigidbody>();
-            sb.Append(FormattableString.Invariant($"{Ref(i)} {type} at {i.transform.position.x:0.0} {i.transform.position.y:0.0} {i.transform.position.z:0.0} active={i.gameObject.activeInHierarchy}"));
+            sb.Append(
+                FormattableString.Invariant(
+                    $"{Ref(i)} {type} at {i.transform.position.x:0.0} {i.transform.position.y:0.0} {i.transform.position.z:0.0} active={i.gameObject.activeInHierarchy}"));
             if (b == null)
             {
                 sb.Append(" no body");
             }
             else
             {
-                sb.Append(FormattableString.Invariant($" body kin={b.isKinematic} cons={b.constraints} sleep={b.IsSleeping()} v={b.velocity.magnitude:0.0} mass={b.mass:0.##} drag={b.drag:0.##}"));
+                sb.Append(
+                    FormattableString.Invariant(
+                        $" body kin={b.isKinematic} cons={b.constraints} sleep={b.IsSleeping()} v={b.velocity.magnitude:0.0} mass={b.mass:0.##} drag={b.drag:0.##}"));
             }
             foreach (var c in i.GetComponentsInChildren<Collider>(true))
             {
-                sb.Append($" col[{c.GetType().Name} {c.gameObject.name} on={c.enabled} trig={c.isTrigger} layer={c.gameObject.layer}]");
+                sb.Append(
+                    $" col[{c.GetType().Name} {c.gameObject.name} on={c.enabled} trig={c.isTrigger} layer={c.gameObject.layer}]");
             }
             for (var t = i.transform.parent; t != null; t = t.parent)
             {
-                sb.Append(FormattableString.Invariant($" in {t.name}@{t.position.x:0.0},{t.position.z:0.0}"));
+                sb.Append(
+                    FormattableString.Invariant(
+                        $" in {t.name}@{t.position.x:0.0},{t.position.z:0.0}"));
             }
             if (b != null)
             {
-                sb.Append(FormattableString.Invariant($" bodypos {b.position.x:0.0} {b.position.z:0.0} interp={b.interpolation}"));
+                sb.Append(
+                    FormattableString.Invariant(
+                        $" bodypos {b.position.x:0.0} {b.position.z:0.0} interp={b.interpolation}"));
             }
             sb.Append(" ");
             string watch = "no DragSync";
@@ -121,7 +141,9 @@ namespace DarkwoodMP.World
             {
                 radius = float.Parse(a[0], CultureInfo.InvariantCulture);
             }
-            var list = Dropped(radius).OrderBy(i => StateDump.Flat(i.transform.position - Centre)).ToList();
+            var list = Dropped(radius)
+                .OrderBy(i => StateDump.Flat(i.transform.position - Centre))
+                .ToList();
             if (_order.Count == 0)
             {
                 _order.AddRange(list.Select(Ref));
@@ -130,7 +152,10 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo($"[knock] {Describe(i)}");
             }
-            r.Info = string.Join("; ", list.Select(i => $"{_order.IndexOf(Ref(i))}={Ref(i)} {Fmt1(i.transform.position)}"));
+            r.Info = string.Join(
+                "; ",
+                list.Select(
+                    i => $"{_order.IndexOf(Ref(i))}={Ref(i)} {Fmt1(i.transform.position)}"));
             if (list.Count == 0)
             {
                 r.Fail("no dropped items by the centre");
@@ -159,7 +184,8 @@ namespace DarkwoodMP.World
             yield return Walk(start - dir * 90f, 10f, detours: 0);
             yield return Walk(start + dir * 80f, 5f, detours: 0);
             yield return new WaitForSeconds(3f); // at rest, and sent
-            r.Info = $"{Ref(it)} from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
+            r.Info =
+                $"{Ref(it)} from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
         }
 
         private static IEnumerator Slide(string[] a, Result r)
@@ -183,14 +209,16 @@ namespace DarkwoodMP.World
             }
             Plugin.Instance.StartCoroutine(KeepSliding(b, since));
             yield return new WaitForSeconds(0.5f);
-            r.Info = $"{ObjRef.Of(t.gameObject)} {type} sliding from {Fmt1(t.position)}";
+            r.Info =
+                $"{ObjRef.Of(t.gameObject)} {type} sliding from {Fmt1(t.position)}";
         }
 
         private static IEnumerator KeepSliding(Rigidbody b, float since)
         {
             float until = Time.unscaledTime + 120f;
             float side = 1f;
-            while (b != null && DragSync.SnapshotAt < since && Time.unscaledTime < until)
+            while (b != null && DragSync.SnapshotAt < since
+                && Time.unscaledTime < until)
             {
                 b.WakeUp();
                 b.velocity = new Vector3(200f * side, 0f, 0f);
@@ -204,11 +232,13 @@ namespace DarkwoodMP.World
             var at = b.position;
             b.WakeUp();
             b.velocity = new Vector3(0f, 0f, 250f);
-            Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
+            Plugin.Log.LogInfo(
+                $"[knock] {ObjRef.Of(b.gameObject)} pushed at {Fmt1(at)} after the snapshot (at {DragSync.SnapshotAt:0.0}, now {Time.unscaledTime:0.0})");
             yield return new WaitForSeconds(3f);
             if (b != null)
             {
-                Plugin.Log.LogInfo($"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
+                Plugin.Log.LogInfo(
+                    $"[knock] {ObjRef.Of(b.gameObject)} at rest at {Fmt1(b.position)}");
             }
         }
 
@@ -235,13 +265,15 @@ namespace DarkwoodMP.World
             {
                 dir = Vector3.forward;
             }
-            dir = Quaternion.Euler(0f, 90f, 0f) * dir; // across, not from our player's side
+            // across, not from our player's side
+            dir = Quaternion.Euler(0f, 90f, 0f) * dir;
             var from = start - dir * 150f;
             var to = start + dir * 150f;
             Character c;
             try
             {
-                c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, from, 1f, kind, nocturnal: false);
+                c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                    P.gameObject, from, 1f, kind, nocturnal: false);
             }
             catch (Exception e)
             {
@@ -254,7 +286,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             var rb = c.GetComponent<Rigidbody>();
-            c.transform.position = new Vector3(from.x, c.transform.position.y, from.z);
+            c.transform.position =
+                new Vector3(from.x, c.transform.position.y, from.z);
             yield return new WaitForSeconds(1f); // the client's copy is made
             for (float t = 0f; t < 2f; t += Time.deltaTime)
             {
@@ -273,7 +306,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1f);
             Object.Destroy(c.gameObject);
             yield return new WaitForSeconds(3f); // at rest, and sent
-            r.Info = $"{kind} through {Ref(it)}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
+            r.Info =
+                $"{kind} through {Ref(it)}: from {Fmt1(start)} to {Fmt1(it.transform.position)} ({StateDump.Flat(it.transform.position - start):0.0} units)";
         }
     }
 }

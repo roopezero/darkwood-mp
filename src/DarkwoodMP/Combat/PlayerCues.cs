@@ -4,17 +4,21 @@ using UnityEngine;
 namespace DarkwoodMP.Combat
 {
     /// <summary>
-    /// Two things a player does that the game tells nearby enemies about, besides noise: a swing about to land
-    /// (Player.notifyEnemiesAboutAttack: enemies within 150 that see it may dodge, Character.doIWantToDodge) and
-    /// aiming a weapon (Player.aimScare, every second: Character.scareInArea makes enemies within 350 scared). Both run
-    /// only in the acting player's game, and the enemies that matter are the host's, so a client sends each as a
-    /// PlayerCue and the host runs the game's own call at that player's proxy. A client's frozen copies of the host's
-    /// enemies neither dodge nor get scared.
+    /// Two things a player does that the game tells nearby enemies about,
+    /// besides noise: a swing about to land (Player.notifyEnemiesAboutAttack:
+    /// enemies within 150 that see it may dodge, Character.doIWantToDodge) and
+    /// aiming a weapon (Player.aimScare, every second: Character.scareInArea
+    /// makes enemies within 350 scared). Both run only in the acting player's
+    /// game, and the enemies that matter are the host's, so a client sends each
+    /// as a PlayerCue and the host runs the game's own call at that player's
+    /// proxy. A client's frozen copies of the host's enemies neither dodge nor
+    /// get scared.
     /// </summary>
     public static class PlayerCues
     {
         public const byte Dodge = 0, Scare = 1;
-        private const int EnemyLayers = 2099200; // the game's layers in both calls
+        // the game's layers in both calls
+        private const int EnemyLayers = 2099200;
         private static readonly Collider[] _near = new Collider[128];
 
         public static void Send(byte kind)
@@ -29,7 +33,10 @@ namespace DarkwoodMP.Combat
             s.SendToHost(w, Net.Channel.Control, reliable: true);
         }
 
-        /// <summary>Host: a client's player swung or aimed; the game's own reaction, at their proxy.</summary>
+        /// <summary>
+        /// Host: a client's player swung or aimed; the game's own reaction, at
+        /// their proxy.
+        /// </summary>
         public static void OnCue(ulong from, Net.PacketReader r)
         {
             var s = Net.Session.Instance;
@@ -38,7 +45,8 @@ namespace DarkwoodMP.Combat
                 return;
             }
             byte kind = r.R.ReadByte();
-            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy) || proxy == null || !proxy.alive)
+            if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
+                || proxy == null || !proxy.alive)
             {
                 return;
             }
@@ -46,7 +54,8 @@ namespace DarkwoodMP.Combat
             int n = 0;
             if (kind == Dodge)
             {
-                int hits = Physics.OverlapSphereNonAlloc(pos, 150f, _near, EnemyLayers);
+                int hits = Physics.OverlapSphereNonAlloc(
+                    pos, 150f, _near, EnemyLayers);
                 for (int i = 0; i < hits; i++)
                 {
                     Character c = null;
@@ -86,17 +95,21 @@ namespace DarkwoodMP.Combat
                 {
                     effect = "within 150 may dodge";
                 }
-                Plugin.Log.LogInfo($"[threat] {proxy.OwnerName} {text}: {n} characters " +
+                Plugin.Log.LogInfo(
+                    $"[threat] {proxy.OwnerName} {text}: {n} characters " +
                                    effect);
             }
         }
 
         private static int CountCharacters(Vector3 pos, float range)
         {
-            int hits = Physics.OverlapSphereNonAlloc(pos, range, _near, EnemyLayers), n = 0;
+            int hits = Physics.OverlapSphereNonAlloc(
+                pos, range, _near, EnemyLayers),
+                n = 0;
             for (int i = 0; i < hits; i++)
             {
-                if (_near[i] != null && _near[i].GetComponent<Character>() != null)
+                if (_near[i] != null
+                    && _near[i].GetComponent<Character>() != null)
                 {
                     n++;
                 }
@@ -105,30 +118,41 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    /// <summary>Client: its player's swing goes to the host too, for the host's enemies to dodge.</summary>
+    /// <summary>
+    /// Client: its player's swing goes to the host too, for the host's enemies
+    /// to dodge.
+    /// </summary>
     [HarmonyPatch(typeof(Player), "notifyEnemiesAboutAttack")]
     static class AttackCuePatch
     {
         static void Postfix() => PlayerCues.Send(PlayerCues.Dodge);
     }
 
-    /// <summary>Client: its player's aim goes to the host too. Only Player.aimScare calls scareInArea.</summary>
+    /// <summary>
+    /// Client: its player's aim goes to the host too. Only Player.aimScare
+    /// calls scareInArea.
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.scareInArea))]
     static class AimCuePatch
     {
         static void Prefix() => PlayerCues.Send(PlayerCues.Scare);
     }
 
-    /// <summary>Client: frozen copies of the host's enemies don't dodge or get scared (the host's do, and are sent).</summary>
+    /// <summary>
+    /// Client: frozen copies of the host's enemies don't dodge or get scared
+    /// (the host's do, and are sent).
+    /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.doIWantToDodge))]
     static class FrozenNoDodgePatch
     {
-        static bool Prefix(Character __instance) => !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+        static bool Prefix(Character __instance) =>
+            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
     }
 
     [HarmonyPatch(typeof(Character), nameof(Character.getScared))]
     static class FrozenNotScaredPatch
     {
-        static bool Prefix(Character __instance) => !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+        static bool Prefix(Character __instance) =>
+            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
     }
 }

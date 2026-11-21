@@ -4,16 +4,20 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// The game doesn't stop while others are playing in it. Darkwood pauses (Core.pause: time scale 0, sound
-    /// paused) for the pause menu, the map, the journal, dialogue, the padlock, the level-up and skill menus.
-    /// The host's game runs the enemies and the clock for everyone, and a client's shows them, so in co-op the
-    /// pause only marks the game paused (Core.Paused, which stops the player's own input as it does alone) and the
-    /// world goes on, as in other co-op games. While a menu is open your character stands still, and enemies
-    /// can still get you.
+    /// The game doesn't stop while others are playing in it. Darkwood pauses
+    /// (Core.pause: time scale 0, sound paused) for the pause menu, the map,
+    /// the journal, dialogue, the padlock, the level-up and skill menus.
+    /// The host's game runs the enemies and the clock for everyone, and a
+    /// client's shows them, so in co-op the pause only marks the game paused
+    /// (Core.Paused, which stops the player's own input as it does alone) and
+    /// the world goes on, as in other co-op games. While a menu is open your
+    /// character stands still, and enemies can still get you.
     ///
-    /// The same goes for slow motion: the active-skill wheel (ActiveSkillsMenu, time scale 0.2 while it's open) and
-    /// a scripted event's timeScale step (Controller.alterTimeScale). On the host they would slow the enemies, fire
-    /// and clock of everyone's world. In co-op the time scale stays 1 (the wheel still stops your own input).
+    /// The same goes for slow motion: the active-skill wheel (ActiveSkillsMenu,
+    /// time scale 0.2 while it's open) and a scripted event's timeScale step
+    /// (Controller.alterTimeScale). On the host they would slow the enemies,
+    /// fire and clock of everyone's world. In co-op the time scale stays 1 (the
+    /// wheel still stops your own input).
     /// </summary>
     public static class CoopPause
     {
@@ -23,13 +27,15 @@ namespace DarkwoodMP.World
             get
             {
                 var s = Net.Session.Instance;
-                return s != null && s.Active && s.Connected && WorldShare.InWorld && (s.IsClient || s.Peers.Count > 0);
+                return s != null && s.Active && s.Connected
+                    && WorldShare.InWorld && (s.IsClient || s.Peers.Count > 0);
             }
         }
 
         /// <summary>
-        /// Call every frame. A game that was paused before co-op started (the host in a menu as someone joins)
-        /// starts running again; and a character standing still in a menu doesn't keep sliding.
+        /// Call every frame. A game that was paused before co-op started (the
+        /// host in a menu as someone joins) starts running again; and a
+        /// character standing still in a menu doesn't keep sliding.
         /// </summary>
         public static void Update()
         {
@@ -39,7 +45,8 @@ namespace DarkwoodMP.World
             }
             if (Time.timeScale == 0f)
             {
-                Plugin.Log.LogInfo("Co-op: the game was paused; it runs on while others play");
+                Plugin.Log.LogInfo(
+                    "Co-op: the game was paused; it runs on while others play");
                 Core.setTimeScale(1f);
                 AudioController.UnpauseAll(0.5f);
             }
@@ -64,12 +71,16 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
-            Core.Paused = true; // menus and input behave as paused; time and sound go on
+            // menus and input behave as paused; time and sound go on
+            Core.Paused = true;
             return false;
         }
     }
 
-    /// <summary>Slow motion (the active-skill wheel) keeps time at its normal rate in co-op.</summary>
+    /// <summary>
+    /// Slow motion (the active-skill wheel) keeps time at its normal rate in
+    /// co-op.
+    /// </summary>
     [HarmonyPatch(typeof(Core), nameof(Core.setTimeScale), typeof(float))]
     static class CoopTimeScalePatch
     {
@@ -82,8 +93,13 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>A scripted event's slow motion (GameEvent timeScale) doesn't run in co-op.</summary>
-    [HarmonyPatch(typeof(Controller), nameof(Controller.alterTimeScale), typeof(float), typeof(float))]
+    /// <summary>
+    /// A scripted event's slow motion (GameEvent timeScale) doesn't run in
+    /// co-op.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Controller), nameof(Controller.alterTimeScale), typeof(float),
+        typeof(float))]
     static class CoopAlterTimeScalePatch
     {
         static bool Prefix(ref System.Collections.IEnumerator __result)

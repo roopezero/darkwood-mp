@@ -33,19 +33,26 @@ namespace DarkwoodMP.World
     ///                      item reach it as ItemHit (the shadow takes them), its light check runs there, and it
     ///                      sends the death. A client's own copy of the shadow never dies by itself.
     ///
-    /// Keys and quest items aren't objects lying in the world: KeyReference / QuestItemReference.pickup is called
-    /// on the item's database prefab when it's taken from a container or a dropped item, which is a slot change
+    /// Keys and quest items aren't objects lying in the world: KeyReference /
+    /// QuestItemReference.pickup is called on the item's database prefab when
+    /// it's taken from a container or a dropped item, which is a slot change
     /// (SlotShare), so there's nothing more to remove for them.
     /// </summary>
     public static class ObjectActions
     {
-        public static bool Handles(Action a) => a == Action.InteractiveSwitch || a == Action.Removed || a == Action.FeederUsed || a == Action.LiquidLit
+        public static bool Handles(Action a) => a == Action.InteractiveSwitch
+            || a == Action.Removed || a == Action.FeederUsed
+            || a == Action.LiquidLit
             || a == Action.VineHit || a == Action.ShadowArmorDied;
 
-        /// <summary>The most a player's swing takes off a vine in one hit.</summary>
+        /// <summary>
+        /// The most a player's swing takes off a vine in one hit.
+        /// </summary>
         public const float VineDamageCap = 1000f;
 
-        /// <summary>Host: whether a client's player could have done this here.</summary>
+        /// <summary>
+        /// Host: whether a client's player could have done this here.
+        /// </summary>
         internal static bool Allowed(Action a, ObjRef obj, bool on, float x)
         {
             var t = ObjRef.Resolve<Transform>(obj);
@@ -76,10 +83,13 @@ namespace DarkwoodMP.World
                         }
                         if (x < 0f || x > VineDamageCap)
                         {
-                            Authority.Refuse($"a hit of {x:0} is more than any weapon does");
+                            Authority.Refuse(
+                                $"a hit of {x:0} is more than any weapon does");
                             return false;
                         }
-                        return Authority.InReach(t.position, WorldActions.ShotReach, t.name); // a vine is long: its root may be far from the cut
+                        // a vine is long: its root may be far from the cut
+                        return Authority.InReach(
+                            t.position, WorldActions.ShotReach, t.name);
                     }
                 case Action.ShadowArmorDied:
                     Authority.Refuse("the host decides when a shadow dies");
@@ -92,7 +102,8 @@ namespace DarkwoodMP.World
                             Authority.Refuse("it isn't a switch");
                             return false;
                         }
-                        if (!Authority.InReach(t.position, WorldActions.Reach, t.name))
+                        if (!Authority.InReach(
+                            t.position, WorldActions.Reach, t.name))
                         {
                             return false;
                         }
@@ -111,15 +122,18 @@ namespace DarkwoodMP.World
                 case Action.Removed:
                     if (t.GetComponent<Lure>() != null)
                     {
-                        Authority.Refuse("lures are eaten by the host's animals");
+                        Authority.Refuse(
+                            "lures are eaten by the host's animals");
                         return false;
                     }
-                    if (t.GetComponent<JournalNoteReference>() == null && t.GetComponent<DeathDrop>() == null)
+                    if (t.GetComponent<JournalNoteReference>() == null
+                        && t.GetComponent<DeathDrop>() == null)
                     {
                         Authority.Refuse("it can't be picked up");
                         return false;
                     }
-                    return Authority.InReach(t.position, WorldActions.Reach, t.name);
+                    return Authority.InReach(
+                        t.position, WorldActions.Reach, t.name);
                 case Action.LiquidLit:
                     {
                         var liquid = t.GetComponent<Liquid>();
@@ -138,13 +152,15 @@ namespace DarkwoodMP.World
                             Authority.Refuse("it isn't a feeder");
                             return false;
                         }
-                        if (!Authority.InReach(t.position, WorldActions.Reach, t.name))
+                        if (!Authority.InReach(
+                            t.position, WorldActions.Reach, t.name))
                         {
                             return false;
                         }
                         if (!feeder.Active)
                         {
-                            Authority.Refuse("the feeder was already used today");
+                            Authority.Refuse(
+                                "the feeder was already used today");
                             return false;
                         }
                         return true;
@@ -153,8 +169,11 @@ namespace DarkwoodMP.World
             return false;
         }
 
-        /// <summary>Make the change in this game (under WorldActions.Replaying).</summary>
-        internal static void Apply(Action a, ObjRef obj, bool on, float x, ref float y)
+        /// <summary>
+        /// Make the change in this game (under WorldActions.Replaying).
+        /// </summary>
+        internal static void Apply(
+            Action a, ObjRef obj, bool on, float x, ref float y)
         {
             var t = ObjRef.Resolve<Transform>(obj);
             if (WorldActions.Debug)
@@ -180,7 +199,8 @@ namespace DarkwoodMP.World
                             break;
                         }
                         var s = Session.Instance;
-                        // The host's own hit says the health it left, so a copy that missed a hit comes back in step.
+                        // The host's own hit says the health it left, so a copy
+                        // that missed a hit comes back in step.
                         if (s != null && !s.IsHost)
                         {
                             cp.health = y + x;
@@ -226,12 +246,15 @@ namespace DarkwoodMP.World
                         var ii = t.GetComponent<InteractiveItem>();
                         if (ii != null)
                         {
-                            ii.isOn = on; // its events are the switcher's (and the host's), not ours
+                            // its events are the switcher's (and the host's),
+                            // not ours
+                            ii.isOn = on;
                         }
                         break;
                     }
                 case Action.Removed:
-                    if (t.GetComponent<Item>() != null || t.GetComponent<Lure>() != null)
+                    if (t.GetComponent<Item>() != null
+                        || t.GetComponent<Lure>() != null)
                     {
                         Containers.CloseIfOpen(t.gameObject);
                         Object.Destroy(t.gameObject);
@@ -256,7 +279,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>Host, after applying a client's action: what the host's own game does for it, outside the replay.</summary>
+        /// <summary>
+        /// Host, after applying a client's action: what the host's own game
+        /// does for it, outside the replay.
+        /// </summary>
         internal static void AfterOnHost(Action a, ObjRef obj, bool on)
         {
             if (a != Action.InteractiveSwitch)
@@ -286,18 +312,23 @@ namespace DarkwoodMP.World
                 // the host's own flip.
                 if (!ReferenceEquals(trigger, null))
                 {
-                    trigger.fireEventTrigger(global::EventTrigger.Type.area, "", force: true);
+                    trigger.fireEventTrigger(
+                        global::EventTrigger.Type.area, "", force: true);
                 }
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't run the events of switch {ii.name}: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't run the events of switch {ii.name}: {e.Message}");
             }
         }
 
-        // ---- what the local player picks up -------------------------------------------------------
+        // ---- what the local player picks up ---------------------------------
 
-        /// <summary>The Item.activate call in progress, and whether it took the thing (a note read, a bag's experience).</summary>
+        /// <summary>
+        /// The Item.activate call in progress, and whether it took the thing (a
+        /// note read, a bag's experience).
+        /// </summary>
         internal static Item Activating;
         internal static bool Took;
 
@@ -320,7 +351,8 @@ namespace DarkwoodMP.World
             w.W.Write(0f);
             w.W.Write((byte)0);
             w.WriteStr("");
-            Authority.Request(w, $"FeederUsed {r} ({feeder.name})", (ok, reason, result) =>
+            Authority.Request(w, $"FeederUsed {r} ({feeder.name})",
+                (ok, reason, result) =>
             {
                 if (feeder == null || Player.Instance == null)
                 {
@@ -328,7 +360,8 @@ namespace DarkwoodMP.World
                 }
                 if (!ok)
                 {
-                    Player.Instance.displayMessage(Language.Get("Playermsg_feederInactive", "UI"));
+                    Player.Instance.displayMessage(
+                        Language.Get("Playermsg_feederInactive", "UI"));
                     return;
                 }
                 WorldActions.Replaying = true;
@@ -344,7 +377,9 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Switching an InteractiveItem (from its window's button).</summary>
+    /// <summary>
+    /// Switching an InteractiveItem (from its window's button).
+    /// </summary>
     [HarmonyPatch(typeof(InteractiveItem), nameof(InteractiveItem.switchMe))]
     static class InteractiveSwitchPatch
     {
@@ -354,13 +389,16 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            WorldActions.Send(Action.InteractiveSwitch, __instance.gameObject, f1: __instance.isOn);
+            WorldActions.Send(
+                Action.InteractiveSwitch, __instance.gameObject,
+                f1: __instance.isOn);
         }
     }
 
     /// <summary>
-    /// Item.activate: a note picked up off the ground, or a death bag's experience taken, destroys the object
-    /// in this game only; send it as Removed. The ObjRef is taken before, while the object is as it was.
+    /// Item.activate: a note picked up off the ground, or a death bag's
+    /// experience taken, destroys the object in this game only; send it as
+    /// Removed. The ObjRef is taken before, while the object is as it was.
     /// </summary>
     [HarmonyPatch(typeof(Item), nameof(Item.activate))]
     static class PickupPatch
@@ -375,7 +413,8 @@ namespace DarkwoodMP.World
                 return;
             }
             var note = __instance.GetComponent<JournalNoteReference>();
-            if ((note != null && !note.dontDestroy) || __instance.GetComponent<DeathDrop>() != null)
+            if ((note != null && !note.dontDestroy)
+                || __instance.GetComponent<DeathDrop>() != null)
             {
                 ObjectActions.Activating = __instance;
                 __state = ObjRef.Of(__instance.gameObject);
@@ -384,7 +423,9 @@ namespace DarkwoodMP.World
 
         static void Postfix(Item __instance, ObjRef __state)
         {
-            bool took = ObjectActions.Took && ObjectActions.Activating == __instance; // both are reset in Finalizer
+            // both are reset in Finalizer
+            bool took =
+                ObjectActions.Took && ObjectActions.Activating == __instance;
             if (!took || !__state.Valid || !WorldActions.Sharing)
             {
                 return;
@@ -400,13 +441,18 @@ namespace DarkwoodMP.World
         }
     }
 
-    [HarmonyPatch(typeof(JournalNoteReference), nameof(JournalNoteReference.pickup))]
+    [HarmonyPatch(
+        typeof(JournalNoteReference), nameof(JournalNoteReference.pickup))]
     static class NotePickupPatch
     {
-        static void Prefix(JournalNoteReference __instance) => ObjectActions.TookIt(__instance.gameObject);
+        static void Prefix(JournalNoteReference __instance) =>
+            ObjectActions.TookIt(__instance.gameObject);
     }
 
-    /// <summary>The DeathDrop branch of Item.activate gives the bag's experience (Player.gainExp) and destroys it.</summary>
+    /// <summary>
+    /// The DeathDrop branch of Item.activate gives the bag's experience
+    /// (Player.gainExp) and destroys it.
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.gainExp))]
     static class DeathDropExpPatch
     {
@@ -420,7 +466,9 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Host: a lure its animals finished eating goes for everyone.</summary>
+    /// <summary>
+    /// Host: a lure its animals finished eating goes for everyone.
+    /// </summary>
     [HarmonyPatch(typeof(Lure), nameof(Lure.removeHealth))]
     static class LureEatenPatch
     {
@@ -435,13 +483,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            WorldActions.Send(Action.Removed, __instance.gameObject, byPlayerKnown: true);
+            WorldActions.Send(
+                Action.Removed, __instance.gameObject, byPlayerKnown: true);
         }
     }
 
     /// <summary>
-    /// Feeders: the host's own use goes to everyone (FeederUsed); a client's waits for the host's yes, as only
-    /// one player gets each day's feed.
+    /// Feeders: the host's own use goes to everyone (FeederUsed); a client's
+    /// waits for the host's yes, as only one player gets each day's feed.
     /// </summary>
     [HarmonyPatch(typeof(Feeder), nameof(Feeder.activate))]
     static class FeederPatch
@@ -468,41 +517,57 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            WorldActions.Send(Action.FeederUsed, __instance.gameObject, byPlayerKnown: true);
+            WorldActions.Send(
+                Action.FeederUsed, __instance.gameObject, byPlayerKnown: true);
         }
     }
 
-    /// <summary>Spilt gasoline catching fire: send where it started (see ObjectActions, LiquidLit).</summary>
+    /// <summary>
+    /// Spilt gasoline catching fire: send where it started (see ObjectActions,
+    /// LiquidLit).
+    /// </summary>
     [HarmonyPatch(typeof(Liquid), nameof(Liquid.startBurning))]
     static class LiquidLitPatch
     {
-        /// <summary>True while a burning liquid lights its neighbours (Liquid.waitToBurnNeighbors): a spread, not sent.</summary>
+        /// <summary>
+        /// True while a burning liquid lights its neighbours
+        /// (Liquid.waitToBurnNeighbors): a spread, not sent.
+        /// </summary>
         internal static bool Spreading;
-        /// <summary>True while the local player's melee sensor touches something.</summary>
+        /// <summary>
+        /// True while the local player's melee sensor touches something.
+        /// </summary>
         internal static bool OwnSwing;
 
-        static void Prefix(Liquid __instance, out bool __state) => __state = __instance != null && !__instance.burning;
+        static void Prefix(Liquid __instance, out bool __state) =>
+            __state = __instance != null && !__instance.burning;
 
         static void Postfix(Liquid __instance, bool __state)
         {
-            if (!__state || Spreading || !__instance.burning || !WorldActions.Sharing)
+            if (!__state || Spreading || !__instance.burning
+                || !WorldActions.Sharing)
             {
                 return;
             }
             var s = Session.Instance;
             if (s.IsClient && !OwnSwing)
             {
-                return; // the host's copy of the throw or explosion lights it there
+                // the host's copy of the throw or explosion lights it there
+                return;
             }
-            WorldActions.Send(Action.LiquidLit, __instance.gameObject, byPlayerKnown: true);
+            WorldActions.Send(
+                Action.LiquidLit, __instance.gameObject, byPlayerKnown: true);
         }
     }
 
     /// <summary>
-    /// A thrown item going off spawns things at random spots round it (Explodes.spawnObjects: a molotov's gasoline).
-    /// Every thrown item goes off in the host's game too (its own, or its copy of a client's throw), so the host's
-    /// are the ones shared (Containers.ThrownSpawns) and a client's game makes none of its own: otherwise each game
-    /// had its gasoline in different spots and the fire the host lit in its own wasn't found in the others.
+    /// A thrown item going off spawns things at random spots round it
+    /// (Explodes.spawnObjects: a molotov's gasoline). Every thrown item goes
+    /// off in the host's game too (its own, or its copy of a client's throw),
+    /// so the host's are the ones shared (Containers.ThrownSpawns) and a
+    /// client's game makes none of its own: otherwise each game had its
+    /// gasoline in different spots and the fire the host lit in its own wasn't
+    /// found in the others.
     /// </summary>
     [HarmonyPatch(typeof(Explodes), "spawnObjects")]
     static class ThrownLeavesPatch
@@ -510,7 +575,8 @@ namespace DarkwoodMP.World
         static bool Prefix(Explodes __instance)
         {
             var s = Session.Instance;
-            if (s == null || !s.Active || !WorldShare.InWorld || __instance == null || __instance.spawnObject == null)
+            if (s == null || !s.Active || !WorldShare.InWorld
+                || __instance == null || __instance.spawnObject == null)
             {
                 return true;
             }
@@ -531,7 +597,8 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] {__instance.name} went off: its {path} comes from the host");
+                    Plugin.Log.LogInfo(
+                        $"[world] {__instance.name} went off: its {path} comes from the host");
                 }
                 return false;
             }
@@ -550,7 +617,8 @@ namespace DarkwoodMP.World
             foreach (var path in Containers.ThrownSpawns)
             {
                 var loaded = Resources.Load("Prefabs/" + path);
-                if (loaded != null && (loaded == prefab || loaded.name == prefab.name))
+                if (loaded != null
+                    && (loaded == prefab || loaded.name == prefab.name))
                 {
                     return path;
                 }
@@ -573,7 +641,8 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(MeleeSensor), "OnTriggerEnter")]
     static class OwnSwingPatch
     {
-        static void Prefix(MeleeSensor __instance) => LiquidLitPatch.OwnSwing = __instance.type == MeleeSensor.MeleeSensorType.player;
+        static void Prefix(MeleeSensor __instance) => LiquidLitPatch.OwnSwing =
+            __instance.type == MeleeSensor.MeleeSensorType.player;
         static System.Exception Finalizer(System.Exception __exception)
         {
             LiquidLitPatch.OwnSwing = false;
@@ -581,8 +650,13 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>A vine cut at (ObjectActions, VineHit). The detach it may make, and the parent's break in it, are nested.</summary>
-    [HarmonyPatch(typeof(ChainParent), nameof(ChainParent.getHit), new[] { typeof(float), typeof(Transform), typeof(Vine) })]
+    /// <summary>
+    /// A vine cut at (ObjectActions, VineHit). The detach it may make, and the
+    /// parent's break in it, are nested.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(ChainParent), nameof(ChainParent.getHit),
+        new[] { typeof(float), typeof(Transform), typeof(Vine) })]
     static class VineHitPatch
     {
         static void Prefix(ChainParent __instance, out float __state)
@@ -590,9 +664,12 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.health;
         }
-        static void Postfix(ChainParent __instance, float damage, Transform attackerTransform, float __state)
+        static void Postfix(
+            ChainParent __instance, float damage, Transform attackerTransform,
+            float __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing || __instance == null || __instance.health == __state)
+            if (!WorldActions.Outermost() || !WorldActions.Sharing
+                || __instance == null || __instance.health == __state)
             {
                 return;
             }
@@ -600,27 +677,36 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            WorldActions.Send(Action.VineHit, ObjRef.Of(__instance.gameObject), __instance.name, damage, __instance.health);
+            WorldActions.Send(
+                Action.VineHit, ObjRef.Of(__instance.gameObject),
+                __instance.name, damage, __instance.health);
         }
     }
 
     /// <summary>
-    /// The shadow on a shadow-covered item died (ObjectActions, ShadowArmorDied). The host sends it; on a client the
-    /// shadow dies only when the host says so, whatever its own copy's light check and hits came to. A shadow on a
-    /// character (a night enemy) is the enemy's: left to the game here and to the host's enemies.
-    /// die(instant: true) comes only from Item.loadValues, when the save being loaded says the shadow is already dead.
-    /// Everyone loaded the host's save, so it runs in every game and isn't sent (a joiner who loads after the shadow
-    /// died would otherwise keep it, and the item under it stays shut).
+    /// The shadow on a shadow-covered item died (ObjectActions,
+    /// ShadowArmorDied). The host sends it; on a client the shadow dies only
+    /// when the host says so, whatever its own copy's light check and hits came
+    /// to. A shadow on a character (a night enemy) is the enemy's: left to the
+    /// game here and to the host's enemies.
+    /// die(instant: true) comes only from Item.loadValues, when the save being
+    /// loaded says the shadow is already dead. Everyone loaded the host's save,
+    /// so it runs in every game and isn't sent (a joiner who loads after the
+    /// shadow died would otherwise keep it, and the item under it stays shut).
     /// </summary>
     [HarmonyPatch(typeof(ShadowArmor), nameof(ShadowArmor.die))]
     static class ShadowArmorDiedPatch
     {
-        static bool OnItem(ShadowArmor sa) => sa != null && sa.GetComponent<Item>() != null && sa.GetComponent<Character>() == null;
+        static bool OnItem(ShadowArmor sa) => sa != null
+            && sa.GetComponent<Item>() != null
+            && sa.GetComponent<Character>() == null;
 
-        static bool Prefix(ShadowArmor __instance, bool instant, out ObjRef __state)
+        static bool Prefix(
+            ShadowArmor __instance, bool instant, out ObjRef __state)
         {
             __state = default;
-            if (instant || !OnItem(__instance) || Session.Instance == null || !WorldShare.InWorld)
+            if (instant || !OnItem(__instance) || Session.Instance == null
+                || !WorldShare.InWorld)
             {
                 return true;
             }

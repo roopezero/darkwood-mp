@@ -9,15 +9,20 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// What the world rolls by itself, rolled once, on the host: the night's scenario and its events, the day's
-    /// random events, the shadows' lights, the random objects that appear at dawn, night mushrooms, and the weather.
-    /// A joiner's clock follows the host's a minute at a time (TimeSync), and each of these hangs on the clock, so
-    /// without this every game rolled its own with its own random numbers.
+    /// What the world rolls by itself, rolled once, on the host: the night's
+    /// scenario and its events, the day's random events, the shadows' lights,
+    /// the random objects that appear at dawn, night mushrooms, and the
+    /// weather. A joiner's clock follows the host's a minute at a time
+    /// (TimeSync), and each of these hangs on the clock, so without this every
+    /// game rolled its own with its own random numbers.
     ///
-    /// On a joiner in the shared world (not away in a separate location or a dream, which play as in single player)
-    /// the rolls do nothing: NightScenarios.setCurrentScenario, NightScenario.checkFrequencies / fireEvent, the day
-    /// events' Events.onUpdateTime, RandomEvent.fire, Player.shadowLightsTurnOff, WorldGenerator.spawnRandomObjects
-    /// and despawnRandomObjects, WormsSpawner.spawn, and Rain.onNewDay / setUpNextRain / setUpFog. The host sends:
+    /// On a joiner in the shared world (not away in a separate location or a
+    /// dream, which play as in single player) the rolls do nothing:
+    /// NightScenarios.setCurrentScenario, NightScenario.checkFrequencies /
+    /// fireEvent, the day events' Events.onUpdateTime, RandomEvent.fire,
+    /// Player.shadowLightsTurnOff, WorldGenerator.spawnRandomObjects and
+    /// despawnRandomObjects, WormsSpawner.spawn, and Rain.onNewDay /
+    /// setUpNextRain / setUpFog. The host sends:
     ///   NightScenario  the scenario it chose (checked every second, sent when it changes and every 10 seconds).
     ///   NightEvent     a night event that fired. A joiner plays it at its own hideout, presentation only: of the
     ///                  event's GameEvent steps it runs sounds, particles, camera effects, colour tweens, animations
@@ -27,18 +32,25 @@ namespace DarkwoodMP.World
     ///   RandomObjects  the dawn's random objects (chunk, which object, where, what it holds), a moment after the
     ///                  host made them so their contents are filled; or one night mushroom.
     ///   Weather        the day's rain and fog plan, when it changes and every 10 seconds.
-    /// Enemies the events spawn on the host reach joiners through NetEnemies, and lamps switched on through ItemOn.
+    /// Enemies the events spawn on the host reach joiners through NetEnemies,
+    /// and lamps switched on through ItemOn.
     /// </summary>
     public sealed class WorldEvents
     {
         public static WorldEvents Instance { get; private set; }
         private readonly Session _session;
         private const float Resend = 10f;
-        private float _nextCheck, _nextScenarioSend, _nextWeatherSend, _randomDue = -1f;
+        private float _nextCheck,
+            _nextScenarioSend,
+            _nextWeatherSend,
+            _randomDue = -1f;
         private string _sentScenario;
         private string _sentWeather;
 
-        /// <summary>Above 0 while a joiner plays a night event the host sent: only its presentation runs.</summary>
+        /// <summary>
+        /// Above 0 while a joiner plays a night event the host sent: only its
+        /// presentation runs.
+        /// </summary>
         public static int Presentation;
 
         public WorldEvents(Session session)
@@ -62,10 +74,14 @@ namespace DarkwoodMP.World
         {
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
-            return (o != null && o.playerInOutsideLocation) || (d != null && d.dreaming);
+            return (o != null && o.playerInOutsideLocation)
+                || (d != null && d.dreaming);
         }
 
-        /// <summary>A joiner in the shared world: the host rolls the world's events, this game follows.</summary>
+        /// <summary>
+        /// A joiner in the shared world: the host rolls the world's events,
+        /// this game follows.
+        /// </summary>
         public static bool Follows => NetEnemies.ClientMode && !Away();
 
         private bool HostSharing => _session.IsHost && WorldActions.Sharing;
@@ -93,11 +109,13 @@ namespace DarkwoodMP.World
             {
                 scenario = ns.currentScenario.name;
             }
-            if (scenario != _sentScenario || Time.unscaledTime >= _nextScenarioSend)
+            if (scenario != _sentScenario
+                || Time.unscaledTime >= _nextScenarioSend)
             {
                 if (WorldActions.Debug && scenario != _sentScenario)
                 {
-                    Plugin.Log.LogInfo($"[world] sent night scenario '{scenario}'");
+                    Plugin.Log.LogInfo(
+                        $"[world] sent night scenario '{scenario}'");
                 }
                 _sentScenario = scenario;
                 _nextScenarioSend = Time.unscaledTime + Resend;
@@ -110,7 +128,8 @@ namespace DarkwoodMP.World
             if (rain != null)
             {
                 string key = WeatherKey(rain);
-                if (key != _sentWeather || Time.unscaledTime >= _nextWeatherSend)
+                if (key != _sentWeather
+                    || Time.unscaledTime >= _nextWeatherSend)
                 {
                     if (WorldActions.Debug && key != _sentWeather)
                     {
@@ -123,7 +142,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- night scenario --------------------------------------------------------------
+        // ---- night scenario -------------------------------------------------
 
         private void OnScenario(ulong from, PacketReader r)
         {
@@ -163,15 +182,19 @@ namespace DarkwoodMP.World
             }
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] night scenario now '{name}' (the host's)");
+                Plugin.Log.LogInfo(
+                    $"[world] night scenario now '{name}' (the host's)");
             }
         }
 
-        // ---- night events ----------------------------------------------------------------
+        // ---- night events ---------------------------------------------------
 
         private const byte EventFired = 1, ShadowLightsKind = 2;
 
-        /// <summary>Host: a night event fired (CustomEvent.fire); the joiners play it too.</summary>
+        /// <summary>
+        /// Host: a night event fired (CustomEvent.fire); the joiners play it
+        /// too.
+        /// </summary>
         internal void SendNightEvent(CustomEvent ev)
         {
             if (!HostSharing || WorldActions.Replaying || ev == null)
@@ -207,7 +230,8 @@ namespace DarkwoodMP.World
                 {
                     shownName = big.name;
                 }
-                Plugin.Log.LogInfo($"[world] sent night event {ev.gameObject.name} at {shownName}");
+                Plugin.Log.LogInfo(
+                    $"[world] sent night event {ev.gameObject.name} at {shownName}");
             }
         }
 
@@ -220,7 +244,8 @@ namespace DarkwoodMP.World
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent shadow lights: {keep.name} stays on ({gen.name})");
+                Plugin.Log.LogInfo(
+                    $"[world] sent shadow lights: {keep.name} stays on ({gen.name})");
             }
         }
 
@@ -228,7 +253,8 @@ namespace DarkwoodMP.World
         {
             foreach (var e in sc.customEventAndInts)
             {
-                if (e != null && e.customEvent != null && e.customEvent.gameObject.name == name)
+                if (e != null && e.customEvent != null
+                    && e.customEvent.gameObject.name == name)
                 {
                     return e.customEvent;
                 }
@@ -252,7 +278,9 @@ namespace DarkwoodMP.World
             byte kind = r.R.ReadByte();
             if (kind == EventFired)
             {
-                string scenario = r.ReadStr(), name = r.ReadStr(), where = r.ReadStr();
+                string scenario = r.ReadStr(),
+                    name = r.ReadStr(),
+                    where = r.ReadStr();
                 if (!Follows)
                 {
                     return;
@@ -270,7 +298,8 @@ namespace DarkwoodMP.World
                 }
                 if (ev == null)
                 {
-                    Plugin.Log.LogWarning($"No night event {scenario}/{name} here");
+                    Plugin.Log.LogWarning(
+                        $"No night event {scenario}/{name} here");
                     return;
                 }
                 var big = Player.Instance.whereAmI.bigLocation;
@@ -278,7 +307,8 @@ namespace DarkwoodMP.World
                 {
                     if (WorldActions.Debug)
                     {
-                        Plugin.Log.LogInfo($"[world] night event {name} (the host's, at {where}): not at a location here, not played");
+                        Plugin.Log.LogInfo(
+                            $"[world] night event {name} (the host's, at {where}): not at a location here, not played");
                     }
                     return;
                 }
@@ -296,7 +326,8 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] night event {name} (the host's, at {where}) played here at {big.name}");
+                    Plugin.Log.LogInfo(
+                        $"[world] night event {name} (the host's, at {where}) played here at {big.name}");
                 }
             }
             else if (kind == ShadowLightsKind)
@@ -311,7 +342,8 @@ namespace DarkwoodMP.World
                 var keep = ObjRef.Resolve<Item>(k);
                 if (gen == null || keep == null)
                 {
-                    Plugin.Log.LogWarning($"Shadow lights: no generator {g} or lamp {k} here");
+                    Plugin.Log.LogWarning(
+                        $"Shadow lights: no generator {g} or lamp {k} here");
                     return;
                 }
                 WorldActions.Replaying = true;
@@ -325,18 +357,22 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] shadow lights: {keep.name} stays on (the host's choice)");
+                    Plugin.Log.LogInfo(
+                        $"[world] shadow lights: {keep.name} stays on (the host's choice)");
                 }
             }
         }
 
         /// <summary>
-        /// Player.shadowLightsTurnOff on the host, with its lamp chosen once and sent: the chosen lamp comes on, all
-        /// of the generator's lamps flicker, and after 8 seconds the others go out for 30.
+        /// Player.shadowLightsTurnOff on the host, with its lamp chosen once
+        /// and sent: the chosen lamp comes on, all of the generator's lamps
+        /// flicker, and after 8 seconds the others go out for 30.
         /// </summary>
         internal bool HostShadowLights(Player p, bool anyTime = false)
         {
-            if (!anyTime && (Singleton<CharacterSpawner>.Instance.shadowsRemove || Core.isDay()))
+            if (!anyTime
+                && (Singleton<CharacterSpawner>.Instance.shadowsRemove
+                    || Core.isDay()))
             {
                 return false;
             }
@@ -368,7 +404,9 @@ namespace DarkwoodMP.World
             return lights;
         }
 
-        /// <summary>The game's shadow lights effect, with the lamp that stays on given.</summary>
+        /// <summary>
+        /// The game's shadow lights effect, with the lamp that stays on given.
+        /// </summary>
         internal static void ShadowLights(Generator gen, Item keep)
         {
             var lights = Lights(gen);
@@ -406,7 +444,10 @@ namespace DarkwoodMP.World
             }, 8f, timeScaleDependent: true);
         }
 
-        /// <summary>The GameEvent steps a joiner runs when it plays the host's night event: what's seen and heard.</summary>
+        /// <summary>
+        /// The GameEvent steps a joiner runs when it plays the host's night
+        /// event: what's seen and heard.
+        /// </summary>
         internal static bool PresentationOnly(GameEvent e)
         {
             switch (e.type)
@@ -422,7 +463,9 @@ namespace DarkwoodMP.World
                 case GameEvent.Type.debug:
                     return true;
                 case GameEvent.Type.fireEvent:
-                    return !e.activeModifier; // other GameEvents (filtered the same way), not a world event
+                    // other GameEvents (filtered the same way), not a world
+                    // event
+                    return !e.activeModifier;
                 default:
                     return false;
             }
@@ -433,12 +476,16 @@ namespace DarkwoodMP.World
             yield break;
         }
 
-        /// <summary>Runs a played event's step with Presentation and Replaying set, so what it fires later is filtered too.</summary>
+        /// <summary>
+        /// Runs a played event's step with Presentation and Replaying set, so
+        /// what it fires later is filtered too.
+        /// </summary>
         internal static IEnumerator AsPresentation(IEnumerator inner)
         {
             while (true)
             {
-                bool more, was = WorldActions.Replaying; // the first step runs at once, inside OnNightEvent's own replay
+                // the first step runs at once, inside OnNightEvent's own replay
+                bool more, was = WorldActions.Replaying;
                 Presentation++;
                 WorldActions.Replaying = true;
                 try
@@ -458,15 +505,19 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- random objects at dawn, night mushrooms -----------------------------------------
+        // ---- random objects at dawn, night mushrooms ------------------------
 
         private const byte DawnObjects = 1, NightObject = 2;
         private static readonly AccessTools.FieldRef<WorldChunk, List<GameObject>> RandomObjectsOf =
-            AccessTools.FieldRefAccess<WorldChunk, List<GameObject>>("randomObjects");
+            AccessTools.FieldRefAccess<WorldChunk, List<GameObject>>(
+                "randomObjects");
         private readonly System.Random _rng = new System.Random();
         private long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
 
-        /// <summary>Host: the dawn's random objects were made; send them once their Start has filled what they hold.</summary>
+        /// <summary>
+        /// Host: the dawn's random objects were made; send them once their
+        /// Start has filled what they hold.
+        /// </summary>
         internal void RandomObjectsMade()
         {
             if (HostSharing)
@@ -483,7 +534,8 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            var all = new List<(long id, int chunk, int obj, Vector3 local, string contents)>();
+            var all =
+                new List<(long id, int chunk, int obj, Vector3 local, string contents)>();
             for (int c = 0; c < gen.worldChunks.Count; c++)
             {
                 var chunk = gen.worldChunks[c];
@@ -497,7 +549,9 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    int oi = rwo.objects.FindIndex(o => o != null && o.prefab != null && o.prefab.name == go.name);
+                    int oi = rwo.objects.FindIndex(
+                        o => o != null && o.prefab != null
+                            && o.prefab.name == go.name);
                     if (oi < 0)
                     {
                         continue;
@@ -521,7 +575,8 @@ namespace DarkwoodMP.World
                     string contents = "";
                     if (inv != null)
                     {
-                        contents = JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+                        contents = JsonConvert.SerializeObject(
+                            new Inventory.SaveState(inv));
                     }
                     all.Add((id, c, oi, local, contents));
                 }
@@ -540,11 +595,14 @@ namespace DarkwoodMP.World
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent {all.Count} random objects of the dawn");
+                Plugin.Log.LogInfo(
+                    $"[world] sent {all.Count} random objects of the dawn");
             }
         }
 
-        /// <summary>Host: a night mushroom was made (WormsSpawner.spawn).</summary>
+        /// <summary>
+        /// Host: a night mushroom was made (WormsSpawner.spawn).
+        /// </summary>
         internal void SendNightObject(GameObject go, string prefab)
         {
             if (!HostSharing || go == null)
@@ -561,7 +619,8 @@ namespace DarkwoodMP.World
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent night object {prefab} #{id} at {go.transform.position}");
+                Plugin.Log.LogInfo(
+                    $"[world] sent night object {prefab} #{id} at {go.transform.position}");
             }
         }
 
@@ -575,10 +634,13 @@ namespace DarkwoodMP.World
             if (kind == DawnObjects)
             {
                 int n = r.R.ReadUInt16();
-                var list = new List<(long id, int chunk, int obj, Vector3 local, string contents)>(n);
+                var list =
+                    new List<(long id, int chunk, int obj, Vector3 local, string contents)>(n);
                 for (int i = 0; i < n; i++)
                 {
-                    list.Add((r.R.ReadInt64(), r.R.ReadUInt16(), r.R.ReadUInt16(), r.ReadVector3(), r.ReadStr()));
+                    list.Add(
+                        (r.R.ReadInt64(), r.R.ReadUInt16(), r.R.ReadUInt16(), r
+                            .ReadVector3(), r.ReadStr()));
                 }
                 if (!NetEnemies.ClientMode)
                 {
@@ -612,12 +674,14 @@ namespace DarkwoodMP.World
                 {
                     foreach (var o in list)
                     {
-                        if (o.chunk >= gen.worldChunks.Count || o.obj >= rwo.objects.Count)
+                        if (o.chunk >= gen.worldChunks.Count
+                            || o.obj >= rwo.objects.Count)
                         {
                             continue;
                         }
                         var chunk = gen.worldChunks[o.chunk];
-                        RandomWorldObjects.RandomObject randomObject = rwo.objects[o.obj];
+                        RandomWorldObjects.RandomObject randomObject =
+                            rwo.objects[o.obj];
                         GameObject prefab = null;
                         if (randomObject != null)
                         {
@@ -627,7 +691,10 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
-                        var go = Core.AddPrefab(prefab, o.local, Quaternion.Euler(90f, 0f, 0f), chunk.gameObject); // as WorldChunk.tryToSpawnInChunk
+                        // as WorldChunk.tryToSpawnInChunk
+                        var go = Core.AddPrefab(
+                            prefab, o.local, Quaternion.Euler(90f, 0f, 0f),
+                            chunk.gameObject);
                         if (go == null)
                         {
                             continue;
@@ -658,7 +725,8 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] made the host's {made} of {n} random objects of the dawn");
+                    Plugin.Log.LogInfo(
+                        $"[world] made the host's {made} of {n} random objects of the dawn");
                 }
             }
             else if (kind == NightObject)
@@ -685,7 +753,9 @@ namespace DarkwoodMP.World
                 WorldActions.Replaying = true;
                 try
                 {
-                    go = Core.AddPrefab(prefab, pos, Quaternion.Euler(90f, 0f, 0f), null, worldSpace: true);
+                    go = Core.AddPrefab(
+                        prefab, pos, Quaternion.Euler(90f, 0f, 0f), null,
+                        worldSpace: true);
                 }
                 finally
                 {
@@ -698,17 +768,19 @@ namespace DarkwoodMP.World
                 var chunk = WorldChunk.getChunkAtPos(pos);
                 if (chunk != null)
                 {
-                    chunk.nightSpawnedObjects.Add(go); // gone at dawn, as the host's
+                    // gone at dawn, as the host's
+                    chunk.nightSpawnedObjects.Add(go);
                 }
                 ObjRef.RegisterSpawned(id, go);
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] made the host's night object {name} #{id} at {pos}");
+                    Plugin.Log.LogInfo(
+                        $"[world] made the host's night object {name} #{id} at {pos}");
                 }
             }
         }
 
-        // ---- weather ---------------------------------------------------------------------
+        // ---- weather --------------------------------------------------------
 
         private static string WeatherKey(Rain r)
         {
@@ -788,7 +860,10 @@ namespace DarkwoodMP.World
                 return;
             }
             byte f = r.R.ReadByte();
-            float start = r.R.ReadSingle(), duration = r.R.ReadSingle(), pre = r.R.ReadSingle(), lightning = r.R.ReadSingle();
+            float start = r.R.ReadSingle(),
+                duration = r.R.ReadSingle(),
+                pre = r.R.ReadSingle(),
+                lightning = r.R.ReadSingle();
             var fogIn = ReadTad(r);
             var fogOut = ReadTad(r);
             var rain = Singleton<Rain>.Instance;
@@ -819,15 +894,17 @@ namespace DarkwoodMP.World
         }
     }
 
-    // ---- joiners don't roll -----------------------------------------------------------------
+    // ---- joiners don't roll -------------------------------------------------
 
-    [HarmonyPatch(typeof(NightScenarios), nameof(NightScenarios.setCurrentScenario))]
+    [HarmonyPatch(
+        typeof(NightScenarios), nameof(NightScenarios.setCurrentScenario))]
     static class ScenarioChoicePatch
     {
         static bool Prefix() => !WorldEvents.Follows;
     }
 
-    [HarmonyPatch(typeof(NightScenario), nameof(NightScenario.checkFrequencies))]
+    [HarmonyPatch(
+        typeof(NightScenario), nameof(NightScenario.checkFrequencies))]
     static class NightEventRollPatch
     {
         static bool Prefix() => !WorldEvents.Follows;
@@ -839,19 +916,29 @@ namespace DarkwoodMP.World
         static bool Prefix() => !WorldEvents.Follows;
     }
 
-    /// <summary>The day's random events (a redneck ambush, world events) at their random times.</summary>
+    /// <summary>
+    /// The day's random events (a redneck ambush, world events) at their random
+    /// times.
+    /// </summary>
     [HarmonyPatch(typeof(Events), "onUpdateTime")]
     static class DayEventsPatch
     {
         static bool Prefix() => !WorldEvents.Follows;
     }
 
-    /// <summary>A joiner's own random events don't fire; a night event the host sent plays only its location events' presentation.</summary>
-    [HarmonyPatch(typeof(RandomEvent), nameof(RandomEvent.fire), new[] { typeof(bool), typeof(bool) })]
+    /// <summary>
+    /// A joiner's own random events don't fire; a night event the host sent
+    /// plays only its location events' presentation.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(RandomEvent), nameof(RandomEvent.fire),
+        new[] { typeof(bool), typeof(bool) })]
     static class RandomEventPatch
     {
         static bool Prefix(RandomEvent __instance) =>
-            !WorldEvents.Follows || (WorldEvents.Presentation > 0 && __instance.type == RandomEvent.Type.locationEvent);
+            !WorldEvents.Follows
+                || (WorldEvents.Presentation > 0
+                    && __instance.type == RandomEvent.Type.locationEvent);
     }
 
     /// <summary>Host: a night event fired; send it.</summary>
@@ -868,8 +955,13 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>A joiner playing the host's night event runs only the steps that are seen or heard.</summary>
-    [HarmonyPatch(typeof(GameEvent), nameof(GameEvent.fire), new[] { typeof(GameObject) })]
+    /// <summary>
+    /// A joiner playing the host's night event runs only the steps that are
+    /// seen or heard.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(GameEvent), nameof(GameEvent.fire),
+        new[] { typeof(GameObject) })]
     static class PresentationPatch
     {
         static void Postfix(GameEvent __instance, ref IEnumerator __result)
@@ -886,14 +978,18 @@ namespace DarkwoodMP.World
             {
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] night event step {__instance.type} ({__instance.Value}) left to the host");
+                    Plugin.Log.LogInfo(
+                        $"[world] night event step {__instance.type} ({__instance.Value}) left to the host");
                 }
                 __result = WorldEvents.Nothing();
             }
         }
     }
 
-    /// <summary>The shadows' lights: the host picks the lamp and sends it; joiners wait for it.</summary>
+    /// <summary>
+    /// The shadows' lights: the host picks the lamp and sends it; joiners wait
+    /// for it.
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.shadowLightsTurnOff))]
     static class ShadowLightsPatch
     {
@@ -903,7 +999,8 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
-            if (Session.Instance != null && Session.Instance.IsHost && WorldActions.Sharing && WorldEvents.Instance != null)
+            if (Session.Instance != null && Session.Instance.IsHost
+                && WorldActions.Sharing && WorldEvents.Instance != null)
             {
                 WorldEvents.Instance.HostShadowLights(__instance);
                 return false;
@@ -912,7 +1009,8 @@ namespace DarkwoodMP.World
         }
     }
 
-    [HarmonyPatch(typeof(WorldGenerator), nameof(WorldGenerator.spawnRandomObjects))]
+    [HarmonyPatch(
+        typeof(WorldGenerator), nameof(WorldGenerator.spawnRandomObjects))]
     static class RandomObjectsPatch
     {
         static bool Prefix() => !NetEnemies.ClientMode;
@@ -929,7 +1027,8 @@ namespace DarkwoodMP.World
         }
     }
 
-    [HarmonyPatch(typeof(WorldGenerator), nameof(WorldGenerator.despawnRandomObjects))]
+    [HarmonyPatch(
+        typeof(WorldGenerator), nameof(WorldGenerator.despawnRandomObjects))]
     static class RandomObjectsGonePatch
     {
         static bool Prefix() => !NetEnemies.ClientMode;
@@ -968,12 +1067,14 @@ namespace DarkwoodMP.World
             }
             var list = __state.chunk.nightSpawnedObjects;
             var big = Player.Instance.whereAmI.bigLocation;
-            if (list.Count > __state.count && big != null && big.nightMushroom != null)
+            if (list.Count > __state.count && big != null
+                && big.nightMushroom != null)
             {
                 WorldEvents instance = WorldEvents.Instance;
                 if (instance != null)
                 {
-                    instance.SendNightObject(list[list.Count - 1], big.nightMushroom.name);
+                    instance.SendNightObject(
+                        list[list.Count - 1], big.nightMushroom.name);
                 }
             }
         }
@@ -982,7 +1083,10 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Rain), nameof(Rain.onNewDay))]
     static class RainDayPatch
     {
-        /// <summary>A joiner keeps the new day's fog reset (not random); the rest is the host's, in Weather.</summary>
+        /// <summary>
+        /// A joiner keeps the new day's fog reset (not random); the rest is the
+        /// host's, in Weather.
+        /// </summary>
         static bool Prefix(Rain __instance)
         {
             if (!NetEnemies.ClientMode)
@@ -1008,28 +1112,39 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// Host: the day's redneck ambush (RandomEvent spawnRedneck) can be any player's. The game sends one redneck
-    /// at the host's player when it's outdoors, away from any location, from day 2. With others playing, the
-    /// ambush picks at random among every player that holds for (the host's player, and each living joiner's
-    /// proxy that is outdoors and away from any location); for a joiner the redneck is spawned around their proxy
-    /// and goes for them, as the game's does for the host. It's the host's enemy like any other, so it reaches
-    /// the joiners as an EnemySpawn.
+    /// Host: the day's redneck ambush (RandomEvent spawnRedneck) can be any
+    /// player's. The game sends one redneck at the host's player when it's
+    /// outdoors, away from any location, from day 2. With others playing, the
+    /// ambush picks at random among every player that holds for (the host's
+    /// player, and each living joiner's proxy that is outdoors and away from
+    /// any location); for a joiner the redneck is spawned around their proxy
+    /// and goes for them, as the game's does for the host. It's the host's
+    /// enemy like any other, so it reaches the joiners as an EnemySpawn.
     /// </summary>
-    [HarmonyPatch(typeof(RandomEvent), nameof(RandomEvent.fire), new[] { typeof(bool), typeof(bool) })]
+    [HarmonyPatch(
+        typeof(RandomEvent), nameof(RandomEvent.fire),
+        new[] { typeof(bool), typeof(bool) })]
     static class RedneckAmbushPatch
     {
-        private static readonly System.Reflection.MethodInfo RemoveMe = AccessTools.Method(typeof(RandomEvent), "removeMe");
+        private static readonly System.Reflection.MethodInfo RemoveMe =
+            AccessTools.Method(typeof(RandomEvent), "removeMe");
 
-        static bool Prefix(RandomEvent __instance, bool checkIfRequirementsMet, bool force)
+        static bool Prefix(
+            RandomEvent __instance, bool checkIfRequirementsMet, bool force)
         {
             var e = __instance;
-            if (NetEnemies.ClientMode || !Threat.Enabled || e.type != RandomEvent.Type.spawnRedneck)
+            if (NetEnemies.ClientMode || !Threat.Enabled
+                || e.type != RandomEvent.Type.spawnRedneck)
             {
                 return true;
             }
-            // The game's own gate (it returns before doing anything): left to it.
+            // The game's own gate (it returns before doing anything): left to
+            // it.
             bool wants = (!e.disabled || force)
-                && ((((checkIfRequirementsMet && e.requirementsMet()) || !checkIfRequirementsMet) && (!e.startedToday || e.multipleTimesPerDay)) || force);
+                && ((((checkIfRequirementsMet && e.requirementsMet())
+                            || !checkIfRequirementsMet)
+                        && (!e.startedToday || e.multipleTimesPerDay))
+                    || force);
             if (!wants)
             {
                 return true;
@@ -1041,18 +1156,22 @@ namespace DarkwoodMP.World
             }
 
             var host = Player.Instance;
-            bool hostCan = host != null && host.alive && !host.isInside && host.whereAmI != null && host.whereAmI.bigLocation == null;
+            bool hostCan = host != null && host.alive && !host.isInside
+                && host.whereAmI != null && host.whereAmI.bigLocation == null;
             var joiners = new List<NetPlayerProxy>();
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p != null && p.alive && !JoinerAi.InsideAt(p.transform.position) && NightSpawns.BigLocationAt(p.transform.position) == null)
+                if (p != null && p.alive
+                    && !JoinerAi.InsideAt(p.transform.position)
+                    && NightSpawns.BigLocationAt(p.transform.position) == null)
                 {
                     joiners.Add(p);
                 }
             }
             if (joiners.Count == 0)
             {
-                return true; // only the host's player could be ambushed: the game's own
+                // only the host's player could be ambushed: the game's own
+                return true;
             }
             int hostSlot = 0;
             if (hostCan)
@@ -1066,7 +1185,8 @@ namespace DarkwoodMP.World
             }
 
             var proxy = joiners[pick];
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(proxy.gameObject, Vector3.zero, 1500f, "Redneck02",
+            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                proxy.gameObject, Vector3.zero, 1500f, "Redneck02",
                 nocturnal: false, attackPlayer: false, relentlessPursuit: true);
             if (c != null)
             {
@@ -1078,7 +1198,8 @@ namespace DarkwoodMP.World
                 c.attackType = AttackType.hitAndRun;
                 c.wantToDespawn = true;
                 c.maxStamina = 1000f;
-                Plugin.Log.LogInfo($"[events] the day's redneck ambush is {proxy.OwnerName}'s ({Core.trueDistance(c.transform.position, proxy.transform.position):0} from them)");
+                Plugin.Log.LogInfo(
+                    $"[events] the day's redneck ambush is {proxy.OwnerName}'s ({Core.trueDistance(c.transform.position, proxy.transform.position):0} from them)");
             }
             e.randomizeStartTime();
             if (c != null)

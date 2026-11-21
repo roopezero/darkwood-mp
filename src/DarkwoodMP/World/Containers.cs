@@ -8,52 +8,73 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// What's in the world's containers, shared: cupboards, crates, corpses, items lying on the ground (a dropped
-    /// item is a one-slot container, Items/DroppedItem), so what one player takes is gone for everyone.
+    /// What's in the world's containers, shared: cupboards, crates, corpses,
+    /// items lying on the ground (a dropped item is a one-slot container,
+    /// Items/DroppedItem), so what one player takes is gone for everyone.
     ///
-    /// A container's contents change only while a player has it open, so the container each player has open is
-    /// checked a few times a second, and once more as it closes. When its contents changed, they're sent as the
-    /// game saves them (Inventory.SaveState, as JSON) in ContainerState: ObjRef, str contents. The others load
-    /// them into their copy (closing it first if they have it open), and remove it if it's one that goes when
-    /// emptied. Clients send theirs to the host, which keeps them and passes them on.
+    /// A container's contents change only while a player has it open, so the
+    /// container each player has open is checked a few times a second, and once
+    /// more as it closes. When its contents changed, they're sent as the game
+    /// saves them (Inventory.SaveState, as JSON) in ContainerState: ObjRef,
+    /// str contents. The others load them into their copy (closing it first if
+    /// they have it open), and remove it if it's one that goes when emptied.
+    /// Clients send theirs to the host, which keeps them and passes them on.
     ///
-    /// Items dropped while playing together come to the others as ObjSpawn: i64 id, u8 flags, str prefab, vec3 pos,
-    /// quat rot, str contents, i32 experience (a death bag's DeathDrop.expAmount, else 0), sent once the item has
-    /// come to rest. The host's enemies' loot comes to a client
-    /// as the corpse's contents, when it dies.
+    /// Items dropped while playing together come to the others as ObjSpawn:
+    /// i64 id, u8 flags, str prefab, vec3 pos, quat rot, str contents,
+    /// i32 experience (a death bag's DeathDrop.expAmount, else 0), sent once
+    /// the item has come to rest. The host's enemies' loot comes to a client as
+    /// the corpse's contents, when it dies.
     ///
-    /// One player at a time has a container open: opening one asks the host for it (ContainerLock: ObjRef, u8 open);
-    /// if someone else has it, the host says so (ContainerBusy: ObjRef, str who) and it closes again. Traders'
+    /// One player at a time has a container open: opening one asks the host for
+    /// it (ContainerLock: ObjRef, u8 open); if someone else has it, the host
+    /// says so (ContainerBusy: ObjRef, str who) and it closes again. Traders'
     /// stock is a container like the others while someone trades with them.
     /// </summary>
     public sealed class Containers
     {
-        /// <summary>Prefabs of things made while playing that are shared with the others.</summary>
-        public static readonly HashSet<string> SharedPrefabs = new HashSet<string>
+        /// <summary>
+        /// Prefabs of things made while playing that are shared with the
+        /// others.
+        /// </summary>
+        public static readonly HashSet<string> SharedPrefabs =
+            new HashSet<string>
         {
             "Items/DroppedItem", "Items/DroppedItem_water",
-            "Objects/_Unique/deathDrop", "Objects/_Unique/deathDrop_water", // what a player who died left behind
-            GasolineTrail, // poured by a player (Player.waitToSpillLiquid); each game merges trails into a puddle itself
+            // what a player who died left behind
+            "Objects/_Unique/deathDrop", "Objects/_Unique/deathDrop_water",
+            // poured by a player (Player.waitToSpillLiquid); each game merges
+            // trails into a puddle itself
+            GasolineTrail,
         };
 
         /// <summary>
-        /// Sent at once, not once at rest: a trail doesn't move, and the pourer's game merges a few into a puddle
-        /// (GasolineTrail.init) and removes them half a second later. Every trail has to reach the others first,
-        /// so their games merge the same ones.
+        /// Sent at once, not once at rest: a trail doesn't move, and the
+        /// pourer's game merges a few into a puddle (GasolineTrail.init) and
+        /// removes them half a second later. Every trail has to reach the
+        /// others first, so their games merge the same ones.
         /// </summary>
         public const string GasolineTrail = "Items/GasolineTrail";
 
-        /// <summary>True while the local player is placing something (a trap...), set around Player.progressBarCompleted.</summary>
+        /// <summary>
+        /// True while the local player is placing something (a trap...), set
+        /// around Player.progressBarCompleted.
+        /// </summary>
         public static bool Placing;
 
         /// <summary>
-        /// What a player can place, by prefab: each item that canBePlaced (InvItem.item, which
-        /// Player.progressBarCompleted makes with the Object overload of Core.AddPrefab), with its path under
-        /// Resources/Prefabs ("Traps/beartrap"), which is what ObjSpawn names. Built once from the item database.
+        /// What a player can place, by prefab: each item that canBePlaced
+        /// (InvItem.item, which Player.progressBarCompleted makes with the
+        /// Object overload of Core.AddPrefab), with its path under
+        /// Resources/Prefabs ("Traps/beartrap"), which is what ObjSpawn names.
+        /// Built once from the item database.
         /// </summary>
         private static Dictionary<Object, string> _placeables;
         private static HashSet<string> _placeablePaths;
-        /// <summary>The item types that place each path (more than one item may place the same trap).</summary>
+        /// <summary>
+        /// The item types that place each path (more than one item may place
+        /// the same trap).
+        /// </summary>
         private static Dictionary<string, HashSet<string>> _placeableTypes;
 
         private static void EnsurePlaceables()
@@ -85,7 +106,8 @@ namespace DarkwoodMP.World
                 string path = "Traps/" + item.item.name;
                 if (Resources.Load("Prefabs/" + path) != item.item)
                 {
-                    Plugin.Log.LogWarning($"Placeable {kv.Key}: its prefab {item.item.name} isn't in Prefabs/Traps; placing it won't be shared");
+                    Plugin.Log.LogWarning(
+                        $"Placeable {kv.Key}: its prefab {item.item.name} isn't in Prefabs/Traps; placing it won't be shared");
                     continue;
                 }
                 _placeables[item.item] = path;
@@ -96,32 +118,44 @@ namespace DarkwoodMP.World
                 }
                 types.Add(kv.Key);
             }
-            Plugin.Log.LogInfo($"Placeable things: {string.Join(", ", _placeablePaths)}");
+            Plugin.Log.LogInfo(
+                $"Placeable things: {string.Join(", ", _placeablePaths)}");
         }
 
-        /// <summary>The path (under Resources/Prefabs) of a prefab a player can place, or null.</summary>
+        /// <summary>
+        /// The path (under Resources/Prefabs) of a prefab a player can place,
+        /// or null.
+        /// </summary>
         public static string PlaceablePath(Object prefab)
         {
             EnsurePlaceables();
-            if (prefab != null && _placeables != null && _placeables.TryGetValue(prefab, out var path))
+            if (prefab != null && _placeables != null
+                && _placeables.TryGetValue(prefab, out var path))
             {
                 return path;
             }
             return null;
         }
 
-        /// <summary>Whether a player can place the prefab at this path (under Resources/Prefabs).</summary>
+        /// <summary>
+        /// Whether a player can place the prefab at this path (under
+        /// Resources/Prefabs).
+        /// </summary>
         public static bool IsPlaceable(string path)
         {
             EnsurePlaceables();
             return _placeablePaths != null && _placeablePaths.Contains(path);
         }
 
-        /// <summary>The item types a player places the prefab at this path with, or null.</summary>
+        /// <summary>
+        /// The item types a player places the prefab at this path with, or
+        /// null.
+        /// </summary>
         public static HashSet<string> PlacedWith(string path)
         {
             EnsurePlaceables();
-            if (_placeableTypes != null && _placeableTypes.TryGetValue(path, out var types))
+            if (_placeableTypes != null
+                && _placeableTypes.TryGetValue(path, out var types))
             {
                 return types;
             }
@@ -168,10 +202,12 @@ namespace DarkwoodMP.World
 
         private static bool Sharing => WorldActions.Sharing;
 
-        // ---- watching the open containers ------------------------------------------------
+        // ---- watching the open containers -----------------------------------
 
-        private readonly Dictionary<Inventory, string> _watched = new Dictionary<Inventory, string>();
-        private readonly HashSet<Inventory> _slotOpen = new HashSet<Inventory>();
+        private readonly Dictionary<Inventory, string> _watched =
+            new Dictionary<Inventory, string>();
+        private readonly HashSet<Inventory> _slotOpen =
+            new HashSet<Inventory>();
         private readonly List<Inventory> _slotGone = new List<Inventory>();
         private float _nextCheck;
 
@@ -196,13 +232,16 @@ namespace DarkwoodMP.World
             Poll();
         }
 
-        // ---- windows of containers that go while open ---------------------------------------
+        // ---- windows of containers that go while open -----------------------
 
         /// <summary>
-        /// Closes the window of every container in this object (or under it) that is open here. Called before the
-        /// mod destroys a container or its Inventory: the window (Inventory.thisUI) lives under the UI, not under
-        /// the container, and Inventory has no OnDestroy, so a container destroyed while open leaves its window on
-        /// screen, and Player.closeInventory skips it from then on (openedItemInventory is a destroyed object).
+        /// Closes the window of every container in this object (or under it)
+        /// that is open here. Called before the mod destroys a container or its
+        /// Inventory: the window (Inventory.thisUI) lives under the UI, not
+        /// under the container, and Inventory has no OnDestroy, so a container
+        /// destroyed while open leaves its window on screen, and
+        /// Player.closeInventory skips it from then on (openedItemInventory is
+        /// a destroyed object).
         /// </summary>
         internal static void CloseIfOpen(GameObject go)
         {
@@ -222,18 +261,22 @@ namespace DarkwoodMP.World
                 }
                 catch (System.Exception e)
                 {
-                    Plugin.Log.LogWarning($"Couldn't close {inv.name}'s window before removing it: {e.Message}");
+                    Plugin.Log.LogWarning(
+                        $"Couldn't close {inv.name}'s window before removing it: {e.Message}");
                 }
             }
         }
 
-        private static readonly System.Reflection.FieldInfo SawField = AccessTools.Field(typeof(Inventory), "sawComponent");
+        private static readonly System.Reflection.FieldInfo SawField =
+            AccessTools.Field(typeof(Inventory), "sawComponent");
 
         /// <summary>
-        /// The safety net for any other way a container goes while open (the game's own code, or a path of ours
-        /// that CloseIfOpen doesn't cover): when the player's open container is a destroyed object, its window is
-        /// removed and the inventory closed as Inventory.hide would have done. The destroyed Inventory's fields can
-        /// still be read; only its Unity side is gone, so hide() itself can't run.
+        /// The safety net for any other way a container goes while open (the
+        /// game's own code, or a path of ours that CloseIfOpen doesn't cover):
+        /// when the player's open container is a destroyed object, its window
+        /// is removed and the inventory closed as Inventory.hide would have
+        /// done. The destroyed Inventory's fields can still be read; only its
+        /// Unity side is gone, so hide() itself can't run.
         /// </summary>
         internal static void DropOrphanedWindows()
         {
@@ -256,7 +299,8 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool Orphaned(Inventory inv) => !ReferenceEquals(inv, null) && inv == null;
+        private static bool Orphaned(Inventory inv) =>
+            !ReferenceEquals(inv, null) && inv == null;
 
         private static void DropWindow(Player p, Inventory inv)
         {
@@ -265,7 +309,8 @@ namespace DarkwoodMP.World
             {
                 text = "";
             }
-            Plugin.Log.LogInfo($"[containers] an open container was destroyed with its window still up: removed the window{text}");
+            Plugin.Log.LogInfo(
+                $"[containers] an open container was destroyed with its window still up: removed the window{text}");
             try
             {
                 if (inv.slots != null)
@@ -296,7 +341,8 @@ namespace DarkwoodMP.World
                 UI instance = Singleton<UI>.Instance;
                 if (instance != null)
                 {
-                    InventorySelectionPrompt inventorySelectionPrompt = instance.InventorySelectionPrompt;
+                    InventorySelectionPrompt inventorySelectionPrompt =
+                        instance.InventorySelectionPrompt;
                     if (inventorySelectionPrompt != null)
                     {
                         inventorySelectionPrompt.Hide();
@@ -329,15 +375,18 @@ namespace DarkwoodMP.World
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Couldn't remove a destroyed container's window: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Couldn't remove a destroyed container's window: {e.Message}");
             }
         }
 
         /// <summary>
-        /// The local player opened a container (Player.setOpenedItemInventory): look at it now, not at the next of
-        /// the checks a few times a second. What it held before our player could touch it is the starting point;
-        /// a thing taken in the first quarter second after opening would otherwise be in the starting point already,
-        /// so the take would never be sent and the item would stay in the container too (doubled).
+        /// The local player opened a container (Player.setOpenedItemInventory):
+        /// look at it now, not at the next of the checks a few times a second.
+        /// What it held before our player could touch it is the starting point;
+        /// a thing taken in the first quarter second after opening would
+        /// otherwise be in the starting point already, so the take would never
+        /// be sent and the item would stay in the container too (doubled).
         /// </summary>
         internal void OpenedNow()
         {
@@ -355,19 +404,26 @@ namespace DarkwoodMP.World
             var open = new List<Inventory>();
             if (player != null)
             {
-                // Not one only our player has (in a dream of our own): the host hasn't got it, so it's ours, as alone.
-                if (IsWorldContainer(player.openedItemInventory) && !WorldActions.OursAlone(player.openedItemInventory.gameObject))
+                // Not one only our player has (in a dream of our own): the host
+                // hasn't got it, so it's ours, as alone.
+                if (IsWorldContainer(player.openedItemInventory)
+                    && !WorldActions.OursAlone(
+                        player.openedItemInventory.gameObject))
                 {
                     open.Add(player.openedItemInventory);
                 }
-                if (IsWorldContainer(player.openedItemInventory2) && !WorldActions.OursAlone(player.openedItemInventory2.gameObject))
+                if (IsWorldContainer(player.openedItemInventory2)
+                    && !WorldActions.OursAlone(
+                        player.openedItemInventory2.gameObject))
                 {
                     open.Add(player.openedItemInventory2);
                 }
             }
-            // Slot by slot (SlotShare): the workbench's storage, used by everyone at once; and, on a client, every
-            // container, so each change is the host's to accept (a refused one is undone for our player). Ordinary
-            // containers are still one player at a time (the lock).
+            // Slot by slot (SlotShare): the workbench's storage, used by
+            // everyone at once; and, on a client, every container, so each
+            // change is the host's to accept (a refused one is undone for our
+            // player). Ordinary containers are still one player at a time (the
+            // lock).
             var slots = SlotShare.Instance;
             for (int i = open.Count - 1; i >= 0; i--)
             {
@@ -389,7 +445,9 @@ namespace DarkwoodMP.World
             _slotGone.Clear();
             foreach (var inv in _slotOpen)
             {
-                if (inv == null || (player != null && player.openedItemInventory != inv && player.openedItemInventory2 != inv))
+                if (inv == null
+                    || (player != null && player.openedItemInventory != inv
+                        && player.openedItemInventory2 != inv))
                 {
                     _slotGone.Add(inv);
                 }
@@ -413,7 +471,8 @@ namespace DarkwoodMP.World
             {
                 if (!_watched.ContainsKey(inv))
                 {
-                    _watched[inv] = Contents(inv); // its contents as we found it
+                    // its contents as we found it
+                    _watched[inv] = Contents(inv);
                     Opened(inv);
                 }
                 else
@@ -421,7 +480,8 @@ namespace DarkwoodMP.World
                     Check(inv);
                 }
             }
-            // Closed since the last check: one last look (it may be gone: emptied and removed).
+            // Closed since the last check: one last look (it may be gone:
+            // emptied and removed).
             var closed = new List<Inventory>();
             foreach (var inv in _watched.Keys)
             {
@@ -450,9 +510,15 @@ namespace DarkwoodMP.World
         }
 
         private static bool IsWorldContainer(Inventory inv) =>
-            inv != null && (inv.invType == Inventory.InvType.itemInv || inv.invType == Inventory.InvType.deathDrop || inv.invType == Inventory.InvType.shop) && !inv.isWorkbench;
+            inv != null
+                && (inv.invType == Inventory.InvType.itemInv
+                    || inv.invType == Inventory.InvType.deathDrop
+                    || inv.invType == Inventory.InvType.shop)
+                && !inv.isWorkbench;
 
-        /// <summary>Send what's in a container to the others now (a trader's new stock).</summary>
+        /// <summary>
+        /// Send what's in a container to the others now (a trader's new stock).
+        /// </summary>
         public void SendContents(Inventory inv)
         {
             if (inv != null)
@@ -465,12 +531,16 @@ namespace DarkwoodMP.World
         {
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent contents of {inv.name} {ObjRef.Of(inv.gameObject)}");
+                Plugin.Log.LogInfo(
+                    $"[world] sent contents of {inv.name} {ObjRef.Of(inv.gameObject)}");
             }
             Send(ObjRef.Of(inv.gameObject), contents, except: 0);
         }
 
-        /// <summary>Host: send what's in a container to one client (a corpse it has only now been sent).</summary>
+        /// <summary>
+        /// Host: send what's in a container to one client (a corpse it has only
+        /// now been sent).
+        /// </summary>
         public void SendContentsTo(ulong peer, Inventory inv)
         {
             ObjRef r = default;
@@ -488,10 +558,13 @@ namespace DarkwoodMP.World
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
-        // ---- one player at a time ------------------------------------------------------------
+        // ---- one player at a time -------------------------------------------
 
-        /// <summary>Host: who has which container open ("kind:id" of its ObjRef).</summary>
-        private readonly Dictionary<string, ulong> _locks = new Dictionary<string, ulong>();
+        /// <summary>
+        /// Host: who has which container open ("kind:id" of its ObjRef).
+        /// </summary>
+        private readonly Dictionary<string, ulong> _locks =
+            new Dictionary<string, ulong>();
         public int LockCount => _locks.Count;
         private static string LockKey(ObjRef r) => r.ToString();
 
@@ -508,7 +581,8 @@ namespace DarkwoodMP.World
                 return;
             }
             // Host: our own player opening it.
-            if (_locks.TryGetValue(LockKey(r), out var holder) && holder != _session.LocalId)
+            if (_locks.TryGetValue(LockKey(r), out var holder)
+                && holder != _session.LocalId)
             {
                 Busy(inv, _session.NameOf(holder));
             }
@@ -528,17 +602,21 @@ namespace DarkwoodMP.World
             {
                 SendLock(r, open: false);
             }
-            else if (_locks.TryGetValue(LockKey(r), out var holder) && holder == _session.LocalId)
+            else if (_locks.TryGetValue(LockKey(r), out var holder)
+                && holder == _session.LocalId)
             {
                 _locks.Remove(LockKey(r));
             }
         }
 
-        /// <summary>Host: whether someone other than this player has the container open.</summary>
+        /// <summary>
+        /// Host: whether someone other than this player has the container open.
+        /// </summary>
         public bool LockedByOther(ObjRef r, ulong who, out string holderName)
         {
             holderName = null;
-            if (!_locks.TryGetValue(LockKey(r), out var holder) || holder == who)
+            if (!_locks.TryGetValue(LockKey(r), out var holder)
+                || holder == who)
             {
                 return false;
             }
@@ -629,8 +707,10 @@ namespace DarkwoodMP.World
             SendNow(inv, now);
         }
 
-        // An emptied container that removes itself is destroyed as it closes; tell the others it's empty.
-        private readonly Dictionary<Inventory, ObjRef> _refs = new Dictionary<Inventory, ObjRef>();
+        // An emptied container that removes itself is destroyed as it closes;
+        // tell the others it's empty.
+        private readonly Dictionary<Inventory, ObjRef> _refs =
+            new Dictionary<Inventory, ObjRef>();
         private void SendGone(Inventory inv)
         {
             if (_refs.TryGetValue(inv, out var r))
@@ -640,23 +720,32 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static readonly string Empty = JsonConvert.SerializeObject(new Inventory.SaveState());
+        private static readonly string Empty =
+            JsonConvert.SerializeObject(new Inventory.SaveState());
 
-        /// <summary>A container's contents as the game saves them (Inventory.SaveState, as JSON).</summary>
-        private static string Serialize(Inventory inv) => JsonConvert.SerializeObject(new Inventory.SaveState(inv));
+        /// <summary>
+        /// A container's contents as the game saves them (Inventory.SaveState,
+        /// as JSON).
+        /// </summary>
+        private static string Serialize(Inventory inv) =>
+            JsonConvert.SerializeObject(new Inventory.SaveState(inv));
 
         private string Contents(Inventory inv)
         {
-            _refs[inv] = ObjRef.Of(inv.gameObject); // remembered, as the object may be gone at the last look
+            // remembered, as the object may be gone at the last look
+            _refs[inv] = ObjRef.Of(inv.gameObject);
             return Serialize(inv);
         }
 
-        /// <summary>The host's to everyone but except, a client's to the host.</summary>
+        /// <summary>
+        /// The host's to everyone but except, a client's to the host.
+        /// </summary>
         private void Share(PacketWriter w, ulong except)
         {
             if (_session.IsHost)
             {
-                _session.Broadcast(w, Channel.Control, reliable: true, except: except);
+                _session.Broadcast(
+                    w, Channel.Control, reliable: true, except: except);
             }
             else
             {
@@ -677,9 +766,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Why nobody may take from or put into this container in the host's world, or null if they may: a locked
-        /// crate not yet picked open (Item.disarmTime &gt; 0 and not searched: Item.openInventory starts the lockpick
-        /// instead), one with a Locked that is locked, or one that must be broken open first (a larva egg).
+        /// Why nobody may take from or put into this container in the host's
+        /// world, or null if they may: a locked crate not yet picked open
+        /// (Item.disarmTime &gt; 0 and not searched: Item.openInventory starts
+        /// the lockpick instead), one with a Locked that is locked, or one that
+        /// must be broken open first (a larva egg).
         /// </summary>
         public static string LockedReason(Inventory inv)
         {
@@ -697,17 +788,22 @@ namespace DarkwoodMP.World
             {
                 return "locked";
             }
-            if (item != null && item.destroyToAccessInventory && !item.destroyed)
+            if (item != null && item.destroyToAccessInventory
+                && !item.destroyed)
             {
                 return "locked (not broken open)";
             }
             return null;
         }
 
-        /// <summary>Host: why a client's change to this container is refused (too far from it, locked), or null.</summary>
+        /// <summary>
+        /// Host: why a client's change to this container is refused (too far
+        /// from it, locked), or null.
+        /// </summary>
         public static string Refusal(ulong from, Inventory inv)
         {
-            if (NetPlayerProxy.All.TryGetValue(from, out var proxy) && proxy != null)
+            if (NetPlayerProxy.All.TryGetValue(from, out var proxy)
+                && proxy != null)
             {
                 var d = proxy.transform.position - inv.transform.position;
                 if (new Vector2(d.x, d.z).magnitude > WorldActions.Reach)
@@ -740,11 +836,14 @@ namespace DarkwoodMP.World
                 }
                 Plugin.Log.LogInfo($"[world] got contents for {obj}: " + name);
             }
-            // A client's whole contents (it sends an emptied container that went this way): refused if it couldn't
-            // have changed it, and the host's contents go back to it to roll back to.
-            if (_session.IsHost && inv != null && Refusal(from, inv) is string why)
+            // A client's whole contents (it sends an emptied container that
+            // went this way): refused if it couldn't have changed it, and the
+            // host's contents go back to it to roll back to.
+            if (_session.IsHost && inv != null
+                && Refusal(from, inv) is string why)
             {
-                Plugin.Log.LogInfo($"[authority] {_session.NameOf(from)} changed the contents of {inv.name}: refused ({why})");
+                Plugin.Log.LogInfo(
+                    $"[authority] {_session.NameOf(from)} changed the contents of {inv.name}: refused ({why})");
                 var w = _session.Begin(MsgType.ContainerState);
                 obj.Write(w);
                 w.WriteBigStr(Serialize(inv));
@@ -766,7 +865,8 @@ namespace DarkwoodMP.World
             Inventory.SaveState state;
             try
             {
-                state = JsonConvert.DeserializeObject<Inventory.SaveState>(contents);
+                state = JsonConvert.DeserializeObject<Inventory.SaveState>(
+                    contents);
             }
             catch (System.Exception e)
             {
@@ -777,18 +877,22 @@ namespace DarkwoodMP.World
             {
                 return;
             }
-            if (inv.open && state.slotCount == inv.slots.Count && UiRefresh.Enabled)
+            if (inv.open && state.slotCount == inv.slots.Count
+                && UiRefresh.Enabled)
             {
                 ApplyOpen(inv, state);
                 return;
             }
             if (inv.open)
             {
-                inv.hide(); // a different number of slots than its window has drawn: close it rather than show stale slots
+                // a different number of slots than its window has drawn: close
+                // it rather than show stale slots
+                inv.hide();
             }
             if (inv == null)
             {
-                return; // hide() removed it (it was empty and goes when emptied)
+                // hide() removed it (it was empty and goes when emptied)
+                return;
             }
             WorldActions.Replaying = true;
             try
@@ -807,18 +911,24 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// The contents of a container whose window is open here, loaded into it without closing it: its slots draw
-        /// their new icons as they're filled (InvSlot.createItem), and UiRefresh redraws the rest of the window.
-        /// A client watching it slot by slot takes them as SlotShare.MergeOpen settles them (a change of ours not
-        /// yet sent stays or is undone, as the host would decide). Otherwise what our player changed since the last
-        /// look goes first, and the loaded contents become the starting point, so they aren't sent back.
+        /// The contents of a container whose window is open here, loaded into
+        /// it without closing it: its slots draw their new icons as they're
+        /// filled (InvSlot.createItem), and UiRefresh redraws the rest of the
+        /// window.
+        /// A client watching it slot by slot takes them as SlotShare.MergeOpen
+        /// settles them (a change of ours not yet sent stays or is undone, as
+        /// the host would decide). Otherwise what our player changed since the
+        /// last look goes first, and the loaded contents become the starting
+        /// point, so they aren't sent back.
         /// </summary>
         private void ApplyOpen(Inventory inv, Inventory.SaveState state)
         {
             var slots = SlotShare.Instance;
             if (_session.IsClient && slots != null && slots.Watching(inv))
             {
-                slots.MergeOpen(inv, state, $"{ObjRef.Of(inv.gameObject)} contents from host, open here");
+                slots.MergeOpen(
+                    inv, state,
+                    $"{ObjRef.Of(inv.gameObject)} contents from host, open here");
                 return;
             }
             if (slots != null)
@@ -846,11 +956,12 @@ namespace DarkwoodMP.World
             {
                 _watched[inv] = Contents(inv);
             }
-            Plugin.Log.LogInfo($"[ui] {inv.name} {ObjRef.Of(inv.gameObject)}: contents loaded into its open window ({inv.getAllItems().Count} items)");
+            Plugin.Log.LogInfo(
+                $"[ui] {inv.name} {ObjRef.Of(inv.gameObject)}: contents loaded into its open window ({inv.getAllItems().Count} items)");
             UiRefresh.Changed(inv);
         }
 
-        // ---- things dropped while playing together ---------------------------------------
+        // ---- things dropped while playing together --------------------------
 
         private sealed class Pending
         {
@@ -862,13 +973,20 @@ namespace DarkwoodMP.World
         }
         private readonly List<Pending> _pending = new List<Pending>();
 
-        /// <summary>A random id for something spawned while playing (ObjRef.RegisterSpawned).</summary>
+        /// <summary>
+        /// A random id for something spawned while playing
+        /// (ObjRef.RegisterSpawned).
+        /// </summary>
         private long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
 
-        /// <summary>Core.AddPrefab made something; share it if it's a shared kind (and we made it, not a replay).</summary>
+        /// <summary>
+        /// Core.AddPrefab made something; share it if it's a shared kind (and
+        /// we made it, not a replay).
+        /// </summary>
         public void Made(string prefab, GameObject go)
         {
-            if (go == null || WorldActions.Replaying || !Sharing || !(SharedPrefabs.Contains(prefab) || Placing))
+            if (go == null || WorldActions.Replaying || !Sharing
+                || !(SharedPrefabs.Contains(prefab) || Placing))
             {
                 return;
             }
@@ -883,10 +1001,20 @@ namespace DarkwoodMP.World
             {
                 delay = 0.2f;
             }
-            _pending.Add(new Pending { Id = id, Go = go, Prefab = prefab, Placed = Placing, SendAt = Time.time + delay });
+            _pending.Add(new Pending
+            {
+                Id = id,
+                Go = go,
+                Prefab = prefab,
+                Placed = Placing,
+                SendAt = Time.time + delay
+            });
         }
 
-        /// <summary>The Object overload of Core.AddPrefab made something: share it if our player is placing it.</summary>
+        /// <summary>
+        /// The Object overload of Core.AddPrefab made something: share it if
+        /// our player is placing it.
+        /// </summary>
         public void MadeFrom(Object prefab, GameObject go)
         {
             if (ThrownSpawning != null)
@@ -901,24 +1029,35 @@ namespace DarkwoodMP.World
             string path = PlaceablePath(prefab);
             if (path == null)
             {
-                Plugin.Log.LogWarning($"Placed {go.name}, which isn't a placeable prefab here: not shared");
+                Plugin.Log.LogWarning(
+                    $"Placed {go.name}, which isn't a placeable prefab here: not shared");
                 return;
             }
             Made(path, go);
         }
 
         /// <summary>
-        /// What a thrown item leaves behind when it goes off (Explodes.spawnObject: a molotov's gasoline), by prefab.
-        /// The host's game makes it and sends it; a client's game makes none of its own (ThrownLeavesPatch), so the
-        /// fire the host then lights in it (ObjectActions, LiquidLit) is found by ObjRef in every game. Accepted
-        /// from the host only: Items/Gasoline is also what each game merges gasoline trails into by itself.
+        /// What a thrown item leaves behind when it goes off
+        /// (Explodes.spawnObject: a molotov's gasoline), by prefab. The host's
+        /// game makes it and sends it; a client's game makes none of its own
+        /// (ThrownLeavesPatch), so the fire the host then lights in it
+        /// (ObjectActions, LiquidLit) is found by ObjRef in every game.
+        /// Accepted from the host only: Items/Gasoline is also what each game
+        /// merges gasoline trails into by itself.
         /// </summary>
-        public static readonly HashSet<string> ThrownSpawns = new HashSet<string> { "Items/Gasoline" };
+        public static readonly HashSet<string> ThrownSpawns =
+            new HashSet<string> { "Items/Gasoline" };
 
-        /// <summary>Set while an Explodes on a thrown item spawns its objects on the host: their prefab path.</summary>
+        /// <summary>
+        /// Set while an Explodes on a thrown item spawns its objects on the
+        /// host: their prefab path.
+        /// </summary>
         internal static string ThrownSpawning;
 
-        /// <summary>Host: a thrown item that went off made this (ThrownSpawns): send it now, before the fire that lights it.</summary>
+        /// <summary>
+        /// Host: a thrown item that went off made this (ThrownSpawns): send it
+        /// now, before the fire that lights it.
+        /// </summary>
         private void ShareThrownSpawn(string prefab, GameObject go)
         {
             if (go == null || !_session.IsHost || !Sharing)
@@ -929,14 +1068,19 @@ namespace DarkwoodMP.World
             ObjRef.RegisterSpawned(id, go);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent {prefab} #{id} at {go.transform.position} (left by a thrown item)");
+                Plugin.Log.LogInfo(
+                    $"[world] sent {prefab} #{id} at {go.transform.position} (left by a thrown item)");
             }
-            SendSpawn(id, prefab, go.transform.position, go.transform.rotation, "", false, 0, except: 0);
+            SendSpawn(
+                id, prefab, go.transform.position, go.transform.rotation, "",
+                false, 0, except: 0);
         }
 
         /// <summary>
-        /// Our player has just placed something (the end of Player.progressBarCompleted): send it now, in the frame
-        /// the item was used up, so a client's request carries that and the item comes back if the host refuses.
+        /// Our player has just placed something (the end of
+        /// Player.progressBarCompleted): send it now, in the frame the item was
+        /// used up, so a client's request carries that and the item comes back
+        /// if the host refuses.
         /// </summary>
         public void SendPlacedNow() => SendPendingSpawns(placedNow: true);
 
@@ -972,18 +1116,23 @@ namespace DarkwoodMP.World
                 }
                 if (WorldActions.Debug)
                 {
-                    Plugin.Log.LogInfo($"[world] sent {p.Prefab} #{p.Id} at {p.Go.transform.position}");
+                    Plugin.Log.LogInfo(
+                        $"[world] sent {p.Prefab} #{p.Id} at {p.Go.transform.position}");
                 }
                 var drop = p.Go.GetComponent<DeathDrop>();
                 if (p.Placed && _session.IsClient)
                 {
-                    // Placed by our player: the host decides (within reach, a thing a player can place). Refused,
-                    // ours goes, and the item used up comes back (InventoryWatch).
+                    // Placed by our player: the host decides (within reach, a
+                    // thing a player can place). Refused, ours goes, and the
+                    // item used up comes back (InventoryWatch).
                     var go = p.Go;
                     long id = p.Id;
                     string prefab = p.Prefab;
-                    var w = SpawnMessage(id, prefab, go.transform.position, go.transform.rotation, contents, true, 0);
-                    Authority.Request(w, $"placing {prefab} #{id}", (ok, why, result) =>
+                    var w = SpawnMessage(
+                        id, prefab, go.transform.position,
+                        go.transform.rotation, contents, true, 0);
+                    Authority.Request(w, $"placing {prefab} #{id}",
+                        (ok, why, result) =>
                     {
                         if (ok || go == null)
                         {
@@ -992,7 +1141,8 @@ namespace DarkwoodMP.World
                         ObjRef.Spawned.Remove(id);
                         CloseIfOpen(go);
                         Object.Destroy(go);
-                        Plugin.Log.LogInfo($"[world] our {prefab} #{id} was refused: removed it");
+                        Plugin.Log.LogInfo(
+                            $"[world] our {prefab} #{id} was refused: removed it");
                     });
                     continue;
                 }
@@ -1001,16 +1151,25 @@ namespace DarkwoodMP.World
                 {
                     exp = drop.expAmount;
                 }
-                SendSpawn(p.Id, p.Prefab, p.Go.transform.position, p.Go.transform.rotation, contents, p.Placed, exp, except: 0);
+                SendSpawn(
+                    p.Id, p.Prefab, p.Go.transform.position,
+                    p.Go.transform.rotation, contents, p.Placed, exp,
+                    except: 0);
                 if (drop != null && drop.additionalMapMarker != null)
                 {
-                    SendBagMarker(p.Id, drop.additionalMapMarker.transform.position, except: 0);
+                    SendBagMarker(
+                        p.Id, drop.additionalMapMarker.transform.position,
+                        except: 0);
                 }
             }
         }
 
-        /// <summary>The map marker the game puts for a death bag left in a separate location (Player.dropBody).</summary>
-        public const string DeathBagMarkerPrefab = "Objects/_Unique/deathDrop_marker";
+        /// <summary>
+        /// The map marker the game puts for a death bag left in a separate
+        /// location (Player.dropBody).
+        /// </summary>
+        public const string DeathBagMarkerPrefab =
+            "Objects/_Unique/deathDrop_marker";
 
         private void SendBagMarker(long id, Vector3 pos, ulong except)
         {
@@ -1020,7 +1179,8 @@ namespace DarkwoodMP.World
             Share(w, except);
             if (WorldActions.Debug)
             {
-                Plugin.Log.LogInfo($"[world] sent the map marker of death bag #{id} at {pos}");
+                Plugin.Log.LogInfo(
+                    $"[world] sent the map marker of death bag #{id} at {pos}");
             }
         }
 
@@ -1048,7 +1208,9 @@ namespace DarkwoodMP.World
                 {
                     bagName = drop.name;
                 }
-                Plugin.Log.LogInfo($"[world] got the map marker of death bag #{id}: " + bagName);
+                Plugin.Log.LogInfo(
+                    $"[world] got the map marker of death bag #{id}: "
+                        + bagName);
             }
             if (drop == null || drop.additionalMapMarker != null)
             {
@@ -1057,7 +1219,9 @@ namespace DarkwoodMP.World
             WorldActions.Replaying = true;
             try
             {
-                drop.additionalMapMarker = Core.AddPrefab(DeathBagMarkerPrefab, pos, Quaternion.Euler(90f, 0f, 0f), null);
+                drop.additionalMapMarker = Core.AddPrefab(
+                    DeathBagMarkerPrefab, pos, Quaternion.Euler(90f, 0f, 0f),
+                    null);
             }
             finally
             {
@@ -1069,13 +1233,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        private void SendSpawn(long id, string prefab, Vector3 pos, Quaternion rot, string contents, bool placed, int exp, ulong except)
+        private void SendSpawn(
+            long id, string prefab, Vector3 pos, Quaternion rot,
+            string contents, bool placed, int exp, ulong except)
         {
             var w = SpawnMessage(id, prefab, pos, rot, contents, placed, exp);
             Share(w, except);
         }
 
-        private PacketWriter SpawnMessage(long id, string prefab, Vector3 pos, Quaternion rot, string contents, bool placed, int exp)
+        private PacketWriter SpawnMessage(
+            long id, string prefab, Vector3 pos, Quaternion rot,
+            string contents, bool placed, int exp)
         {
             var w = _session.Begin(MsgType.ObjSpawn);
             w.W.Write(id);
@@ -1110,33 +1278,42 @@ namespace DarkwoodMP.World
             bool placed = (r.R.ReadByte() & 1) != 0;
             string prefab = r.ReadStr();
             Vector3 pos = r.ReadVector3();
-            var rot = new Quaternion(r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle());
+            var rot = new Quaternion(
+                r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
+                r.R.ReadSingle());
             string contents = r.ReadBigStr();
             int exp = r.R.ReadInt32();
-            bool thrownSpawn = _session.IsClient && ThrownSpawns.Contains(prefab);
-            if (!(SharedPrefabs.Contains(prefab) || placed || thrownSpawn) || ObjRef.Spawned.ContainsKey(id))
+            bool thrownSpawn =
+                _session.IsClient && ThrownSpawns.Contains(prefab);
+            if (!(SharedPrefabs.Contains(prefab) || placed || thrownSpawn)
+                || ObjRef.Spawned.ContainsKey(id))
             {
                 return;
             }
             if (_session.IsHost && placed)
             {
-                // A client's player placed it: only as a request, within reach, and only a thing a player can place.
+                // A client's player placed it: only as a request, within reach,
+                // and only a thing a player can place.
                 if (!Authority.Handling)
                 {
-                    Plugin.Log.LogWarning($"[world] {_session.NameOf(from)} placed {prefab} without asking: ignored");
+                    Plugin.Log.LogWarning(
+                        $"[world] {_session.NameOf(from)} placed {prefab} without asking: ignored");
                     return;
                 }
                 if (!IsPlaceable(prefab))
                 {
-                    Authority.Refuse($"{prefab} isn't something a player can place");
+                    Authority.Refuse(
+                        $"{prefab} isn't something a player can place");
                     return;
                 }
                 if (!Authority.InReach(pos, WorldActions.Reach, prefab))
                 {
                     return;
                 }
-                // And only with the item in their bags: the character the client sent as its player began placing
-                // (PlacingPatch), less what it has placed since. Not known yet (no character from it this session): allowed.
+                // And only with the item in their bags: the character the
+                // client sent as its player began placing (PlacingPatch), less
+                // what it has placed since. Not known yet (no character from it
+                // this session): allowed.
                 Characters instance = Characters.Instance;
                 int? carried = null;
                 if (instance != null)
@@ -1145,7 +1322,8 @@ namespace DarkwoodMP.World
                 }
                 if (carried.HasValue && carried.Value < 1)
                 {
-                    Authority.Refuse($"they don't carry anything that places {prefab}");
+                    Authority.Refuse(
+                        $"they don't carry anything that places {prefab}");
                     return;
                 }
                 if (carried.HasValue)
@@ -1164,7 +1342,8 @@ namespace DarkwoodMP.World
             WorldActions.Replaying = true;
             try
             {
-                go = Core.AddPrefab(prefab, pos, rot, Core.ItemContainer, worldSpace: true);
+                go = Core.AddPrefab(
+                    prefab, pos, rot, Core.ItemContainer, worldSpace: true);
                 if (go == null)
                 {
                     return;
@@ -1174,12 +1353,14 @@ namespace DarkwoodMP.World
                     var trap = go.GetComponent<Trigger>();
                     if (trap != null)
                     {
-                        trap.setByPlayer = true; // as the game marks what a player sets
+                        // as the game marks what a player sets
+                        trap.setByPlayer = true;
                     }
                 }
                 if (!thrownSpawn)
                 {
-                    Core.addToSaveable(go, isDynamic: true, assignID: placed); // (the host's isn't saved either)
+                    // (the host's isn't saved either)
+                    Core.addToSaveable(go, isDynamic: true, assignID: placed);
                 }
                 WorldGrid grid = Singleton<WorldGrid>.Instance;
                 if (grid != null)
@@ -1199,12 +1380,14 @@ namespace DarkwoodMP.World
             ObjRef.RegisterSpawned(id, go);
             if (thrownSpawn)
             {
-                ThrownHits.Spawned.Add(go); // its flames count as thrown here, as our own copy's did
+                // its flames count as thrown here, as our own copy's did
+                ThrownHits.Spawned.Add(go);
             }
             var drop = go.GetComponent<DeathDrop>();
             if (drop != null)
             {
-                drop.expAmount = exp; // the experience its player lost, for whoever takes it
+                // the experience its player lost, for whoever takes it
+                drop.expAmount = exp;
             }
             var inv = go.GetComponent<Inventory>();
             if (inv != null && contents.Length > 0)
@@ -1218,19 +1401,26 @@ namespace DarkwoodMP.World
                 {
                     count = inv.getAllItems().Count;
                 }
-                Plugin.Log.LogInfo($"[world] made {prefab} #{id} at {pos}: {count} items");
+                Plugin.Log.LogInfo(
+                    $"[world] made {prefab} #{id} at {pos}: {count} items");
             }
             if (_session.IsHost)
             {
-                SendSpawn(id, prefab, pos, rot, contents, placed, exp, except: from); // pass it on
+                // pass it on
+                SendSpawn(
+                    id, prefab, pos, rot, contents, placed, exp, except: from);
             }
         }
 
-        // ---- the host's enemies' loot ------------------------------------------------------
+        // ---- the host's enemies' loot ---------------------------------------
 
-        private readonly HashSet<Character> _corpsesSent = new HashSet<Character>();
+        private readonly HashSet<Character> _corpsesSent =
+            new HashSet<Character>();
 
-        /// <summary>Host: when an enemy the clients see has died, send them what its corpse holds.</summary>
+        /// <summary>
+        /// Host: when an enemy the clients see has died, send them what its
+        /// corpse holds.
+        /// </summary>
         private void SendCorpseLoot()
         {
             var ne = NetEnemies.Instance;
@@ -1254,16 +1444,22 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>What the player places (a trap...) is made in Player.progressBarCompleted; share it.</summary>
+    /// <summary>
+    /// What the player places (a trap...) is made in
+    /// Player.progressBarCompleted; share it.
+    /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.progressBarCompleted))]
     static class PlacingPatch
     {
         static void Prefix(Player __instance)
         {
             Containers.Placing = __instance.placingItem;
-            // A client's character goes to the host first, the item to place still in it (it's used up below), so the
-            // host's check of what it carries (Containers.OnSpawn) sees what was picked up or made a moment ago.
-            if (__instance.placingItem && NetEnemies.ClientMode && WorldActions.Sharing)
+            // A client's character goes to the host first, the item to place
+            // still in it (it's used up below), so the host's check of what it
+            // carries (Containers.OnSpawn) sees what was picked up or made a
+            // moment ago.
+            if (__instance.placingItem && NetEnemies.ClientMode
+                && WorldActions.Sharing)
             {
                 Characters instance = Characters.Instance;
                 if (instance != null)
@@ -1292,11 +1488,24 @@ namespace DarkwoodMP.World
         }
     }
 
-    /// <summary>Things made while playing together (a dropped item) are shared with the others.</summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(string), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
+    /// <summary>
+    /// Things made while playing together (a dropped item) are shared with the
+    /// others.
+    /// </summary>
+    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
+    {
+        typeof(string),
+        typeof(Vector3),
+        typeof(Quaternion),
+        typeof(GameObject),
+        typeof(bool)
+    })]
     static class SharedPrefabPatch
     {
-        /// <summary>Inside the string overload, which makes it with the Object overload: shared from here only.</summary>
+        /// <summary>
+        /// Inside the string overload, which makes it with the Object overload:
+        /// shared from here only.
+        /// </summary>
         internal static int Depth;
         static void Prefix() => Depth++;
         static void Postfix(string prefab, GameObject __result)
@@ -1319,10 +1528,19 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// What the player places is made with the Object overload (Player.progressBarCompleted passes the item's
-    /// prefab, InvItem.item), not the string one: shared from here, unless the string overload is the caller.
+    /// What the player places is made with the Object overload
+    /// (Player.progressBarCompleted passes the item's prefab, InvItem.item),
+    /// not the string one: shared from here, unless the string overload is the
+    /// caller.
     /// </summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
+    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
+    {
+        typeof(Object),
+        typeof(Vector3),
+        typeof(Quaternion),
+        typeof(GameObject),
+        typeof(bool)
+    })]
     static class PlacedPrefabPatch
     {
         static void Postfix(Object prefab, GameObject __result)
@@ -1354,7 +1572,8 @@ namespace DarkwoodMP.World
             }
             catch (System.Exception e)
             {
-                Plugin.Log.LogWarning($"Container open check failed: {e.Message}");
+                Plugin.Log.LogWarning(
+                    $"Container open check failed: {e.Message}");
             }
         }
     }

@@ -4,8 +4,9 @@ using Steamworks;
 namespace DarkwoodMP.Net
 {
     /// <summary>
-    /// Steam lobbies + Steam Datagram Relay P2P. Only constructed once Steam is confirmed running,
-    /// so the Steamworks types it references are never touched on GOG builds.
+    /// Steam lobbies + Steam Datagram Relay P2P. Only constructed once Steam is
+    /// confirmed running, so the Steamworks types it references are never
+    /// touched on GOG builds.
     /// </summary>
     public sealed class SteamBackend : INetBackend, IGuiSection
     {
@@ -26,10 +27,17 @@ namespace DarkwoodMP.Net
 
         public void Host() => _lobby.Host();
 
-        /// <summary>The lobby members' Steam names, comma-separated (for logs; keeps Steamworks types out of callers).</summary>
-        public string MemberNames() => string.Join(", ", _lobby.Members().ConvertAll(m => SteamFriends.GetFriendPersonaName(m)));
+        /// <summary>
+        /// The lobby members' Steam names, comma-separated (for logs; keeps
+        /// Steamworks types out of callers).
+        /// </summary>
+        public string MemberNames() => string.Join(
+            ", ",
+            _lobby.Members().ConvertAll(
+                m => SteamFriends.GetFriendPersonaName(m)));
 
-        public void Kick(ulong peer) => _transport.CloseWhenSent(new CSteamID(peer));
+        public void Kick(ulong peer) =>
+            _transport.CloseWhenSent(new CSteamID(peer));
 
         public event Action OnEntered;
         public event Action OnLeft;
@@ -77,9 +85,11 @@ namespace DarkwoodMP.Net
                     left();
                 }
             };
-            // A player whose connection died without leaving the lobby (its PC lost power, its network dropped):
-            // the lobby only notices much later. Only for peers that got in, or a host that let us in: a session
-            // can also fail while it's first being set up, and Hello is sent again then.
+            // A player whose connection died without leaving the lobby (its PC
+            // lost power, its network dropped): the lobby only notices much
+            // later. Only for peers that got in, or a host that let us in: a
+            // session can also fail while it's first being set up, and Hello is
+            // sent again then.
             _transport.OnSessionLost += who =>
             {
                 var session = Session.Instance;
@@ -89,7 +99,8 @@ namespace DarkwoodMP.Net
                 }
                 if (IsHost && session.Peers.Contains(who.m_SteamID))
                 {
-                    Plugin.Log.LogInfo($"Lost the connection to #{who.m_SteamID}");
+                    Plugin.Log.LogInfo(
+                        $"Lost the connection to #{who.m_SteamID}");
                     _transport.CloseSession(who);
                     Action<ulong> lost = OnPeerLost;
                     if (lost != null)
@@ -102,8 +113,9 @@ namespace DarkwoodMP.Net
                     _lobby.LoseHost("Lost the connection to the host");
                 }
             };
-            // Every member hears of every departure. A client only acts on the host's: for anyone else the host's
-            // PlayerLeft does the cleanup (and shows "X left", which needs the name still known then).
+            // Every member hears of every departure. A client only acts on the
+            // host's: for anyone else the host's PlayerLeft does the cleanup
+            // (and shows "X left", which needs the name still known then).
             _lobby.OnMemberLeft += who =>
             {
                 if (!IsHost && who != _lobby.Owner)
@@ -128,11 +140,16 @@ namespace DarkwoodMP.Net
                     Ui.Text(f, "In a direct game.", MenuSkin.Dim);
                     return;
                 }
-                if (Plugin.CantHostReason == null && Ui.Button(f, "Host with Steam (friends join by invite)"))
+                if (Plugin.CantHostReason == null
+                    && Ui.Button(f, "Host with Steam (friends join by invite)"))
                 {
                     _lobby.Host();
                 }
-                Ui.Text(f, "To join: accept a friend's Steam invite, or Join Game in the Steam friends list.", MenuSkin.Dim);
+                Ui.Text(
+                    f,
+                    "To join: accept a friend's Steam invite, or Join Game in "
+                        + "the Steam friends list.",
+                    MenuSkin.Dim);
                 return;
             }
             Ui.Text(f, Status, MenuSkin.Bright);
@@ -140,7 +157,9 @@ namespace DarkwoodMP.Net
             {
                 _lobby.OpenInviteDialog();
             }
-            if (!IsHost && session.Connected && Ui.Button(f, "Reload the host's world (if things look out of sync)"))
+            if (!IsHost && session.Connected
+                && Ui.Button(
+                    f, "Reload the host's world (if things look out of sync)"))
             {
                 Rejoin();
             }
@@ -150,7 +169,8 @@ namespace DarkwoodMP.Net
             }
         }
 
-        public bool Send(ulong to, byte[] data, int length, int channel, bool reliable) =>
+        public bool Send(
+            ulong to, byte[] data, int length, int channel, bool reliable) =>
             _transport.Send(new CSteamID(to), data, length, channel, reliable);
 
         public void Poll() => _transport.Poll();
@@ -170,11 +190,14 @@ namespace DarkwoodMP.Net
         private string _presStatus, _presGroup, _presSize;
 
         /// <summary>
-        /// Steam rich presence. "status" is a plain string that friends see in "View game info". The line under a
-        /// name in the friends list would need "steam_display", which only takes tokens that the game's developer
-        /// uploads to Steamworks; Darkwood has none, so it isn't set. In a Steam lobby, "steam_player_group" (the
-        /// lobby) and "steam_player_group_size" let Steam show the players together. Steam is only called for a
-        /// value that changed; an empty value removes the key.
+        /// Steam rich presence. "status" is a plain string that friends see in
+        /// "View game info". The line under a name in the friends list would
+        /// need "steam_display", which only takes tokens that the game's
+        /// developer uploads to Steamworks; Darkwood has none, so it isn't set.
+        /// In a Steam lobby, "steam_player_group" (the lobby) and
+        /// "steam_player_group_size" let Steam show the players together. Steam
+        /// is only called for a value that changed; an empty value removes the
+        /// key.
         /// </summary>
         public void SetPresence(string status, int players)
         {
@@ -206,7 +229,8 @@ namespace DarkwoodMP.Net
         }
 
         /// <summary>Our own "status" as Steam has it (for the log).</summary>
-        public string PresenceReadBack() => SteamFriends.GetFriendRichPresence(SteamUser.GetSteamID(), "status");
+        public string PresenceReadBack() => SteamFriends.GetFriendRichPresence(
+            SteamUser.GetSteamID(), "status");
 
         public void Leave()
         {

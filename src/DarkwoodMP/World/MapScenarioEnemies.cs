@@ -11,10 +11,12 @@ using Object = UnityEngine.Object;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps that fight each kind of enemy and creature in the game (tools/tests/map_scenario_enemies.py):
-    /// the host spawns one beside the client's player and watches whom it goes for and what it spawns; the client
-    /// waits for it to come and hurt it, then hits it (and whatever it spawned) with the player's own melee until
-    /// it's dead, and searches the corpse. Both games' "enemies" dumps are compared after each.
+    /// Map test steps that fight each kind of enemy and creature in the game
+    /// (tools/tests/map_scenario_enemies.py): the host spawns one beside the
+    /// client's player and watches whom it goes for and what it spawns; the
+    /// client waits for it to come and hurt it, then hits it (and whatever it
+    /// spawned) with the player's own melee until it's dead, and searches the
+    /// corpse. Both games' "enemies" dumps are compared after each.
     /// </summary>
     public static class MapScenarioEnemies
     {
@@ -38,16 +40,20 @@ namespace DarkwoodMP.World
             Add("ee-day", Day, timeout: 10f);
         }
 
-        // ---- the clock -----------------------------------------------------------------------------------------
+        // ---- the clock ------------------------------------------------------
 
         private static bool _holdDay;
-        /// <summary>The characters there were when the clock was first held: ee-clear leaves these alone.</summary>
+        /// <summary>
+        /// The characters there were when the clock was first held: ee-clear
+        /// leaves these alone.
+        /// </summary>
         private static readonly HashSet<int> _baseline = new HashSet<int>();
 
         /// <summary>
-        /// "ee-day [off]" (host): the clock set to noon and held there (Controller.DoUpdateTime off, put back if the
-        /// game turns it on), so no night (its worms and attackers) comes during the fights; "off" lets it run again.
-        /// The clients follow the host's clock (TimeSync).
+        /// "ee-day [off]" (host): the clock set to noon and held there
+        /// (Controller.DoUpdateTime off, put back if the game turns it on), so
+        /// no night (its worms and attackers) comes during the fights; "off"
+        /// lets it run again. The clients follow the host's clock (TimeSync).
         /// </summary>
         private static IEnumerator Day(string[] a, Result r)
         {
@@ -67,7 +73,8 @@ namespace DarkwoodMP.World
             {
                 _holdDay = false;
                 ctl.DoUpdateTime = true;
-                r.Info = $"the clock runs again from {ctl.CurrentTime / 60f:0.00} h";
+                r.Info =
+                    $"the clock runs again from {ctl.CurrentTime / 60f:0.00} h";
                 yield break;
             }
             TestWorld.SetTime(720f);
@@ -112,7 +119,10 @@ namespace DarkwoodMP.World
 
         // ---- what the fights spawn (logged, to find where a thing only one game has came from) -------------------
 
-        /// <summary>While the fights run: things made by name (Core.AddPrefab) are logged with where they came from.</summary>
+        /// <summary>
+        /// While the fights run: things made by name (Core.AddPrefab) are
+        /// logged with where they came from.
+        /// </summary>
         internal static bool TraceSpawns;
 
         internal static void Spawned(GameObject go)
@@ -122,14 +132,18 @@ namespace DarkwoodMP.World
                 return;
             }
             string n = go.name;
-            if (n.StartsWith("Fov_") || n.Contains("sound_loop") || n.Contains("Spawner"))
+            if (n.StartsWith("Fov_") || n.Contains("sound_loop")
+                || n.Contains("Spawner"))
             {
-                System.Diagnostics.StackFrame[] st = new System.Diagnostics.StackTrace(2, false).GetFrames();
+                System.Diagnostics.StackFrame[] st =
+                    new System.Diagnostics.StackTrace(2, false).GetFrames();
                 if (st == null)
                 {
                     st = new System.Diagnostics.StackFrame[0];
                 }
-                string from = string.Join(" < ", st.Take(8).Select(f => f.GetMethod()).Where(m => m != null).Select(m =>
+                string from = string.Join(" < ", st.Take(8)
+                        .Select(f => f.GetMethod()).Where(m => m != null)
+                        .Select(m =>
                 {
                     Type declaringType = m.DeclaringType;
                     string name = null;
@@ -139,19 +153,28 @@ namespace DarkwoodMP.World
                     }
                     return name + "." + m.Name;
                 }));
-                string comps = string.Join("/", go.GetComponentsInChildren<MonoBehaviour>(true).Where(m => m != null).Select(m => m.GetType().Name).Distinct());
+                string comps = string.Join(
+                    "/",
+                    go.GetComponentsInChildren<MonoBehaviour>(true)
+                        .Where(m => m != null).Select(m => m.GetType().Name)
+                        .Distinct());
                 string place = Fmt(go.transform.position);
                 string parent = "none";
                 if (go.transform.parent != null)
                 {
                     parent = go.transform.parent.name;
                 }
-                Plugin.Log.LogInfo($"[ee] made {n} at {place} (parent {parent}; {comps}) from {from}");
+                Plugin.Log.LogInfo(
+                    $"[ee] made {n} at {place} (parent {parent}; {comps}) from {from}");
             }
         }
 
-        /// <summary>Where the fights are: away from the stations (the host stays at the centre, out of the way).</summary>
-        private static Vector3 ArenaSpot => FreeSpot(Centre + new Vector3(0f, 0f, 1500f));
+        /// <summary>
+        /// Where the fights are: away from the stations (the host stays at the
+        /// centre, out of the way).
+        /// </summary>
+        private static Vector3 ArenaSpot =>
+            FreeSpot(Centre + new Vector3(0f, 0f, 1500f));
 
         private static string Short(string kind)
         {
@@ -161,7 +184,9 @@ namespace DarkwoodMP.World
             }
             return kind;
         }
-        private static bool IsKind(Character c, string kind) => c != null && c.name.Replace("(Clone)", "").Trim().Equals(Short(kind), StringComparison.OrdinalIgnoreCase);
+        private static bool IsKind(Character c, string kind) => c != null
+            && c.name.Replace("(Clone)", "").Trim()
+                .Equals(Short(kind), StringComparison.OrdinalIgnoreCase);
 
         internal static Vector3 FreeSpot(Vector3 at)
         {
@@ -170,8 +195,13 @@ namespace DarkwoodMP.World
                 for (int i = 0; i < Math.Max(1, ring * 6); i++)
                 {
                     float a = i * Mathf.PI * 2f / Math.Max(1, ring * 6);
-                    var p = at + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * ring * 50f;
-                    if (!Physics.OverlapSphere(p, 60f, ~0, QueryTriggerInteraction.Ignore).Any(c => c.attachedRigidbody == null || !c.attachedRigidbody.CompareTag("Player")))
+                    var p = at
+                        + new Vector3(Mathf.Cos(a), 0f, Mathf
+                            .Sin(a)) * ring * 50f;
+                    if (!Physics.OverlapSphere(
+                        p, 60f, ~0, QueryTriggerInteraction.Ignore).Any(
+                            c => c.attachedRigidbody == null
+                                || !c.attachedRigidbody.CompareTag("Player")))
                     {
                         return p;
                     }
@@ -181,12 +211,19 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>The (one) remote player's stand-in on the host.</summary>
-        internal static NetPlayerProxy ClientProxy() => NetPlayerProxy.All.Values.FirstOrDefault(p => p != null && p.Owner != Sync.PlayerSync.DummyId);
+        internal static NetPlayerProxy ClientProxy() =>
+            NetPlayerProxy.All.Values.FirstOrDefault(
+                p => p != null && p.Owner != Sync.PlayerSync.DummyId);
 
-        /// <summary>KIND spawned at the spot, sent after "the player" if attack (null: it couldn't be).</summary>
+        /// <summary>
+        /// KIND spawned at the spot, sent after "the player" if attack (null:
+        /// it couldn't be).
+        /// </summary>
         private static Character SpawnAt(string kind, Vector3 spot, bool attack)
         {
-            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(P.gameObject, spot, 1f, kind, nocturnal: false, attackPlayer: attack);
+            var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
+                P.gameObject, spot, 1f, kind, nocturnal: false,
+                attackPlayer: attack);
             if (c != null)
             {
                 c.transform.position = spot;
@@ -195,9 +232,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>Kill it as our player's own hit.</summary>
-        private static void Kill(Character c) => AsPlayer(() => c.getHit(c.health + 1000f, P.transform, false, true, false));
+        private static void Kill(Character c) => AsPlayer(
+            () => c.getHit(c.health + 1000f, P.transform, false, true, false));
 
-        // ---- host --------------------------------------------------------------------------------------------------
+        // ---- host -----------------------------------------------------------
 
         private sealed class Watch
         {
@@ -217,7 +255,9 @@ namespace DarkwoodMP.World
         }
         private static Watch _w;
 
-        /// <summary>"ee-arena" (client): walk to the fighting spot, unhurt.</summary>
+        /// <summary>
+        /// "ee-arena" (client): walk to the fighting spot, unhurt.
+        /// </summary>
         private static IEnumerator Arena(string[] a, Result r)
         {
             TraceSpawns = true;
@@ -227,9 +267,11 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "ee-spawn KIND" (host): KIND (a prefab under Characters/) beside the client's player, on the far side from
-        /// ours, sent after "the player" (Character.attackPlayer: the one it has most threat for). A kind that is an NPC
-        /// here (it runs in every game, not on the host) or has no prefab is reported "skip".
+        /// "ee-spawn KIND" (host): KIND (a prefab under Characters/) beside the
+        /// client's player, on the far side from ours, sent after "the player"
+        /// (Character.attackPlayer: the one it has most threat for). A kind
+        /// that is an NPC here (it runs in every game, not on the host) or has
+        /// no prefab is reported "skip".
         /// </summary>
         private static IEnumerator Spawn(string[] a, Result r)
         {
@@ -263,7 +305,11 @@ namespace DarkwoodMP.World
                 heading = Vector3.forward;
             }
             var spot = FreeSpot(proxy.transform.position + heading * 450f);
-            var w = new Watch { Kind = kind, SpawnedAt = Time.realtimeSinceStartup };
+            var w = new Watch
+            {
+                Kind = kind,
+                SpawnedAt = Time.realtimeSinceStartup
+            };
             foreach (var c0 in Object.FindObjectsOfType<Character>())
             {
                 w.Before.Add(c0.GetInstanceID());
@@ -297,13 +343,15 @@ namespace DarkwoodMP.World
             Plugin.Instance.StartCoroutine(Monitor(w));
             yield return new WaitForSeconds(1f);
             NetEnemies.Instance.NetIdOf(c, out w.Id);
-            r.Info = $"{c.name} #{w.Id} at {Fmt(spot)} ({Core.trueDistance(spot, proxy.transform.position):0} from the client, {Core.trueDistance(spot, P.transform.position):0} from us), health {c.health:0}, {Traits(c)}; children: {Children(c)}";
+            r.Info =
+                $"{c.name} #{w.Id} at {Fmt(spot)} ({Core.trueDistance(spot, proxy.transform.position):0} from the client, {Core.trueDistance(spot, P.transform.position):0} from us), health {c.health:0}, {Traits(c)}; children: {Children(c)}";
         }
 
         /// <summary>
-        /// "ee-solo KIND" (host): KIND beside our own player, the client far off: whether it hurts our player in the
-        /// game's own single-player way within 15 s (to tell a kind that never attacks from one that can't reach a
-        /// joiner). It's killed after.
+        /// "ee-solo KIND" (host): KIND beside our own player, the client far
+        /// off: whether it hurts our player in the game's own single-player way
+        /// within 15 s (to tell a kind that never attacks from one that can't
+        /// reach a joiner). It's killed after.
         /// </summary>
         private static IEnumerator Solo(string[] a, Result r)
         {
@@ -312,15 +360,19 @@ namespace DarkwoodMP.World
             {
                 kind = a[0];
             }
-            var spot = FreeSpot(P.transform.position + new Vector3(0f, 0f, -400f));
+            var spot =
+                FreeSpot(P.transform.position + new Vector3(0f, 0f, -400f));
             var c = SpawnAt(kind, spot, attack: true);
             if (c == null)
             {
                 r.Fail($"couldn't spawn {kind}");
                 yield break;
             }
-            float lost = 0f, hp = P.health, until = Time.realtimeSinceStartup + 15f;
-            while (Time.realtimeSinceStartup < until && lost <= 0f && c != null && c.alive)
+            float lost = 0f,
+                hp = P.health,
+                until = Time.realtimeSinceStartup + 15f;
+            while (Time.realtimeSinceStartup < until && lost <= 0f
+                && c != null && c.alive)
             {
                 if (P.health < hp)
                 {
@@ -332,9 +384,11 @@ namespace DarkwoodMP.World
             string text = "gone";
             if (c != null)
             {
-                text = $"{Core.trueDistance(c.transform.position, P.transform.position):0} from us, alive {c.alive}";
+                text =
+                    $"{Core.trueDistance(c.transform.position, P.transform.position):0} from us, alive {c.alive}";
             }
-            r.Info = $"{kind} beside our player: it hurt us for {lost:0}; {text}";
+            r.Info =
+                $"{kind} beside our player: it hurt us for {lost:0}; {text}";
             HealNow();
             if (c != null)
             {
@@ -347,7 +401,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>A character's child objects that are items (with their components): what the dumps' items list shows.</summary>
+        /// <summary>
+        /// A character's child objects that are items (with their components):
+        /// what the dumps' items list shows.
+        /// </summary>
         internal static string Children(Character c)
         {
             var l = new List<string>();
@@ -361,7 +418,9 @@ namespace DarkwoodMP.World
                         text = "";
                     }
                     string name = it.name;
-                    string components = string.Join("/", it.GetComponents<MonoBehaviour>().Where(m => m != null).Select(m =>
+                    string components = string.Join("/",
+                        it.GetComponents<MonoBehaviour>().Where(m => m != null)
+                            .Select(m =>
                     {
                         string type = m.GetType().Name;
                         string off = "-off";
@@ -381,7 +440,10 @@ namespace DarkwoodMP.World
             return string.Join(", ", l);
         }
 
-        /// <summary>What's special about a character (the components and flags behind its special behaviours).</summary>
+        /// <summary>
+        /// What's special about a character (the components and flags behind
+        /// its special behaviours).
+        /// </summary>
         private static string Traits(Character c)
         {
             var t = new List<string>();
@@ -411,7 +473,10 @@ namespace DarkwoodMP.World
             }
             if (c.attacks != null)
             {
-                t.Add("attacks " + string.Join("/", c.attacks.Where(x => x != null).Select(x => x.name)));
+                t.Add(
+                    "attacks " + string.Join(
+                        "/",
+                        c.attacks.Where(x => x != null).Select(x => x.name)));
             }
             t.Add("aggr " + c.aggressiveness);
             if (c.immobile)
@@ -443,20 +508,30 @@ namespace DarkwoodMP.World
                 t.Add("sleeping");
             }
             t.Add("behaviour " + c.behaviour);
-            t.Add($"view {c.farViewDistance}/{c.nearViewDistance} x{c.aniSightRangeModifier:0.##}");
+            t.Add(
+                $"view {c.farViewDistance}/{c.nearViewDistance} x{c.aniSightRangeModifier:0.##}");
             if (c.currentActivity != null && c.currentActivity.isActive)
             {
                 t.Add("activity " + c.currentActivity.type);
             }
             if (c.activities != null && c.activities.Count > 0)
             {
-                t.Add("activities " + string.Join("/", c.activities.Select(x => x.type)));
+                t.Add(
+                    "activities " + string.Join(
+                        "/", c.activities.Select(x => x.type)));
             }
-            t.Add("components " + string.Join("/", c.GetComponents<MonoBehaviour>().Where(m => m != null).Select(m => m.GetType().Name).Distinct()));
+            t.Add(
+                "components " + string.Join(
+                    "/",
+                    c.GetComponents<MonoBehaviour>().Where(m => m != null)
+                        .Select(m => m.GetType().Name).Distinct()));
             return string.Join(", ", t);
         }
 
-        /// <summary>Host, while the fight lasts: whom the enemy goes for, how far it moved, and what it spawned.</summary>
+        /// <summary>
+        /// Host, while the fight lasts: whom the enemy goes for, how far it
+        /// moved, and what it spawned.
+        /// </summary>
         private static IEnumerator Monitor(Watch w)
         {
             while (!w.Done && Time.realtimeSinceStartup - w.SpawnedAt < 200f)
@@ -483,7 +558,8 @@ namespace DarkwoodMP.World
                         w.Targets.Add(who);
                         if (who != w.LastTarget)
                         {
-                            w.Timeline.Add($"{Time.realtimeSinceStartup - w.SpawnedAt:0.0}s {who} ({c.behaviour})");
+                            w.Timeline.Add(
+                                $"{Time.realtimeSinceStartup - w.SpawnedAt:0.0}s {who} ({c.behaviour})");
                         }
                         w.LastTarget = who;
                         if (cb is NetPlayerProxy)
@@ -491,11 +567,14 @@ namespace DarkwoodMP.World
                             w.TargetedClient = true;
                         }
                     }
-                    w.Moved = Mathf.Max(w.Moved, Core.trueDistance(c.transform.position, w.From));
+                    w.Moved = Mathf.Max(
+                        w.Moved,
+                        Core.trueDistance(c.transform.position, w.From));
                 }
                 foreach (var o in Object.FindObjectsOfType<Character>())
                 {
-                    if (o == null || w.Before.Contains(o.GetInstanceID()) || o.npc != null)
+                    if (o == null || w.Before.Contains(o.GetInstanceID())
+                        || o.npc != null)
                     {
                         continue;
                     }
@@ -510,8 +589,10 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "ee-check [--targets]" (host): the enemy and all it spawned are dead here; with --targets, it went for the
-        /// client's player. Anything still alive is killed (so it doesn't spoil the next fight) and fails the step.
+        /// "ee-check [--targets]" (host): the enemy and all it spawned are dead
+        /// here; with --targets, it went for the client's player. Anything
+        /// still alive is killed (so it doesn't spoil the next fight) and fails
+        /// the step.
         /// </summary>
         private static IEnumerator Check(string[] a, Result r)
         {
@@ -524,7 +605,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             w.Done = true;
             var all = new List<Character> { w.C }.Concat(w.Minions).ToList();
-            var alive = all.Where(c => c != null && NetEnemies.InPlay(c)).ToList();
+            var alive =
+                all.Where(c => c != null && NetEnemies.InPlay(c)).ToList();
             string minions;
             if (w.Minions.Count == 0)
             {
@@ -552,7 +634,8 @@ namespace DarkwoodMP.World
                     return $"{name}{number} {status}";
                 }));
             }
-            string summary = $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved {w.Moved:0}, spawned: {minions}, ";
+            string summary =
+                $"{w.Kind}: went for [{string.Join(", ", w.Targets)}], moved {w.Moved:0}, spawned: {minions}, ";
             string state;
             if (w.C == null)
             {
@@ -560,7 +643,8 @@ namespace DarkwoodMP.World
             }
             else
             {
-                state = $"alive {w.C.alive}, health {w.C.health:0}, children {Children(w.C)}";
+                state =
+                    $"alive {w.C.alive}, health {w.C.health:0}, children {Children(w.C)}";
             }
             r.Info = summary + state;
             if (w.Timeline.Count > 1)
@@ -573,7 +657,8 @@ namespace DarkwoodMP.World
             }
             if (alive.Count > 0)
             {
-                r.Fail($"still alive here: {string.Join(", ", alive.Select(c => c.name))}; {r.Info}");
+                r.Fail(
+                    $"still alive here: {string.Join(", ", alive.Select(c => c.name))}; {r.Info}");
                 foreach (var c in alive)
                 {
                     Kill(c);
@@ -581,7 +666,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"ee-clear" (host): what the last fight left (corpses, spawned things) removed in every game.</summary>
+        /// <summary>
+        /// "ee-clear" (host): what the last fight left (corpses, spawned
+        /// things) removed in every game.
+        /// </summary>
         private static IEnumerator Clear(string[] a, Result r)
         {
             var w = _w;
@@ -599,16 +687,20 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            // And whatever else came while the fights went on (a banshee's babies, the world's own animals), near the
-            // client: anything not here when the clock was first held.
+            // And whatever else came while the fights went on (a banshee's
+            // babies, the world's own animals), near the client: anything not
+            // here when the clock was first held.
             var proxy = ClientProxy();
             var others = new List<string>();
             if (proxy != null && _baseline.Count > 0)
             {
                 foreach (var c in Object.FindObjectsOfType<Character>())
                 {
-                    if (c != null && c.npc == null && !gone.Contains(c) && !_baseline.Contains(c.GetInstanceID())
-                        && Core.trueDistance(c.transform.position, proxy.transform.position) < 3000f && gone.Add(c))
+                    if (c != null && c.npc == null && !gone.Contains(c)
+                        && !_baseline.Contains(c.GetInstanceID())
+                        && Core.trueDistance(
+                            c.transform.position,
+                            proxy.transform.position) < 3000f && gone.Add(c))
                     {
                         others.Add(c.name);
                         Object.Destroy(c.gameObject);
@@ -625,11 +717,14 @@ namespace DarkwoodMP.World
             r.Info = $"removed {n}" + othersNote;
         }
 
-        // ---- client ------------------------------------------------------------------------------------------------
+        // ---- client ---------------------------------------------------------
 
-        private static uint _fought;     // client: the net ID of the kind we fought
+        // client: the net ID of the kind we fought
+        private static uint _fought;
 
-        /// <summary>A copy of one of the host's enemies here (and its net ID).</summary>
+        /// <summary>
+        /// A copy of one of the host's enemies here (and its net ID).
+        /// </summary>
         private static IEnumerable<(Character c, uint id)> HostEnemies()
         {
             var ne = NetEnemies.Instance;
@@ -647,10 +742,13 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "ee-fight KIND [--hurts] [--moves]" (client): the host's KIND shows here; with --moves it moves, with
-        /// --hurts it hurts our player (waited for up to 12 s, standing still; with --twice, two hits: one pooled
-        /// sensor must hurt again), with --throws one of its projectiles shows here (EnemyProjectile or EnemySensorThrown). Then our player hits it, and anything
-        /// of the host's it spawned near us, with a pitchfork until none are left alive (healed when low).
+        /// "ee-fight KIND [--hurts] [--moves]" (client): the host's KIND shows
+        /// here; with --moves it moves, with --hurts it hurts our player
+        /// (waited for up to 12 s, standing still; with --twice, two hits: one
+        /// pooled sensor must hurt again), with --throws one of its projectiles
+        /// shows here (EnemyProjectile or EnemySensorThrown). Then our player
+        /// hits it, and anything of the host's it spawned near us, with a
+        /// pitchfork until none are left alive (healed when low).
         /// </summary>
         private static IEnumerator Fight(string[] a, Result r)
         {
@@ -660,7 +758,9 @@ namespace DarkwoodMP.World
             {
                 kind = a[0];
             }
-            bool hurts = a.Contains("--hurts"), moves = a.Contains("--moves"), throws = a.Contains("--throws");
+            bool hurts = a.Contains("--hurts"),
+                moves = a.Contains("--moves"),
+                throws = a.Contains("--throws");
             int needHits = 1;
             if (a.Contains("--twice"))
             {
@@ -669,13 +769,19 @@ namespace DarkwoodMP.World
             int shown0 = EnemyLandings.Shown;
             Character c = null;
             uint id = 0;
-            var earlier = new HashSet<uint>(HostEnemies().Where(e => !IsKind(e.c, kind)).Select(e => e.id)); // the world's own, here before it: not ours to fight
+            // the world's own, here before it: not ours to fight
+            var earlier = new HashSet<uint>(HostEnemies()
+                    .Where(e => !IsKind(e.c, kind)).Select(e => e.id));
             float until = Time.realtimeSinceStartup + 8f;
             while (c == null && Time.realtimeSinceStartup < until)
             {
                 foreach (var (o, i) in HostEnemies())
                 {
-                    if (IsKind(o, kind) && NetEnemies.InPlay(o) && (c == null || Core.trueDistance(o.transform.position, p.transform.position) < Core.trueDistance(c.transform.position, p.transform.position)))
+                    if (IsKind(o, kind) && NetEnemies.InPlay(o)
+                        && (c == null || Core.trueDistance(
+                            o.transform.position,
+                            p.transform.position) < Core.trueDistance(
+                                c.transform.position, p.transform.position)))
                     {
                         c = o;
                         id = i;
@@ -693,7 +799,10 @@ namespace DarkwoodMP.World
             }
             _fought = id;
             Vector3 from = c.transform.position;
-            float moved = 0f, lost = 0f, hp = p.health, closest = float.MaxValue;
+            float moved = 0f,
+                lost = 0f,
+                hp = p.health,
+                closest = float.MaxValue;
             int hits = 0;
             // Let it come and attack.
             float wait = 1f;
@@ -713,10 +822,15 @@ namespace DarkwoodMP.World
                 wait = 6f;
             }
             float waitUntil = Time.realtimeSinceStartup + wait;
-            while (Time.realtimeSinceStartup < waitUntil && c != null && NetEnemies.InPlay(c))
+            while (Time.realtimeSinceStartup < waitUntil && c != null
+                && NetEnemies.InPlay(c))
             {
-                moved = Mathf.Max(moved, Core.trueDistance(c.transform.position, from));
-                closest = Mathf.Min(closest, Core.trueDistance(c.transform.position, p.transform.position));
+                moved = Mathf.Max(
+                    moved, Core.trueDistance(c.transform.position, from));
+                closest = Mathf.Min(
+                    closest,
+                    Core.trueDistance(
+                        c.transform.position, p.transform.position));
                 if (p.health < hp)
                 {
                     lost += hp - p.health;
@@ -728,14 +842,16 @@ namespace DarkwoodMP.World
                     HealNow();
                     hp = p.health;
                 }
-                if (hurts && hits >= needHits && (!moves || moved > 30f) && (!throws || EnemyLandings.Shown > shown0))
+                if (hurts && hits >= needHits && (!moves || moved > 30f)
+                    && (!throws || EnemyLandings.Shown > shown0))
                 {
                     break;
                 }
                 yield return new WaitForSeconds(0.1f);
             }
             int thrown = EnemyLandings.Shown - shown0;
-            string came = $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, hurt us {hits} time(s) for {lost:0}, {thrown} projectile(s) shown (children here: {Children(c)})";
+            string came =
+                $"{c.name} #{id}: moved {moved:0}, came within {closest:0}, hurt us {hits} time(s) for {lost:0}, {thrown} projectile(s) shown (children here: {Children(c)})";
             string weapon = "pitchfork";
             if (a.Contains("--cut"))
             {
@@ -751,17 +867,20 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
-            // Hit it and whatever of the host's is alive near us until nothing is left: a swing of the weapon (the
-            // game's own melee hit, when it lands), then hits through the same path (Character.getHit by our player,
-            // which goes to the host as EnemyHit) for the most the weapon does (the Strong skill doubles it), so a
-            // fight ends in seconds even with something that dodges, flies or runs.
+            // Hit it and whatever of the host's is alive near us until
+            // nothing is left: a swing of the weapon (the game's own melee hit,
+            // when it lands), then hits through the same path (Character.getHit
+            // by our player, which goes to the host as EnemyHit) for the most
+            // the weapon does (the Strong skill doubles it), so a fight ends in
+            // seconds even with something that dodges, flies or runs.
             var killed = new HashSet<string>();
             var seen = new HashSet<uint> { id };
             var swung = new HashSet<uint>();
             int swings = 0, direct = 0;
             float dmg = HitDamage(p);
             bool cut = a.Contains("--cut");
-            float giveUp = Time.realtimeSinceStartup + FightTime, lastSeen = Time.realtimeSinceStartup;
+            float giveUp = Time.realtimeSinceStartup + FightTime,
+                lastSeen = Time.realtimeSinceStartup;
             while (Time.realtimeSinceStartup < giveUp)
             {
                 (Character c, uint id) best = default;
@@ -772,7 +891,8 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
-                    float d = Core.trueDistance(e.c.transform.position, p.transform.position);
+                    float d = Core.trueDistance(
+                        e.c.transform.position, p.transform.position);
                     if (d > 2500f)
                     {
                         continue;
@@ -786,7 +906,8 @@ namespace DarkwoodMP.World
                 }
                 if (best.c == null)
                 {
-                    // Nothing left: unless something it left (a half cut off, a minion) shows up within a moment.
+                    // Nothing left: unless something it left (a half cut off, a
+                    // minion) shows up within a moment.
                     float sinceSeen = Time.realtimeSinceStartup - lastSeen;
                     float grace = 3f;
                     if (a.Contains("--minions"))
@@ -823,7 +944,8 @@ namespace DarkwoodMP.World
                     {
                         within = 70f;
                     }
-                    yield return Walk(best.c.transform.position, within, detours: 0);
+                    yield return Walk(
+                        best.c.transform.position, within, detours: 0);
                 }
                 if (p.health < hp)
                 {
@@ -843,13 +965,22 @@ namespace DarkwoodMP.World
                 else
                 {
                     var bc = best.c;
-                    AsPlayer(() => bc.getHit(dmg, p.transform, false, true, true, true, false, false, false));
+                    AsPlayer(
+                        () => bc.getHit(
+                            dmg, p.transform, false, true, true, true, false,
+                            false, false));
                     direct++;
                     yield return new WaitForSeconds(0.25f);
                 }
                 hp = p.health;
             }
-            var left = HostEnemies().Where(e => NetEnemies.InPlay(e.c) && !earlier.Contains(e.id) && Core.trueDistance(e.c.transform.position, p.transform.position) < 2500f).Select(e => $"{e.c.name} #{e.id}").ToList();
+            var left = HostEnemies()
+                .Where(
+                    e => NetEnemies.InPlay(e.c) && !earlier.Contains(e.id)
+                        && Core.trueDistance(
+                            e.c.transform.position,
+                            p.transform.position) < 2500f)
+                .Select(e => $"{e.c.name} #{e.id}").ToList();
             var others = seen.Where(x => x != id).ToList();
             HealNow();
             int count = seen.Count;
@@ -860,9 +991,12 @@ namespace DarkwoodMP.World
             }
             else
             {
-                spawned = "spawned " + string.Join(", ", HostEnemies().Where(e => others.Contains(e.id)).Select(e => $"{e.c.name} #{e.id}"));
+                spawned = "spawned " + string.Join(", ", HostEnemies()
+                        .Where(e => others.Contains(e.id))
+                        .Select(e => $"{e.c.name} #{e.id}"));
             }
-            r.Info = $"{came}; then {swings} swing(s) and {direct} hit(s) of {dmg:0}; the host's here: {count} ({spawned}), our player lost {lost:0} in all";
+            r.Info =
+                $"{came}; then {swings} swing(s) and {direct} hit(s) of {dmg:0}; the host's here: {count} ({spawned}), our player lost {lost:0} in all";
             if (moves && moved < 30f)
             {
                 r.Fail($"it didn't move here: {r.Info}");
@@ -873,7 +1007,8 @@ namespace DarkwoodMP.World
             }
             else if (hurts && hits < needHits)
             {
-                r.Fail($"it hurt our player only {hits} time(s), not {needHits}: {r.Info}");
+                r.Fail(
+                    $"it hurt our player only {hits} time(s), not {needHits}: {r.Info}");
             }
             else if (throws && thrown == 0)
             {
@@ -885,7 +1020,10 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>A melee weapon that can cut a character in half (InvItem.canCutInHalf), from the game's item list.</summary>
+        /// <summary>
+        /// A melee weapon that can cut a character in half
+        /// (InvItem.canCutInHalf), from the game's item list.
+        /// </summary>
         private static string CutWeapon()
         {
             var db = Singleton<ItemsDatabase>.Instance;
@@ -893,7 +1031,8 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
-            foreach (var type in db.itemsDict.Keys.OrderBy(k => k, StringComparer.Ordinal))
+            foreach (var type in db.itemsDict.Keys.OrderBy(
+                k => k, StringComparer.Ordinal))
             {
                 InvItem it = null;
                 try
@@ -911,10 +1050,15 @@ namespace DarkwoodMP.World
             return null;
         }
 
-        /// <summary>How long a fight lasts at most once the hitting starts (s).</summary>
+        /// <summary>
+        /// How long a fight lasts at most once the hitting starts (s).
+        /// </summary>
         private const float FightTime = 25f;
 
-        /// <summary>What one hit of the weapon in hand does at most: its damage with upgrades, doubled by the Strong skill (within NetEnemies.DamageCap).</summary>
+        /// <summary>
+        /// What one hit of the weapon in hand does at most: its damage with
+        /// upgrades, doubled by the Strong skill (within NetEnemies.DamageCap).
+        /// </summary>
         private static float HitDamage(Player p)
         {
             var it = p.currentItem;
@@ -922,22 +1066,33 @@ namespace DarkwoodMP.World
             {
                 return 10f;
             }
-            return Mathf.Max(10f, Mathf.Max(it.getModdedDamage(it.baseClass.damage), it.getModdedDamage(it.baseClass.specialDamage)) * 2f);
+            return Mathf.Max(
+                10f,
+                Mathf.Max(
+                    it.getModdedDamage(it.baseClass.damage),
+                    it.getModdedDamage(it.baseClass.specialDamage)) * 2f);
         }
 
-        /// <summary>Take a weapon of this type out (made in an empty hotbar slot), as the game's hotbar select does.</summary>
+        /// <summary>
+        /// Take a weapon of this type out (made in an empty hotbar slot), as
+        /// the game's hotbar select does.
+        /// </summary>
         internal static IEnumerator TakeOut(Player p, string type, Result r)
         {
             for (int attempt = 0; attempt < 4; attempt++)
             {
-                if (!InvItemClass.isNull(p.currentItem) && p.currentItem.type == type && !p.switchingItem)
+                if (!InvItemClass.isNull(p.currentItem)
+                    && p.currentItem.type == type && !p.switchingItem)
                 {
                     yield break;
                 }
-                InvSlot slot = p.Hotbar.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem) && s.invItem.type == type);
+                InvSlot slot = p.Hotbar.slots.FirstOrDefault(
+                    s => !InvItemClass.isNull(s.invItem)
+                        && s.invItem.type == type);
                 if (slot == null)
                 {
-                    slot = p.Hotbar.slots.FirstOrDefault(s => InvItemClass.isNull(s.invItem));
+                    slot = p.Hotbar.slots.FirstOrDefault(
+                        s => InvItemClass.isNull(s.invItem));
                 }
                 if (slot == null)
                 {
@@ -948,17 +1103,25 @@ namespace DarkwoodMP.World
                     slot = p.Hotbar.slots[0];
                 }
                 slot.inventory = p.Hotbar;
-                // A full hotbar (earlier steps left a torch and a flashlight in it): make room in a slot that isn't
-                // in hand, or the selected weapon was taken out again instead.
-                if (!InvItemClass.isNull(slot.invItem) && slot.invItem.type != type)
+                // A full hotbar (earlier steps left a torch and a flashlight in
+                // it): make room in a slot that isn't in hand, or the selected
+                // weapon was taken out again instead.
+                if (!InvItemClass.isNull(slot.invItem)
+                    && slot.invItem.type != type)
                 {
                     slot.removeItem();
                 }
-                // A weapon wears out over the fights: a fresh one when it's worn (a broken one can't be taken out).
-                if (!InvItemClass.isNull(slot.invItem) && slot.invItem.type == type && slot.invItem.baseClass != null && slot.invItem.baseClass.hasDurability
-                    && slot.invItem.durability < slot.invItem.baseClass.maxDurability * 0.5f)
+                // A weapon wears out over the fights: a fresh one when it's
+                // worn (a broken one can't be taken out).
+                if (!InvItemClass.isNull(slot.invItem)
+                    && slot.invItem.type == type
+                    && slot.invItem.baseClass != null
+                    && slot.invItem.baseClass.hasDurability
+                    && slot.invItem.durability
+                        < slot.invItem.baseClass.maxDurability * 0.5f)
                 {
-                    slot.invItem.durability = slot.invItem.baseClass.maxDurability;
+                    slot.invItem.durability =
+                        slot.invItem.baseClass.maxDurability;
                 }
                 if (InvItemClass.isNull(slot.invItem))
                 {
@@ -970,12 +1133,15 @@ namespace DarkwoodMP.World
                 }
                 slot.select(noiseless: true);
                 float t = Time.realtimeSinceStartup + 2.5f;
-                while ((InvItemClass.isNull(p.currentItem) || p.currentItem.type != type || p.switchingItem) && Time.realtimeSinceStartup < t)
+                while ((InvItemClass.isNull(p.currentItem)
+                        || p.currentItem.type != type
+                        || p.switchingItem) && Time.realtimeSinceStartup < t)
                 {
                     yield return null;
                 }
             }
-            if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != type)
+            if (InvItemClass.isNull(p.currentItem)
+                || p.currentItem.type != type)
             {
                 string holding;
                 if (InvItemClass.isNull(p.currentItem))
@@ -1003,19 +1169,25 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static readonly System.Reflection.MethodInfo AttackMethod = AccessTools.Method(typeof(Player), "attack", new[] { typeof(float) });
+        private static readonly System.Reflection.MethodInfo AttackMethod =
+            AccessTools.Method(
+                typeof(Player), "attack", new[] { typeof(float) });
         private static void Swing(Player p, Vector3 at)
         {
             var d = at - p.transform.position;
             d.y = 0f;
             if (d.sqrMagnitude > 1f)
             {
-                p.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
+                p.transform.rotation = Quaternion.Euler(
+                    90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
             }
             AsPlayer(() => AttackMethod.Invoke(p, new object[] { 1f }));
         }
 
-        /// <summary>"ee-corpse" (client): search the body of what we fought, if the game makes it searchable; take what's in it.</summary>
+        /// <summary>
+        /// "ee-corpse" (client): search the body of what we fought, if the game
+        /// makes it searchable; take what's in it.
+        /// </summary>
         private static IEnumerator Corpse(string[] a, Result r)
         {
             var p = P;
@@ -1035,19 +1207,22 @@ namespace DarkwoodMP.World
                 r.Fail($"{c.name} #{_fought} is still alive here");
                 yield break;
             }
-            yield return new WaitForSeconds(2.5f); // settled (NetEnemies.DeathAnimTime)
+            // settled (NetEnemies.DeathAnimTime)
+            yield return new WaitForSeconds(2.5f);
             var item = c.GetComponent<Item>();
             var inv = c.GetComponentInChildren<Inventory>(true);
             if (item == null || inv == null)
             {
-                r.Info = $"{c.name} #{_fought}: not searchable (Item {item != null}, Inventory {inv != null})";
+                r.Info =
+                    $"{c.name} #{_fought}: not searchable (Item {item != null}, Inventory {inv != null})";
                 yield break;
             }
             yield return Walk(c.transform.position, 90f);
             int mark = MapScenarioIssues.LogMark();
             p.openedItemInventory = inv;
             yield return new WaitForSeconds(1.5f);
-            var slot = inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem));
+            var slot =
+                inv.slots.FirstOrDefault(s => !InvItemClass.isNull(s.invItem));
             string took = "nothing in it";
             if (slot != null)
             {
@@ -1055,14 +1230,16 @@ namespace DarkwoodMP.World
                 AsPlayer(() =>
                 {
                     slot.removeItem();
-                    p.Inventory.addItemTypeToPlayer(it.type, it.amount, dropIfNoRoom: true);
+                    p.Inventory.addItemTypeToPlayer(
+                        it.type, it.amount, dropIfNoRoom: true);
                 });
                 took = $"took {it.type} x{it.amount}";
                 yield return new WaitForSeconds(0.8f);
             }
             p.openedItemInventory = null;
             yield return new WaitForSeconds(1.5f);
-            var refused = MapScenarioIssues.LogLines().Skip(Math.Max(0, mark)).FirstOrDefault(l => l.Contains("refused"));
+            var refused = MapScenarioIssues.LogLines().Skip(Math.Max(0, mark))
+                .FirstOrDefault(l => l.Contains("refused"));
             r.Info = $"{c.name} #{_fought}: {took} (children {Children(c)})";
             if (refused != null)
             {
@@ -1070,12 +1247,15 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- P9: shadow armour and a joiner's flashlight ------------------------------------------------------------
+        // ---- P9: shadow armour and a joiner's flashlight --------------------
 
         private static ShadowArmor _armor;
         private static float _armorHealth;
 
-        /// <summary>"ee-shadow-spawn" (host): a Dog with shadow armour beside the client's player, asleep in the dark.</summary>
+        /// <summary>
+        /// "ee-shadow-spawn" (host): a Dog with shadow armour beside the
+        /// client's player, asleep in the dark.
+        /// </summary>
         private static IEnumerator ShadowSpawn(string[] a, Result r)
         {
             var proxy = ClientProxy();
@@ -1086,21 +1266,24 @@ namespace DarkwoodMP.World
             }
             var away = proxy.transform.position - P.transform.position;
             away.y = 0f;
-            var spot = FreeSpot(proxy.transform.position + away.normalized * 300f);
+            var spot =
+                FreeSpot(proxy.transform.position + away.normalized * 300f);
             var c = SpawnAt("Dog", spot, attack: false);
             if (c == null)
             {
                 r.Fail("couldn't spawn a dog");
                 yield break;
             }
-            c.immobile = true; // it stays where it is, for the client's beam to find it
+            // it stays where it is, for the client's beam to find it
+            c.immobile = true;
             _armor = c.gameObject.AddComponent<ShadowArmor>();
             _beamLog = "";
             Plugin.Instance.StartCoroutine(BeamWatch(_armor));
             yield return new WaitForSeconds(1.5f);
             _armorHealth = _armor.health;
             bool lit = Core.isInLight(spot, mustBeWalkable: false);
-            r.Info = $"{c.name} at {Fmt(spot)}, shadow armour {_armorHealth:0}, lit here {lit}";
+            r.Info =
+                $"{c.name} at {Fmt(spot)}, shadow armour {_armorHealth:0}, lit here {lit}";
             if (lit)
             {
                 r.Fail($"its spot is lit already: {r.Info}");
@@ -1109,7 +1292,10 @@ namespace DarkwoodMP.World
 
         private static string _beamLog = "";
 
-        /// <summary>Host, until ee-shadow-check: how the client's beam (as ShadowArmorJoinerLightPatch sees it) stood to the dog.</summary>
+        /// <summary>
+        /// Host, until ee-shadow-check: how the client's beam (as
+        /// ShadowArmorJoinerLightPatch sees it) stood to the dog.
+        /// </summary>
         private static IEnumerator BeamWatch(ShadowArmor armor)
         {
             int samples = 0, on = 0, inBox = 0, lit = 0;
@@ -1120,15 +1306,20 @@ namespace DarkwoodMP.World
                 samples++;
                 var proxy = ClientProxy();
                 var ps = Sync.PlayerSync.Instance;
-                if (Core.isInLight(armor.transform.position, mustBeWalkable: false))
+                if (Core.isInLight(
+                    armor.transform.position, mustBeWalkable: false))
                 {
                     lit++;
                 }
-                if (proxy != null && ps != null && ps.Remotes.TryGetValue(proxy.Owner, out var rp) && rp.Root != null && rp.Last != null && rp.Last.Flashlight)
+                if (proxy != null && ps != null
+                    && ps.Remotes.TryGetValue(proxy.Owner, out var rp)
+                    && rp.Root != null && rp.Last != null && rp.Last.Flashlight)
                 {
                     on++;
                     var pos = armor.transform.position;
-                    bool inside = ShadowArmorJoinerLightPatch.InBeam(rp.Root.transform, pos, out float ahead, out float aside);
+                    bool inside = ShadowArmorJoinerLightPatch.InBeam(
+                        rp.Root.transform, pos, out float ahead,
+                        out float aside);
                     if (inside)
                     {
                         inBox++;
@@ -1136,19 +1327,28 @@ namespace DarkwoodMP.World
                     if (aside < best)
                     {
                         best = aside;
-                        closest = FormattableString.Invariant($"{ahead:0} ahead, {aside:0} aside; puppet yaw {rp.Root.transform.eulerAngles.y:0} rot {rp.Root.transform.eulerAngles.x:0}");
+                        closest = FormattableString.Invariant(
+                            $"{ahead:0} ahead, {aside:0} aside; puppet yaw {rp.Root.transform.eulerAngles.y:0} rot {rp.Root.transform.eulerAngles.x:0}");
                     }
                 }
-                _beamLog = $"beam watch: {samples} samples, client's beam on in {on}, dog in its beam in {inBox}, lit in {lit}; nearest: {closest}";
+                _beamLog =
+                    $"beam watch: {samples} samples, client's beam on in {on}, dog in its beam in {inBox}, lit in {lit}; nearest: {closest}";
                 yield return new WaitForSeconds(0.25f);
             }
         }
 
-        /// <summary>"ee-flashlight" (client): our flashlight on, aimed at the host's shadow-armoured dog for a few seconds, then off.</summary>
+        /// <summary>
+        /// "ee-flashlight" (client): our flashlight on, aimed at the host's
+        /// shadow-armoured dog for a few seconds, then off.
+        /// </summary>
         private static IEnumerator Flashlight(string[] a, Result r)
         {
             var p = P;
-            var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog")).OrderBy(e => Core.trueDistance(e.c.transform.position, p.transform.position)).Select(e => e.c).FirstOrDefault();
+            var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog"))
+                .OrderBy(
+                    e => Core.trueDistance(
+                        e.c.transform.position, p.transform.position))
+                .Select(e => e.c).FirstOrDefault();
             if (dog == null)
             {
                 r.Fail("no copy of the host's dog here");
@@ -1173,9 +1373,11 @@ namespace DarkwoodMP.World
                 d.y = 0f;
                 if (d.sqrMagnitude > 1f)
                 {
-                    p.transform.rotation = Quaternion.Euler(90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
+                    p.transform.rotation = Quaternion.Euler(
+                        90f, Quaternion.LookRotation(d).eulerAngles.y, 0f);
                 }
-                if (InvItemClass.isNull(p.currentItem) || p.currentItem.type != "flashlight")
+                if (InvItemClass.isNull(p.currentItem)
+                    || p.currentItem.type != "flashlight")
                 {
                     break;
                 }
@@ -1193,15 +1395,18 @@ namespace DarkwoodMP.World
                     text = "off";
                 }
             }
-            r.Info = $"flashlight {text} at {dog.name} {Core.trueDistance(dog.transform.position, p.transform.position):0} away";
+            r.Info =
+                $"flashlight {text} at {dog.name} {Core.trueDistance(dog.transform.position, p.transform.position):0} away";
             if (beam == null || !beam.gameObject.activeSelf)
             {
                 r.Fail($"our flashlight isn't on: {r.Info}");
             }
         }
 
-        /// <summary>"ee-shadow-check [keep]" (host): the client's flashlight took the shadow armour's health and set the
-        /// dog on the client. Then the dog is killed, unless "keep" (ee-armor-burn goes on with it).</summary>
+        /// <summary>"ee-shadow-check [keep]" (host): the client's flashlight
+        /// took the shadow armour's health and set the dog on the client. Then
+        /// the dog is killed, unless "keep" (ee-armor-burn goes on with
+        /// it).</summary>
         private static IEnumerator ShadowCheck(string[] a, Result r)
         {
             if (_armor == null)
@@ -1228,7 +1433,8 @@ namespace DarkwoodMP.World
             {
                 text = target.name;
             }
-            r.Info = $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {text}";
+            r.Info =
+                $"shadow armour {_armorHealth:0} -> {_armor.health:0}; the dog goes for {text}";
             bool hurt = _armor.health < _armorHealth;
             r.Info += "; " + _beamLog;
             bool keep = a.Length > 0 && a[0] == "keep";
@@ -1274,20 +1480,27 @@ namespace DarkwoodMP.World
 
         private static Character _armoredDog;
 
-        /// <summary>"ee-armor-check on|off" (client): our copy of the host's shadow-armoured dog wears the armour, with its
-        /// effect and its health untouched (no light check or damage on a copy; the client's flashlight was on it), or
-        /// wears none (waiting up to 5 s).</summary>
+        /// <summary>"ee-armor-check on|off" (client): our copy of the host's
+        /// shadow-armoured dog wears the armour, with its effect and its health
+        /// untouched (no light check or damage on a copy; the client's
+        /// flashlight was on it), or wears none (waiting up to 5 s).</summary>
         private static IEnumerator ArmorCheck(string[] a, Result r)
         {
             bool on = a.Length == 0 || a[0] == "on";
             var p = P;
-            var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog")).OrderBy(e => Core.trueDistance(e.c.transform.position, p.transform.position)).Select(e => e.c).FirstOrDefault();
+            var dog = HostEnemies().Where(e => e.c.name.StartsWith("Dog"))
+                .OrderBy(
+                    e => Core.trueDistance(
+                        e.c.transform.position, p.transform.position))
+                .Select(e => e.c).FirstOrDefault();
             if (dog == null)
             {
                 r.Fail("no copy of the host's dog here");
                 yield break;
             }
-            var dest = HarmonyLib.AccessTools.FieldRefAccess<ShadowArmor, float>("destHealth");
+            var dest =
+                HarmonyLib.AccessTools.FieldRefAccess<ShadowArmor, float>(
+                    "destHealth");
             bool Ok()
             {
                 var sa = dog.GetComponent<ShadowArmor>();
@@ -1295,7 +1508,9 @@ namespace DarkwoodMP.World
                 {
                     return sa == null;
                 }
-                return sa != null && sa.effectGO != null && sa.health >= sa.maxHealth - 0.01f && dest(sa) >= sa.maxHealth - 0.01f;
+                return sa != null && sa.effectGO != null
+                    && sa.health >= sa.maxHealth - 0.01f
+                    && dest(sa) >= sa.maxHealth - 0.01f;
             }
             float until = Time.realtimeSinceStartup + 5f;
             while (!Ok() && Time.realtimeSinceStartup < until)
@@ -1318,7 +1533,8 @@ namespace DarkwoodMP.World
                 {
                     effect = "shown";
                 }
-                r.Info = $"{name}: shadow armour {health:0.#} (going to {goal:0.#}) of {full:0}, effect {effect}";
+                r.Info =
+                    $"{name}: shadow armour {health:0.#} (going to {goal:0.#}) of {full:0}, effect {effect}";
             }
             if (!Ok())
             {
@@ -1326,14 +1542,17 @@ namespace DarkwoodMP.World
             }
         }
 
-        /// <summary>"ee-armor-burn [done]" (host): the dog's shadow armour is burnt off (as light does: damageMe, then
-        /// its Update kills it), waiting until it's gone; "done" kills the dog and removes it.</summary>
+        /// <summary>"ee-armor-burn [done]" (host): the dog's shadow armour is
+        /// burnt off (as light does: damageMe, then its Update kills it),
+        /// waiting until it's gone; "done" kills the dog and removes
+        /// it.</summary>
         private static IEnumerator ArmorBurn(string[] a, Result r)
         {
             var c = _armoredDog;
             if (c == null)
             {
-                r.Fail("no shadow-armoured dog kept (ee-shadow-check keep first)");
+                r.Fail(
+                    "no shadow-armoured dog kept (ee-shadow-check keep first)");
                 yield break;
             }
             if (a.Length > 0 && a[0] == "done")
@@ -1354,9 +1573,11 @@ namespace DarkwoodMP.World
                 yield break;
             }
             sa.damageMe(sa.maxHealth * sa.normalDamageMod * 2f);
-            sa.health = Mathf.Min(sa.health, 1f); // its Update takes health down 9 a second; this ends it next frame
+            // its Update takes health down 9 a second; this ends it next frame
+            sa.health = Mathf.Min(sa.health, 1f);
             float until = Time.realtimeSinceStartup + 5f;
-            while (c.GetComponent<ShadowArmor>() != null && Time.realtimeSinceStartup < until)
+            while (c.GetComponent<ShadowArmor>() != null
+                && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSecondsRealtime(0.1f);
             }
@@ -1372,11 +1593,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        // ---- P8: a scripted run-away activity ---------------------------------------------------------------------
+        // ---- P8: a scripted run-away activity -------------------------------
 
         /// <summary>
-        /// "ee-flee-activity" (host): a Chicken beside the client, given the game's runAway activity with no target
-        /// (as a scripted event does), runs from the client's player (the nearest), not from ours behind it.
+        /// "ee-flee-activity" (host): a Chicken beside the client, given the
+        /// game's runAway activity with no target (as a scripted event does),
+        /// runs from the client's player (the nearest), not from ours behind
+        /// it.
         /// </summary>
         private static IEnumerator FleeActivity(string[] a, Result r)
         {
@@ -1389,7 +1612,9 @@ namespace DarkwoodMP.World
             var host = P.transform.position;
             var toClient = proxy.transform.position - host;
             toClient.y = 0f;
-            var spot = FreeSpot(proxy.transform.position - toClient.normalized * 250f); // between the two players, nearer the client
+            // between the two players, nearer the client
+            var spot =
+                FreeSpot(proxy.transform.position - toClient.normalized * 250f);
             var c = SpawnAt("Chicken", spot, attack: false);
             if (c == null)
             {
@@ -1397,13 +1622,20 @@ namespace DarkwoodMP.World
                 yield break;
             }
             yield return new WaitForSeconds(1f);
-            var act = new Character.Activity { type = Character.Activity.Type.runAway };
+            var act = new Character.Activity
+            {
+                type = Character.Activity.Type.runAway
+            };
             act.run(c);
             yield return new WaitForSeconds(3f);
             var now = c.transform.position;
-            float fromClient = Core.trueDistance(now, proxy.transform.position) - Core.trueDistance(spot, proxy.transform.position);
-            float fromHost = Core.trueDistance(now, host) - Core.trueDistance(spot, host);
-            r.Info = $"{c.name} from {Fmt(spot)} to {Fmt(now)}: {fromClient:0} further from the client, {fromHost:0} further from us";
+            float fromClient =
+                Core.trueDistance(now, proxy.transform.position)
+                    - Core.trueDistance(spot, proxy.transform.position);
+            float fromHost =
+                Core.trueDistance(now, host) - Core.trueDistance(spot, host);
+            r.Info =
+                $"{c.name} from {Fmt(spot)} to {Fmt(now)}: {fromClient:0} further from the client, {fromHost:0} further from us";
             Kill(c);
             yield return new WaitForSeconds(1f);
             if (c != null)
@@ -1417,7 +1649,14 @@ namespace DarkwoodMP.World
         }
     }
 
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[] { typeof(Object), typeof(Vector3), typeof(Quaternion), typeof(GameObject), typeof(bool) })]
+    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
+    {
+        typeof(Object),
+        typeof(Vector3),
+        typeof(Quaternion),
+        typeof(GameObject),
+        typeof(bool)
+    })]
     static class EnemyTestSpawnTracePatch
     {
         static void Postfix(GameObject __result)
