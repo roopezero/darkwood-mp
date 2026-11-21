@@ -318,7 +318,13 @@ join on the GOG build.
       were already mirrored (`Sync/MoveCheck` and the core's `Sync/Move*`).
       The core's `MoveTracker` keeps the state, so `MoveCheck` only converts
       vectors and needs no `FactsOf`.
-- [ ] **4.3 `Authority`.** Change all callers in one mechanical commit.
+- [x] **4.3 `Authority`.** Change all callers in one mechanical commit.
+      Done: the callers read `Coop.Current.Authority`, and its refused
+      requests' rollback (`InventoryWatch`) is its `Inventory`. Handlers
+      that don't call their rules yet still refuse in words, through
+      `Refuse(string)` and the core's `Refusal.Words`, which goes once the
+      last of them has moved. The message classes are `RequestMessage` and
+      `VerdictMessage`, since `Request` and `Verdict` were taken. No patches.
 - [ ] **4.4 Object names.** `ObjRef` is used by about 50 files, and its lookup
       order becomes a unit-tested rule.
 - [ ] **4.5 Guards.** Move `Depth`, `Outermost()`, `Replaying` and `Sharing` out
