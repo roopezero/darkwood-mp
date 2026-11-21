@@ -303,7 +303,8 @@ namespace DarkwoodMP.World
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {a} on {go.name}: ours alone (not where the host runs), not sent");
+                        $"[world] {a} on {go.name}: ours alone (not where the "
+                            + "host runs), not sent");
                 }
                 return;
             }
@@ -507,7 +508,8 @@ namespace DarkwoodMP.World
                             pick = "failed";
                         }
                         Plugin.Log.LogInfo(
-                            $"[world] {s.NameOf(from)} picks the lock of {obj} ({crate.name}): {pick}");
+                            $"[world] {s.NameOf(from)} picks the lock of "
+                                + $"{obj} ({crate.name}): {pick}");
                     }
                     if (!worked || was)
                     {
@@ -537,7 +539,8 @@ namespace DarkwoodMP.World
                             disarm = "worked";
                         }
                         Plugin.Log.LogInfo(
-                            $"[world] {s.NameOf(from)} disarms {obj}: {disarm}");
+                            $"[world] {s.NameOf(from)} disarms {obj}: "
+                                + $"{disarm}");
                     }
                     if (item != null)
                     {
@@ -1522,11 +1525,13 @@ namespace DarkwoodMP.World
                         if (OursAlone(go.gameObject))
                         {
                             Plugin.Log.LogInfo(
-                                $"[world] the host hasn't got {go.name} {obj}: ours alone, kept");
+                                $"[world] the host hasn't got {go.name} {obj}: "
+                                    + "ours alone, kept");
                             break;
                         }
                         Plugin.Log.LogInfo(
-                            $"[world] {go.name} {obj} is gone on the host: removed ours");
+                            $"[world] {go.name} {obj} is gone on the host: "
+                                + "removed ours");
                         Containers.CloseIfOpen(go.gameObject);
                         UnityEngine.Object.Destroy(go.gameObject);
                         break;
@@ -2346,7 +2351,8 @@ namespace DarkwoodMP.World
                 if (held != null && !held.Done)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] TrapFired {key}: refused, so its {held.Prefab.name} isn't spawned");
+                        $"[world] TrapFired {key}: refused, so its "
+                            + $"{held.Prefab.name} isn't spawned");
                 }
                 if (player == null || player != Player.Instance)
                 {
@@ -2364,7 +2370,8 @@ namespace DarkwoodMP.World
                 if (bearHold || lost > 0f)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] TrapFired {key}: refused, so the bite is undone (hold released, {lost:0} health back)");
+                        $"[world] TrapFired {key}: refused, so the bite is "
+                            + $"undone (hold released, {lost:0} health back)");
                 }
             }, inventory: false);
         }

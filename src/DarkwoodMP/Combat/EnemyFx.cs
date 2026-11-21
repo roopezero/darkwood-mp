@@ -286,10 +286,12 @@ namespace DarkwoodMP.Combat
                 if (me != null && !EnemyAreaHits.PlayerAway())
                 {
                     where =
-                        $"too far (at {me.transform.position.x:0},{me.transform.position.z:0})";
+                        "too far (at "
+                            + $"{me.transform.position.x:0},{me.transform.position.z:0})";
                 }
                 log.LogInfo(
-                    $"[enemyfx] the host's enemy made {name}, not shown: our player is {where}");
+                    $"[enemyfx] the host's enemy made {name}, not shown: our "
+                        + $"player is {where}");
                 return;
             }
             if (Show(() =>
@@ -307,7 +309,8 @@ namespace DarkwoodMP.Combat
                 }))
             {
                 Plugin.Log.LogInfo(
-                    $"[enemyfx] the host's enemy made {name} at {pos.x:0},{pos.z:0}");
+                    $"[enemyfx] the host's enemy made {name} at "
+                        + $"{pos.x:0},{pos.z:0}");
             }
         }
 
@@ -326,7 +329,8 @@ namespace DarkwoodMP.Combat
             catch (System.Exception e)
             {
                 Plugin.Log.LogInfo(
-                    $"[enemyfx] couldn't show the host's effect here: {e.Message}");
+                    "[enemyfx] couldn't show the host's effect here: "
+                        + $"{e.Message}");
                 return false;
             }
             finally
@@ -396,7 +400,8 @@ namespace DarkwoodMP.Combat
             if (_seen.Count == 0)
             {
                 Plugin.Log.LogInfo(
-                    $"[enemyfx] our player sees the host's banshee {nearest.name} ({nearestDist:0} away)");
+                    "[enemyfx] our player sees the host's banshee "
+                        + $"{nearest.name} ({nearestDist:0} away)");
             }
             _seen.Clear();
             foreach (var c in now)
@@ -497,11 +502,13 @@ namespace DarkwoodMP.Combat
                 catch (System.Exception e)
                 {
                     Plugin.Log.LogInfo(
-                        $"--dwmp-test-blast: the scream failed here: {e.Message}");
+                        "--dwmp-test-blast: the scream failed here: "
+                            + $"{e.Message}");
                 }
             }
             Plugin.Log.LogInfo(
-                $"--dwmp-test-blast: the forest spirit's effect beside {p.OwnerName}");
+                "--dwmp-test-blast: the forest spirit's effect beside "
+                    + $"{p.OwnerName}");
             try
             {
                 Core.AddPooledPrefab(
@@ -513,7 +520,8 @@ namespace DarkwoodMP.Combat
                 // Chapter 1's FX pool hasn't got it: send it anyway, for the
                 // joiner's side of the message.
                 Plugin.Log.LogInfo(
-                    $"--dwmp-test-blast: no such pooled effect here ({e.Message}): sent without the patch");
+                    "--dwmp-test-blast: no such pooled effect here "
+                        + $"({e.Message}): sent without the patch");
                 EnemyFx.SendPrefab(
                     2, EnemyPooledFxPatch.ForestSpirit,
                     at + new Vector3(100f, 0f, 0f), 0f);

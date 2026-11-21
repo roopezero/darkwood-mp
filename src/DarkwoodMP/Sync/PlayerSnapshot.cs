@@ -359,7 +359,8 @@ namespace DarkwoodMP.Sync
                         }
                         log.LogInfo(
                             $"[sprite] {text} path={path} layer={layer} " +
-                                    $"active={active} coll={collectionName} sprite={spriteName}");
+                                    $"active={active} coll={collectionName} "
+                                + $"sprite={spriteName}");
                     }
                     if (!ok)
                     {

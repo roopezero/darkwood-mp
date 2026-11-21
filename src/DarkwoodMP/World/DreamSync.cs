@@ -106,7 +106,8 @@ namespace DarkwoodMP.World
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"[dream] couldn't draw the level dream early, it's sent when the game draws it: {e.Message}");
+                    "[dream] couldn't draw the level dream early, it's sent "
+                        + $"when the game draws it: {e.Message}");
             }
         }
 
@@ -158,7 +159,8 @@ namespace DarkwoodMP.World
                 S.SendToHost(w, Channel.Control, reliable: true);
             }
             Plugin.Log.LogInfo(
-                $"[dream] our dream {Shared} ends ({d.outcome}): everyone's does");
+                $"[dream] our dream {Shared} ends ({d.outcome}): everyone's "
+                    + "does");
         }
 
         private static PacketWriter EndMessage(string outcome)
@@ -254,11 +256,13 @@ namespace DarkwoodMP.World
                 if (dream != Shared)
                 {
                     Plugin.Log.LogInfo(
-                        $"[dream] {S.NameOf(from)}'s {dream} ended, but we're in {Shared}: not passed on");
+                        $"[dream] {S.NameOf(from)}'s {dream} ended, but we're "
+                            + $"in {Shared}: not passed on");
                     return;
                 }
                 Plugin.Log.LogInfo(
-                    $"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours and everyone's end");
+                    $"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours "
+                        + "and everyone's end");
                 S.Broadcast(
                     EndMessage(outcome), Channel.Control, reliable: true,
                     except: from);
@@ -303,7 +307,8 @@ namespace DarkwoodMP.World
             if (InDream(d))
             {
                 Plugin.Log.LogInfo(
-                    $"[dream] the host's level dream {name}: we're in a dream already");
+                    $"[dream] the host's level dream {name}: we're in a dream "
+                        + "already");
                 return;
             }
             _pendingStart = name;
@@ -403,7 +408,8 @@ namespace DarkwoodMP.World
             if (Time.unscaledTime > _startBy)
             {
                 Plugin.Log.LogWarning(
-                    $"[dream] couldn't go into the host's dream {_pendingStart} (busy)");
+                    "[dream] couldn't go into the host's dream "
+                        + $"{_pendingStart} (busy)");
                 _pendingStart = null;
                 return;
             }

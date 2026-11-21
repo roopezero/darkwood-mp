@@ -61,7 +61,8 @@ namespace DarkwoodMP.Net
             SteamNetworkingMessagesSessionFailed_t fail)
         {
             Plugin.Log.LogWarning(
-                $"P2P session failed: {fail.m_info.m_eEndReason} {fail.m_info.m_szEndDebug}");
+                $"P2P session failed: {fail.m_info.m_eEndReason} "
+                    + $"{fail.m_info.m_szEndDebug}");
             Action<CSteamID> handler = OnSessionLost;
             if (handler != null)
             {
@@ -110,7 +111,8 @@ namespace DarkwoodMP.Net
                     return SendPieces(to, data, length, channel);
                 }
                 Plugin.Log.LogWarning(
-                    $"Send to {to} failed: an unreliable {(MsgType)data[0]} of {length / 1024} KiB is too long for Steam");
+                    "Send to "
+                        + $"{to} failed: an unreliable {(MsgType)data[0]} of {length / 1024} KiB is too long for Steam");
                 return false;
             }
             return SendOne(to, data, length, channel, reliable);
@@ -173,7 +175,8 @@ namespace DarkwoodMP.Net
                 if (total <= 0 || total > Protocol.MaxMessage)
                 {
                     Plugin.Log.LogWarning(
-                        $"Dropped a piece from {from}: a message of {total} bytes");
+                        $"Dropped a piece from {from}: a message of {total} "
+                            + "bytes");
                     return null;
                 }
                 _joining[key] = j = new Joining { Data = new byte[total] };
@@ -188,7 +191,8 @@ namespace DarkwoodMP.Net
             if (j.Got + n > j.Data.Length)
             {
                 Plugin.Log.LogWarning(
-                    $"Dropped a long message from {key.Item1}: its pieces ran past its length");
+                    $"Dropped a long message from {key.Item1}: its pieces ran "
+                        + "past its length");
                 _joining.Remove(key);
                 return null;
             }
@@ -262,7 +266,8 @@ namespace DarkwoodMP.Net
             if (bytes + length > MaxPendingBytes)
             {
                 Plugin.Log.LogWarning(
-                    $"Send to {to} failed: {bytes / 1024} KiB already waiting for room");
+                    $"Send to {to} failed: {bytes / 1024} KiB already waiting "
+                        + "for room");
                 return false;
             }
             var copy = new byte[length];

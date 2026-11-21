@@ -375,7 +375,8 @@ namespace DarkwoodMP.Net
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't list the network adapters, searching by broadcast only: {e.Message}");
+                    "Couldn't list the network adapters, searching by "
+                        + $"broadcast only: {e.Message}");
             }
             list.AddRange(sweep);
             return list;
@@ -499,7 +500,9 @@ namespace DarkwoodMP.Net
                             });
                         }
                         Plugin.Log.LogInfo(
-                            $"LAN search: asked {targets.Count} addresses ({failed} couldn't be sent), the last at {Interlocked.Read(ref sentAt)} ms");
+                            $"LAN search: asked {targets.Count} addresses "
+                                + $"({failed} couldn't be sent), the last at "
+                                + $"{Interlocked.Read(ref sentAt)} ms");
                     }
                 }
                 catch (Exception ex)

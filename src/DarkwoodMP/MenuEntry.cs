@@ -592,7 +592,8 @@ namespace DarkwoodMP
                 }
             }
             Plugin.Log.LogInfo(
-                $"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} renderers");
+                $"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} "
+                    + "renderers");
         }
 
         public static void Restore()
@@ -632,7 +633,8 @@ namespace DarkwoodMP
                 }
             }
             Plugin.Log.LogInfo(
-                $"[pause hud] restored: {back} of {_off.Count} windows, {_renderers.Count} renderers");
+                $"[pause hud] restored: {back} of {_off.Count} windows, "
+                    + $"{_renderers.Count} renderers");
             _off.Clear();
             _renderers.Clear();
         }

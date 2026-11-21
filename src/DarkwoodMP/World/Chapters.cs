@@ -288,7 +288,8 @@ namespace DarkwoodMP.World
                 else if (result != null && result.StartsWith("pending: "))
                 {
                     Plugin.Notice(
-                        $"The host will start {what} as soon as it can ({result.Substring(9)})");
+                        $"The host will start {what} as soon as it can "
+                            + $"({result.Substring(9)})");
                 }
             }, inventory: false);
         }
@@ -350,7 +351,9 @@ namespace DarkwoodMP.World
                         || _held.From != from)
                     {
                         Plugin.Log.LogInfo(
-                            $"{s.NameOf(from)} set off {What(kind, chapter)}, which can't run here yet ({reason}): holding it until it can");
+                            $"{s.NameOf(from)} set off {What(kind, chapter)}, "
+                                + $"which can't run here yet ({reason}): "
+                                + "holding it until it can");
                         _held = h;
                         _readySince = -1f;
                     }
@@ -358,7 +361,8 @@ namespace DarkwoodMP.World
                     return;
             }
             Plugin.Log.LogInfo(
-                $"{s.NameOf(from)} set off {What(kind, chapter)}: running it here");
+                $"{s.NameOf(from)} set off {What(kind, chapter)}: running it "
+                    + "here");
             if (!Run(h))
             {
                 Authority.Refuse("it couldn't run");
@@ -458,13 +462,15 @@ namespace DarkwoodMP.World
             if (kind == StoryKind.Chapter && h.Chapter != now + 1)
             {
                 reason =
-                    $"chapter {h.Chapter} isn't the next one (this is chapter {now})";
+                    $"chapter {h.Chapter} isn't the next one (this is chapter "
+                        + $"{now})";
                 return Verdict.Refuse;
             }
             if (kind == StoryKind.Epilogue && now < LastChapter)
             {
                 reason =
-                    $"the epilogue comes after chapter {LastChapter} (this is chapter {now})";
+                    $"the epilogue comes after chapter {LastChapter} (this is "
+                        + $"chapter {now})";
                 return Verdict.Refuse;
             }
             GameEvents ge = null;
@@ -551,7 +557,8 @@ namespace DarkwoodMP.World
             if (s == null || !s.IsHost || !s.Peers.Contains(h.From))
             {
                 Plugin.Log.LogInfo(
-                    $"Dropped the held {What(h.Kind, h.Chapter)}: its player left");
+                    $"Dropped the held {What(h.Kind, h.Chapter)}: its player "
+                        + "left");
                 _held = null;
                 return;
             }
@@ -583,11 +590,13 @@ namespace DarkwoodMP.World
             if (v == Verdict.Refuse)
             {
                 Plugin.Log.LogWarning(
-                    $"Not running the held {What(h.Kind, h.Chapter)} after all: {reason}");
+                    $"Not running the held {What(h.Kind, h.Chapter)} after "
+                        + $"all: {reason}");
                 return;
             }
             Plugin.Log.LogInfo(
-                $"{s.NameOf(h.From)} set off {What(h.Kind, h.Chapter)} earlier: running it here now");
+                $"{s.NameOf(h.From)} set off {What(h.Kind, h.Chapter)} "
+                    + "earlier: running it here now");
             Run(h);
         }
 
@@ -603,7 +612,8 @@ namespace DarkwoodMP.World
             _chapterSent = true;
             _ran.Add(KeyOf(StoryKind.Chapter, chapter));
             Plugin.Log.LogInfo(
-                $"Starting chapter {chapter}: the players in your world follow once it's ready");
+                $"Starting chapter {chapter}: the players in your world follow "
+                    + "once it's ready");
             var w = s.Begin(MsgType.ChapterStart);
             w.W.Write(chapter);
             s.Broadcast(w, Channel.Control, reliable: true);
@@ -624,7 +634,8 @@ namespace DarkwoodMP.World
             if (s.IsClient)
             {
                 Plugin.Log.LogWarning(
-                    $"Not starting chapter {chapter} here: the host's game starts chapters");
+                    $"Not starting chapter {chapter} here: the host's game "
+                        + "starts chapters");
                 return false;
             }
             SendChapterStart(chapter);
@@ -647,7 +658,8 @@ namespace DarkwoodMP.World
                 return;
             }
             Plugin.Log.LogInfo(
-                $"The game's end ({kind}): the players in your world see it too, and the server stops");
+                $"The game's end ({kind}): the players in your world see it "
+                    + "too, and the server stops");
             var w = s.Begin(MsgType.GameEnd);
             w.W.Write((byte)kind);
             w.W.Write((byte)1); // phase 1: the session ends
@@ -686,7 +698,8 @@ namespace DarkwoodMP.World
                 instance.SaveNow();
             }
             Plugin.Notice(
-                $"The host is starting chapter {chapter}. You'll follow once it's ready.");
+                $"The host is starting chapter {chapter}. You'll follow once "
+                    + "it's ready.");
             if (!WorldShare.InWorld)
             {
                 return;

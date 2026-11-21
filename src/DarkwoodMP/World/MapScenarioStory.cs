@@ -200,7 +200,9 @@ namespace DarkwoodMP.World
             _made[id] = m;
             yield return null;
             r.Info =
-                $"trigger {id} #{et.eventTriggers.Count - 1} ({type}, {a[3]}) on {go.name} {ObjRef.Of(go)} at {Fmt(go.transform.position)}";
+                $"trigger {id} #{et.eventTriggers.Count - 1} ({type}, {a[3]}) "
+                    + $"on {go.name} "
+                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}";
         }
 
         /// <summary>
@@ -248,7 +250,8 @@ namespace DarkwoodMP.World
                         }
                         yield return new WaitForSeconds(0.5f);
                         state =
-                            $"open={door.opened} broken={door.destroyed} health={door.health}";
+                            $"open={door.opened} broken={door.destroyed} "
+                                + $"health={door.health}";
                         if (door.opened != open)
                         {
                             r.Fail($"{m.Thing.name}: {state}");
@@ -325,7 +328,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             int got = c.Of(a[0]) - had;
             r.Info =
-                $"{m.Thing.name} {state}: {got} step(s) acted on our player (want {want}), the shared step ran {m.C.N} time(s) here";
+                $"{m.Thing.name} {state}: {got} step(s) acted on our player "
+                    + $"(want {want}), the shared step ran {m.C.N} time(s) "
+                    + "here";
             if (got != want)
             {
                 r.Fail(r.Info);
@@ -357,10 +362,13 @@ namespace DarkwoodMP.World
             if (m.Thing != null && m.Thing.GetComponent<Door>() is Door d)
             {
                 doorNote =
-                    $"; door open={d.opened} broken={d.destroyed} health={d.health}";
+                    $"; door open={d.opened} broken={d.destroyed} "
+                        + $"health={d.health}";
             }
             r.Info =
-                $"{got} step(s) of {a[0]} acted on our player (want {own}), its shared step ran {m.C.N} time(s) (want {shared})" + doorNote;
+                $"{got} step(s) of {a[0]} acted on our player (want {own}), "
+                    + $"its shared step ran {m.C.N} time(s) (want {shared})"
+                    + doorNote;
             if (got != own || m.C.N != shared)
             {
                 r.Fail(r.Info);

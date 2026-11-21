@@ -62,7 +62,8 @@ namespace DarkwoodMP.World
             var to = c.transform.position + away.normalized * dist;
             yield return Walk(to, 60f);
             r.Info =
-                $"at {Fmt(P.transform.position)}, {StateDump.Flat(P.transform.position - c.transform.position):0} from {a[0]}";
+                $"at {Fmt(P.transform.position)}, "
+                    + $"{StateDump.Flat(P.transform.position - c.transform.position):0} from {a[0]}";
         }
 
         /// <summary>
@@ -102,8 +103,12 @@ namespace DarkwoodMP.World
         private static string Props(Character c)
         {
             string head =
-                $"{c.name} ({Kind(c)}, npc {c.npc.name}) at {Fmt(c.transform.position)}: health {c.health:0}/{c.maxHealth:0}, alive {c.alive}, " +
-                          $"{c.aggressiveness}, {c.behaviour}, faction {c.faction}, attacks players {c.attacksFaction(Faction.player)}, ";
+                $"{c.name} ({Kind(c)}, npc {c.npc.name}) at "
+                    + $"{Fmt(c.transform.position)}: health "
+                    + $"{c.health:0}/{c.maxHealth:0}, alive {c.alive}, " +
+                          $"{c.aggressiveness}, {c.behaviour}, faction "
+                    + $"{c.faction}, attacks players "
+                    + $"{c.attacksFaction(Faction.player)}, ";
             string target = "none";
             if (c.target != null)
             {
@@ -421,7 +426,8 @@ namespace DarkwoodMP.World
             // a client settles the corpse 2 s after it dies
             yield return new WaitForSecondsRealtime(3f);
             r.Info =
-                $"{a[0]}: alive={(c != null && c.alive)} after {hits} hits, searchable={(c != null && c.GetComponent<Item>() != null)}";
+                $"{a[0]}: alive={(c != null && c.alive)} after {hits} hits, "
+                    + $"searchable={(c != null && c.GetComponent<Item>() != null)}";
             if (c != null && c.alive)
             {
                 r.Fail($"still alive: {r.Info}");
@@ -485,7 +491,9 @@ namespace DarkwoodMP.World
                 part = a[0];
             }
             r.Info =
-                $"alive {c.alive}, story dead {deadText}, searchable {c.GetComponent<Item>() != null}; flags {FlagsWith(part)}";
+                $"alive {c.alive}, story dead {deadText}, searchable "
+                    + $"{c.GetComponent<Item>() != null}; flags "
+                    + $"{FlagsWith(part)}";
             if (c.alive || (st != null && !st.dead))
             {
                 r.Fail($"not dead here: {r.Info}");

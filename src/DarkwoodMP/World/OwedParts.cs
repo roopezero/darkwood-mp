@@ -145,7 +145,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't read who is owed their part of fired events in {dir}: {e.Message}");
+                    "Couldn't read who is owed their part of fired events in "
+                        + $"{dir}: {e.Message}");
             }
             return new FileData();
         }
@@ -214,7 +215,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't write who is owed their part of fired events: {e.Message}");
+                    "Couldn't write who is owed their part of fired events: "
+                        + $"{e.Message}");
             }
         }
 

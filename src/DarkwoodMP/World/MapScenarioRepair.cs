@@ -56,7 +56,8 @@ namespace DarkwoodMP.World
                 {
                     return "door gone";
                 }
-                return $"{_door.name} {MapScenarioWorld.Ref(_door)} broken={_door.destroyed} health {_door.health}";
+                return $"{_door.name} {MapScenarioWorld.Ref(_door)} "
+                    + $"broken={_door.destroyed} health {_door.health}";
             }
         }
         private static string ItemInfo
@@ -67,7 +68,9 @@ namespace DarkwoodMP.World
                 {
                     return "item gone";
                 }
-                return $"{_item.name} {MapScenarioWorld.Ref(_item)} broken={_item.destroyed} health {_item.health}/{_item.maxHealth}";
+                return $"{_item.name} {MapScenarioWorld.Ref(_item)} "
+                    + $"broken={_item.destroyed} health "
+                    + $"{_item.health}/{_item.maxHealth}";
             }
         }
 
@@ -175,7 +178,9 @@ namespace DarkwoodMP.World
                 menu = "added";
             }
             r.Info =
-                $"{ItemInfo} at {Fmt(_item.transform.position)}, construction menu {menu} (only when broken: {c.onlyWhenDestroyed}, {c.options.Count} options)";
+                $"{ItemInfo} at {Fmt(_item.transform.position)}, construction "
+                    + $"menu {menu} (only when broken: {c.onlyWhenDestroyed}, "
+                    + $"{c.options.Count} options)";
         }
 
         private static IEnumerator RpFurnitureBreak(string[] a, Result r)

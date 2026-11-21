@@ -99,7 +99,9 @@ namespace DarkwoodMP
             };
             _win.Show();
             Plugin.Log.LogInfo(
-                $"[drag-real] ready: screen {Screen.width}x{Screen.height}, window at (200, 200), title bar to y {200 + 20 * UiWindow.S}");
+                $"[drag-real] ready: screen {Screen.width}x{Screen.height}, "
+                    + "window at (200, 200), title bar to y "
+                    + $"{200 + 20 * UiWindow.S}");
             float t0 = Time.realtimeSinceStartup;
             bool held = false;
             Vector2 grab = default, start = default;
@@ -118,7 +120,13 @@ namespace DarkwoodMP
                 if (down || held)
                 {
                     Plugin.Log.LogInfo(
-                        $"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} mouse {m.x:0.#},{m.y:0.#} ev {_lastEv.x:0.#},{_lastEv.y:0.#} drags {_drags} win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size {_win.Rect.width:0.#}x{_win.Rect.height:0.#} off {(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
+                        $"[drag-real] dt {Time.unscaledDeltaTime * 1000f:0.0} "
+                            + $"mouse {m.x:0.#},{m.y:0.#} ev "
+                            + $"{_lastEv.x:0.#},{_lastEv.y:0.#} drags {_drags} "
+                            + $"win {_win.Rect.x:0.#},{_win.Rect.y:0.#} size "
+                            + $"{_win.Rect.width:0.#}x{_win.Rect.height:0.#} "
+                            + "off "
+                            + $"{(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
                 }
                 _drags = 0;
                 held = down;
@@ -237,7 +245,9 @@ namespace DarkwoodMP
                     change = "grew";
                 }
                 Log(
-                    $"{text} {c.name}: mouse moved ({want.x:0.##}, {want.y:0.##}), window {change} ({got.x:0.##}, {got.y:0.##})");
+                    $"{text} {c.name}: mouse moved ({want.x:0.##}, "
+                        + $"{want.y:0.##}), window {change} ({got.x:0.##}, "
+                        + $"{got.y:0.##})");
                 _win.Close();
                 yield return null;
             }

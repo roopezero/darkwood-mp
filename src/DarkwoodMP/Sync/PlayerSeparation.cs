@@ -141,7 +141,8 @@ namespace DarkwoodMP.Sync
                 _radius = DefaultRadius;
             }
             Plugin.Log.LogInfo(
-                $"Soft player collision: players are eased apart within {Distance:0} units");
+                "Soft player collision: players are eased apart within "
+                    + $"{Distance:0} units");
         }
     }
 }

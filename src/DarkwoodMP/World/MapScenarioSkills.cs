@@ -97,7 +97,8 @@ namespace DarkwoodMP.World
                                 && cell.yMax >= icon.yMax))
                         {
                             fails.Add(
-                                $"{sk.name}: cell {cell} doesn't cover icon {icon}");
+                                $"{sk.name}: cell {cell} doesn't cover icon "
+                                    + $"{icon}");
                         }
                         if (first == null && k + 1 < list.Count
                             && list[k + 1] != null)
@@ -161,7 +162,9 @@ namespace DarkwoodMP.World
                         > 0.5f)
                 {
                     fails.Add(
-                        $"the window's height changed with the hover: {hBefore} -> {hHover} -> {SkillsPanel.TestWindow.height}");
+                        "the window's height changed with the hover: "
+                            + $"{hBefore} -> {hHover} -> "
+                            + $"{SkillsPanel.TestWindow.height}");
                 }
             }
             else
@@ -176,7 +179,8 @@ namespace DarkwoodMP.World
             if (!both)
             {
                 fails.Add(
-                    $"backpack opened: panel {SkillsPanel.Open}, backpack {P.Inventory.open}");
+                    $"backpack opened: panel {SkillsPanel.Open}, backpack "
+                        + $"{P.Inventory.open}");
             }
             if (P.Inventory.open)
             {
@@ -199,9 +203,13 @@ namespace DarkwoodMP.World
                 outsideHover = "nothing";
             }
             r.Info =
-                $"open {open} (backpack {bag}); {skills} skills, cell {firstCell} over icon {firstIcon}; mouse at the edge: {atEdge}, " +
-                $"between: {atGap}, outside: {outsideHover}; height {hBefore}; with the backpack both open {both}, " +
-                $"after it closed panel open {stillOpen}; closed {!SkillsPanel.Open}";
+                $"open {open} (backpack {bag}); {skills} skills, cell "
+                    + $"{firstCell} over icon {firstIcon}; mouse at the edge: "
+                    + $"{atEdge}, " +
+                $"between: {atGap}, outside: {outsideHover}; height {hBefore}; "
+                    + $"with the backpack both open {both}, " +
+                $"after it closed panel open {stillOpen}; closed "
+                    + $"{!SkillsPanel.Open}";
             if (SkillsPanel.Open)
             {
                 fails.Add("the key didn't close the panel");
@@ -244,7 +252,8 @@ namespace DarkwoodMP.World
                 text = " with " + choice[1];
             }
             r.Info =
-                $"{choice[0]}{text}: have it {have}, points {before} -> {SkillTree.Points(P)}, waiting {SkillTree.Waiting}";
+                $"{choice[0]}{text}: have it {have}, points {before} -> "
+                    + $"{SkillTree.Points(P)}, waiting {SkillTree.Waiting}";
             if (SkillTree.Waiting || have == refused)
             {
                 r.Fail(r.Info);
@@ -305,7 +314,8 @@ namespace DarkwoodMP.World
                     outcome = "ok";
                 }
                 log.Add(
-                    $"{choice[0]}{text}: {outcome} ({before} -> {SkillTree.Points(P)})");
+                    $"{choice[0]}{text}: {outcome} ({before} -> "
+                        + $"{SkillTree.Points(P)})");
                 if (why != null)
                 {
                     fails.Add($"choice {n} ({choice[0]}): {why}");
@@ -358,7 +368,8 @@ namespace DarkwoodMP.World
                 SkillsPanel.TestPressKey();
             }
             r.Info =
-                $"{start} points, {n} choices: {string.Join("; ", log)}; {Progression.TestState()}";
+                $"{start} points, {n} choices: {string.Join("; ", log)}; "
+                    + $"{Progression.TestState()}";
             if (start < 2)
             {
                 fails.Add("fewer than two points to spend");
@@ -400,7 +411,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(0.5f);
             int left = SkillTree.Chosen(P).Count;
             r.Info =
-                $"skills {had} -> {left}, morning {Progression.InMorning(0)}: {Progression.TestState()}";
+                $"skills {had} -> {left}, morning {Progression.InMorning(0)}: "
+                    + $"{Progression.TestState()}";
             menu.hide();
             yield return new WaitForSecondsRealtime(2f);
             bool wrong = had == 0;

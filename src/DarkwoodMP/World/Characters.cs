@@ -140,7 +140,8 @@ namespace DarkwoodMP.World
             if (_records.Count > 0)
             {
                 Plugin.Log.LogInfo(
-                    $"Players' characters of the last world in this folder forgotten ({why})");
+                    "Players' characters of the last world in this folder "
+                        + $"forgotten ({why})");
             }
             _records.Clear();
             _recordsDir = null;
@@ -176,7 +177,8 @@ namespace DarkwoodMP.World
                 if (_records.Count > 0)
                 {
                     Plugin.Log.LogInfo(
-                        $"This world keeps {_records.Count} other players' characters");
+                        $"This world keeps {_records.Count} other players' "
+                            + "characters");
                 }
             }
             catch (Exception e)
@@ -318,7 +320,8 @@ namespace DarkwoodMP.World
             if (dead)
             {
                 Plugin.Log.LogInfo(
-                    $"{_session.NameOf(from)}'s character died for good in this world: they watch the others");
+                    $"{_session.NameOf(from)}'s character died for good in "
+                        + "this world: they watch the others");
                 return;
             }
             string name = _session.NameOf(from);
@@ -326,7 +329,8 @@ namespace DarkwoodMP.World
             if (rec != null)
             {
                 which =
-                    $"theirs, from {DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}";
+                    "theirs, from "
+                        + $"{DateTimeOffset.FromUnixTimeSeconds(rec.Saved).LocalDateTime}";
                 if (earlier)
                 {
                     which += $" in chapter {rec.Chapter}: beside you";
@@ -420,7 +424,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't read what {_session.NameOf(peer)} carries: {e.Message}");
+                    $"Couldn't read what {_session.NameOf(peer)} carries: "
+                        + $"{e.Message}");
                 return null;
             }
         }
@@ -483,7 +488,8 @@ namespace DarkwoodMP.World
             }
             rec.Dead = true;
             Plugin.Log.LogInfo(
-                $"{_session.NameOf(from)}'s character died for good: kept dead in this world");
+                $"{_session.NameOf(from)}'s character died for good: kept dead "
+                    + "in this world");
         }
 
         /// <summary>
@@ -755,7 +761,9 @@ namespace DarkwoodMP.World
                 if (offMap)
                 {
                     Plugin.Log.LogInfo(
-                        $"[spawn] your kept place {p.transform.position} isn't on this map: your character is back, beside the host");
+                        $"[spawn] your kept place {p.transform.position} isn't "
+                            + "on this map: your character is back, beside the "
+                            + "host");
                 }
                 if (prologue)
                 {
@@ -898,7 +906,8 @@ namespace DarkwoodMP.World
                 body.velocity = Vector3.zero;
             }
             Plugin.Log.LogInfo(
-                $"[spawn] placed at {at}, {new Vector2(at.x - want.x, at.z - want.z).magnitude:0} from {want}, which wasn't free");
+                $"[spawn] placed at {at}, "
+                    + $"{new Vector2(at.x - want.x, at.z - want.z).magnitude:0} from {want}, which wasn't free");
         }
 
         private static void ApplyRecord(

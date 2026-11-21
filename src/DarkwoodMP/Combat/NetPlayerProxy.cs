@@ -367,12 +367,15 @@ namespace DarkwoodMP.Combat
                             text = "a dream";
                         }
                         data =
-                            $"{proxy.OwnerName} is away ({text}): the host's enemies leave them be";
+                            $"{proxy.OwnerName} is away ({text}): the host's "
+                                + "enemies leave them be";
                     }
                     else if (loc != null)
                     {
                         data =
-                            $"{proxy.OwnerName} is in {snap.Place}, which we run for them: the enemies there are ours and go for them";
+                            $"{proxy.OwnerName} is in {snap.Place}, which we "
+                                + "run for them: the enemies there are ours "
+                                + "and go for them";
                     }
                     else
                     {
@@ -437,7 +440,8 @@ namespace DarkwoodMP.Combat
                     catch (System.Exception e)
                     {
                         Plugin.Log.LogWarning(
-                            $"{c.name} couldn't stop attacking {proxy.OwnerName}: {e.Message}");
+                            $"{c.name} couldn't stop attacking "
+                                + $"{proxy.OwnerName}: {e.Message}");
                     }
                 }
             }
@@ -449,10 +453,16 @@ namespace DarkwoodMP.Combat
                     stopNote = $"; {stopped} enemies stop attacking them";
                 }
                 Plugin.Log.LogInfo(
-                    $"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, shadow ward {proxy.ShadowWard}, forest spirit ward {proxy.ForestSpiritWard}, " +
-                                   $"friend of the forest {proxy.FriendOfTheForest}, enemy of the forest {proxy.EnemyOfTheForest}" +
+                    $"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, "
+                        + $"shadow ward {proxy.ShadowWard}, forest spirit ward "
+                        + $"{proxy.ForestSpiritWard}, " +
+                                   "friend of the forest "
+                        + $"{proxy.FriendOfTheForest}, enemy of the forest "
+                        + $"{proxy.EnemyOfTheForest}" +
                                    stopNote +
-                                   $"; night worms sent at them: {NightSpawns.WormWanted(proxy)}; in light here: {Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
+                                   "; night worms sent at them: "
+                        + $"{NightSpawns.WormWanted(proxy)}; in light here: "
+                        + $"{Core.isInLight(proxy.transform.position, mustBeWalkable: false)}");
             }
         }
 

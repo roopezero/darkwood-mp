@@ -104,7 +104,8 @@ namespace DarkwoodMP.World
             {
                 n = FallbackBase;
                 Plugin.Log.LogWarning(
-                    $"[workbench] no prefab for {wb.name} ('{name}'): its storage counts {n} slots at level {BaseLevel}");
+                    $"[workbench] no prefab for {wb.name} ('{name}'): its "
+                        + $"storage counts {n} slots at level {BaseLevel}");
             }
             _base[name] = n;
             return n;
@@ -174,12 +175,14 @@ namespace DarkwoodMP.World
                 if (Fit(wb.normalInventory, Wanted(wb, level)))
                 {
                     Plugin.Log.LogInfo(
-                        $"[workbench] {wb.name} {ObjRef.Of(wb.normalInventory.gameObject)} storage {before} -> {wb.normalInventory.slots.Count} slots (level {level}, {why})");
+                        $"[workbench] {wb.name} "
+                            + $"{ObjRef.Of(wb.normalInventory.gameObject)} storage {before} -> {wb.normalInventory.slots.Count} slots (level {level}, {why})");
                 }
                 else if (why == "world loaded")
                 {
                     Plugin.Log.LogInfo(
-                        $"[workbench] {wb.name} {ObjRef.Of(wb.normalInventory.gameObject)} storage {before} slots (level {level}, base {BaseSlots(wb)}, {wb.normalInventory.maxColumns} columns)");
+                        $"[workbench] {wb.name} "
+                            + $"{ObjRef.Of(wb.normalInventory.gameObject)} storage {before} slots (level {level}, base {BaseSlots(wb)}, {wb.normalInventory.maxColumns} columns)");
                 }
             }
         }
@@ -296,7 +299,8 @@ namespace DarkwoodMP.World
             float scale = room / need;
             inv.thisUI.transform.localScale = Vector3.one * scale;
             Plugin.Log.LogInfo(
-                $"[workbench] storage of {inv.slots.Count} slots ({rows} rows) drawn at {scale:0.00} of its size to fit the screen");
+                $"[workbench] storage of {inv.slots.Count} slots ({rows} rows) "
+                    + $"drawn at {scale:0.00} of its size to fit the screen");
         }
     }
 

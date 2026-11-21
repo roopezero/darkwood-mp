@@ -323,7 +323,8 @@ namespace DarkwoodMP
                     {
                         ago = $"{Math.Max(0, since.Seconds)} s";
                     }
-                    s = $"What you did since the last save ({ago} ago) will be lost.";
+                    s = $"What you did since the last save ({ago} ago) will be "
+                        + "lost.";
                 }
                 catch
                 {
@@ -690,15 +691,19 @@ namespace DarkwoodMP
             foreach (var en in _entries)
             {
                 parts.Add(
-                    $"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} {en.Rect.width:0}x{en.Rect.height:0}");
+                    $"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} "
+                        + $"{en.Rect.width:0}x{en.Rect.height:0}");
             }
             string text = "main menu";
             if (_pause)
             {
                 text = "pause menu";
             }
-            return $"list shown {_shown} (alpha {_alpha:0.00}), {text}: {string.Join("; ", parts)}; takes clicks {!MenuWindows.AnyOpen}; " +
-                   $"game entries hidden {GameEntriesHidden(mm)}; screen {Screen.width}x{Screen.height}";
+            return $"list shown {_shown} (alpha {_alpha:0.00}), {text}: "
+                + $"{string.Join("; ", parts)}; takes clicks "
+                + $"{!MenuWindows.AnyOpen}; " +
+                   $"game entries hidden {GameEntriesHidden(mm)}; screen "
+                + $"{Screen.width}x{Screen.height}";
         }
 
         private static bool GameEntriesHidden(MainMenu mm)

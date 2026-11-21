@@ -211,7 +211,8 @@ namespace DarkwoodMP.World
                         text = "entered: its enter";
                     }
                     Plugin.Log.LogInfo(
-                        $"[farevents] {l.name} {text} events run as {ran}{more}");
+                        $"[farevents] {l.name} {text} events run as "
+                            + $"{ran}{more}");
                 }
             }
             if (part == null)
@@ -308,7 +309,9 @@ namespace DarkwoodMP.World
                         which = "enter";
                     }
                     Plugin.Log.LogInfo(
-                        $"[farevents] our player {text} {l.name}, kept entered for the others: its {which} events, our player's part only");
+                        $"[farevents] our player {text} {l.name}, kept entered "
+                            + $"for the others: its {which} events, our "
+                            + "player's part only");
                 }
                 ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerOnly,
                     replaying: false, () =>
@@ -324,7 +327,8 @@ namespace DarkwoodMP.World
                             catch (Exception e)
                             {
                                 Plugin.Log.LogWarning(
-                                    $"[farevents] {l.name}'s {type} on {et.name}: {e.Message}");
+                                    $"[farevents] {l.name}'s {type} on "
+                                        + $"{et.name}: {e.Message}");
                             }
                         }
                     }

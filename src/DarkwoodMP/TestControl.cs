@@ -288,7 +288,8 @@ namespace DarkwoodMP
                 default:
                     _busy = false;
                     reply.WriteLine(
-                        $"fail unknown event {what} (world-ready, player-joined)");
+                        $"fail unknown event {what} (world-ready, "
+                            + "player-joined)");
                     yield break;
             }
             float until = Time.realtimeSinceStartup + secs;

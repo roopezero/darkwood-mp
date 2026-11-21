@@ -930,7 +930,9 @@ namespace DarkwoodMP.Net
             if (n < b.Length)
             {
                 Plugin.Log.LogError(
-                    $"A {b.Length}-byte string was cut to {n} bytes in a message: use WriteBigStr for it\n{Environment.StackTrace}");
+                    $"A {b.Length}-byte string was cut to {n} bytes in a "
+                        + "message: use WriteBigStr for "
+                        + $"it\n{Environment.StackTrace}");
             }
             _w.Write((ushort)n);
             _w.Write(b, 0, n);

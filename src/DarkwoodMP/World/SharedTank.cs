@@ -95,7 +95,8 @@ namespace DarkwoodMP.World
             }
             FlagsSync.SetModFlag(f, Flag, true, 0);
             Plugin.Log.LogInfo(
-                $"[world] our player holds a full oxygen tank: every player can dive in the village cellar now ({Flag})");
+                "[world] our player holds a full oxygen tank: every player "
+                    + $"can dive in the village cellar now ({Flag})");
         }
 
         private static Object _tankPrefab;

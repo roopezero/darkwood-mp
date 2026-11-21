@@ -91,7 +91,8 @@ namespace DarkwoodMP
             }
             var left = target - Now;
             Plugin.Log.LogInfo(
-                $"[mouse] couldn't reach {target}: at {Now} ({left.magnitude:0.0} px away)");
+                $"[mouse] couldn't reach {target}: at {Now} "
+                    + $"({left.magnitude:0.0} px away)");
             if (done != null)
             {
                 done(left.magnitude <= 3f);

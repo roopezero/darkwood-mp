@@ -70,12 +70,13 @@ namespace DarkwoodMP.World
         {
             var p = go.transform.position;
             string name = Name(go);
-            ctx.Set($"{name} {Mathf.Round(p.x / 10f) * 10f:0},{Mathf.Round(p.z / 10f) * 10f:0}", new Dictionary<string, object>
-            {
-                ["name"] = name,
-                ["pos"] = StateDump.Pos(p),
-                ["listed"] = listed,
-            });
+            ctx.Set($"{name} "
+                    + $"{Mathf.Round(p.x / 10f) * 10f:0},{Mathf.Round(p.z / 10f) * 10f:0}", new Dictionary<string, object>
+                    {
+                        ["name"] = name,
+                        ["pos"] = StateDump.Pos(p),
+                        ["listed"] = listed,
+                    });
         }
 
         private static string Name(GameObject g) =>
@@ -211,16 +212,20 @@ namespace DarkwoodMP.World
                         steps.Add("(" + re.type + argument + ")");
                     }
                     Plugin.Log.LogInfo(
-                        $"[night] {sc.name} (difficulty {sc.difficulty}) / {ce.name}: {re.type}: {string.Join("; ", steps)}");
+                        $"[night] {sc.name} (difficulty {sc.difficulty}) / "
+                            + $"{ce.name}: {re.type}: "
+                            + $"{string.Join("; ", steps)}");
                 }
             }
             foreach (var kv in kinds)
             {
                 Plugin.Log.LogInfo(
-                    $"[night] world step {kv.Key}: in {string.Join(", ", kv.Value)}");
+                    $"[night] world step {kv.Key}: in "
+                        + $"{string.Join(", ", kv.Value)}");
             }
             r.Info =
-                $"{events} night events; world steps: {string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
+                $"{events} night events; world steps: "
+                    + $"{string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
             return None();
         }
 
@@ -369,7 +374,8 @@ namespace DarkwoodMP.World
                 r.Fail($"{ev.name} at {loc.name} made nothing");
             }
             r.Info =
-                $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} objects; night objects now: {string.Join(", ", made)}";
+                $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} "
+                    + $"objects; night objects now: {string.Join(", ", made)}";
         }
 
         // ---- enemy motion ---------------------------------------------------
@@ -503,7 +509,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail(
                     "enemies stood still in over 10% of the frames they "
-                    + "moved: " + s);
+                        + "moved: " + s);
             }
             r.Info = s;
         }

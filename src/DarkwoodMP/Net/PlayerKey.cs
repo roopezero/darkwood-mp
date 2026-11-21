@@ -42,7 +42,8 @@ namespace DarkwoodMP.Net
             catch (Exception e)
             {
                 Plugin.Log.LogError(
-                    $"Couldn't read or write the player key ({e.Message}); using a temporary one");
+                    $"Couldn't read or write the player key ({e.Message}); "
+                        + "using a temporary one");
                 return Guid.NewGuid().ToString("N") + Guid.NewGuid()
                     .ToString("N");
             }

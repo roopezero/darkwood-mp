@@ -115,9 +115,13 @@ namespace DarkwoodMP.World
             string hitNames = string.Join(
                 ", ",
                 hits.Select(
-                    h => $"{h.collider.name}(layer {h.collider.gameObject.layer}, {h.distance:0})"));
+                    h => $"{h.collider.name}(layer "
+                        + $"{h.collider.gameObject.layer}, {h.distance:0})"));
             string geometry =
-                $"{who.name}: {StateDump.Flat(dir):0} away (sight {range:0}), y {from.y:0} vs {who.transform.position.y:0}, angle {Vector3.Angle(dir, c.transform.up):0} (view {c.fieldOfViewRange}), ";
+                $"{who.name}: {StateDump.Flat(dir):0} away (sight {range:0}), "
+                    + $"y {from.y:0} vs {who.transform.position.y:0}, angle "
+                    + $"{Vector3.Angle(dir, c.transform.up):0} (view "
+                    + $"{c.fieldOfViewRange}), ";
             string collider = "none";
             if (col != null)
             {
@@ -130,7 +134,9 @@ namespace DarkwoodMP.World
             }
             return geometry +
                 $"in view range list {listed}, collider {collider}, " +
-                $"ray hits [{hitNames}], Core.canSee {Core.canSee(c.transform, who.transform)}, in sight {c.charactersInSight.Any(s => s != null && s.transform == who.transform)}";
+                $"ray hits [{hitNames}], Core.canSee "
+                + $"{Core.canSee(c.transform, who.transform)}, in sight "
+                + $"{c.charactersInSight.Any(s => s != null && s.transform == who.transform)}";
         }
 
         private static IEnumerator Sight(string[] a, Result r)
@@ -173,7 +179,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             r.Info =
-                $"{_dog.name}: {Behaviour(_dog)}; first look: {first}; now: {SightOf(_dog, proxy)}";
+                $"{_dog.name}: {Behaviour(_dog)}; first look: {first}; now: "
+                    + $"{SightOf(_dog, proxy)}";
             if (_dog.target != proxy.transform)
             {
                 r.Fail($"it doesn't see {proxy.OwnerName}: {r.Info}");
@@ -206,7 +213,8 @@ namespace DarkwoodMP.World
             if (o.playerInOutsideLocation)
             {
                 r.Fail(
-                    $"our player is in {Locations.Current()}: this checks a location kept only for the joiner");
+                    $"our player is in {Locations.Current()}: this checks a "
+                        + "location kept only for the joiner");
                 yield break;
             }
             try
@@ -223,8 +231,10 @@ namespace DarkwoodMP.World
             var ls = new Location.SaveState(loc);
             var os = new OutsideLocations.SaveState(o);
             r.Info =
-                $"saved: {loc.name} entered {ls.entered} (live: entered {loc.entered}, kept {Locations.KeptForOthers(loc)}), " +
-                     $"our player in a location {os.playerInOutsideLocation}, current '{os.currentLocationName}'";
+                $"saved: {loc.name} entered {ls.entered} (live: entered "
+                    + $"{loc.entered}, kept {Locations.KeptForOthers(loc)}), " +
+                     $"our player in a location {os.playerInOutsideLocation}, "
+                    + $"current '{os.currentLocationName}'";
             if (ls.entered)
             {
                 r.Fail($"the save says our player went into it: {r.Info}");
@@ -349,7 +359,9 @@ namespace DarkwoodMP.World
             }
             ne.IsPuppet(c, out uint id);
             r.Info =
-                $"by the host's sleeping {c.name} #{id} at {Fmt(c.transform.position)}, {StateDump.Flat(c.transform.position - p.transform.position):0} away";
+                $"by the host's sleeping {c.name} #{id} at "
+                    + $"{Fmt(c.transform.position)}, "
+                    + $"{StateDump.Flat(c.transform.position - p.transform.position):0} away";
         }
 
         private static IEnumerator Noise(string[] a, Result r)
@@ -386,7 +398,9 @@ namespace DarkwoodMP.World
                 who = sleeper.name;
             }
             r.Info =
-                $"ran on the spot at {spot} for {steps} steps; the host's {who} asleep here: {(sleeper != null && sleeper.sleeping)}";
+                $"ran on the spot at {spot} for {steps} steps; the host's "
+                    + $"{who} asleep here: "
+                    + $"{(sleeper != null && sleeper.sleeping)}";
         }
 
         private static IEnumerator Wake(string[] a, Result r)
@@ -420,7 +434,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f); // it comes at them
             ne.NetIdOf(c, out uint id);
             r.Info =
-                $"{c.name} #{id} asleep {c.sleeping}, {Behaviour(c)}, {StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}, " +
+                $"{c.name} #{id} asleep {c.sleeping}, {Behaviour(c)}, "
+                    + $"{StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}, " +
                      $"threat {Threat.Of(c).Get(proxy):0.#}";
             _woken = c;
             if (c.sleeping || c.target != proxy.transform)
@@ -459,7 +474,9 @@ namespace DarkwoodMP.World
             }
             int dead = LocationCharacters(loc).Count(c => !c.alive);
             r.Info =
-                $"{loc.name}: kept {Locations.KeptForOthers(loc)}, entered {loc.entered}, characters running {on}, dead ones {dead}, " +
+                $"{loc.name}: kept {Locations.KeptForOthers(loc)}, entered "
+                    + $"{loc.entered}, characters running {on}, dead ones "
+                    + $"{dead}, " +
                      $"a joiner in a location we run: {Joiner() != null}";
             if (Locations.KeptForOthers(loc) || loc.entered || on > 0
                 || Joiner() != null)
@@ -595,7 +612,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             NetEnemies.Instance.NetIdOf(c, out uint id);
             r.Info =
-                $"{c.name} #{id} at {Fmt(c.transform.position)} in {proxy.InLocation.name}, {StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}; " +
+                $"{c.name} #{id} at {Fmt(c.transform.position)} in "
+                    + $"{proxy.InLocation.name}, "
+                    + $"{StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}; " +
                      $"{Behaviour(c)}";
         }
 
@@ -610,7 +629,8 @@ namespace DarkwoodMP.World
             {
                 target = c.target.name;
             }
-            return $"behaviour {behaviour}, active {active}, enabled {enabled}, health {health:0}, going for {target}";
+            return $"behaviour {behaviour}, active {active}, enabled "
+                + $"{enabled}, health {health:0}, going for {target}";
         }
 
         /// <summary>
@@ -672,7 +692,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.5f);
             ne.IsPuppet(dog, out uint id);
             r.Info =
-                $"hit the host's {dog.name} #{id} for 5 from {StateDump.Flat(dog.transform.position - p.transform.position):0} away";
+                $"hit the host's {dog.name} #{id} for 5 from "
+                    + $"{StateDump.Flat(dog.transform.position - p.transform.position):0} away";
         }
 
         /// <summary>
@@ -699,7 +720,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.25f);
             }
             r.Info =
-                $"{_dog.name}: {Behaviour(_dog)}, threat from {proxy.OwnerName}: {Threat.Of(_dog).Get(proxy):0.#}";
+                $"{_dog.name}: {Behaviour(_dog)}, threat from "
+                    + $"{proxy.OwnerName}: {Threat.Of(_dog).Get(proxy):0.#}";
             if (_dog.target != proxy.transform)
             {
                 r.Fail($"it doesn't go for {proxy.OwnerName}: {r.Info}");
@@ -736,12 +758,16 @@ namespace DarkwoodMP.World
             if (dog == null)
             {
                 r.Fail(
-                    $"no copy of the host's dog near our player in {Locations.Current()}");
+                    "no copy of the host's dog near our player in "
+                        + $"{Locations.Current()}");
                 yield break;
             }
             ne.NetIdOf(dog, out uint id);
             r.Info =
-                $"the host's {dog.name} #{id} at {Fmt(dog.transform.position)}, alive {dog.alive}, {StateDump.Flat(dog.transform.position - me):0} from us; " +
+                $"the host's {dog.name} #{id} at "
+                    + $"{Fmt(dog.transform.position)}, alive {dog.alive}, "
+                    + $"{StateDump.Flat(dog.transform.position - me):0} from "
+                    + "us; " +
                      $"characters of our own running here: {ownActive}";
             if (dog.alive != wantAlive)
             {
@@ -755,7 +781,8 @@ namespace DarkwoodMP.World
             else if (ownActive > 0)
             {
                 r.Fail(
-                    $"our own characters run in a location the host runs: {r.Info}");
+                    "our own characters run in a location the host runs: "
+                        + $"{r.Info}");
             }
         }
 
@@ -832,7 +859,10 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             string where =
-                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, of {Core.getTrueLocationName(loc.name)} (entered {loc.entered}), on {c.gameObject.activeInHierarchy}";
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at "
+                    + $"{Fmt(c.transform.position)}, of "
+                    + $"{Core.getTrueLocationName(loc.name)} (entered "
+                    + $"{loc.entered}), on {c.gameObject.activeInHierarchy}";
             if (!c.gameObject.activeInHierarchy)
             {
                 r.Fail($"it's switched off before it died: {where}");
@@ -856,7 +886,8 @@ namespace DarkwoodMP.World
             bool on = c != null && c.gameObject.activeInHierarchy,
                 item = c != null && c.GetComponent<Item>() != null;
             r.Info =
-                $"{where}; after the location was left: on {on}, searchable {item}, in its list {loc.charactersList.Contains(c)}";
+                $"{where}; after the location was left: on {on}, searchable "
+                    + $"{item}, in its list {loc.charactersList.Contains(c)}";
             if (!on)
             {
                 r.Fail(
@@ -917,7 +948,11 @@ namespace DarkwoodMP.World
             }
             bool item = c.GetComponent<Item>() != null;
             r.Info =
-                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, on {c.gameObject.activeInHierarchy}, searchable {item}, cuts the view [{string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()))}]";
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at "
+                    + $"{Fmt(c.transform.position)}, on "
+                    + $"{c.gameObject.activeInHierarchy}, searchable {item}, "
+                    + "cuts the view "
+                    + $"[{string.Join(", ", NetEnemies.FovBlockers(c, NetEnemies.FovShadowMask()))}]";
             if (!c.gameObject.activeInHierarchy || !item)
             {
                 r.Fail(r.Info);
@@ -994,7 +1029,8 @@ namespace DarkwoodMP.World
                                 text = ", trigger";
                             }
                             string key =
-                                $"{path} [layer {h.collider.gameObject.layer}{text}]";
+                                $"{path} [layer "
+                                    + $"{h.collider.gameObject.layer}{text}]";
                             if (hiders.TryGetValue(key, out int n))
                             {
                                 hiders[key] = n + 1;
@@ -1015,12 +1051,17 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             r.Info =
-                $"{spots} spots around {string.Join(", ", centres.Select(x => x.Item1))}: {dark} with the view off, " +
-                     $"by [{string.Join("; ", hiders.Select(kv => $"{kv.Key} x{kv.Value}"))}]";
+                $"{spots} spots around "
+                    + $"{string.Join(", ", centres.Select(x => x.Item1))}: "
+                    + $"{dark} with the view off, " +
+                     "by "
+                    + $"[{string.Join("; ", hiders.Select(kv => $"{kv.Key} x{kv.Value}"))}]";
             if (bad.Count > 0)
             {
                 r.Fail(
-                    $"a character, corpse, puppet or stand-in switches our player's view off: {string.Join("; ", bad)}. {r.Info}");
+                    "a character, corpse, puppet or stand-in switches our "
+                        + $"player's view off: {string.Join("; ", bad)}. "
+                        + $"{r.Info}");
             }
         }
     }

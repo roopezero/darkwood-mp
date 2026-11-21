@@ -119,7 +119,8 @@ namespace DarkwoodMP.World
                     if (Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] sent porter transport from hideout {src.hideoutId}");
+                            "[world] sent porter transport from hideout "
+                                + $"{src.hideoutId}");
                     }
                     Authority.Request(
                         w, $"porter transport from hideout {src.hideoutId}",
@@ -138,7 +139,8 @@ namespace DarkwoodMP.World
             if (Why(src, dest) is string why)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] porter transport from {src.name}: not done ({why})");
+                    $"[world] porter transport from {src.name}: not done "
+                        + $"({why})");
                 return false;
             }
             Deliver(src, dest);
@@ -219,7 +221,8 @@ namespace DarkwoodMP.World
             MakeSpawner(dest, inv.gameObject, spawnerId);
             PorterLeaves();
             Plugin.Log.LogInfo(
-                $"[world] the porter took {slots.Count} slots from {src.name} to {dest.name}");
+                $"[world] the porter took {slots.Count} slots from {src.name} "
+                    + $"to {dest.name}");
 
             var w = S.Begin(MsgType.PorterDelivered);
             w.W.Write((byte)src.hideoutId);
@@ -283,7 +286,8 @@ namespace DarkwoodMP.World
                 MakeSpawner(dest, inv.gameObject, spawnerId);
                 PorterLeaves();
                 Plugin.Log.LogInfo(
-                    $"[world] the porter's package is at {dest.name}: {inv.getAllItems().Count} items");
+                    $"[world] the porter's package is at {dest.name}: "
+                        + $"{inv.getAllItems().Count} items");
             }
             catch (System.Exception e)
             {
@@ -833,7 +837,8 @@ namespace DarkwoodMP.World
                     name = sourceTransform.name;
                 }
                 Plugin.Log.LogInfo(
-                    $"[world] moveInventory from {name} done here; sent the containers");
+                    $"[world] moveInventory from {name} done here; sent the "
+                        + "containers");
             }
         }
     }

@@ -261,7 +261,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] {_session.NameOf(Authority.From)} set {c.name} alight ({obj})");
+                    $"[world] {_session.NameOf(Authority.From)} set {c.name} "
+                        + $"alight ({obj})");
             }
         }
 

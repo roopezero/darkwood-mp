@@ -83,7 +83,8 @@ namespace DarkwoodMP.World
                 {
                     e.gameObject.SetActive(a.Length > 1 && a[1] == "off");
                     r.Info =
-                        $"{a[0]} egg {ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}";
+                        $"{a[0]} egg "
+                            + $"{ObjRef.Of(e.gameObject)} active {e.gameObject.activeSelf}";
                 }
                 return Nothing();
             });
@@ -370,7 +371,8 @@ namespace DarkwoodMP.World
             if (missing.Count > 0)
             {
                 r.Fail(
-                    $"not in the log: {string.Join(", ", missing)} (saw: {string.Join(" | ", join.Distinct().Take(8))})");
+                    $"not in the log: {string.Join(", ", missing)} (saw: "
+                        + $"{string.Join(" | ", join.Distinct().Take(8))})");
             }
             else if (bad != null)
             {
@@ -419,7 +421,8 @@ namespace DarkwoodMP.World
                     if (d < apart)
                     {
                         r.Fail(
-                            $"we overlap {rp.Name}: {d:0} apart, bodies need {apart:0}");
+                            $"we overlap {rp.Name}: {d:0} apart, bodies need "
+                                + $"{apart:0}");
                     }
                 }
             }
@@ -516,7 +519,9 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(0.5f);
             r.Info =
-                $"hotbar slot {slot}: {ItemName(p.Hotbar.slots[slot].invItem)}, holding {ItemName(p.currentItem)}";
+                $"hotbar slot {slot}: "
+                    + $"{ItemName(p.Hotbar.slots[slot].invItem)}, holding "
+                    + $"{ItemName(p.currentItem)}";
             if (InvItemClass.isNull(p.currentItem)
                 || p.currentItem.type != type)
             {
@@ -565,7 +570,8 @@ namespace DarkwoodMP.World
                     line.IndexOf("[chars]", StringComparison.Ordinal));
             }
             r.Info =
-                $"holding {heldName}{bare}, selected slot holds {slotName}; {logged}";
+                $"holding {heldName}{bare}, selected slot holds {slotName}; "
+                    + $"{logged}";
             if (missing.Count > 0)
             {
                 r.Fail("no '[chars] re-equipped' in the log");
@@ -617,7 +623,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             _dogHealth = c.health; // once it's set up (it starts at 0)
             r.Info =
-                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at {Fmt(c.transform.position)}, health {c.health}";
+                $"{c.name} #{MapScenarioFixChecks.IdOf(c)} at "
+                    + $"{Fmt(c.transform.position)}, health {c.health}";
         }
 
         /// <summary>
@@ -734,7 +741,9 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.6f);
             }
             r.Info =
-                $"{swings} swing(s) with {ItemName(p.currentItem)} at {dog.name} #{_dogId} (sounds playing on it before: {loud})";
+                $"{swings} swing(s) with {ItemName(p.currentItem)} at "
+                    + $"{dog.name} #{_dogId} (sounds playing on it before: "
+                    + $"{loud})";
         }
 
         /// <summary>
@@ -749,7 +758,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             r.Info =
-                $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive {_dog.alive}";
+                $"{_dog.name}: health {_dogHealth} -> {_dog.health}, alive "
+                    + $"{_dog.alive}";
             if (!(_dog.health < _dogHealth))
             {
                 string cause =
@@ -824,7 +834,8 @@ namespace DarkwoodMP.World
                 idle = loop.audioID;
             }
             r.Info =
-                $"{name} #{number} alive {alive}, idle loop {idle}, playing [{string.Join(", ", playing)}], death cry {_dogDeath}";
+                $"{name} #{number} alive {alive}, idle loop {idle}, playing "
+                    + $"[{string.Join(", ", playing)}], death cry {_dogDeath}";
             if (dog.alive)
             {
                 r.Fail($"it's alive here: {r.Info}");
@@ -840,7 +851,8 @@ namespace DarkwoodMP.World
             else if (stray.Count > 0)
             {
                 r.Fail(
-                    $"sounds still playing on the corpse: {string.Join(", ", stray)}");
+                    "sounds still playing on the corpse: "
+                        + $"{string.Join(", ", stray)}");
             }
         }
 
@@ -894,7 +906,9 @@ namespace DarkwoodMP.World
             else
             {
                 dogLoops =
-                    $"idle '{dogSnd.idleLoop}', sleeping '{dogSnd.sleeping}', aggressive '{dogSnd.aggressive}', idle sound '{dogSnd.idle}'";
+                    $"idle '{dogSnd.idleLoop}', sleeping '{dogSnd.sleeping}', "
+                        + $"aggressive '{dogSnd.aggressive}', idle sound "
+                        + $"'{dogSnd.idle}'";
             }
             if (kind == null)
             {
@@ -998,15 +1012,18 @@ namespace DarkwoodMP.World
                 idleName = "none";
             }
             r.Info =
-                $"spawn point made {text}; our {mine.name} hidden {hidden}, idle loop {idleName} (a Dog's: {dogLoops}); " +
-                     $"{toggled.Count} hidden character(s) switched off and on, playing [{string.Join(", ", loud)}]";
+                $"spawn point made {text}; our {mine.name} hidden {hidden}, "
+                    + $"idle loop {idleName} (a Dog's: {dogLoops}); " +
+                     $"{toggled.Count} hidden character(s) switched off and "
+                    + $"on, playing [{string.Join(", ", loud)}]";
             NetEnemies.Hidden.Remove(mine);
             NetEnemies.Frozen.Remove(mine);
             Object.Destroy(mine.gameObject);
             if (spawned)
             {
                 r.Fail(
-                    $"a spawn point made a character of our own in the host's world: {r.Info}");
+                    "a spawn point made a character of our own in the host's "
+                        + $"world: {r.Info}");
             }
             else if (!hidden)
             {
@@ -1015,7 +1032,8 @@ namespace DarkwoodMP.World
             else if (!toggled.Contains(mine))
             {
                 r.Fail(
-                    $"our own character wasn't switched on to be checked: {r.Info}");
+                    "our own character wasn't switched on to be checked: "
+                        + $"{r.Info}");
             }
             else if (loud.Count > 0)
             {
@@ -1041,7 +1059,8 @@ namespace DarkwoodMP.World
             if (item == null || inv == null)
             {
                 r.Fail(
-                    $"its corpse can't be searched here (Item {item != null}, Inventory {inv != null})");
+                    $"its corpse can't be searched here (Item {item != null}, "
+                        + $"Inventory {inv != null})");
                 yield break;
             }
             yield return Walk(dog.transform.position, 90f);
@@ -1125,7 +1144,8 @@ namespace DarkwoodMP.World
             p.openedItemInventory2 = null;
             Plugin.Instance.StartCoroutine(WbLateChange(wb, free));
             r.Info =
-                $"{st.name} {ObjRef.Of(st.gameObject)}: {string.Join(", ", WbItems.Select((t, i) => $"{free[i]}={t} x3"))}; a change follows once a player joins";
+                $"{st.name} "
+                    + $"{ObjRef.Of(st.gameObject)}: {string.Join(", ", WbItems.Select((t, i) => $"{free[i]}={t} x3"))}; a change follows once a player joins";
         }
 
         private static IEnumerator WbLateChange(Workbench wb, List<int> slots)
@@ -1156,7 +1176,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory2 = null;
             Plugin.Log.LogInfo(
-                $"[map] wb-fill: changed the storage while a player joins (slot {slots[1]} emptied, slot {slots[2]} rope x5)");
+                "[map] wb-fill: changed the storage while a player joins "
+                    + $"(slot {slots[1]} emptied, slot {slots[2]} rope x5)");
         }
 
         /// <summary>"wb-use" (client): the storage is the host's (asked for
@@ -1181,7 +1202,8 @@ namespace DarkwoodMP.World
             if (missing.Count > 0)
             {
                 r.Fail(
-                    $"no '[slots] {sref} contents from host' in the log: the storage wasn't asked for after joining");
+                    $"no '[slots] {sref} contents from host' in the log: the "
+                        + "storage wasn't asked for after joining");
                 yield break;
             }
             string got = LogLines().Last(
@@ -1201,7 +1223,8 @@ namespace DarkwoodMP.World
                         && s.invItem.type == "rope" && s.invItem.amount == 5))
             {
                 r.Fail(
-                    $"the storage here isn't the host's after its late change (wire gone, rope x5): {before}; {got}");
+                    "the storage here isn't the host's after its late change "
+                        + $"(wire gone, rope x5): {before}; {got}");
                 yield break;
             }
 
@@ -1346,7 +1369,8 @@ namespace DarkwoodMP.World
                     yield break;
                 }
                 made.Add(
-                    $"{kv.Key} {ObjRef.Of(go)} at {Fmt(go.transform.position)}");
+                    $"{kv.Key} "
+                        + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}");
             }
             yield return new WaitForSeconds(0.5f);
             r.Info = string.Join("; ", made);
@@ -1380,7 +1404,8 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.3f);
             }
             r.Info =
-                $"{which} egg {egg.gameObject.name} {ObjRef.Of(egg.gameObject)} at {Fmt(egg.transform.position)}: broken {egg.destroyed}, health {egg.health}";
+                $"{which} egg {egg.gameObject.name} "
+                    + $"{ObjRef.Of(egg.gameObject)} at {Fmt(egg.transform.position)}: broken {egg.destroyed}, health {egg.health}";
             if (!egg.destroyed)
             {
                 r.Fail(r.Info);
@@ -1423,7 +1448,8 @@ namespace DarkwoodMP.World
             var pats = fromOther.Where(eggs.ContainsKey).Where(
                 w => eggs[w] != null)
                 .Select(
-                    w => $@"\[world\] egg {Regex.Escape(ObjRef.Of(eggs[w].gameObject).ToString())} destroyed \(from ").ToArray();
+                    w => @"\[world\] egg "
+                        + $@"{Regex.Escape(ObjRef.Of(eggs[w].gameObject).ToString())} destroyed \(from ").ToArray();
             yield return WaitLog(0, pats, 6f, missing);
             var lines = LogLines();
             var parts = new List<string>();
@@ -1445,7 +1471,8 @@ namespace DarkwoodMP.World
                         $" '{line.Substring(line.IndexOf("[world]", StringComparison.Ordinal))}'";
                 }
                 parts.Add(
-                    $"{kv.Key} {rf} broken {e.destroyed} active {e.gameObject.activeInHierarchy}" + lineNote);
+                    $"{kv.Key} {rf} broken {e.destroyed} active "
+                        + $"{e.gameObject.activeInHierarchy}" + lineNote);
                 if (!e.destroyed)
                 {
                     r.Fail($"the {kv.Key} egg {rf} isn't broken here");
@@ -1494,7 +1521,8 @@ namespace DarkwoodMP.World
             AsPlayer(() => inf.gameObject.AddComponent<Burn>().burnTime = 5f);
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{inf.name} {ObjRef.Of(inf.gameObject)} at {Fmt(inf.transform.position)}: {near.Count(i => i == null || i.disappearing)} of {near.Count} patches cleared";
+                $"{inf.name} "
+                    + $"{ObjRef.Of(inf.gameObject)} at {Fmt(inf.transform.position)}: {near.Count(i => i == null || i.disappearing)} of {near.Count} patches cleared";
             if (near.Any(i => i != null && !i.disappearing))
             {
                 r.Fail(r.Info);
@@ -1551,7 +1579,8 @@ namespace DarkwoodMP.World
                 || p.currentItem.type != type)
             {
                 r.Fail(
-                    $"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
+                    $"couldn't take the {type} out (holding "
+                        + $"{ItemName(p.currentItem)})");
                 yield break;
             }
             var sensor = p.currentItem.baseClass.meleeSensor;
@@ -1648,9 +1677,14 @@ namespace DarkwoodMP.World
                 if (i == 0)
                 {
                     seen =
-                        $"; melee {p.currentItem.baseClass.isMelee}, {sensors.Count} sensor(s) " + string.Join(",", sensors.Select(m =>
-                            $"{m.name} flaming {m.flaming} layer {m.gameObject.layer} ignores layer 1: {Physics.GetIgnoreLayerCollision(m.gameObject.layer, 1)}, overlaps {m.GetComponentsInChildren<Collider>().Any(mc => col.Any(ic => mc.bounds.Intersects(ic.bounds)))} at {StateDump.Flat(m.transform.position - inf.transform.position):0}, sees it {Core.canSeeAttack(p.transform, inf.transform)}"))
-                            + $"; patch colliders {string.Join(",", col.Select(c => $"{c.GetType().Name} on {c.enabled} trigger {c.isTrigger} layer {c.gameObject.layer}"))}; player at {StateDump.Flat(p.transform.position - inf.transform.position):0}";
+                        $"; melee {p.currentItem.baseClass.isMelee}, "
+                            + $"{sensors.Count} sensor(s) " + string.Join(
+                                ",", sensors.Select(m =>
+                            $"{m.name} flaming {m.flaming} layer "
+                                + $"{m.gameObject.layer} ignores layer 1: "
+                                + $"{Physics.GetIgnoreLayerCollision(m.gameObject.layer, 1)}, overlaps {m.GetComponentsInChildren<Collider>().Any(mc => col.Any(ic => mc.bounds.Intersects(ic.bounds)))} at {StateDump.Flat(m.transform.position - inf.transform.position):0}, sees it {Core.canSeeAttack(p.transform, inf.transform)}"))
+                            + "; patch colliders "
+                            + $"{string.Join(",", col.Select(c => $"{c.GetType().Name} on {c.enabled} trigger {c.isTrigger} layer {c.gameObject.layer}"))}; player at {StateDump.Flat(p.transform.position - inf.transform.position):0}";
                 }
                 yield return new WaitForSeconds(0.6f);
             }
@@ -1664,7 +1698,9 @@ namespace DarkwoodMP.World
                 .FirstOrDefault(
                     l => l.Contains("refused") && l.Contains("infection"));
             r.Info =
-                $"{type} (sensor flaming {flaming}) at {rf} {infAt}: cleared {inf == null || inf.disappearing}{seen}; stood at {string.Join(" ", tried)}";
+                $"{type} (sensor flaming {flaming}) at {rf} {infAt}: cleared "
+                    + $"{inf == null || inf.disappearing}{seen}; stood at "
+                    + $"{string.Join(" ", tried)}";
             if (inf != null && !inf.disappearing)
             {
                 r.Fail(r.Info);
@@ -1716,7 +1752,8 @@ namespace DarkwoodMP.World
                 if (near.Count > 0)
                 {
                     r.Fail(
-                        $"{w}'s infection is still here ({string.Join(", ", near.Select(i => ObjRef.Of(i.gameObject)))})");
+                        $"{w}'s infection is still here "
+                            + $"({string.Join(", ", near.Select(i => ObjRef.Of(i.gameObject)))})");
                 }
             }
             var line = LogLines().LastOrDefault(

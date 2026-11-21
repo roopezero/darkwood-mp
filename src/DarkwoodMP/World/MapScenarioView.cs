@@ -184,7 +184,9 @@ namespace DarkwoodMP.World
                 }
             }
             r.Info =
-                $"{Me()} paced {dist:0} x{times} at {speed:0}/s, now {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark; {w}";
+                $"{Me()} paced {dist:0} x{times} at {speed:0}/s, now "
+                    + $"{StateDump.Flat(p.transform.position - _mark.Value):0} "
+                    + $"from the mark; {w}";
         }
 
         /// <summary>
@@ -215,7 +217,8 @@ namespace DarkwoodMP.World
                         off = " (off)";
                     }
                     parts.Add(
-                        $"{name} rgb {red:0.00},{green:0.00},{blue:0.00} a{alpha:0.00}{off}");
+                        $"{name} rgb {red:0.00},{green:0.00},{blue:0.00} "
+                            + $"a{alpha:0.00}{off}");
                 }
             }
             if (parts.Count == 0)
@@ -247,7 +250,9 @@ namespace DarkwoodMP.World
                             && t.type == global::EventTrigger.Type.area))
                 {
                     parts.Add(
-                        $"{et.name} entered {et.entered} left {et.exited}, on it {Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
+                        $"{et.name} entered {et.entered} left {et.exited}, on "
+                            + "it "
+                            + $"{Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
                 }
             }
             if (parts.Count == 0)
@@ -326,11 +331,13 @@ namespace DarkwoodMP.World
                 origin = Vector3.zero;
             }
             r.Info =
-                $"{Me()} {StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
+                $"{Me()} "
+                    + $"{StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
             if (!Ok())
             {
                 r.Fail(
-                    $"{names[0]} isn't {want} here: {r.Info}; areas: {AreasNow()}");
+                    $"{names[0]} isn't {want} here: {r.Info}; areas: "
+                        + $"{AreasNow()}");
             }
         }
 
@@ -375,7 +382,9 @@ namespace DarkwoodMP.World
                     saved = $" saved={so.Active}";
                 }
                 sb.Append(
-                    $"\n{new string(' ', depth * 2)}{name} active={active} layer={layer} at {spot} y {height:0}{saved} [{comps}]");
+                    $"\n{new string(' ', depth * 2)}{name} active={active} "
+                        + $"layer={layer} at {spot} y {height:0}{saved} "
+                        + $"[{comps}]");
                 foreach (var c in t.GetComponents<Collider>())
                 {
                     string text = "";
@@ -389,7 +398,8 @@ namespace DarkwoodMP.World
                         offNote = "";
                     }
                     sb.Append(
-                        $" col:{c.GetType().Name}{text}{offNote} {c.bounds.size.x:0}x{c.bounds.size.z:0}");
+                        $" col:{c.GetType().Name}{text}{offNote} "
+                            + $"{c.bounds.size.x:0}x{c.bounds.size.z:0}");
                 }
                 var ets = t.GetComponent<EventTriggers>();
                 if (ets != null)
@@ -402,7 +412,9 @@ namespace DarkwoodMP.World
                             disabledNote = " disabled";
                         }
                         sb.Append(
-                            $"\n{new string(' ', depth * 2 + 2)}> trigger {et.type} fired={et.fired} multi={et.multipleFire}{disabledNote}");
+                            $"\n{new string(' ', depth * 2 + 2)}> trigger "
+                                + $"{et.type} fired={et.fired} "
+                                + $"multi={et.multipleFire}{disabledNote}");
                         foreach (var (label, ge) in new[]
                         {
                             ("do", et.gameEvents),
@@ -459,7 +471,9 @@ namespace DarkwoodMP.World
             Walk(root, 0);
             Plugin.Log.LogInfo($"[view] vw-tree {root.name}:{sb}");
             r.Info =
-                $"{root.name}: {root.GetComponentsInChildren<Transform>(true).Length} objects (in the log)";
+                $"{root.name}: "
+                    + $"{root.GetComponentsInChildren<Transform>(true).Length} "
+                    + "objects (in the log)";
         }
 
         // ---- who we are -----------------------------------------------------
@@ -642,7 +656,8 @@ namespace DarkwoodMP.World
             yield return Walk(to, 20f, detours: 0);
             Face(_mark.Value);
             r.Info =
-                $"{me} at {Fmt(Player.Instance.transform.position)}, {StateDump.Flat(Player.Instance.transform.position - _mark.Value):0} from the mark {_markName}";
+                $"{me} at {Fmt(Player.Instance.transform.position)}, "
+                    + $"{StateDump.Flat(Player.Instance.transform.position - _mark.Value):0} from the mark {_markName}";
         }
 
         /// <summary>
@@ -745,7 +760,8 @@ namespace DarkwoodMP.World
                 if (DarkBy.Count != 0)
                 {
                     causes =
-                        $" (by {string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
+                        " (by "
+                            + $"{string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
                 }
                 string place = "";
                 if (WorstAt != "")
@@ -762,7 +778,9 @@ namespace DarkwoodMP.World
                     ghosts = string.Join("; ", Ghosts.Take(6));
                 }
                 return $"{Frames} frames: black {Dark}{causes}, " +
-                    $"mesh audits {Audits} (worst {WorstMismatch:P0} not matching our rays{place}, {BadAudits} over {MaxMismatch:P0}), " +
+                    $"mesh audits {Audits} (worst {WorstMismatch:P0} not "
+                    + $"matching our rays{place}, {BadAudits} over "
+                    + $"{MaxMismatch:P0}), " +
                     $"ghost blockers {ghosts}";
             }
 
@@ -770,15 +788,18 @@ namespace DarkwoodMP.World
             {
                 if (BadDark.Count > 0)
                 {
-                    return $"our view went black over something only co-op put there: {string.Join("; ", BadDark)}";
+                    return "our view went black over something only co-op put "
+                        + $"there: {string.Join("; ", BadDark)}";
                 }
                 if (BadAudits > 0)
                 {
-                    return $"our view cone wasn't worked out where we stand ({BadAudits} of {Audits} audits)";
+                    return "our view cone wasn't worked out where we stand "
+                        + $"({BadAudits} of {Audits} audits)";
                 }
                 if (Ghosts.Count > 0)
                 {
-                    return $"something switched off cuts our view: {string.Join("; ", Ghosts)}";
+                    return "something switched off cuts our view: "
+                        + $"{string.Join("; ", Ghosts)}";
                 }
                 return null;
             }
@@ -847,8 +868,10 @@ namespace DarkwoodMP.World
                 w.Frame(true);
             }
             r.Info =
-                $"{Me()} walked {gone:0} at {speed:0}/s in {Time.time - t0:0.0} s to {Fmt(p.transform.position)}, " +
-                     $"{StateDump.Flat(p.transform.position - _mark.Value):0} from the mark; {w}";
+                $"{Me()} walked {gone:0} at {speed:0}/s in "
+                    + $"{Time.time - t0:0.0} s to {Fmt(p.transform.position)}, " +
+                     $"{StateDump.Flat(p.transform.position - _mark.Value):0} "
+                    + $"from the mark; {w}";
             Plugin.Log.LogInfo($"[view] vw-approach: {r.Info}");
             var bad = w.Problem();
             if (bad != null)
@@ -898,16 +921,20 @@ namespace DarkwoodMP.World
             if (_mark != null)
             {
                 distance =
-                    $", {StateDump.Flat(p.transform.position - _mark.Value):0} from the mark";
+                    $", {StateDump.Flat(p.transform.position - _mark.Value):0} "
+                        + "from the mark";
             }
             r.Info = $"{who} at {spot}{distance}: " +
-                     $"cone {light.LightConeAngle:0} (currentFOV {CurrentFov(p):0}), radius {light.LightRadius:0}; {Sides(p, light)}; mesh {audit1}; " +
+                     $"cone {light.LightConeAngle:0} (currentFOV "
+                + $"{CurrentFov(p):0}), radius {light.LightRadius:0}; "
+                + $"{Sides(p, light)}; mesh {audit1}; " +
                      $"{MapScenarioLights.ViewSource()}; {w}";
             Plugin.Log.LogInfo($"[view] vw-check: {r.Info}");
             var bad = w.Problem();
             if (bad == null && w.Dark > 0)
             {
-                bad = $"our view is black here (by {string.Join("; ", w.DarkBy.Keys)})";
+                bad = "our view is black here (by "
+                    + $"{string.Join("; ", w.DarkBy.Keys)})";
             }
             if (bad == null
                 && !MapScenarioLights.ViewSource().StartsWith("view: ours"))
@@ -1131,7 +1158,8 @@ namespace DarkwoodMP.World
             {
                 rightReach = right / nr;
             }
-            return $"reach left {leftReach:P0} (stopped by {top(stopL)}), right {rightReach:P0} (stopped by {top(stopR)})";
+            return $"reach left {leftReach:P0} (stopped by {top(stopL)}), "
+                + $"right {rightReach:P0} (stopped by {top(stopR)})";
         }
     }
 }

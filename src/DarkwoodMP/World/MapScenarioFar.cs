@@ -138,17 +138,20 @@ namespace DarkwoodMP.World
             if (index >= spots.Count)
             {
                 r.Fail(
-                    $"only {spots.Count} spots {min:0} or more from {Fmt(from)}");
+                    $"only {spots.Count} spots {min:0} or more from "
+                        + $"{Fmt(from)}");
                 yield break;
             }
             var door = spots[index];
             var at = door.transform.position;
             MapScenario.SetCentre(at);
             Plugin.Log.LogInfo(
-                $"[map] far-spot {min:0} {index}: {door.name} {ObjRef.Of(door.gameObject)} at {Fmt(at)}, {StateDump.Flat(at - from):0} from {Fmt(from)}; walking from {Fmt(p.transform.position)}");
+                $"[map] far-spot {min:0} {index}: {door.name} "
+                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(at)}, {StateDump.Flat(at - from):0} from {Fmt(from)}; walking from {Fmt(p.transform.position)}");
             yield return MapScenario.Walk(at, 150f);
             r.Info =
-                $"{door.name} {ObjRef.Of(door.gameObject)} at {Fmt(at)}, {StateDump.Flat(at - from):0} from {Fmt(from)} (spot {index} of {spots.Count}); we're at {Fmt(p.transform.position)}";
+                $"{door.name} "
+                    + $"{ObjRef.Of(door.gameObject)} at {Fmt(at)}, {StateDump.Flat(at - from):0} from {Fmt(from)} (spot {index} of {spots.Count}); we're at {Fmt(p.transform.position)}";
         }
     }
 }

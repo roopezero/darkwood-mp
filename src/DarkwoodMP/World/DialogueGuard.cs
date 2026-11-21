@@ -130,7 +130,8 @@ namespace DarkwoodMP.World
                 // tried; try again in a second if it didn't close
                 _offSince = now;
                 Plugin.Log.LogInfo(
-                    $"[world] {w.npc.name} was switched off during our dialogue: closing it");
+                    $"[world] {w.npc.name} was switched off during our "
+                        + "dialogue: closing it");
                 Close(w);
             }
         }
@@ -198,7 +199,8 @@ namespace DarkwoodMP.World
                 return;
             }
             Plugin.Log.LogInfo(
-                $"[world] the dialogue's NPC is {why}: closing the dialogue without them");
+                $"[world] the dialogue's NPC is {why}: closing the dialogue "
+                    + "without them");
             _goneSince = _offSince = -1f;
             try
             {

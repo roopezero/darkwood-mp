@@ -131,7 +131,8 @@ namespace DarkwoodMP.Combat
                 level = BepInEx.Logging.LogLevel.Warning;
             }
             Plugin.Log.Log(level,
-                $"Wards: {swapped} ward checks in Character.canSeeEnemy read the enemy's target (2 expected)");
+                $"Wards: {swapped} ward checks in Character.canSeeEnemy read "
+                    + "the enemy's target (2 expected)");
             return list;
         }
 
@@ -205,7 +206,8 @@ namespace DarkwoodMP.Combat
                 level = BepInEx.Logging.LogLevel.Warning;
             }
             Plugin.Log.Log(level,
-                $"Wards: {swapped} forest skill checks ({targets} with their target) in {where} read the enemy's target");
+                $"Wards: {swapped} forest skill checks ({targets} with their "
+                    + $"target) in {where} read the enemy's target");
             return list;
         }
     }

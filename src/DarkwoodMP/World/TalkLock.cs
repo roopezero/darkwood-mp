@@ -326,7 +326,8 @@ namespace DarkwoodMP.World
                 && UnityEngine.Time.unscaledTime - rel.Value < Grace)
             {
                 Authority.Refuse(
-                    $"{s.NameOf(rel.Key)} just talked to them: try again in a moment");
+                    $"{s.NameOf(rel.Key)} just talked to them: try again in a "
+                        + "moment");
                 return;
             }
             var npc = ObjRef.Resolve<NPC>(obj);

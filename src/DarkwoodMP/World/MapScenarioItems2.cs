@@ -291,7 +291,8 @@ namespace DarkwoodMP.World
                 || p.currentItem.type != type)
             {
                 r.Fail(
-                    $"couldn't take the {type} out (holding {ItemName(p.currentItem)})");
+                    $"couldn't take the {type} out (holding "
+                        + $"{ItemName(p.currentItem)})");
             }
         }
 
@@ -398,7 +399,8 @@ namespace DarkwoodMP.World
             _noted[name] = c.health;
             NetEnemies.Instance.NetIdOf(c, out uint id);
             string info =
-                $"{c.name} #{id} at {Fmt(c.transform.position)}, health {c.health}, eats {c.lureType}";
+                $"{c.name} #{id} at {Fmt(c.transform.position)}, health "
+                    + $"{c.health}, eats {c.lureType}";
             if (c.veryHungry)
             {
                 info += ", very hungry";
@@ -466,7 +468,8 @@ namespace DarkwoodMP.World
             var capped =
                 LogSince(_mark, @"\[authority\] .*'s hit on .* is more than");
             r.Info =
-                $"{d.name}: health {was:0} -> {d.health:0}, alive {d.alive}; {refused.Count} hit(s) refused, {capped.Count} capped";
+                $"{d.name}: health {was:0} -> {d.health:0}, alive {d.alive}; "
+                    + $"{refused.Count} hit(s) refused, {capped.Count} capped";
             if (!(d.health < was) && d.alive)
             {
                 r.Fail("no damage here: " + r.Info);
@@ -646,7 +649,9 @@ namespace DarkwoodMP.World
                             bagged = spare.amount;
                         }
                         r.Fail(
-                            $"the {type} didn't reload ({before} -> {rounds} of {clip}, reloading {reloading}, {kind} in bags {bagged})");
+                            $"the {type} didn't reload ({before} -> {rounds} "
+                                + $"of {clip}, reloading {reloading}, {kind} "
+                                + $"in bags {bagged})");
                     }
                 }
                 if (loaded)
@@ -720,8 +725,12 @@ namespace DarkwoodMP.World
                     LogSince(mark, @"\[authority\] request \d+: hit on enemy");
                 var refused = LogSince(mark, @"the host refused hit on enemy");
                 string info =
-                    $"{type} ({b.fireMode}, {b.projectileAmount} pellet(s), every {b.fireRate:0.00} s, clip {b.clipSize}, {b.ammoType}): "
-                        + $"reloads {loads}; {fired} of {shots} fired, {sent.Count} hit(s) sent to the host, {refused.Count} refused; ";
+                    $"{type} ({b.fireMode}, {b.projectileAmount} pellet(s), "
+                        + $"every {b.fireRate:0.00} s, clip {b.clipSize}, "
+                        + $"{b.ammoType}): "
+                        + $"reloads {loads}; {fired} of {shots} fired, "
+                        + $"{sent.Count} hit(s) sent to the host, "
+                        + $"{refused.Count} refused; ";
                 if (dog != null)
                 {
                     info += $"{dog.name} health here {dog.health:0}";
@@ -930,7 +939,8 @@ namespace DarkwoodMP.World
                 if (!threw)
                 {
                     r.Fail(
-                        $"the {type} was never thrown (put away by bites each time)");
+                        $"the {type} was never thrown (put away by bites each "
+                            + "time)");
                     yield break;
                 }
                 _thrown = held;
@@ -948,7 +958,8 @@ namespace DarkwoodMP.World
                     yield return null;
                 }
                 string prefix =
-                    $"{type} thrown at {at} {Fmt(target)} from {Fmt(p.transform.position)}: ";
+                    $"{type} thrown at {at} {Fmt(target)} from "
+                        + $"{Fmt(p.transform.position)}: ";
                 string landed;
                 if (held == null)
                 {
@@ -957,7 +968,8 @@ namespace DarkwoodMP.World
                 else
                 {
                     landed =
-                        $"at {Fmt(held.transform.position)}, on the ground {ti != null && ti.onGround}";
+                        $"at {Fmt(held.transform.position)}, on the ground "
+                            + $"{ti != null && ti.onGround}";
                 }
                 r.Info = prefix + landed;
             }
@@ -1036,7 +1048,8 @@ namespace DarkwoodMP.World
                 if (came.Count == 0)
                 {
                     r.Fail(
-                        $"no copy of the other player's {type} here (none since i2-note)");
+                        $"no copy of the other player's {type} here (none "
+                            + "since i2-note)");
                     yield break;
                 }
                 gone = true;
@@ -1123,7 +1136,8 @@ namespace DarkwoodMP.World
                 shownName = prefab + goneNote;
             }
             r.Info =
-                $"{shownName} at {Fmt(last)} ({d:0} from {at}): landed {landed}, went off {off}, fire {fire}";
+                $"{shownName} at {Fmt(last)} ({d:0} from {at}): landed "
+                    + $"{landed}, went off {off}, fire {fire}";
             bool ok;
             if (want == "lands")
             {
@@ -1169,7 +1183,9 @@ namespace DarkwoodMP.World
                     l => ObjRef.Of(l.gameObject).K == ObjRef.Kind.Spawned);
                 var lost = LogSince(_mark, @"got LiquidLit .*not found here");
                 r.Info +=
-                    $"; gasoline here {fuel.Count} ({shared} shared, {fuel.Count(l => l.burning)} burning), {lost.Count} fire(s) not found";
+                    $"; gasoline here {fuel.Count} ({shared} shared, "
+                        + $"{fuel.Count(l => l.burning)} burning), "
+                        + $"{lost.Count} fire(s) not found";
                 if (fuel.Count == 0 || shared < fuel.Count)
                 {
                     r.Fail(
@@ -1282,7 +1298,8 @@ namespace DarkwoodMP.World
                 text = $"still there (health {lure.health})";
             }
             r.Info =
-                $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is {text}";
+                $"{d.name} went for {lname}: {went}, ate: {ate}, the lure is "
+                    + $"{text}";
             if (lure != null && d != null)
             {
                 string targetName = "nothing";
@@ -1291,7 +1308,8 @@ namespace DarkwoodMP.World
                     targetName = d.target.name;
                 }
                 r.Info +=
-                    $"; the dog is {d.behaviour} after {targetName}, {StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
+                    $"; the dog is {d.behaviour} after {targetName}, "
+                        + $"{StateDump.Flat(lure.transform.position - d.transform.position):0} from the lure";
             }
             if (lure != null)
             {
@@ -1317,7 +1335,8 @@ namespace DarkwoodMP.World
             else
             {
                 r.Info =
-                    $"{_thrown.name} still at {Fmt(_thrown.transform.position)}";
+                    $"{_thrown.name} still at "
+                        + $"{Fmt(_thrown.transform.position)}";
             }
             if (_thrown != null)
             {
@@ -1438,7 +1457,8 @@ namespace DarkwoodMP.World
                 dot = "lit";
             }
             r.Info =
-                $"lantern {text}: our light dot {dot}, radius {p.lightDot.LightRadius:0}";
+                $"lantern {text}: our light dot {dot}, radius "
+                    + $"{p.lightDot.LightRadius:0}";
             if (lit != on)
             {
                 r.Fail(r.Info);
@@ -1527,7 +1547,8 @@ namespace DarkwoodMP.World
                 copy = "stand-in";
             }
             r.Info =
-                $"{name}: lantern light on their puppet {shown} (radius {lanternShown:0}), their {copy} in light {inLight}";
+                $"{name}: lantern light on their puppet {shown} (radius "
+                    + $"{lanternShown:0}), their {copy} in light {inLight}";
             if (shown != want || inLight != want)
             {
                 r.Fail(r.Info);
@@ -1595,7 +1616,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             r.Info =
-                $"{_map}: {string.Join(", ", PlacesOf(_map).Select(l => l.name))}";
+                $"{_map}: "
+                    + $"{string.Join(", ", PlacesOf(_map).Select(l => l.name))}";
         }
 
         /// <summary>

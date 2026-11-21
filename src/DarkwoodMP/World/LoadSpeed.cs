@@ -192,7 +192,9 @@ namespace DarkwoodMP.World
             // uses
             _prefabs.Clear();
             Plugin.Log.LogInfo(
-                $"LoadSpeed: {PrefabLookups} prefabs made from {PrefabLoads} loads; save parsed ahead: {AheadUsed} used, {AheadMissed} not");
+                $"LoadSpeed: {PrefabLookups} prefabs made from {PrefabLoads} "
+                    + $"loads; save parsed ahead: {AheadUsed} used, "
+                    + $"{AheadMissed} not");
             AheadUsed = AheadMissed = 0;
         }
 
@@ -366,7 +368,9 @@ namespace DarkwoodMP.World
                     if (Mismatches <= 5)
                     {
                         Plugin.Log.LogWarning(
-                            $"LoadSpeed: {GO.name}: nodes {string.Join(",", hit)}, the game's search {string.Join(",", expected)}");
+                            $"LoadSpeed: {GO.name}: nodes "
+                                + $"{string.Join(",", hit)}, the game's search "
+                                + $"{string.Join(",", expected)}");
                     }
                 }
             }
@@ -505,7 +509,8 @@ namespace DarkwoodMP.World
                     if (Mismatches <= 5)
                     {
                         Plugin.Log.LogWarning(
-                            $"LoadSpeed: {GO.name} at {pos}: node {best}, the game's search {expected}");
+                            $"LoadSpeed: {GO.name} at {pos}: node {best}, the "
+                                + $"game's search {expected}");
                     }
                 }
             }
@@ -702,7 +707,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"LoadSpeed: {e.Message}; the game's own registerToNodes instead");
+                    $"LoadSpeed: {e.Message}; the game's own registerToNodes "
+                        + "instead");
                 LoadSpeed.EndBatch();
                 return true;
             }
@@ -735,7 +741,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"LoadSpeed: {e.Message}; the game's own registerToNode instead");
+                    $"LoadSpeed: {e.Message}; the game's own registerToNode "
+                        + "instead");
                 LoadSpeed.EndBatch();
                 return true;
             }

@@ -190,7 +190,8 @@ namespace DarkwoodMP.Combat
             if (Threat.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[threat] banshee {c.name} seen by {proxy.OwnerName}: going for them");
+                    $"[threat] banshee {c.name} seen by {proxy.OwnerName}: "
+                        + "going for them");
             }
             return false;
         }

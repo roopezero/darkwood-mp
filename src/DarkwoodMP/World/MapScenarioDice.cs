@@ -161,7 +161,9 @@ namespace DarkwoodMP.World
                                 locationName = loc.name;
                             }
                             Plugin.Log.LogInfo(
-                                $"[dice] event {ge.name} step {i} {e.type} picks a {text} {g.type} of {countText} in {locationName}");
+                                $"[dice] event {ge.name} step {i} {e.type} "
+                                    + $"picks a {text} {g.type} of {countText} "
+                                    + $"in {locationName}");
                         }
                     }
                 }
@@ -197,7 +199,11 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[dice] explodes {b.Key}: {b.Value}");
                 }
                 r.Info =
-                    $"{steps} shared steps; {random} pick a random object, {nearest} the one nearest the own player; {functions} runFunction ({string.Join(",", names.Keys)}); {blasts.Count} kinds of unthrown spawning explosions";
+                    $"{steps} shared steps; {random} pick a random object, "
+                        + $"{nearest} the one nearest the own player; "
+                        + $"{functions} runFunction "
+                        + $"({string.Join(",", names.Keys)}); {blasts.Count} "
+                        + "kinds of unthrown spawning explosions";
                 return None();
             });
         }

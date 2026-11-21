@@ -88,7 +88,8 @@ namespace DarkwoodMP.World
                 if (!ok)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {what} not built here: the host refused it ({reason})");
+                        $"[world] {what} not built here: the host refused it "
+                            + $"({reason})");
                     return;
                 }
                 if (c == null)

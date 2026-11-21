@@ -303,7 +303,8 @@ namespace DarkwoodMP.Sync
                 }
                 LogOnce(
                     key,
-                    $"[fx] {name}'s sounds: too far away to hear (puppet at {position}, we're at {ourPosition})");
+                    $"[fx] {name}'s sounds: too far away to hear (puppet at "
+                        + $"{position}, we're at {ourPosition})");
             }
             for (int i = 0; i < n; i++)
             {
@@ -322,7 +323,8 @@ namespace DarkwoodMP.Sync
                 {
                     LogOnce(
                         $"sounds {owner}",
-                        $"[fx] {_s.NameOf(owner)}'s sounds play on their puppet ({id})");
+                        $"[fx] {_s.NameOf(owner)}'s sounds play on their "
+                            + $"puppet ({id})");
                 }
             }
             Relayed(relay, from, reliable: false);
@@ -567,7 +569,8 @@ namespace DarkwoodMP.Sync
                 else
                 {
                     Plugin.Log.LogWarning(
-                        $"[fx] Player.{n} isn't in this build: its sounds won't be heard by the others");
+                        $"[fx] Player.{n} isn't in this build: its sounds "
+                            + "won't be heard by the others");
                 }
             }
             // getHit has two: the one that does it.

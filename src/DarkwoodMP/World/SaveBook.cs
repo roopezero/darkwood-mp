@@ -290,7 +290,8 @@ namespace DarkwoodMP.World
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"[saves] couldn't read slot {slot}'s players' characters: {e.Message}");
+                    $"[saves] couldn't read slot {slot}'s players' characters: "
+                        + $"{e.Message}");
             }
             return names;
         }
@@ -340,13 +341,15 @@ namespace DarkwoodMP.World
                 if (WorldFiles.DeletePlayersFolder(baseDir, slot))
                 {
                     Plugin.Log.LogInfo(
-                        $"[saves] slot {slot}'s players' characters deleted {why}");
+                        $"[saves] slot {slot}'s players' characters deleted "
+                            + $"{why}");
                 }
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"[saves] couldn't delete slot {slot}'s players' characters: {e.Message}");
+                    $"[saves] couldn't delete slot {slot}'s players' "
+                        + $"characters: {e.Message}");
             }
         }
 

@@ -83,7 +83,9 @@ namespace DarkwoodMP.Sync
                 }
             }
             Plugin.Log.LogInfo(
-                $"[spawn] no free spot within {Rings[Rings.Length - 1] * radius:0} of {want}: staying there");
+                "[spawn] no free spot within "
+                    + $"{Rings[Rings.Length - 1] * radius:0} of {want}: "
+                    + "staying there");
             return want;
         }
 

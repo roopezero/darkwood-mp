@@ -285,7 +285,8 @@ namespace DarkwoodMP.World
                         makeable = "makeable";
                     }
                     bad.Add(
-                        $"{s.invItem.type} drawn {text}, is {makeable} ({Needs(recipe)})");
+                        $"{s.invItem.type} drawn {text}, is {makeable} "
+                            + $"({Needs(recipe)})");
                 }
             }
             if (bad.Count == 0)
@@ -301,7 +302,8 @@ namespace DarkwoodMP.World
             {
                 if (q.amount > 0)
                 {
-                    return $"{q.item.type}x{q.amount} have {P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}";
+                    return $"{q.item.type}x{q.amount} have "
+                        + $"{P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}";
                 }
                 return $"{q.item.type} dur {q.durabilityAmount:0.##}";
             }));
@@ -344,7 +346,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(1f);
             string after = PauseHud.Shown();
             r.Info =
-                $"HUD before: {before}; under the menu: {under} (overlays hidden {hidden}, {why}); after: {after}";
+                $"HUD before: {before}; under the menu: {under} (overlays "
+                    + $"hidden {hidden}, {why}); after: {after}";
             if (under != "none")
             {
                 r.Fail($"HUD shown under the pause menu: {under}");
@@ -360,7 +363,8 @@ namespace DarkwoodMP.World
             else if (UiState.WorldOverlaysHidden)
             {
                 r.Fail(
-                    $"world overlays still hidden after the menu ({UiState.Reason})");
+                    "world overlays still hidden after the menu "
+                        + $"({UiState.Reason})");
             }
             else if (Drawn(st) is string bad)
             {
@@ -411,7 +415,9 @@ namespace DarkwoodMP.World
                 .Select(
                     s => $"{s.invItem.type}[{Needs(s.invItem.baseClass.GetComponent<CraftingRecipes>().recipes[s.invItem.usedRecipe])}]");
             r.Info =
-                $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, {st.getAllItems().Count} filled; {met}/{total} recipes makeable: {string.Join(" ", known)}";
+                $"{MapScenarioWorld.Ref(st)} {st.slots.Count} slots, "
+                    + $"{st.getAllItems().Count} filled; {met}/{total} recipes "
+                    + $"makeable: {string.Join(" ", known)}";
             if (drawn != null)
             {
                 r.Fail($"drawn wrong as it opened: {drawn}");
@@ -598,11 +604,14 @@ namespace DarkwoodMP.World
             string drawn = Drawn(st),
                 rec = Recipes(wb, out int met, out int total);
             r.Info =
-                $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, tint ok={rec == null}; redraws {UiRefresh.Redraws} (total)";
+                $"{slots}; drawn ok={drawn == null}; {met}/{total} makeable, "
+                    + $"tint ok={rec == null}; redraws {UiRefresh.Redraws} "
+                    + "(total)";
             if (wrong.Count > 0)
             {
                 r.Fail(
-                    $"{string.Join("; ", wrong)} (the other player's change didn't arrive)");
+                    $"{string.Join("; ", wrong)} (the other player's change "
+                        + "didn't arrive)");
             }
             else if (drawn != null)
             {
@@ -651,7 +660,8 @@ namespace DarkwoodMP.World
             }
             _saw = saw;
             r.Info =
-                $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, label '{Label(inv)}'";
+                $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, "
+                    + $"label '{Label(inv)}'";
         }
 
         private static string Label(Inventory inv)
@@ -701,7 +711,8 @@ namespace DarkwoodMP.World
                 && btn.background.activeSelf;
             bool can = saw.canConvert();
             r.Info =
-                $"fuel {saw.fuel:0.0}, label '{Label(inv)}', convert enabled={enabled} can={can}";
+                $"fuel {saw.fuel:0.0}, label '{Label(inv)}', convert "
+                    + $"enabled={enabled} can={can}";
             if (saw.fuel < min)
             {
                 r.Fail($"{r.Info}: the fuel didn't arrive (wanted {min:0})");
@@ -764,7 +775,8 @@ namespace DarkwoodMP.World
             _traderMark = MapScenarioIssues.LogMark();
             string drawn = Drawn(npc.inventory);
             r.Info =
-                $"{npc.name}: {npc.inventory.slots.Count} slots, {npc.inventory.getAllItems().Count} items shown";
+                $"{npc.name}: {npc.inventory.slots.Count} slots, "
+                    + $"{npc.inventory.getAllItems().Count} items shown";
             if (drawn != null)
             {
                 r.Fail($"drawn wrong as shown: {drawn}");
@@ -798,7 +810,8 @@ namespace DarkwoodMP.World
             yield return null;
             string drawn = Drawn(npc.inventory);
             r.Info =
-                $"{npc.name}: {npc.inventory.getAllItems().Count} items, open={npc.inventory.open}; {line}";
+                $"{npc.name}: {npc.inventory.getAllItems().Count} items, "
+                    + $"open={npc.inventory.open}; {line}";
             if (line == null)
             {
                 r.Fail("no new stock from the host");

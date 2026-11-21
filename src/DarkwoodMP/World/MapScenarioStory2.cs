@@ -70,7 +70,8 @@ namespace DarkwoodMP.World
             }
             yield return null;
             r.Info =
-                $"{et.name} marked fired as loaded; owed to our player {ScriptedEvents.IsOwed(t)}";
+                $"{et.name} marked fired as loaded; owed to our player "
+                    + $"{ScriptedEvents.IsOwed(t)}";
         }
 
         /// <summary>
@@ -224,7 +225,8 @@ namespace DarkwoodMP.World
             _made[a[0]] = m;
             yield return null;
             r.Info =
-                $"trigger {a[0]} {ObjRef.Of(go)} at {Fmt(go.transform.position)}, set off by {lamp.name} {ObjRef.Of(lamp.gameObject)} while on; carrying {m.Had} {Item}";
+                $"trigger {a[0]} "
+                    + $"{ObjRef.Of(go)} at {Fmt(go.transform.position)}, set off by {lamp.name} {ObjRef.Of(lamp.gameObject)} while on; carrying {m.Had} {Item}";
         }
 
         /// <summary>
@@ -250,7 +252,9 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(1.5f);
             int got = MapScenarioWorld.CarriedOf(Item) - m.Had;
             r.Info =
-                $"the shared part of {a[0]} ran {m.C.N} time(s) here (want {want}), our player got {got} {Item} (want {wantGot}); fired {m.T.fired}";
+                $"the shared part of {a[0]} ran {m.C.N} time(s) here (want "
+                    + $"{want}), our player got {got} {Item} (want {wantGot}); "
+                    + $"fired {m.T.fired}";
             if (m.C.N != want || got != wantGot)
             {
                 r.Fail(r.Info);

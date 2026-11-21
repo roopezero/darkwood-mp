@@ -236,12 +236,14 @@ namespace DarkwoodMP.World
                     heldLight = snapshot.HeldLight;
                 }
                 parts.Add(
-                    $"{heldLight} light r{held.LightRadius:0} drawn {Drawn(held)}");
+                    $"{heldLight} light r{held.LightRadius:0} drawn "
+                        + $"{Drawn(held)}");
             }
             if (x.LanternLight != null)
             {
                 parts.Add(
-                    $"lantern r{x.LanternLight.LightRadius:0} drawn {Drawn(x.LanternLight)}");
+                    $"lantern r{x.LanternLight.LightRadius:0} drawn "
+                        + $"{Drawn(x.LanternLight)}");
             }
             if (x.Beam != null && x.Beam.activeSelf)
             {
@@ -263,7 +265,8 @@ namespace DarkwoodMP.World
                     grey = l.LightColor.r;
                 }
                 parts.Add(
-                    $"beam r{lightRadius:0} (sent {beamRadius:0}) grey {grey:0.00} drawn {Drawn(l)}");
+                    $"beam r{lightRadius:0} (sent {beamRadius:0}) grey "
+                        + $"{grey:0.00} drawn {Drawn(l)}");
             }
             string listing;
             if (parts.Count == 0)

@@ -193,7 +193,9 @@ namespace DarkwoodMP.Sync
                 {
                     _flamesLogged = true;
                     Plugin.Log.LogInfo(
-                        $"[fx] {Name}'s {_heldShown}: flames on the puppet at {_heldFlames.localPosition} from its centre (on the item in hand)");
+                        $"[fx] {Name}'s {_heldShown}: flames on the puppet at "
+                            + $"{_heldFlames.localPosition} from its centre "
+                            + "(on the item in hand)");
                 }
             }
             bool beam = _last.Flashlight && _last.Alive && !_last.Spectating;
@@ -297,7 +299,8 @@ namespace DarkwoodMP.Sync
                     return;
                 }
                 Plugin.Log.LogInfo(
-                    $"[fx] {Name}'s lantern: a light of radius {want:0} on their puppet");
+                    $"[fx] {Name}'s lantern: a light of radius {want:0} on "
+                        + "their puppet");
             }
             if (_lantern.LightRadius != want)
             {
@@ -622,7 +625,8 @@ namespace DarkwoodMP.Sync
             if (lib != null)
             {
                 data =
-                    $"Loaded animation library {library} for another player's look";
+                    $"Loaded animation library {library} for another player's "
+                        + "look";
             }
             else
             {

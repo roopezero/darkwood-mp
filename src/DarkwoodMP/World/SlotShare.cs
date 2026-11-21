@@ -154,7 +154,9 @@ namespace DarkwoodMP.World
                 }
                 _awaiting.Remove(inv);
                 Plugin.Log.LogWarning(
-                    $"[slots] {_refs[inv]} no contents from host in {AskTimeout:0} s; sending changes against what we saw");
+                    $"[slots] {_refs[inv]} no contents from host in "
+                        + $"{AskTimeout:0} s; sending changes against what we "
+                        + "saw");
             }
             var changed = new List<Change>();
             for (int i = 0; i < keys.Length; i++)
@@ -186,7 +188,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[world] sent {changed.Count} slot(s) of {inv.name} {r}: {string.Join(", ", changed.ConvertAll(c => $"{c.Slot}: '{c.Old}' -> '{keys[c.Slot]}'"))}");
+                    $"[world] sent {changed.Count} slot(s) of {inv.name} "
+                        + $"{r}: {string.Join(", ", changed.ConvertAll(c => $"{c.Slot}: '{c.Old}' -> '{keys[c.Slot]}'"))}");
             }
             _watched[inv] = keys;
         }
@@ -358,7 +361,8 @@ namespace DarkwoodMP.World
             if (_watched.ContainsKey(inv) && !waited)
             {
                 Plugin.Log.LogInfo(
-                    $"[slots] {obj} contents from host: not used, our changes to it already went");
+                    $"[slots] {obj} contents from host: not used, our changes "
+                        + "to it already went");
                 return;
             }
             Inventory.SaveState state;
@@ -385,7 +389,8 @@ namespace DarkwoodMP.World
             if (state.slotCount != inv.slots.Count)
             {
                 Plugin.Log.LogWarning(
-                    $"[slots] {obj} has {state.slotCount} slots on the host, {inv.slots.Count} here");
+                    "[slots] "
+                        + $"{obj} has {state.slotCount} slots on the host, {inv.slots.Count} here");
             }
 
             if (!_watched.TryGetValue(inv, out var seen) && !inv.open)
@@ -406,7 +411,8 @@ namespace DarkwoodMP.World
                     filled = items.Count;
                 }
                 Plugin.Log.LogInfo(
-                    $"[slots] {obj} contents from host ({inv.slots.Count} slots): {filled} filled, loaded whole");
+                    $"[slots] {obj} contents from host ({inv.slots.Count} "
+                        + $"slots): {filled} filled, loaded whole");
                 RemoveIfEmptied(inv);
                 return;
             }
@@ -528,13 +534,17 @@ namespace DarkwoodMP.World
                 var tried = Item(Json(inv, i));
                 Set(inv, i, host[i]);
                 Plugin.Log.LogInfo(
-                    $"[authority] our change to slot {i} of {inv.name}: refused here (it had changed on the host before we opened it)");
+                    $"[authority] our change to slot {i} of {inv.name}: "
+                        + "refused here (it had changed on the host before we "
+                        + "opened it)");
                 Undo(oldKey, tried);
                 differed++;
                 undone++;
             }
             Plugin.Log.LogInfo(
-                $"[slots] {what} ({slotCount} slots): {filled} filled, {differed} differed here, {undone} of our changes undone");
+                $"[slots] {what} ({slotCount} slots): {filled} filled, "
+                    + $"{differed} differed here, {undone} of our changes "
+                    + "undone");
             if (differed > 0)
             {
                 UiRefresh.Changed(inv);
@@ -839,7 +849,9 @@ namespace DarkwoodMP.World
                 ctl.pickedUpItem = null;
                 int dropped = GiveBack(player, keep, keep.amount);
                 Plugin.Log.LogInfo(
-                    $"[slots] the {keep.type} we held came from slot {i} of {inv.name}, filled by someone else: into our bags ({dropped} at our feet)");
+                    $"[slots] the {keep.type} we held came from slot {i} of "
+                        + $"{inv.name}, filled by someone else: into our bags "
+                        + $"({dropped} at our feet)");
             }
             WorldActions.Replaying = true;
             try
@@ -1014,7 +1026,9 @@ namespace DarkwoodMP.World
                     if (changes.Count > 1)
                     {
                         refusedAll =
-                            $"slot {c.Slot} had just changed, so the {changes.Count} changes made with it are refused too";
+                            $"slot {c.Slot} had just changed, so the "
+                                + $"{changes.Count} changes made with it are "
+                                + "refused too";
                     }
                     else
                     {
@@ -1047,7 +1061,8 @@ namespace DarkwoodMP.World
                     continue;
                 }
                 Plugin.Log.LogInfo(
-                    $"[authority] {s.NameOf(from)} changed slot {c.Slot} of {inv.name}: refused ({refusedAll})");
+                    $"[authority] {s.NameOf(from)} changed slot {c.Slot} of "
+                        + $"{inv.name}: refused ({refusedAll})");
                 var w = s.Begin(MsgType.ContainerSlotRefused);
                 obj.Write(w);
                 w.W.Write((ushort)c.Slot);
@@ -1091,7 +1106,8 @@ namespace DarkwoodMP.World
             var tried = Item(Json(inv, c.Slot));
             Set(inv, c.Slot, c.New);
             Plugin.Log.LogInfo(
-                $"[authority] our change to slot {c.Slot} of {inv.name}: refused here (another player changed it first)");
+                $"[authority] our change to slot {c.Slot} of {inv.name}: "
+                    + "refused here (another player changed it first)");
             Undo(oldKey, tried);
         }
 
@@ -1114,7 +1130,8 @@ namespace DarkwoodMP.World
             // may be gone here: a dropped item we picked up with a click
             var inv = ObjRef.Resolve<Inventory>(obj);
             Plugin.Log.LogInfo(
-                $"[slots] {obj} slot {slot}: the host refused our change '{oldKey}' -> '{Key(Item(triedJson))}' (it holds '{Key(Item(hostJson))}' there)");
+                "[slots] "
+                    + $"{obj} slot {slot}: the host refused our change '{oldKey}' -> '{Key(Item(triedJson))}' (it holds '{Key(Item(hostJson))}' there)");
             // Something we changed in that slot after this change and haven't
             // sent yet: Set replaces it too, so it's undone as well. (A later
             // change already sent is refused, and undone, by its own answer.)
@@ -1290,12 +1307,14 @@ namespace DarkwoodMP.World
                 if (put > 0)
                 {
                     data =
-                        $"[slots] undone: gave back {put} {kv.Key} ({dropped} of them at our feet, no room)";
+                        $"[slots] undone: gave back {put} {kv.Key} ({dropped} "
+                            + "of them at our feet, no room)";
                 }
                 else
                 {
                     data =
-                        $"[slots] undone: took back {took - left} of {took} {kv.Key}";
+                        $"[slots] undone: took back {took - left} of {took} "
+                            + $"{kv.Key}";
                 }
                 Plugin.Log.LogInfo(data);
             }
@@ -1431,7 +1450,8 @@ namespace DarkwoodMP.World
                 if (refused != null)
                 {
                     Plugin.Log.LogInfo(
-                        $"[authority] {s.NameOf(from)} raised the workbench level: refused ({refused})");
+                        $"[authority] {s.NameOf(from)} raised the workbench "
+                            + $"level: refused ({refused})");
                     return;
                 }
                 var w = s.Begin(MsgType.WorkbenchLevel);
@@ -1440,7 +1460,8 @@ namespace DarkwoodMP.World
             }
             ctl.workbenchLevel = level;
             Plugin.Log.LogInfo(
-                $"The workbench is now level {level} ({s.NameOf(from)} upgraded it)");
+                $"The workbench is now level {level} ({s.NameOf(from)} "
+                    + "upgraded it)");
             // its new row, before any change to it arrives
             WorkbenchStorage.ApplyAll("upgraded");
             // An open workbench shows the new level's recipes.

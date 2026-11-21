@@ -101,7 +101,8 @@ namespace DarkwoodMP.World
             if (!_steps.TryGetValue(name, out var s))
             {
                 reply(
-                    $"fail unknown step {name} (known: {string.Join(", ", _steps.Keys.OrderBy(k => k))})");
+                    $"fail unknown step {name} (known: "
+                        + $"{string.Join(", ", _steps.Keys.OrderBy(k => k))})");
                 yield break;
             }
             var r = new Result();
@@ -641,14 +642,17 @@ namespace DarkwoodMP.World
             if (Count() <= before)
             {
                 r.Fail(
-                    $"took {item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)} but it isn't in our bags (full?)");
+                    $"took {item.type} x{item.amount} from {inv.name} "
+                        + $"{ObjRef.Of(inv.gameObject)} but it isn't in our "
+                        + "bags (full?)");
             }
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
             _lastTaken = item.type;
             r.Info =
-                $"{item.type} x{item.amount} from {inv.name} {ObjRef.Of(inv.gameObject)}";
+                $"{item.type} x{item.amount} from {inv.name} "
+                    + $"{ObjRef.Of(inv.gameObject)}";
         }
         private static string _lastTaken;
 
@@ -790,7 +794,8 @@ namespace DarkwoodMP.World
             if (deaths.Count > 0)
             {
                 r.Fail(
-                    $"deaths in the log: {string.Join(" | ", deaths.Select(l => l.Trim()))}");
+                    "deaths in the log: "
+                        + $"{string.Join(" | ", deaths.Select(l => l.Trim()))}");
             }
             r.Info = string.Join("; ", parts);
             if (r.Failure != null)

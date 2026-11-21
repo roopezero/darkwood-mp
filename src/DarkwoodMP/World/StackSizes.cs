@@ -77,7 +77,8 @@ namespace DarkwoodMP.World
                 }
                 _hostSize = -1;
                 Plugin.Log.LogInfo(
-                    $"[stacks] session over: our own setting again ({Current})");
+                    "[stacks] session over: our own setting again "
+                        + $"({Current})");
                 Apply(Current);
             };
             Plugin.Cfg.StackSize.SettingChanged += (_, __) =>
@@ -204,12 +205,14 @@ namespace DarkwoodMP.World
             if (size > 0)
             {
                 data =
-                    $"[stacks] {eligible} stackable items stack to {size} ({changed} raised)";
+                    $"[stacks] {eligible} stackable items stack to {size} "
+                        + $"({changed} raised)";
             }
             else
             {
                 data =
-                    $"[stacks] {eligible} stackable items stack to the game's own sizes";
+                    $"[stacks] {eligible} stackable items stack to the game's "
+                        + "own sizes";
             }
             Plugin.Log.LogInfo(data);
         }

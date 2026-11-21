@@ -413,7 +413,8 @@ namespace DarkwoodMP.World
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] {p.Item.name} ({p.Ref}) moved {moved:0.0} units by itself: put back");
+                            $"[world] {p.Item.name} ({p.Ref}) moved "
+                                + $"{moved:0.0} units by itself: put back");
                     }
                     continue;
                 }
@@ -422,7 +423,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] pushed {p.Item.name} ({p.Ref}) {moved:0.0} units: sent where it is");
+                        $"[world] pushed {p.Item.name} ({p.Ref}) {moved:0.0} "
+                            + "units: sent where it is");
                 }
             }
             if (gone != null)
@@ -565,7 +567,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {item.name} ({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
+                        $"[world] {item.name} "
+                            + $"({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
                 }
             }
             if (sent > 0 || later > 0)
@@ -576,7 +579,9 @@ namespace DarkwoodMP.World
                     moving = $", {later} still moving (sent once at rest)";
                 }
                 Plugin.Log.LogInfo(
-                    $"{_session.NameOf(who)} is in the world: {sent} loose objects that moved since their snapshot sent to them{moving}");
+                    $"{_session.NameOf(who)} is in the world: {sent} loose "
+                        + "objects that moved since their snapshot sent to "
+                        + $"them{moving}");
             }
         }
 
@@ -909,7 +914,8 @@ namespace DarkwoodMP.World
                 return true;
             }
             Plugin.Log.LogInfo(
-                $"[authority] {_session.NameOf(from)} dragged {item.name} from too far: put back");
+                $"[authority] {_session.NameOf(from)} dragged {item.name} from "
+                    + "too far: put back");
             _session.SendTo(
                 from,
                 Message(
@@ -988,7 +994,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {go.name} ({obj}): the host passed back where we left it");
+                        $"[world] {go.name} ({obj}): the host passed back "
+                            + "where we left it");
                 }
                 return;
             }
@@ -1012,7 +1019,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {s.NameOf(from)} is moving {go.name} ({obj})");
+                        $"[world] {s.NameOf(from)} is moving {go.name} "
+                            + $"({obj})");
                 }
             }
             m.Pos = pos;
@@ -1207,7 +1215,8 @@ namespace DarkwoodMP.World
                 }
             }
             Plugin.Log.LogInfo(
-                $"[dragging] let go of {item.name} ({ObjRef.Of(go)}): {message}");
+                $"[dragging] let go of {item.name} ({ObjRef.Of(go)}): "
+                    + $"{message}");
         }
 
         private void SendOwner(ObjRef r, ulong owner, bool letGo, ulong to = 0)
@@ -1292,7 +1301,8 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
-                    $"[dragging] {_session.NameOf(from)} drags {item.name} ({obj})");
+                    $"[dragging] {_session.NameOf(from)} drags {item.name} "
+                        + $"({obj})");
             }
         }
 
@@ -1322,7 +1332,9 @@ namespace DarkwoodMP.World
                     _corrected[ck] = Time.unscaledTime;
                     SendHere(obj, from);
                     Plugin.Log.LogInfo(
-                        $"[dragging] {_session.NameOf(from)} moved {obj}, which {_session.NameOf(o.Id)} drags: not taken, sent where it is");
+                        $"[dragging] {_session.NameOf(from)} moved "
+                            + $"{obj}, which {_session.NameOf(o.Id)} drags: "
+                            + "not taken, sent where it is");
                 }
                 return false;
             }
@@ -1342,7 +1354,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[dragging] {_session.NameOf(from)} moved {obj} from too far without a claim: dropped");
+                        $"[dragging] {_session.NameOf(from)} moved {obj} from "
+                            + "too far without a claim: dropped");
                 }
                 return false;
             }
@@ -1377,7 +1390,8 @@ namespace DarkwoodMP.World
             SendHere(o.Ref, 0);
             SendOwner(o.Ref, 0, letGo: true);
             Plugin.Log.LogInfo(
-                $"[dragging] {_session.NameOf(o.Id)}'s drag of {o.Ref} freed: {why}");
+                $"[dragging] {_session.NameOf(o.Id)}'s drag of {o.Ref} freed: "
+                    + $"{why}");
         }
 
         private void FreeStale()
@@ -1666,13 +1680,15 @@ namespace DarkwoodMP.World
                         text = "shown";
                     }
                     Plugin.Log.LogInfo(
-                        $"[world] {go.name} moved to another culling node here ({text})");
+                        $"[world] {go.name} moved to another culling node here "
+                            + $"({text})");
                 }
             }
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't move {go.name} to its new culling node: {e.Message}");
+                    $"Couldn't move {go.name} to its new culling node: "
+                        + $"{e.Message}");
             }
         }
 

@@ -195,7 +195,8 @@ namespace DarkwoodMP.Net
             {
                 // Still playable by address; only the browser can't see it.
                 Plugin.Log.LogWarning(
-                    $"Couldn't open UDP port {port} for the server browser: {e.Message}");
+                    $"Couldn't open UDP port {port} for the server browser: "
+                        + $"{e.Message}");
                 _info = null;
             }
 
@@ -687,7 +688,8 @@ namespace DarkwoodMP.Net
                 Kind = EvKind.Lost,
                 Conn = c,
                 Error =
-                    $"it isn't taking what we send ({MaxQueued >> 20} MiB waiting)"
+                    $"it isn't taking what we send ({MaxQueued >> 20} MiB "
+                        + "waiting)"
             });
             return false;
         }
@@ -734,7 +736,8 @@ namespace DarkwoodMP.Net
                         if (IsHost)
                         {
                             Plugin.Log.LogInfo(
-                                $"Connection from {ev.Conn.Remote} as #{ev.Conn.Id}");
+                                $"Connection from {ev.Conn.Remote} as "
+                                    + $"#{ev.Conn.Id}");
                         }
                         else
                         {
@@ -811,7 +814,8 @@ namespace DarkwoodMP.Net
                     && now - c.ConnectedAt > HelloTimeoutMs)
                 {
                     Plugin.Log.LogInfo(
-                        $"#{c.Id} ({c.Remote}) didn't say Hello in {HelloTimeoutMs / 1000} s: closed");
+                        $"#{c.Id} ({c.Remote}) didn't say Hello in "
+                            + $"{HelloTimeoutMs / 1000} s: closed");
                     Drop(c, notify: false, flush: false);
                 }
             }

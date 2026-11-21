@@ -97,7 +97,8 @@ namespace DarkwoodMP.World
                     {
                         note = ", not safe";
                     }
-                    return $"{name} at {at} ({triggers} enter/exit triggers{note})";
+                    return $"{name} at {at} ({triggers} enter/exit "
+                        + $"triggers{note})";
                 })));
             yield return Info(r, $"{locs.Count} world locations");
         }
@@ -240,7 +241,9 @@ namespace DarkwoodMP.World
                 }
                 to = g.transform.position + new Vector3(100f, 0f, 0f);
                 what =
-                    $"by {g.name}, {StateDump.Flat(g.transform.position - Centre):0} from the centre";
+                    $"by {g.name}, "
+                        + $"{StateDump.Flat(g.transform.position - Centre):0} "
+                        + "from the centre";
             }
             else if (t == "to-client")
             {
@@ -310,12 +313,16 @@ namespace DarkwoodMP.World
             if (l == null)
             {
                 r.Fail(
-                    $"no world location within 2500 of the client at {Fmt(j.transform.position)}");
+                    "no world location within 2500 of the client at "
+                        + $"{Fmt(j.transform.position)}");
                 yield break;
             }
             var es = Since(FarEvents.Log, _since, Name(l));
             string info =
-                $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}], our player's steps run [{string.Join(", ", PlayerStepsRun)}], dialogues {Dialogues}";
+                $"{Name(l)}: entered {l.entered}, its events here "
+                    + $"[{Show(es)}], our player's steps run "
+                    + $"[{string.Join(", ", PlayerStepsRun)}], dialogues "
+                    + $"{Dialogues}";
             if (!l.entered)
             {
                 r.Fail("not entered here for the client: " + info);
@@ -433,8 +440,11 @@ namespace DarkwoodMP.World
             var flickers = Flickers(_since);
             var all = Since(FarEvents.Switches, _since);
             r.Info =
-                $"since fe-reset {all.Count(e => e.Kind == "enter")} location enters, {all.Count(e => e.Kind == "leave")} leaves; " +
-                     $"by the client ({string.Join(", ", near)}) in the last 5 s: [{string.Join(", ", switched.Select(e => e.Location + " " + e.Kind))}]; flickers [{string.Join(", ", flickers)}]";
+                $"since fe-reset {all.Count(e => e.Kind == "enter")} location "
+                    + $"enters, {all.Count(e => e.Kind == "leave")} leaves; " +
+                     $"by the client ({string.Join(", ", near)}) in the last 5 "
+                    + "s: "
+                    + $"[{string.Join(", ", switched.Select(e => e.Location + " " + e.Kind))}]; flickers [{string.Join(", ", flickers)}]";
             if (switched.Count > 0)
             {
                 r.Fail(
@@ -491,7 +501,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSeconds(2f);
             var es = Since(FarEvents.Log, _hostArrived, _shared);
             r.Info =
-                $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
+                $"{_shared}: entered {l.entered}, its events since we came "
+                    + $"[{Show(es)}]";
             if (!l.entered)
             {
                 r.Fail("left while our player is in it: " + r.Info);
@@ -518,7 +529,8 @@ namespace DarkwoodMP.World
             }
             var es = Since(FarEvents.Log, _hostArrived, _shared);
             r.Info =
-                $"{_shared}: entered {l.entered}, its events since we came [{Show(es)}]";
+                $"{_shared}: entered {l.entered}, its events since we came "
+                    + $"[{Show(es)}]";
             if (l.entered)
             {
                 r.Fail("still entered after everyone went: " + r.Info);
@@ -576,7 +588,9 @@ namespace DarkwoodMP.World
                 skillText = skill.Value.ToString();
             }
             r.Info =
-                $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the client nearer: {clientNearer}, its electrician skill {skillText})";
+                $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the "
+                    + $"client nearer: {clientNearer}, its electrician skill "
+                    + $"{skillText})";
             if (clientNearer && skill.HasValue
                 && GeneratorDrainSkillPatch.Last != null
                 && !GeneratorDrainSkillPatch.Last.Contains(j.OwnerName))
@@ -590,7 +604,8 @@ namespace DarkwoodMP.World
             int refreshes =
                 SharedCullingPatch.LoadingRefreshes - _refreshesAtReset;
             r.Info =
-                $"{refreshes} culling refreshes round the others while our player was taken to a place, since fe-reset";
+                $"{refreshes} culling refreshes round the others while our "
+                    + "player was taken to a place, since fe-reset";
             if (refreshes == 0)
             {
                 r.Fail(

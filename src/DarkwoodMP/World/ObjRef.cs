@@ -412,7 +412,9 @@ namespace DarkwoodMP.World
                         if (_unsharedLogged++ < 20)
                         {
                             Plugin.Log.LogWarning(
-                                $"A ref to save id {r.Id} came in, but only ids below {SharedIds.ResolveLimit} are the same in every game: ignored");
+                                $"A ref to save id {r.Id} came in, but only "
+                                    + $"ids below {SharedIds.ResolveLimit} are "
+                                    + "the same in every game: ignored");
                         }
                         break;
                     }
@@ -460,7 +462,9 @@ namespace DarkwoodMP.World
                     if (go != null && !exact && WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
-                            $"[world] Placed:{r.Id} ({typeof(T).Name}) taken as {go.name} at {go.transform.position}, off its spot");
+                            $"[world] Placed:{r.Id} ({typeof(T).Name}) taken "
+                                + $"as {go.name} at {go.transform.position}, "
+                                + "off its spot");
                     }
                     break;
             }

@@ -179,7 +179,8 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(1.5f);
             string after = LoopOf(c);
             r.Info =
-                $"{c.name} {ObjRef.Of(c.gameObject)}: loop '{was}' stopped, now '{after}'";
+                $"{c.name} {ObjRef.Of(c.gameObject)}: loop '{was}' stopped, "
+                    + $"now '{after}'";
             // A loop playing here again (not stopped, or the AI started one):
             // the enemies compare wouldn't test the stop.
             if (after != "")
@@ -235,7 +236,8 @@ namespace DarkwoodMP.World
             if (!d.opened || !DoorLeaf.Turned(d))
             {
                 r.Fail(
-                    $"{d.name} didn't swing open (open={d.opened}, leaf at {DoorLeaf.Angle(d):0})");
+                    $"{d.name} didn't swing open (open={d.opened}, leaf at "
+                        + $"{DoorLeaf.Angle(d):0})");
                 yield break;
             }
             yield return new WaitForSecondsRealtime(0.5f);
@@ -243,7 +245,8 @@ namespace DarkwoodMP.World
             if (Mathf.Abs(opened - target) < 8f)
             {
                 r.Fail(
-                    $"{d.name} swung open to {opened:0}, too near {target:0} to tell a push");
+                    $"{d.name} swung open to {opened:0}, too near {target:0} "
+                        + "to tell a push");
                 yield break;
             }
             var rb = d.body.GetComponent<Rigidbody>();
@@ -307,7 +310,8 @@ namespace DarkwoodMP.World
                 DoorPush.TestTouch = null;
             }
             r.Info =
-                $"{d.name} {ObjRef.Of(d.gameObject)}: leaf {opened:0} -> {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0}, wanted {target:0}), open={d.opened}, we are {StateDump.Flat(P.transform.position - hinge.connectedAnchor):0} from the hinge";
+                $"{d.name} "
+                    + $"{ObjRef.Of(d.gameObject)}: leaf {opened:0} -> {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0}, wanted {target:0}), open={d.opened}, we are {StateDump.Flat(P.transform.position - hinge.connectedAnchor):0} from the hinge";
             if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - target) > 4f)
             {
                 r.Fail($"{r.Info}: not turned to {target:0}");
@@ -338,7 +342,8 @@ namespace DarkwoodMP.World
                 yield return null;
             }
             r.Info =
-                $"{d.name} {ObjRef.Of(d.gameObject)} open={d.opened}, leaf at {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0})";
+                $"{d.name} "
+                    + $"{ObjRef.Of(d.gameObject)} open={d.opened}, leaf at {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0})";
             if (!d.opened || Mathf.Abs(DoorLeaf.Angle(d) - want) > 5f)
             {
                 r.Fail($"{r.Info}: not at {want:0}");

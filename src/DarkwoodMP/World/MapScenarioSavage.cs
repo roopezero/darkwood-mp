@@ -111,7 +111,8 @@ namespace DarkwoodMP.World
                     catch (Exception e)
                     {
                         r.Fail(
-                            $"spawning {kind}: {e.GetType().Name}: {e.Message}");
+                            $"spawning {kind}: {e.GetType().Name}: "
+                                + $"{e.Message}");
                         yield break;
                     }
                     if (c == null)
@@ -130,7 +131,8 @@ namespace DarkwoodMP.World
             {
                 NetEnemies.Instance.NetIdOf(c, out uint id);
                 sb.Append(
-                    $"{c.name} #{id} at {Fmt(c.transform.position)} ({Core.trueDistance(c.transform.position, proxy.transform.position):0} from the client): {Anatomy(c)}; ");
+                    $"{c.name} #{id} at {Fmt(c.transform.position)} "
+                        + $"({Core.trueDistance(c.transform.position, proxy.transform.position):0} from the client): {Anatomy(c)}; ");
             }
             r.Info = sb.ToString().TrimEnd(' ', ';');
         }
@@ -465,7 +467,8 @@ namespace DarkwoodMP.World
                 name = struck.name;
             }
             Plugin.Log.LogInfo(
-                $"[sv] hit {name} to draw it to the host; its target now {targetName}");
+                $"[sv] hit {name} to draw it to the host; its target now "
+                    + $"{targetName}");
             yield return new WaitForSeconds(secs * 0.4f);
             yield return Walk(home, 60f, detours: 0);
         }
@@ -529,7 +532,8 @@ namespace DarkwoodMP.World
                         .Concat(seq.Skip(seq.Count - 6)).ToList();
                 }
                 parts.Add(
-                    $"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: {string.Join(" > ", seq)}");
+                    $"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: "
+                        + $"{string.Join(" > ", seq)}");
             }
             return (string.Join(" | ", parts), stuck);
         }
@@ -614,7 +618,8 @@ namespace DarkwoodMP.World
                 if (h.Count == 0)
                 {
                     r.Fail(
-                        $"#{g.Key.Id} {g.Key.Path}: the host has no samples of it");
+                        $"#{g.Key.Id} {g.Key.Path}: the host has no samples of "
+                            + "it");
                     continue;
                 }
                 var mine = g.Where(
@@ -643,7 +648,8 @@ namespace DarkwoodMP.World
                     {
                         var y0 = h.LastOrDefault(y => y.T <= x.T);
                         string key =
-                            $"ours {x.Clip}:{x.Frame} host {y0.Clip}:{y0.Frame}";
+                            $"ours {x.Clip}:{x.Frame} host "
+                                + $"{y0.Clip}:{y0.Frame}";
                         if (bad.TryGetValue(key, out int c))
                         {
                             bad[key] = c + 1;

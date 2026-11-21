@@ -336,7 +336,8 @@ namespace DarkwoodMP.World
             catch (System.Exception e)
             {
                 Plugin.Log.LogWarning(
-                    $"Couldn't run the events of switch {ii.name}: {e.Message}");
+                    $"Couldn't run the events of switch {ii.name}: "
+                        + $"{e.Message}");
             }
         }
 
@@ -615,7 +616,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[world] {__instance.name} went off: its {path} comes from the host");
+                        $"[world] {__instance.name} went off: its {path} comes "
+                            + "from the host");
                 }
                 return false;
             }

@@ -285,7 +285,8 @@ namespace DarkwoodMP.World
             }
             _fxHealth = c.health;
             r.Info =
-                $"{c.name} #{IdOf(c)} at {Fmt(c.transform.position)}, health {c.health}/{c.maxHealth}, preDeath {c.hasPreDeath}";
+                $"{c.name} #{IdOf(c)} at {Fmt(c.transform.position)}, health "
+                    + $"{c.health}/{c.maxHealth}, preDeath {c.hasPreDeath}";
         }
 
         /// <summary>"fx-hit DAMAGE" (client): hit the host's dog once. Its
@@ -343,7 +344,8 @@ namespace DarkwoodMP.World
                 && Mathf.Abs(BarFraction(bar) - frac) > 0.03f)
             {
                 r.Fail(
-                    $"the bar wasn't refreshed with the host's health: {r.Info}");
+                    "the bar wasn't refreshed with the host's health: "
+                        + $"{r.Info}");
             }
             // 45: its shadow, as Character.Update places it.
             if (c.shadow != null && r.Failure == null)
@@ -383,7 +385,8 @@ namespace DarkwoodMP.World
             }
             var bar = Singleton<UI>.Instance.enemyHealthBar;
             r.Info =
-                $"{_fx.name}: health {_fxHealth:0} -> {_fx.health:0}, our bar on it {bar.currentObj == _fx.gameObject}";
+                $"{_fx.name}: health {_fxHealth:0} -> {_fx.health:0}, our bar "
+                    + $"on it {bar.currentObj == _fx.gameObject}";
             if (!(_fx.health < _fxHealth))
             {
                 r.Fail($"the client's hit did nothing here: {r.Info}");
@@ -413,7 +416,8 @@ namespace DarkwoodMP.World
                     false, false));
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"{c.name}: alive {c.alive}, health {c.health:0}, in play {NetEnemies.InPlay(c)}";
+                $"{c.name}: alive {c.alive}, health {c.health:0}, in play "
+                    + $"{NetEnemies.InPlay(c)}";
             if (c.alive)
             {
                 r.Fail($"it's still alive: {r.Info}");
@@ -441,7 +445,8 @@ namespace DarkwoodMP.World
             bool settled = MapScenarioIssues.LogLines().Skip(mark)
                 .Any(l => l.Contains($"#{id} died"));
             string crawl =
-                $"{c.name} #{id}: alive {c.alive}, health {c.health:0} of {c.maxHealth:0}, settled {settled}";
+                $"{c.name} #{id}: alive {c.alive}, health {c.health:0} of "
+                    + $"{c.maxHealth:0}, settled {settled}";
             if (!c.alive || settled)
             {
                 r.Fail(
@@ -478,7 +483,8 @@ namespace DarkwoodMP.World
                 yield break;
             }
             r.Info =
-                $"{_fx.name}: alive {_fx.alive}, health {_fx.health:0}, in play {NetEnemies.InPlay(_fx)}";
+                $"{_fx.name}: alive {_fx.alive}, health {_fx.health:0}, in "
+                    + $"play {NetEnemies.InPlay(_fx)}";
             if (NetEnemies.InPlay(_fx))
             {
                 r.Fail($"it's still in play: {r.Info}");
@@ -602,7 +608,8 @@ namespace DarkwoodMP.World
             _ii = ii;
             yield return null;
             r.Info =
-                $"{host.name} {ObjRef.Of(host.gameObject)} at {Fmt(host.transform.position)} (textures {ii.textureOn}/{ii.textureOff})";
+                $"{host.name} "
+                    + $"{ObjRef.Of(host.gameObject)} at {Fmt(host.transform.position)} (textures {ii.textureOn}/{ii.textureOff})";
         }
 
         private static EventTriggers MakeTrigger(
@@ -672,7 +679,8 @@ namespace DarkwoodMP.World
                 side = "on";
             }
             r.Info =
-                $"{_ii.name}: on {_ii.isOn}, its {side} trigger fired {mine.fired}";
+                $"{_ii.name}: on {_ii.isOn}, its {side} trigger fired "
+                    + $"{mine.fired}";
             if (_ii.isOn != on)
             {
                 r.Fail($"it didn't switch (refused?): {r.Info}");
@@ -717,7 +725,8 @@ namespace DarkwoodMP.World
                 text = "on";
             }
             r.Info =
-                $"{_ii.name}: on {_ii.isOn}, its {text} trigger fired here {t.fired}";
+                $"{_ii.name}: on {_ii.isOn}, its {text} trigger fired here "
+                    + $"{t.fired}";
             if (_ii.isOn != on)
             {
                 r.Fail($"the other's switch didn't reach us: {r.Info}");
@@ -830,7 +839,8 @@ namespace DarkwoodMP.World
                 spot = Fmt(held.transform.position);
             }
             r.Info =
-                $"{type} ({name}) at {spot}: held {HeldItem(p) != null}, on the ground {(ti != null && ti.onGround)}";
+                $"{type} ({name}) at {spot}: held {HeldItem(p) != null}, on "
+                    + $"the ground {(ti != null && ti.onGround)}";
             if (HeldItem(p) != null)
             {
                 r.Fail($"still held: {r.Info}");
@@ -875,7 +885,8 @@ namespace DarkwoodMP.World
             if (found == null)
             {
                 r.Fail(
-                    $"no copy of a dropped {type} ({prefab}) by the drop spot here");
+                    $"no copy of a dropped {type} ({prefab}) by the drop spot "
+                        + "here");
                 yield break;
             }
             var ti = found.GetComponent<ThrownItem>();
@@ -928,7 +939,8 @@ namespace DarkwoodMP.World
             bool nearRes = near.inSightOrCloseToPlayer(),
                 farRes = far.inSightOrCloseToPlayer();
             r.Info =
-                $"near dog: {dn:0} from the client, {hn:0} from us: {nearRes}; far dog: {df:0} / {hf:0}: {farRes}";
+                $"near dog: {dn:0} from the client, {hn:0} from us: {nearRes}; "
+                    + $"far dog: {df:0} / {hf:0}: {farRes}";
             Object.Destroy(near.gameObject);
             Object.Destroy(far.gameObject);
             if (dn > 1450f || hn < 1600f)
@@ -962,7 +974,8 @@ namespace DarkwoodMP.World
             yield return Walk(spot.Value, 20f);
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"at {Fmt(P.transform.position)}: inside {P.isInside} (ground there {JoinerAi.InsideAt(P.transform.position)})";
+                $"at {Fmt(P.transform.position)}: inside {P.isInside} (ground "
+                    + $"there {JoinerAi.InsideAt(P.transform.position)})";
             if (!JoinerAi.InsideAt(P.transform.position))
             {
                 r.Fail($"not on inside ground: {r.Info}");
@@ -1135,7 +1148,8 @@ namespace DarkwoodMP.World
                     knownCount = playerSkills.skills.Count;
                 }
                 parts.Add(
-                    $"no skills to lend ({count} available, {knownCount} known): the wheel wasn't opened");
+                    $"no skills to lend ({count} available, {knownCount} "
+                        + "known): the wheel wasn't opened");
             }
             if (Time.timeScale != 1f && Time.timeScale > 0f)
             {
@@ -1182,7 +1196,8 @@ namespace DarkwoodMP.World
             bool dream = Core.EnteringDream
                 || (dreams != null && dreams.currentTransition != null);
             r.Info =
-                $"{what}: alive {(t != null && t.alive)} after {hits} hits; our dream {dream}";
+                $"{what}: alive {(t != null && t.alive)} after {hits} hits; "
+                    + $"our dream {dream}";
             if (t != null && t.alive)
             {
                 r.Fail($"still alive: {r.Info}");
@@ -1212,7 +1227,8 @@ namespace DarkwoodMP.World
             bool logged = MapScenarioIssues.LogLines().Any(
                 l => l.Contains("the night trader was killed in another game"));
             r.Info =
-                $"living night traders here {alive.Count}; our dream {dream}; skipped it {logged}";
+                $"living night traders here {alive.Count}; our dream {dream}; "
+                    + $"skipped it {logged}";
             if (alive.Count > 0)
             {
                 r.Fail($"the night trader is alive here: {r.Info}");
@@ -1224,7 +1240,8 @@ namespace DarkwoodMP.World
             else if (!logged)
             {
                 r.Fail(
-                    $"the replayed death didn't go by NightTraderDreamPatch: {r.Info}");
+                    "the replayed death didn't go by NightTraderDreamPatch: "
+                        + $"{r.Info}");
             }
         }
     }

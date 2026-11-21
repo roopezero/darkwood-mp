@@ -140,7 +140,8 @@ namespace DarkwoodMP.World
                     if (inv.isImportantItem)
                     {
                         r.Fail(
-                            $"{Item} is an important item: a later player wouldn't get it");
+                            $"{Item} is an important item: a later player "
+                                + "wouldn't get it");
                         yield break;
                     }
                     ge.events.Add(new GameEvent
@@ -186,7 +187,8 @@ namespace DarkwoodMP.World
             _made[id] = m;
             yield return null;
             r.Info =
-                $"trigger {id} {ObjRef.Of(go)} at {Fmt(pos)}: {string.Join(", ", parts)}";
+                $"trigger {id} "
+                    + $"{ObjRef.Of(go)} at {Fmt(pos)}: {string.Join(", ", parts)}";
         }
 
         /// <summary>
@@ -228,7 +230,8 @@ namespace DarkwoodMP.World
                 if (last != null)
                 {
                     made =
-                        $" (made room: took {last.invItem.type}x{last.invItem.amount})";
+                        " (made room: took "
+                            + $"{last.invItem.type}x{last.invItem.amount})";
                     bag.removeItemAmountFromPlayer(
                         last.invItem.type, last.invItem.amount);
                 }
@@ -254,7 +257,8 @@ namespace DarkwoodMP.World
                 text = "already fired here";
             }
             string state =
-                $"{text}, owed {owed}: got {got} {Item}, at the marker {Arrived(m)}, ";
+                $"{text}, owed {owed}: got {got} {Item}, at the marker "
+                    + $"{Arrived(m)}, ";
             LaterTestCounter counter = m.C;
             int? count = null;
             if (counter != null)
@@ -267,7 +271,9 @@ namespace DarkwoodMP.World
                 runs = count.Value;
             }
             r.Info = state
-                + $"shared part ran {runs} time(s) here, still owed {ScriptedEvents.IsOwed(m.T)}{made}; bags {MapScenarioWorld.Contents(bag)}";
+                + $"shared part ran {runs} time(s) here, still owed "
+                + $"{ScriptedEvents.IsOwed(m.T)}{made}; bags "
+                + $"{MapScenarioWorld.Contents(bag)}";
             if (wantItem && got != 1)
             {
                 r.Fail(
@@ -331,7 +337,8 @@ namespace DarkwoodMP.World
                 runs = count.Value;
             }
             r.Info =
-                $"got {got} {Item}, at the marker {there}, shared part ran {runs - ran} more time(s)";
+                $"got {got} {Item}, at the marker {there}, shared part ran "
+                    + $"{runs - ran} more time(s)";
             bool again = got != 0 || (m.Marker != null && Arrived(m));
             if (!again)
             {
@@ -376,7 +383,9 @@ namespace DarkwoodMP.World
             }
             yield return new WaitForSeconds(1f);
             r.Info =
-                $"the shared part of {a[0]} ran {m.C.N} time(s) here (want {want}); fired {m.T.fired}, owed to our player {ScriptedEvents.IsOwed(m.T)}";
+                $"the shared part of {a[0]} ran {m.C.N} time(s) here (want "
+                    + $"{want}); fired {m.T.fired}, owed to our player "
+                    + $"{ScriptedEvents.IsOwed(m.T)}";
             if (m.C.N != want)
             {
                 r.Fail(r.Info);
@@ -414,7 +423,8 @@ namespace DarkwoodMP.World
             if (!Arrived(trip))
             {
                 r.Fail(
-                    $"the trip didn't take us to {Fmt(trip.Marker.position)} (at {Fmt(p.transform.position)})");
+                    $"the trip didn't take us to {Fmt(trip.Marker.position)} "
+                        + $"(at {Fmt(p.transform.position)})");
                 yield break;
             }
             float from = StateDump.Flat(
@@ -426,11 +436,14 @@ namespace DarkwoodMP.World
                 yield return new WaitForSeconds(0.1f);
             }
             r.Info =
-                $"arrived {from:0} from where we left, set off {a[1]} at once: its shared part ran {at.C.N} time(s) here, requests refused {Authority.RolledBack - refusedBefore}";
+                $"arrived {from:0} from where we left, set off {a[1]} at once: "
+                    + $"its shared part ran {at.C.N} time(s) here, requests "
+                    + $"refused {Authority.RolledBack - refusedBefore}";
             if (at.C.N != 1)
             {
                 r.Fail(
-                    $"the host didn't take the trigger we arrived at: {r.Info}");
+                    "the host didn't take the trigger we arrived at: "
+                        + $"{r.Info}");
             }
             Core.forbidInputs = false;
             // the trip's own fade-in ends

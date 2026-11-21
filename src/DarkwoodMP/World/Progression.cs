@@ -261,7 +261,8 @@ namespace DarkwoodMP.World
                     SharedExp = _saved.Exp;
                     SharedLevel = _saved.Level;
                     Plugin.Log.LogInfo(
-                        $"[progress] this world's shared essence {SharedExp}, level {SharedLevel}");
+                        $"[progress] this world's shared essence {SharedExp}, "
+                            + $"level {SharedLevel}");
                 }
             }
             bool begin = false;
@@ -283,7 +284,8 @@ namespace DarkwoodMP.World
                 SharedExp = _saved.Exp;
                 SharedLevel = _saved.Level;
                 Plugin.Log.LogInfo(
-                    $"[progress] shared progression starts from yours: essence {SharedExp}, level {SharedLevel}");
+                    "[progress] shared progression starts from yours: essence "
+                        + $"{SharedExp}, level {SharedLevel}");
             }
             return _saved;
         }
@@ -337,7 +339,8 @@ namespace DarkwoodMP.World
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
-                        $"[progress] shared essence {SharedExp}, level {SharedLevel}");
+                        $"[progress] shared essence {SharedExp}, level "
+                            + $"{SharedLevel}");
                 }
                 if (!Solo)
                 {
@@ -395,7 +398,8 @@ namespace DarkwoodMP.World
             SharedExp += amount;
             _saved.Exp = SharedExp;
             Plugin.Log.LogInfo(
-                $"[progress] {S.NameOf(from)} cooked {amount} essence: shared {SharedExp}");
+                $"[progress] {S.NameOf(from)} cooked {amount} essence: shared "
+                    + $"{SharedExp}");
             SendState(0);
             Apply(p);
         }
@@ -412,7 +416,8 @@ namespace DarkwoodMP.World
             if (level > allowed)
             {
                 Plugin.Log.LogInfo(
-                    $"[progress] {S.NameOf(from)} says level {level}; the shared essence allows {allowed}");
+                    $"[progress] {S.NameOf(from)} says level {level}; the "
+                        + $"shared essence allows {allowed}");
             }
             level = Math.Min(level, allowed);
             if (level <= SharedLevel)
@@ -421,7 +426,8 @@ namespace DarkwoodMP.World
             }
             SharedLevel = _saved.Level = level;
             Plugin.Log.LogInfo(
-                $"[progress] {S.NameOf(from)} took level {level}: everyone can take it at a stove");
+                $"[progress] {S.NameOf(from)} took level {level}: everyone can "
+                    + "take it at a stove");
             SendState(0);
         }
 
@@ -510,7 +516,8 @@ namespace DarkwoodMP.World
                 return;
             }
             Plugin.Log.LogInfo(
-                $"[progress] {S.NameOf(from)} reset their skills (day {Today})");
+                $"[progress] {S.NameOf(from)} reset their skills (day "
+                    + $"{Today})");
         }
 
         // ---- client ---------------------------------------------------------
@@ -542,7 +549,8 @@ namespace DarkwoodMP.World
                     yours = player.currentLevel;
                 }
                 Plugin.Log.LogInfo(
-                    $"[progress] shared essence {SharedExp}, level {SharedLevel}; yours {yours}");
+                    $"[progress] shared essence {SharedExp}, level "
+                        + $"{SharedLevel}; yours {yours}");
             }
             Apply(Player.Instance);
         }
@@ -751,9 +759,11 @@ namespace DarkwoodMP.World
             DreamSync.AfterConfirm(d);
             LevelTaken();
             Plugin.Log.LogInfo(
-                $"[progress] took level {p.currentLevel} at the stove: {SkillTree.Points(p)} skill points to spend");
+                $"[progress] took level {p.currentLevel} at the stove: "
+                    + $"{SkillTree.Points(p)} skill points to spend");
             p.displayMessage(
-                $"A skill point to spend: press {SkillsPanel.KeyName} for the Skills");
+                $"A skill point to spend: press {SkillsPanel.KeyName} for the "
+                    + "Skills");
         }
 
         // ---- skill reset ----------------------------------------------------
@@ -829,7 +839,8 @@ namespace DarkwoodMP.World
                 p.currentLevel = 0;
             }
             Plugin.Log.LogInfo(
-                $"[progress] skills reset: {n} taken back, level {p.currentLevel}");
+                $"[progress] skills reset: {n} taken back, level "
+                    + $"{p.currentLevel}");
         }
 
         private static bool CanResetHere(Player p)
@@ -904,7 +915,8 @@ namespace DarkwoodMP.World
                 HostSync();
             }
             p.displayMessage(
-                $"Skills reset: {SkillTree.Points(p)} skill points to spend ({SkillsPanel.KeyName})");
+                $"Skills reset: {SkillTree.Points(p)} skill points to spend "
+                    + $"({SkillsPanel.KeyName})");
         }
 
         /// <summary>At our stove: the levels waiting, the points to spend, and
@@ -932,7 +944,8 @@ namespace DarkwoodMP.World
             if (points > 0)
             {
                 lines.Add(
-                    $"Skill points to spend: {points} ({SkillsPanel.KeyName}: Skills)");
+                    $"Skill points to spend: {points} ({SkillsPanel.KeyName}: "
+                        + "Skills)");
             }
             if (lines.Count == 0 && !morning)
             {
@@ -1052,9 +1065,13 @@ namespace DarkwoodMP.World
                     }
                 }
             }
-            return $"level {p.currentLevel}, essence {p.experience} (next level at {Req(p, p.currentLevel)}), shared essence {SharedExp} level {SharedLevel}, " +
-                   $"skills chosen {chosen}, points {SkillTree.Points(p)}, morning {InMorning(0)}, kept in a file {_saved != null}, " +
-                   $"reset today {(_saved != null && _saved.Resets.TryGetValue("host", out int d) && d == Today)}";
+            return $"level {p.currentLevel}, essence {p.experience} (next "
+                + $"level at {Req(p, p.currentLevel)}), shared essence "
+                + $"{SharedExp} level {SharedLevel}, " +
+                   $"skills chosen {chosen}, points {SkillTree.Points(p)}, "
+                + $"morning {InMorning(0)}, kept in a file {_saved != null}, " +
+                   "reset today "
+                + $"{(_saved != null && _saved.Resets.TryGetValue("host", out int d) && d == Today)}";
         }
     }
 

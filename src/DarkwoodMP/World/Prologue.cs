@@ -95,7 +95,10 @@ namespace DarkwoodMP.World
                 return null;
             }
             var d = D;
-            return $"stage {Stage}, dreaming {d.dreaming}, switching {d.switchingDream}, entering {Core.EnteringDream}, world ready {worldReady}, inputs forbidden {Core.forbidInputs}, loading {Core.loadingGame}";
+            return $"stage {Stage}, dreaming {d.dreaming}, switching "
+                + $"{d.switchingDream}, entering {Core.EnteringDream}, world "
+                + $"ready {worldReady}, inputs forbidden {Core.forbidInputs}, "
+                + $"loading {Core.loadingGame}";
         }
         private static string _lastWhy;
 
@@ -135,7 +138,8 @@ namespace DarkwoodMP.World
             state.wantToDream = true;
             state.dreamName = d.preset.name;
             Plugin.Log.LogInfo(
-                $"[prologue] snapshot saved in {d.preset.name}: the joiner goes into it as it loads");
+                $"[prologue] snapshot saved in {d.preset.name}: the joiner "
+                    + "goes into it as it loads");
         }
 
         /// <summary>
@@ -206,7 +210,9 @@ namespace DarkwoodMP.World
                 else
                 {
                     Plugin.Log.LogWarning(
-                        $"[prologue] {d.preset.name} is in slot {i} of {state.actualSpawnedLocationsCount}: a joiner makes it in another");
+                        $"[prologue] {d.preset.name} is in slot {i} of "
+                            + $"{state.actualSpawnedLocationsCount}: a joiner "
+                            + "makes it in another");
                 }
                 break;
             }
@@ -255,7 +261,8 @@ namespace DarkwoodMP.World
                 {
                     Core.forbidInputs = false;
                     Plugin.Log.LogInfo(
-                        $"[prologue] loaded into {stage}: the player is let go");
+                        $"[prologue] loaded into {stage}: the player is let "
+                            + "go");
                 }
             }
             else if (stage == null)
@@ -287,18 +294,32 @@ namespace DarkwoodMP.World
                     firstPlay = p.firstPlay;
                 }
                 Plugin.Log.LogInfo(
-                    $"[prologue] in {stage}, not ready: generated {Core.worldGenFinished()}, loading {Core.loadingGame}, inputs forbidden {Core.forbidInputs} "
-                        + $"(locked {Core.cantChangeForbidInputs}, cutscene {ctl != null && ctl.playingCutscene}, place loading {o != null && o.loading}, switching {d.switchingDream}, "
-                        + $"entering {Core.EnteringDream}, dialogue {p != null && p.inDialogue}), first play set {_firstPlaySet}; "
-                        + $"dream prepared {d.dreamPrepared}, loading in dream {d.loadingSaveGameInDream}, want {d.wantToDream}, outside {o != null && o.playerInOutsideLocation} {location}, "
-                        + $"spawning {o != null && o.spawningLocations}, generator finished {finished}, first play {firstPlay}");
+                    $"[prologue] in {stage}, not ready: generated "
+                        + $"{Core.worldGenFinished()}, loading "
+                        + $"{Core.loadingGame}, inputs forbidden "
+                        + $"{Core.forbidInputs} "
+                        + $"(locked {Core.cantChangeForbidInputs}, cutscene "
+                        + $"{ctl != null && ctl.playingCutscene}, place "
+                        + $"loading {o != null && o.loading}, switching "
+                        + $"{d.switchingDream}, "
+                        + $"entering {Core.EnteringDream}, dialogue "
+                        + $"{p != null && p.inDialogue}), first play set "
+                        + $"{_firstPlaySet}; "
+                        + $"dream prepared {d.dreamPrepared}, loading in dream "
+                        + $"{d.loadingSaveGameInDream}, want {d.wantToDream}, "
+                        + $"outside {o != null && o.playerInOutsideLocation} "
+                        + $"{location}, "
+                        + $"spawning {o != null && o.spawningLocations}, "
+                        + $"generator finished {finished}, first play "
+                        + $"{firstPlay}");
             }
             if (stage != null && NetEnemies.ClientMode && !_firstPlaySet
                 && WorldShare.WorldReady && p != null)
             {
                 _firstPlaySet = true;
                 Plugin.Log.LogInfo(
-                    $"[prologue] in the host's prologue ({stage}): a first play (was {p.firstPlay})");
+                    $"[prologue] in the host's prologue ({stage}): a first "
+                        + $"play (was {p.firstPlay})");
                 p.firstPlay = true;
             }
             if (stage == null && !Active)

@@ -151,7 +151,8 @@ namespace DarkwoodMP.Sync
                 if (t != null && Flat(pos - t.Good) <= Teleport)
                 {
                     Plugin.Log.LogInfo(
-                        $"[authority] {_session.NameOf(from)} was taken to {pos} by an event the host agreed to");
+                        $"[authority] {_session.NameOf(from)} was taken to "
+                            + $"{pos} by an event the host agreed to");
                 }
                 _tracks[from] =
                     new Track { Good = pos, WindowStart = pos, WindowAt = now };
@@ -166,7 +167,9 @@ namespace DarkwoodMP.Sync
                     t.LastCorrection = now;
                     Corrections++;
                     Plugin.Log.LogInfo(
-                        $"[authority] {_session.NameOf(from)} moved at {speed:0} a second (most {MaxSpeed:0}): put back");
+                        $"[authority] {_session.NameOf(from)} moved at "
+                            + $"{speed:0} a second (most {MaxSpeed:0}): put "
+                            + "back");
                     var w = _session.Begin(MsgType.PlayerCorrection);
                     w.Write(t.Good);
                     _session.SendTo(from, w, Channel.Control, reliable: true);

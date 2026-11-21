@@ -141,7 +141,8 @@ namespace DarkwoodMP.World
                     name = "#" + from;
                 }
                 Plugin.Log.LogWarning(
-                    $"[authority] dropped {type} from {name}: it's only taken as a request");
+                    $"[authority] dropped {type} from {name}: it's only taken "
+                        + "as a request");
             }
             return false;
         }
@@ -208,7 +209,8 @@ namespace DarkwoodMP.World
             {
                 RolledBack++;
                 Plugin.Log.LogInfo(
-                    $"[authority] the host refused {p.What}: {reason}; rolled back");
+                    $"[authority] the host refused {p.What}: {reason}; rolled "
+                        + "back");
                 InventoryWatch.Undo(p.Inventory);
             }
             else if (WorldActions.Debug)
@@ -219,7 +221,8 @@ namespace DarkwoodMP.World
                     text = " (" + result + ")";
                 }
                 Plugin.Log.LogInfo(
-                    $"[authority] {p.What}: ok{text} after {(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
+                    $"[authority] {p.What}: ok{text} after "
+                        + $"{(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
             }
             try
             {
@@ -337,7 +340,8 @@ namespace DarkwoodMP.World
                     what = ((MsgType)inner[0]).ToString();
                 }
                 Plugin.Log.LogInfo(
-                    $"[authority] refused {what} from {s.NameOf(from)}: {_refusal}");
+                    $"[authority] refused {what} from {s.NameOf(from)}: "
+                        + $"{_refusal}");
             }
         }
 
@@ -386,7 +390,9 @@ namespace DarkwoodMP.World
                 refusal = "not here";
             }
             Plugin.Log.LogInfo(
-                $"[authority] {S.NameOf(From)}'s {what}: they're where the host doesn't run ({refusal}), so it's theirs alone: accepted, not applied here");
+                $"[authority] {S.NameOf(From)}'s {what}: they're where the "
+                    + $"host doesn't run ({refusal}), so it's theirs alone: "
+                    + "accepted, not applied here");
             _refusal = null;
             string kept = result;
             if (kept == null)
@@ -543,7 +549,8 @@ namespace DarkwoodMP.World
                 catch (Exception e)
                 {
                     Plugin.Log.LogWarning(
-                        $"[authority] couldn't undo {kv.Value} {kv.Key}: {e.Message}");
+                        $"[authority] couldn't undo {kv.Value} {kv.Key}: "
+                            + $"{e.Message}");
                 }
             }
             _base = Count();

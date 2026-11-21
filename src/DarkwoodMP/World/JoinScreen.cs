@@ -266,7 +266,9 @@ namespace DarkwoodMP.World
                 }
                 Raise(DownloadShare * fraction);
                 string progress =
-                    $"Downloading the host's world: {p.Value.Got / 1048576f:0.0} / {p.Value.Total / 1048576f:0.0} MB";
+                    "Downloading the host's world: "
+                        + $"{p.Value.Got / 1048576f:0.0} / "
+                        + $"{p.Value.Total / 1048576f:0.0} MB";
                 string unpacked = "";
                 if (world.UnpackedSize > 0)
                 {
@@ -386,7 +388,8 @@ namespace DarkwoodMP.World
             }
             _stage = s;
             Plugin.Log.LogInfo(
-                $"[join] loading screen: {s.ToString().ToLowerInvariant()} {Mathf.RoundToInt(_fraction * 100f)}%" + At);
+                $"[join] loading screen: {s.ToString().ToLowerInvariant()} "
+                    + $"{Mathf.RoundToInt(_fraction * 100f)}%" + At);
         }
     }
 }

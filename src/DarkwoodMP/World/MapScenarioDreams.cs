@@ -75,7 +75,9 @@ namespace DarkwoodMP.World
                 shared = "none";
             }
             r.Info =
-                $"dreaming {presetName} (shared {shared}) at {Locations.Current()}; host runs here {Locations.HostRunsHere()}";
+                $"dreaming {presetName} (shared {shared}) at "
+                    + $"{Locations.Current()}; host runs here "
+                    + $"{Locations.HostRunsHere()}";
             if (!D.dreaming || DreamSync.Shared != null
                 || Locations.HostRunsHere())
             {
@@ -242,7 +244,8 @@ namespace DarkwoodMP.World
                 answer = "refused: " + why;
             }
             r.Info =
-                $"in {locationName}: wardrobe {opened}, {text}; our chomper {chomper}; {doorInfo}; " +
+                $"in {locationName}: wardrobe {opened}, {text}; our chomper "
+                    + $"{chomper}; {doorInfo}; " +
                      $"forged request {answer}; refused {refused}";
             if (refused > 0)
             {
@@ -264,7 +267,8 @@ namespace DarkwoodMP.World
             else if (item != null && ok != true)
             {
                 r.Fail(
-                    $"the host didn't take a request from our own dream: {r.Info}");
+                    "the host didn't take a request from our own dream: "
+                        + $"{r.Info}");
             }
         }
 
@@ -325,11 +329,14 @@ namespace DarkwoodMP.World
                 Progression.SharedExp,
                 reqs[Mathf.Clamp(p.currentLevel, 0, reqs.Count - 1)]);
             r.Info =
-                $"shared essence {Progression.SharedExp} level {Progression.SharedLevel}; ours {p.experience} at level {p.currentLevel}";
+                $"shared essence {Progression.SharedExp} level "
+                    + $"{Progression.SharedLevel}; ours {p.experience} at "
+                    + $"level {p.currentLevel}";
             if (p.experience != want)
             {
                 r.Fail(
-                    $"our essence isn't the shared one up to our next level ({want}): {r.Info}");
+                    "our essence isn't the shared one up to our next level "
+                        + $"({want}): {r.Info}");
             }
         }
 
@@ -392,7 +399,8 @@ namespace DarkwoodMP.World
                 presetName = preset.name;
             }
             r.Info =
-                $"dreaming {presetName} (shared {DreamSync.Shared}) at {Locations.Current()}";
+                $"dreaming {presetName} (shared {DreamSync.Shared}) at "
+                    + $"{Locations.Current()}";
             if (DreamSync.Shared != name)
             {
                 r.Fail($"the dream isn't shared: {r.Info}");
@@ -434,7 +442,8 @@ namespace DarkwoodMP.World
                 presetName = preset.name;
             }
             r.Info =
-                $"dreaming {presetName} (shared {DreamSync.Shared}) at {Locations.Current()}; a friend's puppet shown {seen}";
+                $"dreaming {presetName} (shared {DreamSync.Shared}) at "
+                    + $"{Locations.Current()}; a friend's puppet shown {seen}";
             if (D.preset == null || D.preset.name != name
                 || DreamSync.Shared != name)
             {
@@ -491,7 +500,9 @@ namespace DarkwoodMP.World
             var ne = Combat.NetEnemies.Instance;
             var sb = new System.Text.StringBuilder();
             sb.Append(
-                $"dream {loc.name} at {Fmt(loc.transform.position)}, us at {Fmt(P.transform.position)}, hostRunsHere {Locations.HostRunsHere()}; ");
+                $"dream {loc.name} at {Fmt(loc.transform.position)}, us at "
+                    + $"{Fmt(P.transform.position)}, hostRunsHere "
+                    + $"{Locations.HostRunsHere()}; ");
             foreach (var c in Object.FindObjectsOfType<Character>(true))
             {
                 if (StateDump.Flat(
@@ -503,7 +514,10 @@ namespace DarkwoodMP.World
                 bool net = ne != null
                     && (ne.NetIdOf(c, out id) || ne.IsPuppet(c, out id));
                 string line =
-                    $"\n  {c.name} npc {(c.npc != null)} dummy {c.dummy} elig {Combat.NetEnemies.Eligible(c)} act {c.gameObject.activeInHierarchy} en {c.enabled} alive {c.alive} ";
+                    $"\n  {c.name} npc {(c.npc != null)} dummy {c.dummy} elig "
+                        + $"{Combat.NetEnemies.Eligible(c)} act "
+                        + $"{c.gameObject.activeInHierarchy} en {c.enabled} "
+                        + $"alive {c.alive} ";
                 string spot = Fmt(c.transform.position);
                 string target = "-";
                 if (c.target != null)
@@ -511,7 +525,8 @@ namespace DarkwoodMP.World
                     target = c.target.name;
                 }
                 string state =
-                    $"at {spot} tgt {target} net {net}#{id} aggr {c.aggressive} sleep {c.sleeping} ";
+                    $"at {spot} tgt {target} net {net}#{id} aggr "
+                        + $"{c.aggressive} sleep {c.sleeping} ";
                 var scripts = c.GetComponents<MonoBehaviour>().Select(m =>
                 {
                     if (m == null)
@@ -525,7 +540,8 @@ namespace DarkwoodMP.World
             foreach (var ge in loc.GetComponentsInChildren<GameEvents>(true))
             {
                 sb.Append(
-                    $"\n  events {ge.name} act {ge.gameObject.activeInHierarchy}");
+                    $"\n  events {ge.name} act "
+                        + $"{ge.gameObject.activeInHierarchy}");
             }
             r.Info = sb.ToString();
             Plugin.Log.LogInfo("[dream-mob] " + r.Info);
@@ -630,7 +646,8 @@ namespace DarkwoodMP.World
                 seen = Fmt(shown.transform.position);
             }
             r.Info =
-                $"closed {wardrobe} at {there} from {here}; the host's chomper shown: {seen}";
+                $"closed {wardrobe} at {there} from {here}; the host's chomper "
+                    + $"shown: {seen}";
             if (shown == null)
             {
                 r.Fail($"the host's chomper isn't shown here: {r.Info}");
@@ -725,7 +742,8 @@ namespace DarkwoodMP.World
                 c => !ne.IsPuppet(c, out _) && c.gameObject.activeInHierarchy
                     && !Combat.NetEnemies.Frozen.Contains(c)).ToList();
             string line =
-                $"host runs it here {Locations.HostRunsHere()}; the host's shown {puppets}; ours running {running.Count}";
+                $"host runs it here {Locations.HostRunsHere()}; the host's "
+                    + $"shown {puppets}; ours running {running.Count}";
             string names = "";
             if (running.Count > 0)
             {
@@ -810,7 +828,8 @@ namespace DarkwoodMP.World
         private static string DoorInfo(Door d)
         {
             var l = d.GetComponent<Locked>();
-            return $"{d.name} at {Fmt(d.transform.position)} {ObjRef.Of(d.gameObject)} locked {(l != null && l.locked)} blocked {d.blocked} open {d.opened}";
+            return $"{d.name} at {Fmt(d.transform.position)} "
+                + $"{ObjRef.Of(d.gameObject)} locked {(l != null && l.locked)} blocked {d.blocked} open {d.opened}";
         }
 
         /// <summary>

@@ -298,7 +298,11 @@ namespace DarkwoodMP.Net
             if (BehindAnotherNat)
             {
                 Status =
-                    $"Your router opened {ports} ({how}), but its internet address {ip} is a shared or private one (your provider's NAT, or a second router): friends over the internet probably still can't reach you. Use Steam or a VPN.";
+                    $"Your router opened {ports} ({how}), but its internet "
+                        + $"address {ip} is a shared or private one (your "
+                        + "provider's NAT, or a second router): friends over "
+                        + "the internet probably still can't reach you. Use "
+                        + "Steam or a VPN.";
             }
             else
             {
@@ -332,7 +336,8 @@ namespace DarkwoodMP.Net
                 nat = " (private: another NAT in front)";
             }
             Plugin.Log.LogInfo(
-                $"[port mapping] {how}: {internalIp}:{port} -> {ports}, external address {shownIp}{text}{nat}");
+                $"[port mapping] {how}: {internalIp}:{port} -> {ports}, "
+                    + $"external address {shownIp}{text}{nat}");
         }
 
         private void Remove(Mapping m)
@@ -445,16 +450,20 @@ namespace DarkwoodMP.Net
                     catch (Exception e)
                     {
                         Plugin.Log.LogInfo(
-                            $"[port mapping] GetExternalIPAddress at {control}: {e.Message}");
+                            "[port mapping] GetExternalIPAddress at "
+                                + $"{control}: {e.Message}");
                     }
                     if (!AddUpnp(m, "TCP", LeaseSeconds, out string why))
                     {
                         Plugin.Log.LogInfo(
-                            $"[port mapping] UPnP router at {loc} refused TCP {port}: {why}");
+                            $"[port mapping] UPnP router at {loc} refused TCP "
+                                + $"{port}: {why}");
                         if (why.StartsWith("718"))
                         {
                             _refused =
-                                $"Port {port} is already forwarded to another computer on your router. Pick another port, or forward it by hand.";
+                                $"Port {port} is already forwarded to another "
+                                    + "computer on your router. Pick another "
+                                    + "port, or forward it by hand.";
                         }
                         continue;
                     }
@@ -472,7 +481,8 @@ namespace DarkwoodMP.Net
                         // The game itself still works over TCP; only the
                         // browser's info query is missing.
                         Plugin.Log.LogInfo(
-                            $"[port mapping] UPnP router refused UDP {port}: {why}");
+                            $"[port mapping] UPnP router refused UDP {port}: "
+                                + $"{why}");
                         m.ExternalUdp = 0;
                     }
                     return m;
@@ -534,14 +544,18 @@ namespace DarkwoodMP.Net
                             foreach (string st in SearchTargets)
                             {
                                 byte[] q = Encoding.ASCII.GetBytes(
-                                    $"M-SEARCH * HTTP/1.1\r\nHOST: 239.255.255.250:1900\r\nMAN: \"ssdp:discover\"\r\nMX: 2\r\nST: {st}\r\n\r\n");
+                                    "M-SEARCH * HTTP/1.1\r\nHOST: "
+                                        + "239.255.255.250:1900\r\nMAN: "
+                                        + "\"ssdp:discover\"\r\nMX: 2\r\nST: "
+                                        + $"{st}\r\n\r\n");
                                 u.Send(q, q.Length, to);
                             }
                         }
                         catch (Exception e)
                         {
                             Plugin.Log.LogInfo(
-                                $"[port mapping] SSDP from {ip} to {to}: {e.Message}");
+                                $"[port mapping] SSDP from {ip} to "
+                                    + $"{to}: {e.Message}");
                         }
                     }
                 }
@@ -745,7 +759,8 @@ namespace DarkwoodMP.Net
                     + "xmlns:s=\"http://schemas.xmlsoap.org/soap/envelope/\" "
                     + "s:encodingStyle="
                     + "\"http://schemas.xmlsoap.org/soap/encoding/\">" +
-                $"<s:Body><u:{action} xmlns:u=\"{m.ServiceType}\">{args}</u:{action}></s:Body></s:Envelope>";
+                $"<s:Body><u:{action} "
+                    + $"xmlns:u=\"{m.ServiceType}\">{args}</u:{action}></s:Body></s:Envelope>";
             string text = Http(
                 "POST", m.ControlUrl, body, $"\"{m.ServiceType}#{action}\"",
                 out int status);
