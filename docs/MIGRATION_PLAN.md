@@ -5,14 +5,12 @@ How the code moves from what it is today to the layout in
 going; this one says in what order, how each step is done, and how each step
 is checked.
 
-**Status:** Phase 0 is done. Phase 1 is done except for its in-game gate, which
-moves to the final run, and the hand tests of a test build on Windows and on
+**Status:** Phases 0 to 3 are done, apart from their in-game gates, which
+move to the final run, and the hand tests of a test build on Windows and on
 GOG, which are still to do. The formatting pass over all the code is done, and
-the style rules are errors in the plugin too. The rules of Phases 4 to 8 are
-written in the core with their unit tests; the plugin doesn't call them yet.
-Phase 2's move is done: the map test steps are in `src/DarkwoodMP.MapTests`, a
-second plugin; splitting its files over 600 lines is next. Phase 3 has moved
-the network code into the core; its loopback tests are under way. See [Changes made
+the style rules are errors in every project. The rules of Phases 4 to 8 are
+written in the core with their unit tests; the plugin calls them as each
+subsystem moves. Phase 4 is under way. See [Changes made
 while carrying out the plan](#changes-made-while-carrying-out-the-plan). Tick
 the boxes below as steps are merged, and delete this file when Phase 8 is
 finished.
@@ -213,8 +211,10 @@ first so that later steps don't have to move them too.
 - [x] Move the 40 `MapScenario*` files and apply their test-only patches from
       the new project. `TestOnlyPatch` in `Plugin.cs` goes away.
 - [x] Deploy the DLL to test game folders only, and check that it's in no zip.
-- [ ] Format the moved files, splitting the five over 600 lines, then switch
-      this project's style warnings to errors.
+- [x] Format the moved files, splitting the five over 600 lines, then switch
+      this project's style warnings to errors. The files over 600 lines
+      became `static partial` classes split by topic
+      (`MapScenarioWorld.Doors.cs`); `MapScenarioEnemies.Fights.cs` is 608.
 
 **Gate:** `tools/run-test.sh maps`, with the same results as the baseline.
 
