@@ -224,10 +224,63 @@ namespace DarkwoodMP.World.Rolls
         }
 
         /// <summary>
+        /// Player.shadowLightsTurnOff (RollRules.ShadowLights): the host
+        /// picks the lamp and sends it, a joiner waits for it. Whether the
+        /// game's runs.
+        /// </summary>
+        public bool ShadowLightsTurnOff(Player p)
+        {
+            switch (RollRules.ShadowLights(Follows, HostSharing))
+            {
+                case ShadowTurn.Skip:
+                    return false;
+                case ShadowTurn.HostRolls:
+                    HostShadowLights(p);
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        /// <summary>
+        /// A GameEvent step's coroutine (RollRules.PlayStep): a joiner
+        /// playing the host's night event runs only the steps that are seen
+        /// or heard.
+        /// </summary>
+        public IEnumerator Step(GameEvent e, IEnumerator inner)
+        {
+            // Only looked at while a night event is played.
+            bool presenting = Presentation > 0;
+            bool follows = false;
+            if (presenting)
+            {
+                follows = Follows;
+            }
+
+            bool presents = PresentationOnly(e);
+            switch (RollRules.PlayStep(presenting, follows, presents))
+            {
+                case StepPlay.Presented:
+                    return AsPresentation(inner);
+                case StepPlay.Dropped:
+                    if (WorldActions.Debug)
+                    {
+                        Plugin.Log.LogInfo(
+                            $"[world] night event step {e.type} "
+                                + $"({e.Value}) left to the host");
+                    }
+
+                    return Nothing();
+                default:
+                    return inner;
+            }
+        }
+
+        /// <summary>
         /// Player.shadowLightsTurnOff on the host, at night while the shadows
         /// are there (ShadowRules.Rolls).
         /// </summary>
-        internal bool HostShadowLights(Player p)
+        private bool HostShadowLights(Player p)
         {
             bool removed = Singleton<CharacterSpawner>.Instance.shadowsRemove;
             if (!ShadowRules.Rolls(false, removed, Core.isDay()))
@@ -392,7 +445,7 @@ namespace DarkwoodMP.World.Rolls
             }
         }
 
-        internal static IEnumerator Nothing()
+        private static IEnumerator Nothing()
         {
             yield break;
         }
@@ -401,7 +454,7 @@ namespace DarkwoodMP.World.Rolls
         /// Runs a played event's step with Presentation and Replaying set, so
         /// what it fires later is filtered too.
         /// </summary>
-        internal IEnumerator AsPresentation(IEnumerator inner)
+        private IEnumerator AsPresentation(IEnumerator inner)
         {
             while (true)
             {

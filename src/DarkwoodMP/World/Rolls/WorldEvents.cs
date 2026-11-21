@@ -63,17 +63,59 @@ namespace DarkwoodMP.World.Rolls
         /// A joiner in the shared world: the host rolls the world's events,
         /// this game follows.
         /// </summary>
-        public static bool Follows
+        public bool Follows
         {
             get
             {
-                var o = Singleton<OutsideLocations>.Instance;
-                var d = Singleton<Dreams>.Instance;
-                bool outside = o != null && o.playerInOutsideLocation;
-                bool dreaming = d != null && d.dreaming;
-                return RollRules.Follows(
-                    NetEnemies.ClientMode, outside, dreaming);
+                // Where the player is only matters on a joiner.
+                bool client = NetEnemies.ClientMode;
+                bool outside = false;
+                bool dreaming = false;
+                if (client)
+                {
+                    var o = Singleton<OutsideLocations>.Instance;
+                    var d = Singleton<Dreams>.Instance;
+                    outside = o != null && o.playerInOutsideLocation;
+                    dreaming = d != null && d.dreaming;
+                }
+
+                return RollRules.Follows(client, outside, dreaming);
             }
+        }
+
+        /// <summary>
+        /// A joiner playing the host's world, away or not: the dawn's objects
+        /// and the weather are the host's.
+        /// </summary>
+        public bool Client => NetEnemies.ClientMode;
+
+        /// <summary>
+        /// Whether a RandomEvent fires here (RollRules.RunsRandomEvent): a
+        /// joiner's own don't, and a night event the host sent plays only
+        /// its location events' presentation.
+        /// </summary>
+        public bool RunsRandomEvent(RandomEvent e)
+        {
+            bool location = e.type == RandomEvent.Type.locationEvent;
+            return RollRules.RunsRandomEvent(
+                Follows, Presentation > 0, location);
+        }
+
+        /// <summary>
+        /// Rain.onNewDay: a joiner keeps the new day's fog reset (not
+        /// random); the rest is the host's, in Weather. Whether the game's
+        /// runs.
+        /// </summary>
+        public bool RainNewDay(Rain rain)
+        {
+            if (!Client)
+            {
+                return true;
+            }
+
+            rain.fogFadedInToday = false;
+            rain.fogFadedOutToday = false;
+            return false;
         }
 
         private bool HostSharing => Net.IsHost && _coop.Guards.Sharing;

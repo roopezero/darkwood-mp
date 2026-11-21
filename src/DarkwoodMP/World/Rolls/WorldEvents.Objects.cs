@@ -31,7 +31,7 @@ namespace DarkwoodMP.World.Rolls
         /// </summary>
         internal void RandomObjectsMade()
         {
-            if (HostSharing)
+            if (!Client && HostSharing)
             {
                 _clock.ObjectsMade(Now);
             }
@@ -118,9 +118,59 @@ namespace DarkwoodMP.World.Rolls
         }
 
         /// <summary>
+        /// WormsSpawner.spawn: a joiner in the shared world makes none, and
+        /// the host notes how many night objects the player's chunk has, to
+        /// send the one it makes. Whether the game's runs.
+        /// </summary>
+        public bool NightObjectBefore(out NightCount before)
+        {
+            before = new NightCount(null, 0);
+            if (Follows)
+            {
+                return false;
+            }
+
+            var p = Player.Instance;
+            // The game lists the new mushroom in the chunk the player is in.
+            WorldChunk chunk = null;
+            if (p != null)
+            {
+                chunk = WorldChunk.getChunkAtPos(p._transform.position);
+            }
+
+            if (chunk != null)
+            {
+                before = new NightCount(
+                    chunk, chunk.nightSpawnedObjects.Count);
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// After WormsSpawner.spawn: the host sends the night mushroom it
+        /// made (RollRules.SendsNightObject).
+        /// </summary>
+        public void NightObjectAfter(NightCount before)
+        {
+            if (before.Chunk == null)
+            {
+                return;
+            }
+
+            var list = before.Chunk.nightSpawnedObjects;
+            var big = Player.Instance.whereAmI.bigLocation;
+            bool mushroom = big != null && big.nightMushroom != null;
+            if (RollRules.SendsNightObject(before.Count, list.Count, mushroom))
+            {
+                SendNightObject(list[list.Count - 1], big.nightMushroom.name);
+            }
+        }
+
+        /// <summary>
         /// Host: a night mushroom was made (WormsSpawner.spawn).
         /// </summary>
-        internal void SendNightObject(GameObject go, string prefab)
+        private void SendNightObject(GameObject go, string prefab)
         {
             if (!HostSharing || go == null)
             {
