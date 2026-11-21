@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Skills;
 using HarmonyLib;
 using UnityEngine;
 
@@ -411,21 +412,15 @@ namespace DarkwoodMP.World
             {
                 _waiting = true;
                 var w = S.Begin(MsgType.SkillSpend);
-                w.W.Write((byte)Mathf.Clamp(level, 0, 255));
-                w.WriteStr(good);
-                string sentNegative = negative;
-                if (sentNegative == null)
-                {
-                    sentNegative = "";
-                }
-
-                w.WriteStr(sentNegative);
-                var had = chosen.ToList();
-                w.W.Write((byte)Math.Min(had.Count, 255));
-                for (int i = 0; i < had.Count && i < 255; i++)
-                {
-                    w.WriteStr(had[i]);
-                }
+                SkillSpend.Write(
+                    w,
+                    new SpendRequest
+                    {
+                        Level = level,
+                        Good = good,
+                        Negative = negative,
+                        Had = chosen.ToList(),
+                    });
 
                 Coop.Current.Authority.Request(
                     w, $"learn {good}", (ok, reason, _) =>
@@ -512,14 +507,10 @@ namespace DarkwoodMP.World
 
         private static void OnSpend(ulong from, PacketReader r)
         {
-            int level = r.R.ReadByte();
-            string good = r.ReadStr(), negative = r.ReadStr();
-            int n = r.R.ReadByte();
-            var chosen = new HashSet<string>();
-            for (int i = 0; i < n; i++)
-            {
-                chosen.Add(r.ReadStr());
-            }
+            var spend = SkillSpend.Read(r);
+            int level = spend.Level;
+            string good = spend.Good, negative = spend.Negative;
+            var chosen = new HashSet<string>(spend.Had);
 
             if (!S.IsHost || !Coop.Current.Authority.Handling)
             {
