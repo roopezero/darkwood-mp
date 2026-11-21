@@ -300,9 +300,24 @@ join on the GOG build.
      `coop.World` each time (null while no world is loaded), never kept.
   5. Delete its line from `Plugin.Load` and its `OnSessionEnded` cleanup.
      Patches reach it through `Coop.Current` and do nothing when it's null.
-- [ ] **4.2 `MoveCheck`.** It's small, already an instance, and has clear rules,
+  6. Make the subsystem's class `internal`: its constructor takes the
+     internal `CoopSession`. The map tests still see it.
+  7. Methods on another class that only passed calls on to it (as
+     `PlayerSync.TryChecked` did) go; their callers read
+     `Coop.Current.X` and check it for null. A static counter the map tests
+     read becomes a property of the instance, counted per session.
+  8. A message's bytes go in a static class in the core named after its
+     `MsgType`, in the subsystem's folder (`Sync/PlayerCorrection`):
+     `Write(PacketWriter, ...)` writes the payload after `Begin`, and
+     `Read(PacketReader)` reads it. Its unit test checks the bytes with
+     the type byte.
+- [x] **4.2 `MoveCheck`.** It's small, already an instance, and has clear rules,
       so it tests the recipe. `Good` becomes `Accepted`. Adjust the recipe here
-      if it doesn't fit.
+      if it doesn't fit. Done: the recipe gained items 6 to 8 above. It has
+      no Harmony patches, so recipe step 6 had nothing to do, and its files
+      were already mirrored (`Sync/MoveCheck` and the core's `Sync/Move*`).
+      The core's `MoveTracker` keeps the state, so `MoveCheck` only converts
+      vectors and needs no `FactsOf`.
 - [ ] **4.3 `Authority`.** Change all callers in one mechanical commit.
 - [ ] **4.4 Object names.** `ObjRef` is used by about 50 files, and its lookup
       order becomes a unit-tested rule.

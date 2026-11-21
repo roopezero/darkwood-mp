@@ -15,7 +15,8 @@ network code (`Session`, the packets, `TcpBackend` and the server browser);
 the plugin keeps the Steam backend. The map test steps are in
 `src/DarkwoodMP.MapTests`, a second plugin. `ModHost` holds the `Session`,
 its backends and the server browser; `CoopSession`, `Coop.Current` and
-`WorldScope` exist, and no subsystem has moved into them yet.
+`WorldScope` exist, and `MoveCheck` is the first subsystem to have moved
+into `CoopSession`.
 [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has the order and the progress.
 
 ## The idea: a core of rules, and a thin shell around the game
