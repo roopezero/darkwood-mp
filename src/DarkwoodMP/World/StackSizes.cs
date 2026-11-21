@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Stacks;
 using HarmonyLib;
 using UnityEngine;
 
@@ -109,7 +110,7 @@ namespace DarkwoodMP.World
         private static PacketWriter Write(int size)
         {
             var w = _session.Begin(MsgType.StackSize);
-            w.W.Write((ushort)Mathf.Clamp(size, 0, ushort.MaxValue));
+            StackSize.Write(w, size);
             return w;
         }
 
@@ -123,7 +124,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int size = r.R.ReadUInt16();
+            int size = StackSize.Read(r);
             _hostSize = size;
             Plugin.Log.LogInfo($"[stacks] the host's stack size: {size}");
             Apply(size);

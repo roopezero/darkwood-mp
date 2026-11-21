@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Building;
 using HarmonyLib;
 
 namespace DarkwoodMP.World
@@ -49,8 +50,13 @@ namespace DarkwoodMP.World
         private static PacketWriter Write(ObjRef r, int option)
         {
             var w = S.Begin(MsgType.Construct);
-            r.Write(w);
-            w.W.Write(option);
+            var order = new BuildOrder
+            {
+                Site = ObjRef.NameOf(r),
+                Option = option,
+            };
+
+            Building.Construct.Write(w, order);
             return w;
         }
 
@@ -145,8 +151,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var obj = ObjRef.Read(r);
-            int option = r.R.ReadInt32();
+            BuildOrder order = Building.Construct.Read(r);
+            var obj = ObjRef.RefOf(order.Site);
+            int option = order.Option;
             var c = ObjRef.Resolve<Constructible>(obj);
             if (s.IsHost && !Allowed(c, option))
             {
