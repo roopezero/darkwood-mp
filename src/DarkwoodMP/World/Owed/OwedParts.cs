@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Owed;
 using HarmonyLib;
 using Newtonsoft.Json;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Owed
 {
     /// <summary>
     /// Who is still owed their own part of a once-only trigger that fired for
