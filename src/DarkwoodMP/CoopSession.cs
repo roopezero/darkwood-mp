@@ -42,7 +42,7 @@ namespace DarkwoodMP
         public readonly JoinerSaveIds Joiners;
 
         /// Larva eggs and other items broken open, shared.
-        public readonly EggSync Eggs;
+        public readonly World.Eggs.Eggs Eggs;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -58,7 +58,7 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
-            Eggs = new EggSync(this);
+            Eggs = new World.Eggs.Eggs(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

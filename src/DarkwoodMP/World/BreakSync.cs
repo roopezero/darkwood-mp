@@ -12,7 +12,7 @@ namespace DarkwoodMP.World
     /// A hit on an item (Item.getHit) is sent as ItemHit with the damage and
     /// the health it left; the others make the same call, which breaks the item
     /// there when its health runs out (Item.die, setDeathState), so a hit that
-    /// breaks something is one message (an egg broken open is EggSync's
+    /// breaks something is one message (an egg broken open is Eggs's
     /// EggDestroyed instead). An item broken without a hit is ItemBroken, a
     /// repair (setNormalState, from building) ItemRepaired. An Explodes going
     /// off (Explodes.onActivate) is Explode; the others set off their copy, and
@@ -201,10 +201,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            // An egg this hit broke: EggSync's message breaks it in the other
+            // An egg this hit broke: Eggs's message breaks it in the other
             // games, wherever it is there.
             if (!__state.Destroyed && __instance.destroyed
-                && EggSync.IsEgg(__instance))
+                && Eggs.Eggs.IsEgg(__instance))
             {
                 Coop.Current.Eggs.Send(__instance);
                 return;
@@ -242,7 +242,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (EggSync.IsEgg(__instance))
+            if (Eggs.Eggs.IsEgg(__instance))
             {
                 Coop.Current.Eggs.Send(__instance);
                 return;

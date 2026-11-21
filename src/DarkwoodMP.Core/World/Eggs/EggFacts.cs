@@ -4,7 +4,7 @@ namespace DarkwoodMP.World.Eggs
     public readonly struct EggFacts
     {
         /// The egg was found: by its ObjRef, or by its name near where the
-        /// client saw it (EggSync.Find).
+        /// client saw it (Eggs.Find).
         public bool Found { get; init; }
 
         /// Item.destructible.

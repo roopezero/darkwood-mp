@@ -1,8 +1,7 @@
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Eggs;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Eggs
 {
     /// <summary>
     /// Larva eggs (Objects/larva_egg_big, "Egg": "Something is floating
@@ -29,11 +28,11 @@ namespace DarkwoodMP.World
     /// and the egg isn't broken already, breaks its own and passes it on; if it
     /// refuses, the client gets the egg's state back (WorldActions.SendState).
     /// </summary>
-    internal sealed class EggSync
+    internal sealed class Eggs
     {
         private readonly CoopSession _coop;
 
-        public EggSync(CoopSession coop)
+        public Eggs(CoopSession coop)
         {
             _coop = coop;
             coop.Handle(MsgType.EggDestroyed, OnDestroyed);
