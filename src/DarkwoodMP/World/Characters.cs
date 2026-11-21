@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.KeptCharacters;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
@@ -270,7 +271,6 @@ namespace DarkwoodMP.World
                 answer = 2;
             }
 
-            w.W.Write((byte)answer);
             string player = null;
             if (rec != null)
             {
@@ -282,7 +282,6 @@ namespace DarkwoodMP.World
                 player = "";
             }
 
-            w.WriteBigStr(player);
             string inv = null;
             if (rec != null)
             {
@@ -294,7 +293,6 @@ namespace DarkwoodMP.World
                 inv = "";
             }
 
-            w.WriteBigStr(inv);
             string hotbar = null;
             if (rec != null)
             {
@@ -306,7 +304,6 @@ namespace DarkwoodMP.World
                 hotbar = "";
             }
 
-            w.WriteBigStr(hotbar);
             // Where the host stands: the joiner's game finds a free spot beside
             // it (Sync.Players.SpawnSpot), off the host.
             Vector3 v;
@@ -319,7 +316,17 @@ namespace DarkwoodMP.World
                 v = Vector3.zero;
             }
 
-            w.Write(v);
+            CharacterLoad.Write(
+                w,
+                new CharacterLoadBody
+                {
+                    Kind = (CharacterKind)answer,
+                    Player = player,
+                    Inventory = inv,
+                    Hotbar = hotbar,
+                    At = new Vec3(v.x, v.y, v.z),
+                });
+
             _session.SendTo(from, w, Channel.Control, reliable: true);
             // after the character: the shared essence and level
             // (World.Progression)
@@ -378,19 +385,20 @@ namespace DarkwoodMP.World
                 return;
             }
 
+            var body = CharacterSave.Read(r);
             var rec = new Record
             {
                 Name = _session.NameOf(from),
-                Player = r.ReadBigStr(),
-                Inv = r.ReadBigStr(),
-                Hotbar = r.ReadBigStr(),
+                Player = body.Player,
+                Inv = body.Inventory,
+                Hotbar = body.Hotbar,
                 Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
 
             // The chapter of the world the joiner's game is in: what it sends
             // from the last chapter's map, while it waits for the next one or
             // reloads, is stamped with that chapter, whenever it arrives.
-            int chapter = r.R.ReadInt32();
+            int chapter = body.Chapter;
             if (chapter > 0)
             {
                 rec.Chapter = chapter;
@@ -734,17 +742,21 @@ namespace DarkwoodMP.World
             try
             {
                 var w = _session.Begin(MsgType.CharacterSave);
-                w.WriteBigStr(
-                    JsonConvert.SerializeObject(new Player.SaveState(p)));
-                w.WriteBigStr(
-                    JsonConvert.SerializeObject(
-                        new Inventory.SaveState(p.Inventory)));
-                w.WriteBigStr(
-                    JsonConvert.SerializeObject(
-                        new Inventory.SaveState(p.Hotbar)));
-                // the chapter of the world we're in (the host's, until it moves
-                // on)
-                w.W.Write(Chapters.HostChapter);
+                CharacterSave.Write(
+                    w,
+                    new CharacterSaveBody
+                    {
+                        Player = JsonConvert.SerializeObject(
+                            new Player.SaveState(p)),
+                        Inventory = JsonConvert.SerializeObject(
+                            new Inventory.SaveState(p.Inventory)),
+                        Hotbar = JsonConvert.SerializeObject(
+                            new Inventory.SaveState(p.Hotbar)),
+                        // the chapter of the world we're in (the host's,
+                        // until it moves on)
+                        Chapter = Chapters.HostChapter,
+                    });
+
                 _session.SendToHost(w, Channel.Control, reliable: true);
             }
             catch (Exception e)
@@ -784,11 +796,12 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            byte kind = r.R.ReadByte();
-            string ps = r.ReadBigStr(),
-                inv = r.ReadBigStr(),
-                hot = r.ReadBigStr();
-            Vector3 spawn = r.ReadVector3();
+            var body = CharacterLoad.Read(r);
+            byte kind = (byte)body.Kind;
+            string ps = body.Player,
+                inv = body.Inventory,
+                hot = body.Hotbar;
+            Vector3 spawn = new Vector3(body.At.X, body.At.Y, body.At.Z);
             var p = Player.Instance;
             if (p == null)
             {

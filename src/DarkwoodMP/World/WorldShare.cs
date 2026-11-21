@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Joining;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -104,7 +105,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                string why = r.ReadStr();
+                string why = JoinWaitMessage.Read(r);
                 if (LoadStatus != why)
                 {
                     Plugin.Log.LogInfo($"Waiting to join: {why}");
@@ -1002,19 +1003,26 @@ namespace DarkwoodMP.World
         {
             _offered[peer] = (world, world.Scene);
             _staleTold.Remove(peer);
-            var w = _session.Begin(MsgType.SaveOffer);
-            w.WriteBytes(world.Hash);
-            w.W.Write((uint)world.Sent.Length);
-            w.WriteBigStr(world.ProfileJson);
-            w.W.Write((byte)world.Files.Count);
+            var files = new List<OfferedFile>();
             foreach (var f in world.Files)
             {
-                w.WriteStr(f.Name);
-                w.W.Write((uint)f.Size);
+                files.Add(
+                    new OfferedFile { Name = f.Name, Size = (uint)f.Size });
             }
 
-            w.W.Write(world.Packing);
-            w.W.Write((uint)world.RawSize);
+            var w = _session.Begin(MsgType.SaveOffer);
+            SaveOffer.Write(
+                w,
+                new SaveOfferBody
+                {
+                    Hash = world.Hash,
+                    Size = (uint)world.Sent.Length,
+                    ProfileJson = world.ProfileJson,
+                    Files = files,
+                    Packing = world.Packing,
+                    Raw = (uint)world.RawSize,
+                });
+
             _session.SendTo(peer, w, Channel.Control, reliable: true);
             Plugin.Log.LogInfo(
                 $"Offered the world to #{peer} ({world.Sent.Length / 1024} KiB "
@@ -1256,7 +1264,7 @@ namespace DarkwoodMP.World
         private void JoinWait(ulong peer, string why)
         {
             var ww = _session.Begin(MsgType.JoinWait);
-            ww.WriteStr(why);
+            JoinWaitMessage.Write(ww, why);
             _session.SendTo(peer, ww, Channel.Control, reliable: true);
         }
 
@@ -1267,9 +1275,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var hash = r.R.ReadBytes(32);
-            uint offset = r.R.ReadUInt32();
-            uint length = Math.Min(r.R.ReadUInt32(), (uint)PieceSize);
+            var asked = NeedSave.Read(r);
+            var hash = asked.Hash;
+            uint offset = asked.Offset;
+            uint length = Math.Min(asked.Length, (uint)PieceSize);
             if (!_offered.TryGetValue(peer, out var offer)
                 || !WorldFiles.Equal(offer.World.Hash, hash))
             {
@@ -1301,10 +1310,16 @@ namespace DarkwoodMP.World
 
             int n = (int)Math.Min(length, world.Sent.Length - offset);
             var w = _session.Begin(MsgType.SaveData);
-            w.WriteBytes(world.Hash);
-            w.W.Write(offset);
-            w.W.Write((uint)n);
-            w.W.Write(world.Sent, (int)offset, n);
+            SaveData.Write(
+                w,
+                new WorldPiece
+                {
+                    Hash = world.Hash,
+                    Offset = offset,
+                    Length = (uint)n,
+                },
+                world.Sent);
+
             _session.SendTo(peer, w, Channel.Control, reliable: true);
         }
 
@@ -1468,7 +1483,8 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var d = new Download { Hash = r.R.ReadBytes(32) };
+            var offer = SaveOffer.Read(r);
+            var d = new Download { Hash = offer.Hash };
             // The same world again (an answer to a Hello sent before the first
             // offer came): go on with this download.
             if ((_download != null
@@ -1477,15 +1493,15 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            uint size = r.R.ReadUInt32();
-            d.ProfileJson = r.ReadBigStr();
-            int n = r.R.ReadByte();
+            uint size = offer.Size;
+            d.ProfileJson = offer.ProfileJson;
+            int n = offer.Files.Count;
             d.Files = new List<(string, int)>();
             long sum = 0;
             for (int i = 0; i < n; i++)
             {
-                string name = r.ReadStr();
-                uint fsize = r.R.ReadUInt32();
+                string name = offer.Files[i].Name;
+                uint fsize = offer.Files[i].Size;
                 if (Array.IndexOf(WorldFiles.Names, name) < 0
                     || d.Files.Any(f => f.Name == name))
                 {
@@ -1497,8 +1513,8 @@ namespace DarkwoodMP.World
                 sum += fsize;
             }
 
-            d.Packing = r.R.ReadByte();
-            uint raw = r.R.ReadUInt32();
+            d.Packing = offer.Packing;
+            uint raw = offer.Raw;
             if (d.Packing > 1)
             {
                 Fail(
@@ -1569,9 +1585,15 @@ namespace DarkwoodMP.World
         private void RequestPiece(Download d, uint offset)
         {
             var w = _session.Begin(MsgType.NeedSave);
-            w.WriteBytes(d.Hash);
-            w.W.Write(offset);
-            w.W.Write((uint)PieceSize);
+            NeedSave.Write(
+                w,
+                new WorldPiece
+                {
+                    Hash = d.Hash,
+                    Offset = offset,
+                    Length = (uint)PieceSize,
+                });
+
             _session.SendToHost(w, Channel.Control, reliable: true);
         }
 
@@ -1583,9 +1605,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var hash = r.R.ReadBytes(32);
-            uint offset = r.R.ReadUInt32();
-            int n = (int)r.R.ReadUInt32();
+            var head = SaveData.ReadHead(r);
+            var hash = head.Hash;
+            uint offset = head.Offset;
+            int n = (int)head.Length;
             if (!WorldFiles.Equal(hash, d.Hash))
             {
                 return; // a piece of an earlier offer, still on its way
@@ -1606,7 +1629,7 @@ namespace DarkwoodMP.World
                 return; // asked for twice (after a stall), came twice
             }
 
-            if (r.R.Read(d.Blob, (int)offset, n) != n)
+            if (!SaveData.ReadInto(r, d.Blob, head))
             {
                 Fail("a short piece from the host");
                 return;
