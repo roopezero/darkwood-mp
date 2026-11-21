@@ -510,60 +510,8 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Events), nameof(Events.fireWorldEvent))]
     static class WorldEventPatch
     {
-        static bool Prefix(Events __instance, string type)
-        {
-            if (ScriptedEvents.Current != ScriptedEvents.Part.All
-                || Coop.Guards.Replaying || !Coop.Guards.Sharing
-                || ScriptedEvents.AnimationSent)
-            {
-                return true;
-            }
-
-            if (type == EpilogueSync.PanEvent)
-            {
-                // each game runs its own, when the host says (EpilogueSync)
-                return true;
-            }
-
-            if (type == null
-                || !__instance.worldEvents.TryGetValue(type, out var ge)
-                || ge == null || (ge.fired && !ge.multipleFire))
-            {
-                return true;
-            }
-
-            if (!WorldActions.ByLocalPlayer()
-                && !ScriptedEvents.OnStack(typeof(DialogueWindow)))
-            {
-                return true;
-            }
-
-            // A dream NPC's outcome in a dream of our own: the host isn't
-            // there, so it's ours alone, as in single player.
-            if (WorldActions.InOwnArea())
-            {
-                if (WorldActions.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] world event {type}: ours alone, run here");
-                }
-
-                return true;
-            }
-
-            var events = __instance;
-            ScriptedEvents.SendWorldEvent(type, () =>
-            {
-                if (events != null)
-                {
-                    events.fireWorldEvent(type);
-                }
-            });
-
-            // A joiner runs it (its own and the shared part) once the host says
-            // yes.
-            return !Session.Instance.IsClient;
-        }
+        static bool Prefix(Events __instance, string type) =>
+            ScriptedEvents.OnWorldEvent(__instance, type);
     }
 
     /// <summary>

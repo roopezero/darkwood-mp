@@ -151,13 +151,14 @@ namespace DarkwoodMP.World
             EventTriggers et, global::EventTrigger t, int index, Part part,
             bool replaying)
         {
-            if (t == null || t.disabled
-                || t.type != global::EventTrigger.Type.area)
+            var arrival = FiredEventRules.OnExit(
+                FactsOf(t), OurPlayerInside(et));
+            if (arrival == ExitArrival.Ignored)
             {
                 return;
             }
 
-            if (t.firedExit)
+            if (arrival == ExitArrival.RanAlready)
             {
                 if (Debug)
                 {
@@ -169,7 +170,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (OurPlayerInside(et))
+            if (arrival == ExitArrival.StillInside)
             {
                 Plugin.Log.LogInfo(
                     $"[world] exit of {et.name} #{index}: our player is still "
@@ -178,7 +179,7 @@ namespace DarkwoodMP.World
             }
 
             t.firedExit = true;
-            if (t.multipleFire)
+            if (arrival == ExitArrival.RunAndRearm)
             {
                 t.fired = false;
             }
@@ -356,33 +357,14 @@ namespace DarkwoodMP.World
         internal static bool FromAnimation(Component from, string name)
         {
             var s = S;
-            if (s == null || !s.Active || !WorldShare.InWorld
-                || Current != Part.All || Coop.Guards.Replaying)
+            var act = WorldEventRules.FromAnimation(AnimationOf(from, name));
+            if (act == AnimationEvent.Run)
             {
                 return true;
             }
 
-            if (from == null || from.GetComponent<Character>() == null
-                || from.GetComponent<Player>() != null)
+            if (act == AnimationEvent.LeaveToHost)
             {
-                return true;
-            }
-
-            var events = Singleton<Events>.Instance;
-            if (events == null || string.IsNullOrEmpty(name)
-                || !events.worldEvents.TryGetValue(name, out var ge)
-                || ge == null)
-            {
-                return true;
-            }
-
-            if (s.IsClient)
-            {
-                if (Combat.NetEnemies.LocalOnly(from.gameObject))
-                {
-                    return true;
-                }
-
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
@@ -391,11 +373,6 @@ namespace DarkwoodMP.World
                 }
 
                 return false;
-            }
-
-            if (s.Peers.Count == 0 || (ge.fired && !ge.multipleFire))
-            {
-                return true;
             }
 
             var w = s.Begin(MsgType.EventFired);
@@ -419,6 +396,112 @@ namespace DarkwoodMP.World
             return true;
         }
 
+        /// <summary>
+        /// What WorldEventRules.FromAnimation needs to know of a world event
+        /// a character's animation fires.
+        /// </summary>
+        private static AnimationFacts AnimationOf(Component from, string name)
+        {
+            var s = S;
+            if (s == null)
+            {
+                return default;
+            }
+
+            bool character = from != null
+                && from.GetComponent<Character>() != null
+                && from.GetComponent<Player>() == null;
+            var ge = WorldEventOf(Singleton<Events>.Instance, name);
+            bool localOnly = s.IsClient && character && ge != null
+                && Combat.NetEnemies.LocalOnly(from.gameObject);
+            return new AnimationFacts
+            {
+                Active = s.Active,
+                InWorld = WorldShare.InWorld,
+                Current = (EventPart)Current,
+                Replaying = Coop.Guards.Replaying,
+                Character = character,
+                Known = ge != null,
+                Client = s.IsClient,
+                LocalOnly = localOnly,
+                Peers = s.Peers.Count,
+                Fired = ge != null && ge.fired,
+                MultipleFire = ge != null && ge.multipleFire,
+            };
+        }
+
+        /// <summary>
+        /// The world event of that name in events, or null.
+        /// </summary>
+        private static GameEvents WorldEventOf(Events events, string name)
+        {
+            if (events == null || string.IsNullOrEmpty(name)
+                || !events.worldEvents.TryGetValue(name, out var ge))
+            {
+                return null;
+            }
+
+            return ge;
+        }
+
+        /// <summary>
+        /// A world event fired by name (Events.fireWorldEvent): share it if
+        /// our player set it off (a dialogue's outcome).
+        /// </summary>
+        /// <returns>Whether the game's own call runs here.</returns>
+        internal static bool OnWorldEvent(Events events, string name)
+        {
+            var ge = WorldEventOf(events, name);
+            var facts = new WorldEventFacts
+            {
+                Current = (EventPart)Current,
+                Replaying = Coop.Guards.Replaying,
+                Sharing = Coop.Guards.Sharing,
+                AnimationSent = AnimationSent,
+                Pan = name == EpilogueSync.PanEvent,
+                Known = ge != null,
+                Fired = ge != null && ge.fired,
+                MultipleFire = ge != null && ge.multipleFire,
+            };
+
+            if (!WorldEventRules.MaySend(facts))
+            {
+                return true;
+            }
+
+            bool ours = WorldActions.ByLocalPlayer()
+                || OnStack(typeof(DialogueWindow));
+            if (!ours)
+            {
+                return true;
+            }
+
+            // A dream NPC's outcome in a dream of our own: the host isn't
+            // there, so it's ours alone, as in single player.
+            if (!WorldEventRules.Sends(ours, WorldActions.InOwnArea()))
+            {
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo(
+                        $"[world] world event {name}: ours alone, run here");
+                }
+
+                return true;
+            }
+
+            SendWorldEvent(name, () =>
+            {
+                if (events != null)
+                {
+                    events.fireWorldEvent(name);
+                }
+            });
+
+            // A joiner runs it (its own and the shared part) once the host says
+            // yes.
+            return !S.IsClient;
+        }
+
         internal static void SendWorldEvent(string name, Action accepted)
         {
             var w = S.Begin(MsgType.EventFired);
@@ -432,12 +515,6 @@ namespace DarkwoodMP.World
 
             Send(w, $"world event {name}", accepted);
         }
-
-        /// <summary>
-        /// A Verdict's result: the requester is where the host doesn't run, so
-        /// the event is all theirs.
-        /// </summary>
-        internal const string Alone = "alone";
 
         /// <summary>
         /// The host tells everyone; a joiner asks, and runs accepted (its own
@@ -466,27 +543,16 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                if (result == Alone)
+                var part = (Part)FiredEventRules.PartAfterYes(result);
+                if (part == Part.All)
                 {
                     // We were somewhere the host doesn't run
                     // (Authority.AcceptAway): every part of it is ours.
                     Plugin.Log.LogInfo(
                         $"[world] {what}: ours alone, the host says; running "
                             + "all of it here");
-                    try
-                    {
-                        RunAs(Part.All, replaying: false, accepted);
-                    }
-                    catch (Exception e)
-                    {
-                        Plugin.Log.LogWarning(
-                            $"Couldn't run {what}: {e.Message}");
-                    }
-
-                    return;
                 }
-
-                if (Debug)
+                else if (Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] {what}: the host agreed, running our part "
@@ -495,7 +561,7 @@ namespace DarkwoodMP.World
 
                 try
                 {
-                    RunAs(Part.PlayerAndShared, replaying: false, accepted);
+                    RunAs(part, replaying: false, accepted);
                 }
                 catch (Exception e)
                 {

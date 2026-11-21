@@ -60,12 +60,13 @@ namespace DarkwoodMP.World
     /// doesn't run its own copy of them, and the host sends each one as it runs
     /// it (EventFired kind 3). A joiner then runs the shared part, and of its
     /// player's own part only the messages, and only if its player is near the
-    /// trigger (Part.SharedAndMessages, NearMessages): a dialogue, an item
-    /// given or a trip somewhere stays the host's player's, as it was in the
-    /// host's single-player world, unless a joiner caused it (killed the NPC,
-    /// broke the item, switched on the machine: Cause), whose game then runs
-    /// its own and the shared part (kind 6, SendCaused). So an event set off by
-    /// a death happens once, in the host's world, also when the one who died
+    /// trigger (Part.SharedAndMessages, FiredEventRules.NearMessages): a
+    /// dialogue, an item given or a trip somewhere stays the host's player's,
+    /// as it was in the host's single-player world, unless a joiner caused it
+    /// (killed the NPC, broke the item, switched on the machine: Cause), whose
+    /// game then runs its own and the shared part (kind 6, SendCaused). So an
+    /// event set off by a death happens once, in the host's world, also when
+    /// the one who died
     /// was killed in a joiner's game (NPC deaths are shared, and the joiner's
     /// copy dies by the host's say). Not the host's: triggers in an area only
     /// the joiner is in (a dream, a separate location the host didn't place:
@@ -128,12 +129,6 @@ namespace DarkwoodMP.World
             /// </summary>
             LaterPlayer = 6,
         }
-
-        /// <summary>
-        /// How near the trigger a joiner's player must be to see the messages
-        /// of a world-set-off event.
-        /// </summary>
-        public const float NearMessages = 2000f;
 
         /// <summary>
         /// The part being run now (set around a GameEvents.fire, and inside the
