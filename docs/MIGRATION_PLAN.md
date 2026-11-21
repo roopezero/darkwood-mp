@@ -586,6 +586,13 @@ Finish with `tools/run-test.sh full`.
         per session.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
+  - [x] Part c: `EpilogueSync`. It is `CoopSession.Epilogue`
+        (`World/Story/EpilogueSync`, a partial class in three files, with
+        `EpiloguePatches.cs`); its handler and peer check are per session,
+        and its session-end cleanup is a hook. Its bytes are the core's
+        `EpilogueStepMessage`. `InEpilogueAlone` stays static, as hosting
+        asks it with no session. It still writes `GameEnd` itself, until
+        it uses Chapters' message in the core.
 - [ ] 7.5 Characters and saves. After each change here, confirm that the run's
       save check still reports the real saves as unchanged.
 
