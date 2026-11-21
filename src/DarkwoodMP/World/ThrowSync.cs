@@ -404,58 +404,206 @@ namespace DarkwoodMP.World
                 Core.addToSaveable(go, isDynamic: true);
             }
         }
-    }
 
-    /// <summary>
-    /// Player.dropItem: an item that's dropped when the player stops aiming
-    /// (InvItem.dropOnReleaseAim), or the held throwable when the player is
-    /// interrupted (force), falls at the player's feet; it's sent like a throw.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), "dropItem")]
-    static class PlayerDropPatch
-    {
-        static void Prefix(
-            Player __instance,
-            out (GameObject go, string type) __state) => __state =
-                ThrowSync.Holding(__instance);
-
-        static void Postfix(
-            Player __instance, (GameObject go, string type) __state)
+        /// <summary>
+        /// Before Player.throwItem or dropItem: what the player holds. Nothing
+        /// with no session.
+        /// </summary>
+        internal static (GameObject go, string type) Before(Player p)
         {
-            bool before = __state.go != null;
-            bool now = ThrowSync.Held(__instance) != null;
+            if (Coop.Current == null)
+            {
+                return default;
+            }
+
+            return Holding(p);
+        }
+
+        /// <summary>
+        /// After Player.throwItem: the player threw what they held.
+        /// </summary>
+        internal static void AfterThrow(
+            Player p, (GameObject go, string type) held)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null || held.go == null)
+            {
+                return;
+            }
+
+            coop.Throws.Thrown(held.type, held.go, p.transform.position);
+        }
+
+        /// <summary>
+        /// After Player.dropItem: an item that's dropped when the player stops
+        /// aiming (InvItem.dropOnReleaseAim), or the held throwable when the
+        /// player is interrupted (force), falls at the player's feet; it's
+        /// sent like a throw.
+        /// </summary>
+        internal static void AfterDrop(
+            Player p, (GameObject go, string type) held)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            bool before = held.go != null;
+            bool now = Held(p) != null;
             if (ThrowRules.WasDropped(before, now))
             {
-                CoopSession coop = Coop.Current;
-                if (coop != null)
+                coop.Throws.Dropped(held.type, held.go);
+            }
+        }
+
+        /// <summary>
+        /// A flame starts touching something (Flame.onCollideWith). Noted for
+        /// ThrownHits, and: on the host, an enemy's flame on a proxy hurts
+        /// that player (EnemyAreaHits.FlameTouch); on a client, our own
+        /// weapon's flame (a flamethrower) sends its burn with the hit on the
+        /// host's enemy (NetEnemies.HitEffects). Returns what our flame is
+        /// about to set alight, if anything, for FlameTouched.
+        /// </summary>
+        internal static GameObject FlameTouching(
+            Flame flame, Transform at, Collider col)
+        {
+            if (Coop.Current == null)
+            {
+                return null;
+            }
+
+            ThrownHits.CurrentFlame = flame;
+            EnemyAreaHits.FlameTouch(flame, at, col);
+            if (!NetEnemies.ClientMode || flame == null || !flame.isActive
+                || !EnemyAreaHits.ByLocalPlayer(flame))
+            {
+                return null;
+            }
+
+            if (flame.effect != null)
+            {
+                NetEnemies.HitEffects =
+                    new List<InvItemEffect> { flame.effect };
+            }
+
+            var target = FireSync.Flammable(at, col);
+            if (target != null && target.GetComponent<Burn>() == null)
+            {
+                return target;
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// The flame's touch is over. On a client, a door, window or furniture
+        /// our flame set alight goes to the host as a request
+        /// (FireSync.ClientIgnited).
+        /// </summary>
+        internal static void FlameTouched(GameObject lit)
+        {
+            if (Coop.Current == null)
+            {
+                return;
+            }
+
+            FlameDone();
+            if (lit != null && lit.GetComponent<Burn>() != null)
+            {
+                FireSync instance = FireSync.Instance;
+                if (instance != null)
                 {
-                    coop.Throws.Dropped(__state.type, __state.go);
+                    instance.ClientIgnited(lit);
                 }
             }
         }
-    }
 
-    [HarmonyPatch(typeof(Player), "throwItem")]
-    static class PlayerThrowPatch
-    {
-        static void Prefix(
-            Player __instance,
-            out (GameObject go, string type) __state) => __state =
-                ThrowSync.Holding(__instance);
-
-        static void Postfix(
-            Player __instance, (GameObject go, string type) __state)
+        /// <summary>
+        /// No flame is touching anything now (also when the touch threw).
+        /// </summary>
+        internal static void FlameDone()
         {
-            if (__state.go != null)
+            if (Coop.Current == null)
             {
-                CoopSession coop = Coop.Current;
-                if (coop != null)
+                return;
+            }
+
+            ThrownHits.CurrentFlame = null;
+            NetEnemies.HitEffects = null;
+        }
+
+
+        /// <summary>
+        /// Client: whether what's hitting our player now is an explosion, which
+        /// the host reports through our proxy (EnemyAreaHits.Explosion). Not
+        /// while we're away in a place of our own (a location, a dream):
+        /// explosions there happen only here.
+        /// </summary>
+        internal static bool HostReports() =>
+            ThrownHitRules.HostMayReport(SelfHit()) && InExplosion();
+
+        /// <summary>
+        /// What the client looks at for an explosion on its own player.
+        /// </summary>
+        private static SelfHitFacts SelfHit()
+        {
+            var facts = new SelfHitFacts
+            {
+                ClientMode = NetEnemies.ClientMode,
+                Depth = ThrownHits.Depth,
+                Flame = ThrownHits.CurrentFlame != null,
+            };
+
+            // Only a client inside something thrown asks: where the player
+            // is costs singleton lookups on every hit.
+            if (!facts.ClientMode || facts.Depth <= 0)
+            {
+                return facts;
+            }
+
+            return facts with { Away = EnemyAreaHits.PlayerAway() };
+        }
+
+        private static bool InExplosion()
+        {
+            var st = new System.Diagnostics.StackTrace(2, false);
+            for (int i = 0; i < st.FrameCount && i < 12; i++)
+            {
+                System.Diagnostics.StackFrame frame = st.GetFrame(i);
+                System.Type declaringType = null;
+                if (frame != null)
                 {
-                    coop.Throws.Thrown(
-                        __state.type, __state.go,
-                        __instance.transform.position);
+                    System.Reflection.MethodBase method = frame.GetMethod();
+                    if (method != null)
+                    {
+                        declaringType = method.DeclaringType;
+                    }
+                }
+
+                if (declaringType == typeof(Explodes))
+                {
+                    return true;
                 }
             }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Client: whether an effect starting on a character is one the host
+        /// reports (CharacterEffects.activate): our own player's, caught in
+        /// an explosion, as for HostReports.
+        /// </summary>
+        internal static bool HostReportsEffect(CharacterEffects effects)
+        {
+            var player = Player.Instance;
+            bool ours = effects != null && player != null
+                && effects == player.effects;
+            // Called straight from the patch, as HostReports is, so
+            // InExplosion's look at the stack starts at the same frame.
+            return ThrownHitRules.HostMayReportEffect(SelfHit(), ours)
+                && InExplosion();
         }
     }
 
@@ -601,6 +749,45 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// A thrown thing's impact or an explosion starts.
+        /// </summary>
+        public static void Enter()
+        {
+            Depth++;
+        }
+
+        /// <summary>
+        /// The impact or explosion is over.
+        /// </summary>
+        public static void Leave()
+        {
+            Depth--;
+        }
+
+        /// <summary>
+        /// The impact or explosion threw: whatever depth it left is gone.
+        /// </summary>
+        public static void Failed(System.Exception thrown)
+        {
+            if (thrown != null)
+            {
+                Depth = 0;
+            }
+        }
+
+        /// <summary>
+        /// The game spawned something: if it was inside a thrown thing's
+        /// landing or explosion (fire, fuel), its flames count as thrown.
+        /// </summary>
+        public static void Spawn(GameObject go)
+        {
+            if (Depth > 0 && go != null)
+            {
+                Spawned.Add(go);
+            }
+        }
+
+        /// <summary>
         /// The loaded world's, or null with no session or no world.
         /// </summary>
         private static ThrownThings Here()
@@ -618,248 +805,6 @@ namespace DarkwoodMP.World
             }
 
             return world.Thrown;
-        }
-    }
-
-    [HarmonyPatch(typeof(ThrownItem), nameof(ThrownItem.onCollide))]
-    static class ThrownImpactPatch
-    {
-        static void Prefix() => ThrownHits.Depth++;
-        static void Postfix() => ThrownHits.Depth--;
-        static System.Exception Finalizer(System.Exception __exception)
-        {
-            if (__exception != null)
-            {
-                ThrownHits.Depth = 0;
-            }
-
-            return __exception;
-        }
-    }
-
-    [HarmonyPatch]
-    static class ExplosionPatch
-    {
-        static IEnumerable<System.Reflection.MethodBase> TargetMethods()
-        {
-            yield return AccessTools.Method(typeof(Explodes), "explode");
-            yield return AccessTools.Method(typeof(Explodes), "spawnObjects");
-            yield return AccessTools.Method(
-                typeof(Explodes), nameof(Explodes.onActivate),
-                new System.Type[0]);
-        }
-
-        static void Prefix() => ThrownHits.Depth++;
-        static void Postfix() => ThrownHits.Depth--;
-        static System.Exception Finalizer(System.Exception __exception)
-        {
-            if (__exception != null)
-            {
-                ThrownHits.Depth = 0;
-            }
-
-            return __exception;
-        }
-    }
-
-    /// <summary>
-    /// A flame touching something (Flame.onCollideWith). Noted for ThrownHits,
-    /// and:
-    /// on the host, an enemy's flame on a proxy hurts that player
-    /// (EnemyAreaHits.FlameTouch);
-    /// on a client, our own weapon's flame (a flamethrower) sends its burn with
-    /// the hit on the host's enemy (NetEnemies.HitEffects), and a door, window
-    /// or furniture it sets alight goes to the host as a request
-    /// (FireSync.ClientIgnited).
-    /// </summary>
-    [HarmonyPatch(typeof(Flame), "onCollideWith")]
-    static class FlameTouchPatch
-    {
-        static void Prefix(
-            Flame __instance, Transform _transform, Collider _collider,
-            out GameObject __state)
-        {
-            ThrownHits.CurrentFlame = __instance;
-            __state = null;
-            EnemyAreaHits.FlameTouch(__instance, _transform, _collider);
-            if (!NetEnemies.ClientMode || __instance == null
-                || !__instance.isActive
-                || !EnemyAreaHits.ByLocalPlayer(__instance))
-            {
-                return;
-            }
-
-            if (__instance.effect != null)
-            {
-                NetEnemies.HitEffects =
-                    new List<InvItemEffect> { __instance.effect };
-            }
-
-            var target = FireSync.Flammable(_transform, _collider);
-            if (target != null && target.GetComponent<Burn>() == null)
-            {
-                __state = target;
-            }
-        }
-
-        static void Postfix(GameObject __state)
-        {
-            ThrownHits.CurrentFlame = null;
-            NetEnemies.HitEffects = null;
-            if (__state != null && __state.GetComponent<Burn>() != null)
-            {
-                FireSync instance = FireSync.Instance;
-                if (instance != null)
-                {
-                    instance.ClientIgnited(__state);
-                }
-            }
-        }
-
-        static System.Exception Finalizer(System.Exception __exception)
-        {
-            ThrownHits.CurrentFlame = null;
-            NetEnemies.HitEffects = null;
-            return __exception;
-        }
-    }
-
-    /// <summary>
-    /// Note what a landing or exploding thrown thing spawns (fire, fuel), so
-    /// its flames count as thrown.
-    /// </summary>
-    [HarmonyPatch]
-    static class ThrownSpawnPatch
-    {
-        static IEnumerable<System.Reflection.MethodBase> TargetMethods()
-        {
-            yield return AccessTools.Method(typeof(Core),
-                nameof(Core.AddPrefab), new[]
-            {
-                typeof(Object),
-                typeof(Vector3),
-                typeof(Quaternion),
-                typeof(GameObject),
-                typeof(bool)
-            });
-
-            yield return AccessTools.Method(typeof(Core),
-                nameof(Core.AddPrefab), new[]
-            {
-                typeof(string),
-                typeof(Vector3),
-                typeof(Quaternion),
-                typeof(GameObject),
-                typeof(bool)
-            });
-        }
-
-        static void Postfix(GameObject __result)
-        {
-            if (ThrownHits.Depth > 0 && __result != null)
-            {
-                ThrownHits.Spawned.Add(__result);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Client: an explosion that catches our own player is the host's to report
-    /// (through our proxy there), effects included.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.getHit),
-        new[]
-        {
-            typeof(float),
-            typeof(Transform),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool)
-        })]
-    static class ClientExplosionSelfHitPatch
-    {
-        static bool Prefix() => !HostReports();
-
-        /// <summary>
-        /// Client: whether what's hitting our player now is an explosion, which
-        /// the host reports through our proxy (EnemyAreaHits.Explosion). Not
-        /// while we're away in a place of our own (a location, a dream):
-        /// explosions there happen only here.
-        /// </summary>
-        internal static bool HostReports() =>
-            ThrownHitRules.HostMayReport(SelfHit()) && InExplosion();
-
-        /// <summary>
-        /// What the client looks at for an explosion on its own player.
-        /// </summary>
-        internal static SelfHitFacts SelfHit()
-        {
-            var facts = new SelfHitFacts
-            {
-                ClientMode = NetEnemies.ClientMode,
-                Depth = ThrownHits.Depth,
-                Flame = ThrownHits.CurrentFlame != null,
-            };
-
-            // Only a client inside something thrown asks: where the player
-            // is costs singleton lookups on every hit.
-            if (!facts.ClientMode || facts.Depth <= 0)
-            {
-                return facts;
-            }
-
-            return facts with { Away = EnemyAreaHits.PlayerAway() };
-        }
-
-        private static bool InExplosion()
-        {
-            var st = new System.Diagnostics.StackTrace(2, false);
-            for (int i = 0; i < st.FrameCount && i < 12; i++)
-            {
-                System.Diagnostics.StackFrame frame = st.GetFrame(i);
-                System.Type declaringType = null;
-                if (frame != null)
-                {
-                    System.Reflection.MethodBase method = frame.GetMethod();
-                    if (method != null)
-                    {
-                        declaringType = method.DeclaringType;
-                    }
-                }
-
-                if (declaringType == typeof(Explodes))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-    }
-
-    [HarmonyPatch]
-    static class ClientExplosionSelfEffectPatch
-    {
-        static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
-            AccessTools.GetDeclaredMethods(typeof(CharacterEffects)).FindAll(
-                m => m.Name == nameof(CharacterEffects.activate));
-
-        static bool Prefix(CharacterEffects __instance)
-        {
-            var player = Player.Instance;
-            bool ours = __instance != null && player != null
-                && __instance == player.effects;
-            if (!ThrownHitRules.HostMayReportEffect(
-                ClientExplosionSelfHitPatch.SelfHit(), ours))
-            {
-                return true;
-            }
-
-            return !ClientExplosionSelfHitPatch.HostReports();
         }
     }
 }
