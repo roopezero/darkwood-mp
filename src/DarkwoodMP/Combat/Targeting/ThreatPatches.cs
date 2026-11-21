@@ -29,41 +29,13 @@ namespace DarkwoodMP.Combat
             Character __instance, Transform attackerTransform, bool normalHit,
             float __state)
         {
-            float dealt = __state - __instance.health;
-            // The game splats blood for a normal hit that took health (not the
-            // night trader); show it to the clients too.
-            if (normalHit && dealt > 0f && !__instance.isNightTrader
-                && Net.Session.Instance != null && Net.Session.Instance.IsHost)
+            var hit = new GameHit
             {
-                float y;
-                if (attackerTransform != null)
-                {
-                    y = (attackerTransform.rotation * Quaternion.Euler(
-                        90f, 180f, 0f)).eulerAngles.y;
-                }
-                else
-                {
-                    y = __instance.transform.eulerAngles.y;
-                }
+                Attacker = attackerTransform,
+                NormalHit = normalHit,
+            };
 
-                NetEnemies instance = NetEnemies.Instance;
-                if (instance != null)
-                {
-                    instance.HostBlood(__instance, y);
-                }
-            }
-
-            if (!Threat.Enabled || attackerTransform == null)
-            {
-                return;
-            }
-
-            if (dealt > 0f)
-            {
-                Threat.OnDamaged(
-                    __instance, attackerTransform.GetComponent<CharBase>(),
-                    dealt);
-            }
+            Plugin.Instance.Host.Threats.Hit(__instance, hit, __state);
         }
     }
 
@@ -85,13 +57,8 @@ namespace DarkwoodMP.Combat
     public static class CharacterHeardSoundThreat
     {
         private static void Prefix(
-            Character __instance, Vector3 Position, float volume)
-        {
-            if (Threat.Enabled && !__instance.deaf && __instance.alive)
-            {
-                Threat.OnHeard(__instance, Position, volume);
-            }
-        }
+            Character __instance, Vector3 Position, float volume) =>
+            Plugin.Instance.Host.Threats.Heard(__instance, Position, volume);
     }
 
     /// <summary>
@@ -101,44 +68,8 @@ namespace DarkwoodMP.Combat
     [HarmonyPatch(typeof(Character), nameof(Character.attackPlayer))]
     static class CharacterAttackPlayerThreat
     {
-        static bool Prefix(Character __instance)
-        {
-            if (!Threat.Enabled || __instance.dummy)
-            {
-                return true;
-            }
-
-            // An NPC a joiner's event sends after "the player" (a dialogue's
-            // outcome, run here for them) goes for them.
-            NetPlayerProxy requester = null;
-            CoopSession coop = Coop.Current;
-            if (__instance.npc != null && coop != null)
-            {
-                requester = coop.Authority.Requester;
-            }
-
-            if (requester != null)
-            {
-                HostileNpcs.SendAfter(__instance, requester);
-                return false;
-            }
-
-            var best = Threat.BestPlayerFor(__instance);
-            if (best == null || best is Player)
-            {
-                return true; // the host's player: as the game does it
-            }
-
-            JoinerAi.GoFor(__instance, best.transform);
-            if (Threat.Debug)
-            {
-                Plugin.Log.LogInfo(
-                    $"[threat] {__instance.name} sent after the player: goes "
-                        + $"for {((NetPlayerProxy)best).OwnerName}");
-            }
-
-            return false;
-        }
+        static bool Prefix(Character __instance) =>
+            Plugin.Instance.Host.Threats.AttacksHostPlayer(__instance);
     }
 
     /// <summary>

@@ -1,4 +1,3 @@
-using DarkwoodMP.Combat.Enemies;
 using HarmonyLib;
 using UnityEngine;
 
@@ -14,14 +13,11 @@ namespace DarkwoodMP.Combat
         private static void Postfix(
             string audioID, float volume, Transform parentObj)
         {
-            var s = Net.Session.Instance;
-            if (parentObj == null || s == null || !s.IsHost
-                || s.Peers.Count == 0 || NetEnemies.Instance == null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                return;
+                coop.Enemies.SoundPlayed(parentObj, audioID, volume);
             }
-
-            NetEnemies.Instance.HostSound(parentObj, audioID, volume);
         }
     }
 
@@ -38,25 +34,16 @@ namespace DarkwoodMP.Combat
     {
         private static void Prefix(
             CharacterSounds __instance, out bool __state) =>
-            __state = __instance.idleAudioObject != null;
+            __state = NetEnemies.LoopPlaying(__instance);
 
         private static void Postfix(
             CharacterSounds __instance, string loopName, bool __state)
         {
-            bool after = __instance.idleAudioObject != null;
-            if (!EnemyLoopRules.Stopped(__state, loopName, after))
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                return;
+                coop.Enemies.LoopChanged(__instance, loopName, __state);
             }
-
-            var s = Net.Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0
-                || NetEnemies.Instance == null)
-            {
-                return;
-            }
-
-            NetEnemies.Instance.HostSound(__instance.transform, "", 0f);
         }
     }
 }
