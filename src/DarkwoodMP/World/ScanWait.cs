@@ -39,21 +39,8 @@ namespace DarkwoodMP.World
         {
             try
             {
-                if (!Application.isPlaying || __instance == null
-                    || __instance.graphs == null || __instance.isScanning)
-                {
-                    return;
-                }
-
-                if (ProcessingWorkItems(__instance))
-                {
-                    // called from inside a work item: flushing would recurse
-                    return;
-                }
-
-                bool pending = WorkItemsQueued(__instance)
-                    || __instance.IsAnyGraphUpdatesQueued;
-                if (!pending)
+                if (__instance == null
+                    || !Teardown.TeardownRules.Flushes(FactsOf(__instance)))
                 {
                     return;
                 }
@@ -73,5 +60,20 @@ namespace DarkwoodMP.World
                         + $"scan: {e.Message}");
             }
         }
+
+        /// <summary>
+        /// What the scan's check looks at. Called from inside a work item
+        /// (processingWorkItems), flushing would recurse.
+        /// </summary>
+        private static Teardown.ScanFacts FactsOf(AstarPath astar) =>
+            new Teardown.ScanFacts
+            {
+                Playing = Application.isPlaying,
+                Graphs = astar.graphs != null,
+                Scanning = astar.isScanning,
+                InWorkItem = ProcessingWorkItems(astar),
+                WorkQueued = WorkItemsQueued(astar),
+                UpdatesQueued = astar.IsAnyGraphUpdatesQueued,
+            };
     }
 }

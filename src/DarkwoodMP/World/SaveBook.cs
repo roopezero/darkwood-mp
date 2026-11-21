@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Saves;
 using HarmonyLib;
 using Newtonsoft.Json;
 
@@ -56,24 +57,22 @@ namespace DarkwoodMP.World
         /// The file for the saves the game uses now, or null when there's none
         /// (a host's world in the cache).
         /// </summary>
-        public static string FilePath
+        public static string FilePath => RedirectRules.BookFile(
+            BepInEx.Paths.ConfigPath, SaveRedirect.Dir, HostCopy());
+
+        /// <summary>
+        /// Whether we play a copy of a host's world, or null when that isn't
+        /// known (no WorldShare yet).
+        /// </summary>
+        internal static bool? HostCopy()
         {
-            get
+            WorldShare share = WorldShare.Instance;
+            if (share == null)
             {
-                if (!SaveRedirect.Active)
-                {
-                    return Path.Combine(
-                        BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
-                }
-
-                WorldShare instance = WorldShare.Instance;
-                if (instance == null || instance.PlayingHostCopy)
-                {
-                    return null;
-                }
-
-                return Path.Combine(SaveRedirect.Dir, "darkwoodmp-saves.json");
+                return null;
             }
+
+            return share.PlayingHostCopy;
         }
 
         public static void Register(Session session)
@@ -238,18 +237,14 @@ namespace DarkwoodMP.World
             return name;
         }
 
-        public static void SetName(int slot, string name)
+        public static void SetName(int slot, string typed)
         {
-            if (name == null)
-            {
-                name = "";
-            }
-
-            name = name.Trim();
-            if (NameOf(slot) == name)
+            if (!SaveBookRules.Renames(NameOf(slot), typed))
             {
                 return;
             }
+
+            string name = SaveBookRules.SlotName(typed);
 
             var r = GetOrAdd(slot);
             if (r == null)
@@ -290,7 +285,7 @@ namespace DarkwoodMP.World
                 }
                 else
                 {
-                    dir = PlayersDir(sm.baseSaveDirectory, slot);
+                    dir = DeleteRules.PlayersOf(sm.baseSaveDirectory, slot);
                 }
 
                 if (FilePath != null && dir != null && Directory.Exists(dir))
@@ -327,15 +322,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var p = r.Players.FirstOrDefault(x =>
-            {
-                if (key != "")
-                {
-                    return x.Key == key;
-                }
-
-                return x.Name == name;
-            });
+            var joiner = new BookPlayer { Key = key, Name = name };
+            var p = r.Players.FirstOrDefault(x => SaveBookRules.SamePlayer(
+                new BookPlayer { Key = x.Key, Name = x.Name },
+                joiner));
 
             if (p == null)
             {
@@ -347,14 +337,6 @@ namespace DarkwoodMP.World
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}: played with {name}");
         }
-
-        /// <summary>
-        /// The folder where the host keeps the characters of the players who
-        /// joined slot <paramref name="slot"/>.
-        /// </summary>
-        private static string PlayersDir(string baseDir, int slot) =>
-            Path.Combine(
-                Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
 
         /// <summary>
         /// Delete slot <paramref name="slot"/>'s players' characters;
@@ -407,7 +389,13 @@ namespace DarkwoodMP.World
         static void Prefix()
         {
             var p = Core.currentProfile;
-            if (p == null || p.Active)
+            bool active = false;
+            if (p != null)
+            {
+                active = p.Active;
+            }
+
+            if (!RedirectRules.NewGameForgets(p != null, active))
             {
                 return;
             }
@@ -425,14 +413,10 @@ namespace DarkwoodMP.World
             }
 
             var sm = Singleton<SaveManager>.Instance;
-            if (sm != null)
+            if (RedirectRules.NewGameDeletes(sm != null, SaveBook.HostCopy()))
             {
-                WorldShare share = WorldShare.Instance;
-                if (share == null || !share.PlayingHostCopy)
-                {
-                    SaveBook.DeletePlayersDir(
-                        sm.baseSaveDirectory, p.id, "(a new game)");
-                }
+                SaveBook.DeletePlayersDir(
+                    sm.baseSaveDirectory, p.id, "(a new game)");
             }
         }
     }
@@ -451,13 +435,8 @@ namespace DarkwoodMP.World
         static void Prefix(SaveManager __instance)
         {
             var p = Core.currentProfile;
-            if (p == null)
-            {
-                return;
-            }
-
-            WorldShare share = WorldShare.Instance;
-            if (share != null && share.PlayingHostCopy)
+            bool? hostCopy = SaveBook.HostCopy();
+            if (!RedirectRules.SlotDeleteForgets(p != null, hostCopy))
             {
                 return;
             }

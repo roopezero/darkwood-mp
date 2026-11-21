@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using DarkwoodMP.World.Saves;
 
 namespace DarkwoodMP.World
 {
@@ -164,136 +164,40 @@ namespace DarkwoodMP.World
 
         // ---- paths and deleting folders -------------------------------------
 
-        internal static readonly StringComparison PathCase =
-            PathCaseOf(Environment.OSVersion.Platform);
-
         /// <summary>
-        /// How paths compare on a platform: ignoring case on Windows, exactly
-        /// elsewhere.
+        /// Paths compare ignoring case on Windows, exactly elsewhere.
         /// </summary>
-        private static StringComparison PathCaseOf(PlatformID platform)
-        {
-            if (platform == PlatformID.Win32NT)
-            {
-                return StringComparison.OrdinalIgnoreCase;
-            }
+        internal static readonly bool IgnoreCase =
+            Environment.OSVersion.Platform == PlatformID.Win32NT;
 
-            return StringComparison.Ordinal;
-        }
-
-        internal static string Full(string p) =>
-            Path.GetFullPath(p).TrimEnd(
-                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        internal static string Full(string p) => DeleteRules.Full(p);
 
         /// <summary>
         /// The same folder, however the two were written (separators, a
         /// trailing slash; case on Windows).
         /// </summary>
-        internal static bool SamePath(string a, string b)
-        {
-            if (a == null || b == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                return string.Equals(Full(a), Full(b), PathCase);
-            }
-            catch
-            {
-                return a == b;
-            }
-        }
+        internal static bool SamePath(string a, string b) =>
+            DeleteRules.SamePath(a, b, IgnoreCase);
 
         /// <summary>Whether path is dir or inside it.</summary>
-        internal static bool IsUnder(string path, string dir)
-        {
-            if (path == null || dir == null)
-            {
-                return false;
-            }
-
-            try
-            {
-                string p = Full(path), d = Full(dir);
-                return string.Equals(p, d, PathCase)
-                    || p.StartsWith(d + Path.DirectorySeparatorChar, PathCase);
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        private static bool StrictlyUnder(string full, string dir) =>
-            !SamePath(full, dir) && IsUnder(full, dir);
+        internal static bool IsUnder(string path, string dir) =>
+            DeleteRules.IsUnder(path, dir, IgnoreCase);
 
         /// <summary>
-        /// Why a folder may never be deleted, or null if it may be considered
-        /// at all: an empty or relative path, a filesystem root (Full trims "/"
-        /// to "" and "C:\" to "C:", so a name-less or parent-less path is a
-        /// root), or the user's home folder or one of its parents.
+        /// What the delete fence looks at for a path: the home folders, the
+        /// mod's cache (BepInEx/cache/DarkwoodMP) and the folder standing in
+        /// for the player's saves (SaveRedirect.Dir).
         /// </summary>
-        private static string NeverDelete(string path, out string full)
+        private static DeleteFacts FactsOf(string path) => new DeleteFacts
         {
-            full = null;
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return "the path is empty";
-            }
-
-            if (!Path.IsPathRooted(path))
-            {
-                return "the path isn't absolute";
-            }
-
-            try
-            {
-                full = Full(path);
-            }
-            catch (Exception e)
-            {
-                return $"the path isn't valid ({e.Message})";
-            }
-
-            if (full.Length == 0 || Path.GetDirectoryName(full) == null
-                || string.IsNullOrEmpty(Path.GetFileName(full)))
-            {
-                return "it's a filesystem root";
-            }
-
-            foreach (var home in new[]
-            {
-                Environment.GetEnvironmentVariable("HOME"),
-                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile)
-            })
-            {
-                if (!string.IsNullOrEmpty(home) && Path.IsPathRooted(home)
-                    && IsUnder(home, full))
-                {
-                    return "it's your home folder or holds it";
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary>
-        /// The folders the mod deletes things in: its cache
-        /// (BepInEx/cache/DarkwoodMP) and the folder standing in for the
-        /// player's saves (SaveRedirect.Dir), unless that is itself a root or
-        /// the home folder.
-        /// </summary>
-        private static IEnumerable<string> DeleteRoots()
-        {
-            yield return Path.Combine(BepInEx.Paths.CachePath, "DarkwoodMP");
-            string redirect = SaveRedirect.Dir;
-            if (redirect != null && NeverDelete(redirect, out _) == null)
-            {
-                yield return redirect;
-            }
-        }
+            Path = path,
+            Home = Environment.GetEnvironmentVariable("HOME"),
+            UserProfile = Environment.GetFolderPath(
+                Environment.SpecialFolder.UserProfile),
+            CacheRoot = Path.Combine(BepInEx.Paths.CachePath, "DarkwoodMP"),
+            Redirect = SaveRedirect.Dir,
+            IgnoreCase = IgnoreCase,
+        };
 
         /// <summary>
         /// Deletes a folder and everything in it, only if it's strictly inside
@@ -306,31 +210,23 @@ namespace DarkwoodMP.World
         /// </summary>
         public static bool DeleteTree(string path)
         {
-            if (!MayDelete(path, out string full))
+            if (!MayDelete(path))
             {
                 return false;
             }
 
-            DeleteEntry(full);
+            DeleteEntry(Full(path));
             return true;
         }
 
         /// <summary>
-        /// Whether DeleteTree would delete path; logs a warning when not.
+        /// Whether DeleteTree would delete path (DeleteRules.MayDelete); logs
+        /// a warning when not.
         /// </summary>
-        public static bool MayDelete(string path) => MayDelete(path, out _);
-
-        private static bool MayDelete(string path, out string full)
+        public static bool MayDelete(string path)
         {
-            string why = NeverDelete(path, out full);
-            string f = full;
-            if (why == null
-                && !DeleteRoots().Any(root => StrictlyUnder(f, root)))
-            {
-                why = "it isn't inside the mod's cache or save-redirect folder";
-            }
-
-            if (why == null)
+            var verdict = DeleteRules.MayDelete(FactsOf(path));
+            if (!verdict.Refused)
             {
                 return true;
             }
@@ -341,7 +237,8 @@ namespace DarkwoodMP.World
                 shownPath = "(null)";
             }
 
-            Plugin.Log.LogWarning($"Not deleting {shownPath}: {why}");
+            Plugin.Log.LogWarning(
+                $"Not deleting {shownPath}: {Refusals.Text(verdict)}");
             return false;
         }
 
@@ -350,43 +247,21 @@ namespace DarkwoodMP.World
         /// <paramref name="slot"/>'s joiners,
         /// base/prof&lt;slot&gt;/darkwoodmp_players, which lives in the
         /// player's own save folder (so DeleteTree's roots don't cover it).
-        /// Only that exact folder: false, with a warning, for a bad base folder
-        /// or slot. True if it was there and is deleted.
+        /// Only that exact folder (DeleteRules.MayDeletePlayers): false, with
+        /// a warning, for a bad base folder or slot. True if it was there and
+        /// is deleted.
         /// </summary>
         public static bool DeletePlayersFolder(string baseDir, int slot)
         {
-            string why;
-            if (slot < 1 || slot > 99)
+            var facts = FactsOf(baseDir) with { Slot = slot };
+            var verdict = DeleteRules.MayDeletePlayers(facts);
+            if (verdict.Refused)
             {
-                why = $"slot {slot} isn't a save slot";
-            }
-            else
-            {
-                why = NeverDelete(baseDir, out _);
-            }
-
-            string dir = null, full = null;
-            if (why == null)
-            {
-                dir = Path.Combine(
-                    Path.Combine(baseDir, "prof" + slot), "darkwoodmp_players");
-                full = Full(dir);
-                string expected = Full(baseDir) + Path.DirectorySeparatorChar
-                    + "prof" + slot + Path.DirectorySeparatorChar
-                    + "darkwoodmp_players";
-                if (!string.Equals(full, expected, PathCase))
+                // the players' folder is named once the base folder passed
+                string shownDir = baseDir;
+                if (verdict.Reason == Refusal.NotPlayersFolder)
                 {
-                    why = "it isn't prof<N>/darkwoodmp_players in the save "
-                        + "folder";
-                }
-            }
-
-            if (why != null)
-            {
-                string shownDir = dir;
-                if (shownDir == null)
-                {
-                    shownDir = baseDir;
+                    shownDir = DeleteRules.PlayersOf(baseDir, slot);
                 }
 
                 if (shownDir == null)
@@ -394,10 +269,12 @@ namespace DarkwoodMP.World
                     shownDir = "(null)";
                 }
 
-                Plugin.Log.LogWarning($"Not deleting {shownDir}: {why}");
+                Plugin.Log.LogWarning(
+                    $"Not deleting {shownDir}: {Refusals.Text(verdict)}");
                 return false;
             }
 
+            string full = Full(DeleteRules.PlayersOf(baseDir, slot));
             if (!Exists(full))
             {
                 return false;

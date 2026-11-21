@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Saves;
 using HarmonyLib;
 using UnityEngine.SceneManagement;
 
@@ -60,9 +61,9 @@ namespace DarkwoodMP.World
 
         private static void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            // "Darkwood" is the main menu's scene (Core.returnToMainMenu).
-            if (_worldStarted && scene.name == "Darkwood"
-                && mode == LoadSceneMode.Single)
+            // the main menu's scene loaded after the world was started
+            if (RedirectRules.EndsAt(
+                _worldStarted, scene.name, mode == LoadSceneMode.Single))
             {
                 Plugin.Log.LogInfo(
                     "Back at the main menu: saves go to your own save folder "
@@ -78,12 +79,7 @@ namespace DarkwoodMP.World
 
         private static bool Prefix(ref string __result)
         {
-            string dir = _temporary;
-            if (dir == null)
-            {
-                dir = Dir;
-            }
-
+            string dir = RedirectRules.SaveFolder(_temporary, Dir);
             if (dir == null)
             {
                 return true;
