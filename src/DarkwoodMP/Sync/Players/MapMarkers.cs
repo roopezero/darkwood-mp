@@ -199,7 +199,7 @@ namespace DarkwoodMP.Sync.Players
         public void DrawNames()
         {
             if (_markers.Count == 0 || Core.CamUI == null
-                || Plugin.NameTagStyle == null)
+                || Plugin.Instance.Host.NameTagStyle == null)
             {
                 return;
             }
@@ -225,7 +225,7 @@ namespace DarkwoodMP.Sync.Players
                 var sp = cam.WorldToScreenPoint(kv.Value.position);
                 GUI.Label(
                     new Rect(sp.x - 100, Screen.height - sp.y - 34, 200, 22),
-                    r.Name, Plugin.NameTagStyle);
+                    r.Name, Plugin.Instance.Host.NameTagStyle);
             }
         }
     }

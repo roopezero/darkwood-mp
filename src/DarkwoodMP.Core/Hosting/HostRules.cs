@@ -92,7 +92,7 @@ namespace DarkwoodMP.Hosting
         /// Whether Direct hosting asks the router to forward the port. The
         /// fake router of --dwmp-upnp-test (PortMapper.TestRouter set) wins
         /// over everything; otherwise the OpenPort setting, never in a test
-        /// game (Plugin.TestMode), which hosts over and over.
+        /// game (ModHost.TestMode), which hosts over and over.
         public static bool OpensPort(
             bool testRouter,
             bool openPort,

@@ -716,6 +716,17 @@ Finish with `tools/run-test.sh full`.
         `OwnerOf`, `CloseOf` and `ResultOf` turn Steamworks values into the
         facts inside those files. Steam can't run in the test box, so only
         the unit tests check this until the final in-game run.
+  - [x] The tidy before the docs. Done: the last static switches are on
+        `ModHost` (`DebugWorld`, which `WorldActions.Debug` reads,
+        `TestAsPlayer`, `TestMode`, `NameTagStyle`), and `HammerStroke`'s
+        depth and held sends on the session (`CoopSession.Hammer`; its patch
+        does nothing with no session). `SkillsPanel` is gone: its callers use
+        `ModHost.SkillsPanel`. The plugin's files over 600 lines are split
+        into partial files, moving code verbatim; only `HammerStroke` changed
+        file, the one patch on its game method. Left static: `Plugin.Log`,
+        `Cfg`, `Instance` and `Coop.Current`, lookup tables, reflection
+        caches and `SpawnSpot`'s physics buffer, and the map test steps'
+        own fields (about 110, in static step classes; test-only).
 - [x] Turn style warnings into errors for the whole plugin.
 - [x] Update the Status line in `ARCHITECTURE.md`, `TECHNICAL.md` and
       `CLAUDE.md`. Done with the docs pass, which brought every doc and

@@ -1,6 +1,6 @@
 namespace DarkwoodMP.World.Skills
 {
-    /// The Skills panel's own words, as SkillsPanel says them today.
+    /// The Skills panel's own words, as SkillsWindow says them today.
     public static class SkillPanelTexts
     {
         public const string Choose = "Choose a skill to learn.";
@@ -44,7 +44,7 @@ namespace DarkwoodMP.World.Skills
             return TakeLevel;
         }
 
-        /// The text with its first letter made capital (SkillsPanel.Capital);
+        /// The text with its first letter made capital (SkillsWindow.Capital);
         /// null and "" stay as they are.
         public static string Capital(string text)
         {

@@ -49,7 +49,7 @@ namespace DarkwoodMP.World.Scripted
         /// (ScriptedEvents.PlayerEntered).
         public bool PlayerEntered { get; init; }
 
-        /// The map test acts as our player (WorldActions.TestAsPlayer).
+        /// The map test acts as our player (ModHost.TestAsPlayer).
         public bool TestAsPlayer { get; init; }
 
         /// Another player's action is being applied

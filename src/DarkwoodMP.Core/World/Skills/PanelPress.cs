@@ -1,7 +1,7 @@
 namespace DarkwoodMP.World.Skills
 {
     /// The mouse buttons pressed over the Skills panel and still held, read
-    /// once a frame (SkillsPanel.MouseState). One instance for our game.
+    /// once a frame (SkillsWindow.MouseState). One instance for our game.
     public sealed class PanelPress
     {
         /// How many mouse buttons are tracked: left, right and middle.

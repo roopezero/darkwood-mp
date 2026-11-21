@@ -264,7 +264,7 @@ namespace DarkwoodMP.World
                 Confirming = _confirming,
                 Sharing = Coop.Guards.Sharing,
                 Manual = manual,
-                TestAsPlayer = WorldActions.TestAsPlayer,
+                TestAsPlayer = Plugin.Instance.Host.TestAsPlayer,
             };
 
             if (_coop.Net.IsClient)

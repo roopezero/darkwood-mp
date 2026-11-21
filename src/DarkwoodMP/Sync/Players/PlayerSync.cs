@@ -359,7 +359,7 @@ namespace DarkwoodMP.Sync.Players
                     _dummyDamage = 0f;
                 }
 
-                GUI.Label(rect, tag.Text, Plugin.NameTagStyle);
+                GUI.Label(rect, tag.Text, Plugin.Instance.Host.NameTagStyle);
             }
         }
     }

@@ -32,7 +32,7 @@ namespace DarkwoodMP.World.Progress
     /// The stove only gives the level and its skill point (TakeLevelAtStove, in
     /// place of the game's skill choice):
     /// the points are spent on the Skills panel, anywhere (World.SkillTree,
-    /// SkillsPanel).
+    /// SkillsWindow).
     ///
     /// A skill reset at the stove (a button while the stove's menu is open)
     /// takes back all of a player's chosen skills, good and negative, and gives

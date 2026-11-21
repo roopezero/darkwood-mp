@@ -1,12 +1,12 @@
 namespace DarkwoodMP.World.Skills
 {
-    /// The Skills panel's decisions (SkillsPanel): when it opens and
+    /// The Skills panel's decisions (SkillsWindow): when it opens and
     /// closes, what a click picks, which cells can be picked, what the
     /// footer and the details say, and which game input it takes.
     public static class SkillPanelRules
     {
         /// The game's mouse actions the panel takes while the mouse is
-        /// pressed on it (SkillsPanel.MouseActions).
+        /// pressed on it (SkillsWindow.MouseActions).
         static readonly string[] MouseActions =
         {
             "Primary Action",
@@ -15,7 +15,7 @@ namespace DarkwoodMP.World.Skills
             "Attack",
         };
 
-        /// Why the panel can't open now (SkillsPanel.CanOpen); None: it
+        /// Why the panel can't open now (SkillsWindow.CanOpen); None: it
         /// can. Logged, never sent.
         public static SkillNote CanOpen(in PanelFacts panel)
         {
@@ -51,7 +51,7 @@ namespace DarkwoodMP.World.Skills
         }
 
         /// Whether the open panel closes by itself this frame (the start of
-        /// SkillsPanel.Update). Fewer checks than CanOpen: not health,
+        /// SkillsWindow.Update). Fewer checks than CanOpen: not health,
         /// Loading, forbidInputs or watching.
         public static bool ClosesNow(in PanelFacts panel)
         {
@@ -64,7 +64,7 @@ namespace DarkwoodMP.World.Skills
                     || panel.Dying);
         }
 
-        /// Whether SkillsPanel.Update reads the panel's key this frame: not
+        /// Whether SkillsWindow.Update reads the panel's key this frame: not
         /// while the co-op menu shows or an IMGUI control has the keyboard,
         /// and not when the key is KeyCode.None.
         public static bool ReadsKey(in KeyFacts key)
@@ -150,7 +150,7 @@ namespace DarkwoodMP.World.Skills
         }
 
         /// The negative skill a choice sends with the good one: the one
-        /// picked, only when the good skill needs it (SkillsPanel's
+        /// picked, only when the good skill needs it (SkillsWindow's
         /// needNeg); null otherwise.
         public static string NegativeSent(in ChoiceFacts choice)
         {
@@ -179,7 +179,7 @@ namespace DarkwoodMP.World.Skills
             return !SkillRules.Check(sent).Refused;
         }
 
-        /// What the footer says (SkillsPanel.DrawFooter): the last Learn's
+        /// What the footer says (SkillsWindow.DrawFooter): the last Learn's
         /// reason first, then waiting for the host, then the points or the
         /// negative skill still to pick.
         public static PanelNote Footer(in FooterFacts footer)
@@ -250,7 +250,7 @@ namespace DarkwoodMP.World.Skills
         }
 
         /// Whether the game's read of this action may be taken by the panel
-        /// (SkillsPanel.EatsAction's first check): the panel is open and the
+        /// (SkillsWindow.EatsAction's first check): the panel is open and the
         /// action is one of the game's mouse actions. PanelPress.Eats says
         /// whether it is.
         public static bool WatchesAction(bool open, string action)
