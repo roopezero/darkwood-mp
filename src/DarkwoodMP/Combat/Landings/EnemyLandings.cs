@@ -55,6 +55,59 @@ namespace DarkwoodMP.Combat
             };
         }
 
+        /// <summary>
+        /// Client: the facts of a message about the host's enemies' throws.
+        /// </summary>
+        private static HostSendFacts SendOf(ulong from)
+        {
+            var s = S;
+            if (s == null)
+            {
+                return new HostSendFacts { InWorld = WorldShare.InWorld };
+            }
+
+            return new HostSendFacts
+            {
+                HasSession = true,
+                InWorld = WorldShare.InWorld,
+                IsClient = s.IsClient,
+                FromHost = from == s.HostId,
+            };
+        }
+
+        /// <summary>
+        /// Host: the facts of a throw, ranged attack or landing starting by
+        /// thrower (null when what it starts from isn't there); by is its
+        /// net id when it's one of our tracked enemies.
+        /// </summary>
+        internal static ThrowWatchFacts WatchOf(
+            Character thrower, bool busy, out uint by)
+        {
+            by = 0;
+            var s = S;
+            bool tracked = false;
+            if (thrower != null && NetEnemies.Instance != null)
+            {
+                tracked = NetEnemies.Instance.NetIdOf(thrower, out by);
+            }
+
+            int peers = 0;
+            if (s != null)
+            {
+                peers = s.Peers.Count;
+            }
+
+            return new ThrowWatchFacts
+            {
+                Busy = busy,
+                HasSource = thrower != null,
+                Host = s != null && s.IsHost,
+                Peers = peers,
+                Sharing = Coop.Guards.Sharing,
+                Tracked = tracked,
+            };
+        }
+
         // ---- the throw (a look on clients) ----------------------------------
 
         /// <summary>
@@ -163,14 +216,12 @@ namespace DarkwoodMP.Combat
 
             ti.damage = 0;
             rb.velocity = vel;
-            rb.AddTorque(0f, 225000f, 0f);
+            rb.AddTorque(0f, LandingRules.CopySpin, 0f);
         }
 
         private static void OnProjectile(ulong from, PacketReader r)
         {
-            var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient
-                || from != s.HostId)
+            if (!LandingRules.FromHost(SendOf(from)))
             {
                 return;
             }
@@ -201,7 +252,7 @@ namespace DarkwoodMP.Combat
 
             var ti = t.GetComponent<ThrownItem>();
             var rb = t.GetComponent<Rigidbody>();
-            if (ti == null || rb == null) // only thrown things are shown
+            if (!LandingRules.ShowsCopy(ti != null, rb != null))
             {
                 Core.RemovePooledPrefab(t);
                 return;
@@ -276,9 +327,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static void OnSensorThrown(ulong from, PacketReader r)
         {
-            var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient
-                || from != s.HostId)
+            if (!LandingRules.FromHost(SendOf(from)))
             {
                 return;
             }
@@ -302,18 +351,16 @@ namespace DarkwoodMP.Combat
                 return; // not shown here: nobody would see it
             }
 
-            Character.SensorType st = null;
+            var types = new List<Character.SensorType>();
+            var choices = new List<SensorChoice>();
             foreach (var x in thrower.sensorTypes)
             {
-                if (x != null && x.isRanged && x.name == name
-                    && x.sensor != null)
-                {
-                    st = x;
-                    break;
-                }
+                types.Add(x);
+                choices.Add(ChoiceOf(x));
             }
 
-            if (st == null)
+            int i = LandingRules.SensorIndex(choices, name);
+            if (i < 0)
             {
                 Plugin.Log.LogWarning(
                     $"Couldn't show enemy #{by}'s {name}: our {thrower.name} "
@@ -321,6 +368,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
+            var st = types[i];
             GameObject go;
             try
             {
@@ -342,14 +390,14 @@ namespace DarkwoodMP.Combat
 
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
-            if (ti == null || rb == null) // only thrown things are shown
+            if (!LandingRules.ShowsCopy(ti != null, rb != null))
             {
                 Object.Destroy(go);
                 return;
             }
 
             SensorCopies.Add(ti);
-            rb.drag = 2f; // as rangedAttack sets it
+            rb.drag = LandingRules.SensorDrag;
             Fly(ti, rb, thrower, vel);
             ti.landTarget = new Vector3(land.x, pos.y, land.z);
             ti.setFallSpeed(st.throwStrength);
@@ -361,6 +409,24 @@ namespace DarkwoodMP.Combat
                     $"[world] got enemy #{by}'s {name} ({go.name}) thrown at "
                         + $"{pos}");
             }
+        }
+
+        /// <summary>
+        /// Client: one of our copy's sensor types, for SensorIndex.
+        /// </summary>
+        private static SensorChoice ChoiceOf(Character.SensorType x)
+        {
+            if (x == null)
+            {
+                return new SensorChoice();
+            }
+
+            return new SensorChoice
+            {
+                Ranged = x.isRanged,
+                Name = x.name,
+                HasSensor = x.sensor != null,
+            };
         }
 
         /// <summary>
@@ -376,7 +442,7 @@ namespace DarkwoodMP.Combat
         private static System.Collections.IEnumerator Expire(
             ThrownItem ti, Transform t)
         {
-            yield return new WaitForSeconds(4f);
+            yield return new WaitForSeconds(LandingRules.CopyLife);
             if (ti != null && Copies.Remove(ti))
             {
                 Gone(t);
@@ -426,17 +492,13 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static bool ByHostEnemy(ThrownItem t, out uint by)
         {
-            by = 0;
-            var s = S;
-            if (t == null || t.objectThatSpawnedMe == null || s == null
-                || !s.IsHost || s.Peers.Count == 0 || !Coop.Guards.Sharing)
+            Character c = null;
+            if (t != null && t.objectThatSpawnedMe != null)
             {
-                return false;
+                c = t.objectThatSpawnedMe.GetComponent<Character>();
             }
 
-            var c = t.objectThatSpawnedMe.GetComponent<Character>();
-            return c != null && NetEnemies.Instance != null
-                && NetEnemies.Instance.NetIdOf(c, out by);
+            return LandingRules.Notes(WatchOf(c, false, out by));
         }
 
         /// <summary>Host: after the landing, send what it left.</summary>
@@ -474,7 +536,7 @@ namespace DarkwoodMP.Combat
             }
 
             Made.Clear();
-            if (_landed.Count > 0 && !_watching)
+            if (LandingRules.StartsWatch(_landed.Count, _watching))
             {
                 _watching = true;
                 Plugin.Instance.StartCoroutine(WatchLanded());
@@ -492,7 +554,7 @@ namespace DarkwoodMP.Combat
             var gone = new List<long>();
             while (_landed.Count > 0)
             {
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSeconds(LandingRules.WatchEvery);
                 var s = S;
                 if (s == null || !s.IsHost)
                 {
@@ -504,9 +566,9 @@ namespace DarkwoodMP.Combat
                 foreach (var kv in _landed)
                 {
                     var go = kv.Value;
-                    if (go == null || !go.activeSelf)
+                    bool exists = go != null;
+                    if (LandingRules.Gone(exists, exists && go.activeSelf))
                     {
-                        // destroyed, or switched off as it ended
                         gone.Add(kv.Key);
                     }
                 }
@@ -530,9 +592,7 @@ namespace DarkwoodMP.Combat
 
         private static void OnLandedGone(ulong from, PacketReader r)
         {
-            var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient
-                || from != s.HostId)
+            if (!LandingRules.FromHost(SendOf(from)))
             {
                 return;
             }
@@ -612,9 +672,7 @@ namespace DarkwoodMP.Combat
 
         private static void OnLanded(ulong from, PacketReader r)
         {
-            var s = S;
-            if (s == null || !WorldShare.InWorld || !s.IsClient
-                || from != s.HostId)
+            if (!LandingRules.FromHost(SendOf(from)))
             {
                 return;
             }
@@ -625,13 +683,21 @@ namespace DarkwoodMP.Combat
             string name = landed.Name;
             var pos = VectorOf(landed.At);
             float yaw = landed.Yaw;
-            if (ObjRef.Spawned.TryGetValue(id, out var had) && had != null)
+            bool had = ObjRef.Spawned.TryGetValue(id, out var old)
+                && old != null;
+            Object prefab = null;
+            if (!had)
+            {
+                prefab = PrefabNamed(name);
+            }
+
+            var way = LandingRules.Landed(had, prefab != null);
+            if (way == LandedWay.Ignore)
             {
                 return;
             }
 
-            var prefab = PrefabNamed(name);
-            if (prefab == null)
+            if (way == LandedWay.Unknown)
             {
                 Plugin.Log.LogWarning(
                     $"[world] enemy #{by}'s {name} landed on the host, but no "

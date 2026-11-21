@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using DarkwoodMP.Net;
+using DarkwoodMP.Combat.Landings;
 using DarkwoodMP.World;
 using HarmonyLib;
 using UnityEngine;
@@ -62,8 +62,10 @@ namespace DarkwoodMP.Combat
         static void Postfix(Object prefab, GameObject __result)
         {
             var t = EnemyLandings.Landing;
-            if (t != null && __result != null && prefab != null
-                && prefab == t.prefabToSpawnOnLand)
+            bool noting = t != null && __result != null;
+            bool land = noting && prefab != null
+                && prefab == t.prefabToSpawnOnLand;
+            if (LandingRules.TakesLanded(noting, land))
             {
                 EnemyLandings.Made.Add(__result);
             }
@@ -80,14 +82,16 @@ namespace DarkwoodMP.Combat
         [HarmonyPriority(Priority.First)]
         static bool Prefix(Character __instance)
         {
-            if (!NetEnemies.ClientMode || __instance == null)
+            if (__instance == null)
             {
                 return true;
             }
 
-            return !(NetEnemies.Frozen.Contains(__instance)
-                    || (NetEnemies.Instance != null
-                        && NetEnemies.Instance.IsPuppet(__instance, out _)));
+            bool copy = NetEnemies.Instance != null
+                && NetEnemies.Instance.IsPuppet(__instance, out _);
+            return LandingRules.MayThrow(
+                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(__instance),
+                copy);
         }
     }
 
@@ -101,14 +105,12 @@ namespace DarkwoodMP.Combat
         static void Prefix(
             Character __instance, string _projectileType, out bool __state)
         {
-            var s = Session.Instance;
-            __state = EnemyLandings.Throwing == null && s != null && s.IsHost
-                && s.Peers.Count > 0 && Coop.Guards.Sharing
-                && NetEnemies.Instance != null
-                && NetEnemies.Instance.NetIdOf(
-                    __instance, out EnemyLandings.ThrowingBy);
+            var start = EnemyLandings.WatchOf(
+                __instance, EnemyLandings.Throwing != null, out uint by);
+            __state = LandingRules.Notes(start);
             if (__state)
             {
+                EnemyLandings.ThrowingBy = by;
                 EnemyLandings.Throwing = _projectileType;
                 EnemyLandings.Thrown.Clear();
             }
@@ -147,9 +149,10 @@ namespace DarkwoodMP.Combat
                     && m.ReturnType == typeof(Transform));
         static void Postfix(Transform __result)
         {
-            if (EnemyLandings.Throwing != null && __result != null
-                && __result.GetComponent<ThrownItem>() != null
-                && !EnemyLandings.Thrown.Contains(__result))
+            bool noting = EnemyLandings.Throwing != null && __result != null;
+            if (LandingRules.TakesThrown(
+                noting, noting && __result.GetComponent<ThrownItem>() != null,
+                noting && EnemyLandings.Thrown.Contains(__result)))
             {
                 EnemyLandings.Thrown.Add(__result);
             }
@@ -190,15 +193,18 @@ namespace DarkwoodMP.Combat
             Character __instance, Character.SensorType sensorType,
             out bool __state)
         {
-            var s = Session.Instance;
-            __state = EnemyLandings.SensorThrowing == null
-                && sensorType != null && s != null && s.IsHost
-                && s.Peers.Count > 0
-                && Coop.Guards.Sharing && NetEnemies.Instance != null
-                && NetEnemies.Instance.NetIdOf(
-                    __instance, out EnemyLandings.SensorThrowingBy);
+            Character thrower = null;
+            if (sensorType != null)
+            {
+                thrower = __instance;
+            }
+
+            var start = EnemyLandings.WatchOf(
+                thrower, EnemyLandings.SensorThrowing != null, out uint by);
+            __state = LandingRules.Notes(start);
             if (__state)
             {
+                EnemyLandings.SensorThrowingBy = by;
                 string sensorThrowing = sensorType.name;
                 if (sensorThrowing == null)
                 {
@@ -252,7 +258,9 @@ namespace DarkwoodMP.Combat
             }
 
             var ti = __result.GetComponent<ThrownItem>();
-            if (ti != null && !EnemyLandings.SensorThrown.Contains(ti))
+            bool thrown = ti != null;
+            bool listed = thrown && EnemyLandings.SensorThrown.Contains(ti);
+            if (LandingRules.TakesThrown(true, thrown, listed))
             {
                 EnemyLandings.SensorThrown.Add(ti);
             }
