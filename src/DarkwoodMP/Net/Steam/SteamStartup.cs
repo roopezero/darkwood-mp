@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using HarmonyLib;
+using DarkwoodMP.Net.Steam;
 using UnityEngine;
 
 namespace DarkwoodMP.Net
@@ -17,7 +18,7 @@ namespace DarkwoodMP.Net
         // SteamManager.s_instance and its m_bInitialized
         private FieldInfo _steamInstance, _steamInitialized;
         private bool _steamUnavailable;
-        private float _nextSteamCheck;
+        private Seconds _nextSteamCheck;
 
         public SteamStartup(ModHost host)
         {
@@ -34,10 +35,18 @@ namespace DarkwoodMP.Net
         /// </summary>
         public void Update()
         {
-            if (_host.Steam == null && !_steamUnavailable
-                && Time.unscaledTime >= _nextSteamCheck)
+            var now = new Seconds(Time.unscaledTime);
+            var check = new SteamCheckFacts
             {
-                _nextSteamCheck = Time.unscaledTime + 1f;
+                Up = _host.Steam != null,
+                Missing = _steamUnavailable,
+                Now = now,
+                Next = _nextSteamCheck,
+            };
+
+            if (SteamStartupRules.CheckDue(check))
+            {
+                _nextSteamCheck = SteamStartupRules.NextCheck(now);
                 if (SteamReady())
                 {
                     TryCreateSteamBackend();
@@ -83,7 +92,10 @@ namespace DarkwoodMP.Net
                         _steamInitialized = null;
                     }
 
-                    if (_steamInstance == null || _steamInitialized == null)
+                    bool fields = _steamInstance != null
+                        && _steamInitialized != null;
+                    if (SteamStartupRules.Found(fields, false, false)
+                        == SteamFound.Missing)
                     {
                         _steamUnavailable = true;
                         Plugin.Log.LogInfo(
@@ -94,8 +106,14 @@ namespace DarkwoodMP.Net
 
                 var manager =
                     _steamInstance.GetValue(null) as UnityEngine.Object;
-                return manager != null
-                    && (bool)_steamInitialized.GetValue(manager);
+                bool ready = false;
+                if (manager != null)
+                {
+                    ready = (bool)_steamInitialized.GetValue(manager);
+                }
+
+                return SteamStartupRules.Found(true, manager != null, ready)
+                    == SteamFound.Ready;
             }
             catch
             {
@@ -147,33 +165,17 @@ namespace DarkwoodMP.Net
 
         public void UpdateLocalName()
         {
-            string name = Plugin.Cfg.PlayerName.Value;
-            if (string.IsNullOrWhiteSpace(name))
+            string setting = Plugin.Cfg.PlayerName.Value;
+            // Steam's name is read only when the setting is blank, as before.
+            string steam = null;
+            if (string.IsNullOrWhiteSpace(setting)
+                && _host.Steam is IGuiSection gui)
             {
-                IGuiSection guiSection = _host.Steam as IGuiSection;
-                if (guiSection != null)
-                {
-                    name = guiSection.SuggestedPlayerName;
-                }
-                else
-                {
-                    name = null;
-                }
+                steam = gui.SuggestedPlayerName;
             }
 
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                name = Environment.UserName;
-            }
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                _host.Session.LocalName = "Player";
-            }
-            else
-            {
-                _host.Session.LocalName = name.Trim();
-            }
+            _host.Session.LocalName = PlayerNameRules.Choose(
+                setting, steam, Environment.UserName);
         }
     }
 }

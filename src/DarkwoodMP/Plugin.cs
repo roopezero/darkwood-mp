@@ -63,36 +63,8 @@ namespace DarkwoodMP
         /// it's in, so hosting starts from inside your world; from the main
         /// menu a server would only turn joiners away.
         /// </summary>
-        public static string CantHostReason
-        {
-            get
-            {
-                if (!WorldShare.InWorld)
-                {
-                    return "To host, load your world first (Start Game), then "
-                        + "press Esc and choose Multiplayer in the pause menu.";
-                }
-
-                // After leaving someone's game you're still in your copy of
-                // their world (your own saves are untouched).
-                WorldShare share = Plugin.Instance.Host.Share;
-                if (share != null && share.PlayingHostCopy)
-                {
-                    return "This is your copy of another host's world. To "
-                        + "host, go back to the main menu and load your own "
-                        + "world.";
-                }
-
-                if (World.Story.EpilogueSync.InEpilogueAlone())
-                {
-                    return "This world is in the epilogue, which can't be "
-                        + "shared once it has begun. Host from a save before "
-                        + "the end of the game.";
-                }
-
-                return null;
-            }
-        }
+        public static string CantHostReason =>
+            Instance._host.Hosting.CantHostReason;
 
         /// <summary>
         /// Open the co-op panel (Multiplayer in the pause menu).
@@ -142,91 +114,8 @@ namespace DarkwoodMP
         /// would. Gives up if the game is back at the main menu instead.
         /// </summary>
         internal void HostWhenReady(bool steam) =>
-            StartCoroutine(HostWhenWorldReady(steam));
+            StartCoroutine(_host.Hosting.WhenWorldReady(steam));
 
-        private System.Collections.IEnumerator HostWhenWorldReady(bool steam)
-        {
-            float t0 = Time.realtimeSinceStartup;
-            while (WorldShare.MainMenuReady()
-                && Time.realtimeSinceStartup - t0 < 20f)
-            {
-                yield return null; // the load starts
-            }
-
-            while (!WorldShare.WorldReady)
-            {
-                if (WorldShare.MainMenuReady())
-                {
-                    Log.LogWarning(
-                        "[start game] back at the main menu before the world "
-                            + "loaded: not hosting");
-                    yield break;
-                }
-
-                yield return null;
-            }
-
-            if (_host.Session.Active)
-            {
-                yield break;
-            }
-
-            if (CantHostReason is string why)
-            {
-                Log.LogWarning($"[start game] can't host: {why}");
-                yield break;
-            }
-
-            if (steam && _host.Steam is IGuiSection steamGui)
-            {
-                steamGui.Host();
-                Log.LogInfo("[start game] hosting with Steam");
-            }
-            else
-            {
-                _host.Session.LastRefusal = null;
-                bool ok = HostDirect();
-                int port = Cfg.DirectPort.Value;
-                string status = "started";
-                if (!ok)
-                {
-                    status = _host.Tcp.Status;
-                }
-
-                Log.LogInfo(
-                    $"[start game] hosting with Direct on port {port}: "
-                        + $"{status}");
-            }
-        }
-
-        /// <summary>
-        /// Whether Direct hosting asks the router to forward the port. A test
-        /// game never touches the real router (the tests host over and over);
-        /// it opens the port only on the fake router of --dwmp-upnp-test.
-        /// </summary>
-        private static bool OpensPort() =>
-            PortMapper.TestRouter != null || (Cfg.OpenPort.Value && !TestMode);
-
-        /// <summary>
-        /// Host with Direct on the configured port; a password or player limit
-        /// given here is for this time only.
-        /// </summary>
-        private bool HostDirect(string password = null, int maxPlayers = 0)
-        {
-            string serverName = Cfg.ServerName.Value;
-            int port = Cfg.DirectPort.Value;
-            if (password == null)
-            {
-                password = Cfg.Password.Value;
-            }
-
-            if (maxPlayers <= 0)
-            {
-                maxPlayers = Cfg.MaxPlayers.Value;
-            }
-
-            return _host.Tcp.Host(serverName, port, password, maxPlayers);
-        }
 
         /// <summary>
         /// Whether the game was started for the tests (a --dwmp-test...
@@ -272,7 +161,7 @@ namespace DarkwoodMP
         {
             Cfg = new ModConfig(Config);
 
-            _host = new ModHost(OpensPort);
+            _host = new ModHost(Hosting.HostStart.OpensPort);
             _host.AddPanel(this);
             _host.AddWindows();
             _host.AddPlayers();
@@ -303,16 +192,15 @@ namespace DarkwoodMP
             var args = Environment.GetCommandLineArgs();
             // "--dwmp-profile-load": time the game's loading code and log what
             // was slowest once a world is ready.
-            if (Array.IndexOf(args, "--dwmp-profile-load") >= 0)
+            if (Testing.TestArgRules.Has(args, "--dwmp-profile-load"))
             {
                 _host.LoadProfiler.Start(_harmony);
             }
 
             // "--dwmp-test-control PORT": take test commands from
             // tools/run-test.sh (one game for a whole test run).
-            int tc = Array.IndexOf(args, "--dwmp-test-control");
-            if (tc >= 0 && tc + 1 < args.Length
-                && int.TryParse(args[tc + 1], out int controlPort))
+            if (Testing.TestArgRules.TryInt(
+                args, "--dwmp-test-control", out int controlPort))
             {
                 _host.Control.Start(this, controlPort);
             }

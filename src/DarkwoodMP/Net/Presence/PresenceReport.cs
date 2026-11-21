@@ -14,6 +14,10 @@ namespace DarkwoodMP.Net.Presence
     internal sealed class PresenceReport
     {
         private readonly ModHost _host;
+        private Seconds _nextWorldLabel;
+        private Seconds _nextPresence;
+        private string _lastPresence;
+        private bool _biomeKeysLogged;
 
         public PresenceReport(ModHost host)
         {
@@ -32,27 +36,31 @@ namespace DarkwoodMP.Net.Presence
         /// </summary>
         public void Update()
         {
-            if (_host.Tcp.IsHost && Time.unscaledTime >= _nextWorldLabel)
+            var now = new Seconds(Time.unscaledTime);
+            if (PresenceRules.LabelDue(_host.Tcp.IsHost, now, _nextWorldLabel))
             {
-                _nextWorldLabel = Time.unscaledTime + 2f;
+                _nextWorldLabel = PresenceRules.NextLabel(now);
                 _host.Tcp.WorldLabel = WorldLabel();
             }
 
-            if ((_host.Steam != null || Logged)
-                && Time.unscaledTime >= _nextPresence)
+            var timer = new PresenceTimerFacts
             {
-                _nextPresence = Time.unscaledTime + 5f;
+                SteamUp = _host.Steam != null,
+                Logged = Logged,
+                Now = now,
+                Next = _nextPresence,
+            };
+
+            if (PresenceRules.PresenceDue(timer))
+            {
+                _nextPresence = PresenceRules.NextPresence(now);
                 UpdatePresence();
             }
         }
 
-        private float _nextWorldLabel;
-        private float _nextPresence;
-        private string _lastPresence;
-
         /// <summary>
-        /// The server browser's World column for this host: the day and chapter
-        /// its world is on.
+        /// The server browser's World column for this host: the day and
+        /// chapter its world is on.
         /// </summary>
         private static string WorldLabel()
         {
@@ -60,16 +68,11 @@ namespace DarkwoodMP.Net.Presence
             {
                 if (!WorldShare.InWorld)
                 {
-                    return "";
+                    return PresenceRules.WorldLabel(false, 0, 0);
                 }
 
                 var (day, chapter) = DayAndChapter();
-                if (chapter > 0)
-                {
-                    return $"Day {day}, chapter {chapter}";
-                }
-
-                return $"Day {day}";
+                return PresenceRules.WorldLabel(true, day, chapter);
             }
             catch
             {
@@ -102,19 +105,15 @@ namespace DarkwoodMP.Net.Presence
             string text;
             try
             {
-                text = PresenceText();
+                text = PresenceRules.Text(FactsOf(_host.Session));
             }
             catch (Exception e)
             {
-                text = $"DarkwoodMP {PluginInfo.Version}";
+                text = PresenceRules.Fallback(PluginInfo.Version);
                 Plugin.Log.LogWarning($"Steam presence: {e.Message}");
             }
 
-            if (text.Length > 256)
-            {
-                text = text.Substring(0, 256); // Steam's limit for a value
-            }
-
+            text = PresenceRules.Cut(text);
             bool changed = text != _lastPresence;
             _lastPresence = text;
             if (_host.Steam == null)
@@ -139,8 +138,8 @@ namespace DarkwoodMP.Net.Presence
             }
         }
 
-        // Non-inlined, like CreateSteamBackend: names SteamBackend, so it runs
-        // only once Steam is there.
+        // Non-inlined, like SteamStartup's CreateSteamBackend: names
+        // SteamBackend, so it runs only once Steam is there.
         [MethodImpl(MethodImplOptions.NoInlining)]
         private void SetSteamPresence(string text, bool log)
         {
@@ -149,13 +148,15 @@ namespace DarkwoodMP.Net.Presence
                 return;
             }
 
-            int players = 1;
+            int players = 0;
             if (_host.Session.Active)
             {
                 players = _host.Session.PlayerCount;
             }
 
-            sb.SetPresence(text, players);
+            sb.SetPresence(
+                text,
+                PresenceRules.SteamPlayers(_host.Session.Active, players));
             if (log)
             {
                 Plugin.Log.LogInfo(
@@ -164,147 +165,125 @@ namespace DarkwoodMP.Net.Presence
         }
 
         /// <summary>
-        /// "DarkwoodMP 0.22.0 · Chapter 2, day 5 · Silent Forest · Hosting, 3/5
-        /// players", or "... · In the main menu".
+        /// The game and the session as the presence tells of them. The world
+        /// is read only while one is loaded, and the session only while it
+        /// runs.
         /// </summary>
-        private string PresenceText()
+        private PresenceFacts FactsOf(Session session)
         {
-            var parts = new List<string> { $"DarkwoodMP {PluginInfo.Version}" };
             if (!WorldShare.InWorld)
             {
-                parts.Add("In the main menu");
-                return string.Join(" · ", parts);
+                return new PresenceFacts { Version = PluginInfo.Version };
             }
 
             var (day, chapter) = DayAndChapter();
-            string item;
-            if (chapter > 0)
-            {
-                item = $"Chapter {Mathf.Clamp(chapter, 1, 10)}, day {day}";
-            }
-            else
-            {
-                item = $"Day {day}";
-            }
-
-            parts.Add(item);
             string biome = BiomeName();
-            if (!string.IsNullOrEmpty(biome))
+            if (!session.Active)
             {
-                parts.Add(biome);
+                return new PresenceFacts
+                {
+                    Version = PluginInfo.Version,
+                    InWorld = true,
+                    Day = day,
+                    Chapter = chapter,
+                    Biome = biome,
+                };
             }
 
-            if (!_host.Session.Active)
+            session.Names.TryGetValue(session.HostId, out string host);
+            return new PresenceFacts
             {
-                parts.Add("Playing alone");
-            }
-            else
-            {
-                string count =
-                    $"{_host.Session.PlayerCount}/"
-                        + $"{_host.Session.Backend.MaxPlayers} players";
-                if (_host.Session.IsHost)
-                {
-                    parts.Add($"Hosting, {count}");
-                }
-                else if (_host.Session.Names.TryGetValue(
-                    _host.Session.HostId, out var host)
-                    && !string.IsNullOrEmpty(host))
-                {
-                    parts.Add($"In {host}'s game, {count}");
-                }
-                else
-                {
-                    parts.Add($"In co-op, {count}");
-                }
-            }
-
-            return string.Join(" · ", parts);
+                Version = PluginInfo.Version,
+                InWorld = true,
+                Day = day,
+                Chapter = chapter,
+                Biome = biome,
+                InSession = true,
+                IsHost = session.IsHost,
+                Players = session.PlayerCount,
+                MaxPlayers = session.Backend.MaxPlayers,
+                HostName = host,
+            };
         }
 
-        private bool _biomeKeysLogged;
+        /// <summary>
+        /// Where our player is, for the biome's name.
+        /// </summary>
+        private static WhereFacts FactsOf(Player player)
+        {
+            if (player == null || player.whereAmI == null)
+            {
+                return new WhereFacts();
+            }
+
+            bool outside = Singleton<OutsideLocations>.Instance != null
+                && Singleton<OutsideLocations>.Instance
+                    .playerInOutsideLocation;
+            var biome = player.whereAmI.currentInfoBiome;
+            if (biome == null)
+            {
+                return new WhereFacts { HasPlayer = true, Outside = outside };
+            }
+
+            return new WhereFacts
+            {
+                HasPlayer = true,
+                Outside = outside,
+                HasBiome = true,
+                Kind = (BiomeKind)(int)biome.type,
+            };
+        }
 
         /// <summary>
-        /// The name of the part of the map our player is in, as the game's map
-        /// screen names it (its "UI" sheet, key "biome_" + the biome type), or
-        /// an English name if the sheet can't be read. Empty inside a separate
-        /// location (a cave, an interior), where the biome doesn't apply.
+        /// The name of the part of the map our player is in, as the game's
+        /// map screen names it (its "UI" sheet), or an English name if the
+        /// sheet can't be read. Empty inside a separate location (a cave, an
+        /// interior), where the biome doesn't apply.
         /// </summary>
         private string BiomeName()
         {
-            if (Player.Instance == null || Player.Instance.whereAmI == null)
+            var where = FactsOf(Player.Instance);
+            if (!PresenceRules.InBiome(where))
             {
                 return "";
             }
 
-            if (Singleton<OutsideLocations>.Instance != null
-                && Singleton<OutsideLocations>.Instance.playerInOutsideLocation)
-            {
-                return "";
-            }
-
-            var b = Player.Instance.whereAmI.currentInfoBiome;
-            if (b == null || b.type == Biome.Type.empty)
-            {
-                return "";
-            }
-
-            // The game's sheet has biome_forest, _forest_mutated, _meadow and
-            // _swamp; dense forest is forest on its map.
-            Biome.Type biomeType;
-            if (b.type == Biome.Type.forest_dense)
-            {
-                biomeType = Biome.Type.forest;
-            }
-            else
-            {
-                biomeType = b.type;
-            }
-
-            string key = "biome_" + biomeType;
-            string name = "";
+            string sheet = "";
             try
             {
-                if (!_biomeKeysLogged)
-                {
-                    _biomeKeysLogged = true;
-                    var keys = new List<string>();
-                    foreach (var k in Language.GetAllKeysForSheet("UI").Keys)
-                    {
-                        if (k.StartsWith("biome"))
-                        {
-                            keys.Add(k);
-                        }
-                    }
-
-                    Plugin.Log.LogInfo(
-                        "[presence] the game's biome names: "
-                            + $"{string.Join(", ", keys)}");
-                }
-
-                name = Language.Get(key, "UI");
+                LogBiomeKeys();
+                sheet = Language.Get(PresenceRules.BiomeKey(where.Kind), "UI");
             }
             catch
             {
             }
 
-            if (!string.IsNullOrEmpty(name) && name != key)
+            return PresenceRules.BiomeName(where.Kind, sheet);
+        }
+
+        /// <summary>
+        /// Once: the biome names the game's "UI" sheet has.
+        /// </summary>
+        private void LogBiomeKeys()
+        {
+            if (_biomeKeysLogged)
             {
-                return name;
+                return;
             }
 
-            switch (b.type)
+            _biomeKeysLogged = true;
+            var keys = new List<string>();
+            foreach (var k in Language.GetAllKeysForSheet("UI").Keys)
             {
-                case Biome.Type.meadow:
-                    return "Dry Meadow";
-                case Biome.Type.forest:
-                case Biome.Type.forest_dense:
-                    return "Silent Forest";
-                case Biome.Type.swamp:
-                    return "Swamp";
-                default:
-                    return "";
+                if (k.StartsWith("biome"))
+                {
+                    keys.Add(k);
+                }
             }
+
+            Plugin.Log.LogInfo(
+                "[presence] the game's biome names: "
+                    + $"{string.Join(", ", keys)}");
         }
     }
 }

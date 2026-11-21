@@ -263,6 +263,9 @@ namespace DarkwoodMP
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
+        /// <summary>Whether and how the player starts to host.</summary>
+        internal readonly DarkwoodMP.Hosting.HostStart Hosting;
+
         /// <summary>Finds Steam and works out the player's name.</summary>
         internal readonly Net.SteamStartup SteamStart;
 
@@ -272,6 +275,7 @@ namespace DarkwoodMP
         public ModHost(Func<bool> opensPort)
         {
             SteamStart = new Net.SteamStartup(this);
+            Hosting = new DarkwoodMP.Hosting.HostStart(this);
             Presence = new Net.Presence.PresenceReport(this);
             Threats = new Combat.Threats(Proxies);
             var log = new BepInLog();

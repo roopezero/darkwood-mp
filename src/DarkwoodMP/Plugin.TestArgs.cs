@@ -1,3 +1,4 @@
+using DarkwoodMP.Testing;
 using DarkwoodMP.Menus;
 using DarkwoodMP.World.Inventories;
 using System;
@@ -31,40 +32,19 @@ namespace DarkwoodMP
         /// </summary>
         internal void ApplyTestArgs(string[] args)
         {
-            string Arg(string name)
+            string Arg(string name) => TestArgRules.Arg(args, name);
+            bool Has(string name) => TestArgRules.Has(args, name);
+            if (TestArgRules.IsTestGame(args))
             {
-                int i = Array.IndexOf(args, name);
-                if (i >= 0 && i + 1 < args.Length)
-                {
-                    return args[i + 1];
-                }
-
-                return null;
-            }
-
-            bool Has(string name) => Array.IndexOf(args, name) >= 0;
-            foreach (var a in args)
-            {
-                if (a.StartsWith("--dwmp-test"))
-                {
-                    TestMode = true;
-                }
+                TestMode = true;
             }
 
             _host.Loading.ShotsDir = Arg("--dwmp-load-shots");
             // "--dwmp-window WxH": play in a window of that size (to check the
             // UI at other sizes); without it, the size from before is put back.
             {
-                string windowArg = Arg("--dwmp-window");
-                string[] wh = null;
-                if (windowArg != null)
-                {
-                    wh = windowArg.Split('x');
-                }
-
-                if (wh != null && wh.Length == 2
-                    && int.TryParse(wh[0], out int ww)
-                    && int.TryParse(wh[1], out int hh))
+                if (TestArgRules.TrySize(
+                    Arg("--dwmp-window"), out int ww, out int hh))
                 {
                     if (_host.WindowBefore == null)
                     {
@@ -101,15 +81,20 @@ namespace DarkwoodMP
                 Log.LogInfo("--dwmp-low-quality: quality level 0");
             }
 
-            if (int.TryParse(Arg("--dwmp-fps"), out int fps) && fps > 0)
+            if (TestArgRules.TryInt(args, "--dwmp-fps", out int fps)
+                && fps > 0)
             {
                 _host.FpsCap = fps;
                 Log.LogInfo($"--dwmp-fps: {fps}");
             }
 
-            bool Seconds(string name, out float s) => float.TryParse(
-                Arg(name), System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out s);
+            bool After(string name, out float secs)
+            {
+                bool ok = TestArgRules.TrySeconds(args, name, out var given);
+                secs = given.Value;
+                return ok;
+            }
+
 
             // "--dwmp-host": start hosting directly at once (testing /
             // always-on hosts); "--dwmp-password P" for this time only.
@@ -127,7 +112,7 @@ namespace DarkwoodMP
 
             if (Has("--dwmp-host"))
             {
-                if (int.TryParse(Arg("--dwmp-max-players"), out int mp))
+                if (TestArgRules.TryInt(args, "--dwmp-max-players", out int mp))
                 {
                     TcpBackend.TestMaxPlayers = mp;
                 }
@@ -136,12 +121,13 @@ namespace DarkwoodMP
                     TcpBackend.TestMaxPlayers = 0;
                 }
 
-                HostDirect(Arg("--dwmp-password"), TcpBackend.TestMaxPlayers);
+                _host.Hosting.Direct(
+                    Arg("--dwmp-password"), TcpBackend.TestMaxPlayers);
             }
 
             // "--dwmp-continue N": load your own profile N once the main menu
             // is up; "--dwmp-sandbox DIR": a copy of the saves in DIR.
-            if (int.TryParse(Arg("--dwmp-continue"), out int profileId))
+            if (TestArgRules.TryInt(args, "--dwmp-continue", out int profileId))
             {
                 StartTest(
                     _host.Share.ContinueOwnProfile(
@@ -182,7 +168,7 @@ namespace DarkwoodMP
 
             // "--dwmp-test-reload N": N seconds after a player joins, your game
             // loads its world again (players should follow).
-            if (Seconds("--dwmp-test-reload", out float reloadAfter))
+            if (After("--dwmp-test-reload", out float reloadAfter))
             {
                 StartTest(ReloadAfterJoin(reloadAfter));
             }
@@ -211,7 +197,7 @@ namespace DarkwoodMP
 
             // "--dwmp-test-menu N": N seconds after a player joins, your game
             // goes back to the main menu (the server should stop).
-            if (Seconds("--dwmp-test-menu", out float menuAfter))
+            if (After("--dwmp-test-menu", out float menuAfter))
             {
                 StartTest(MenuAfterJoin(menuAfter));
             }
@@ -226,7 +212,7 @@ namespace DarkwoodMP
 
             // "--dwmp-test-end N": N seconds after a player joins, your game
             // starts the epilogue (the game's end).
-            if (Seconds("--dwmp-test-end", out float endAfter))
+            if (After("--dwmp-test-end", out float endAfter))
             {
                 StartTest(EndAfterJoin(endAfter));
             }
@@ -236,7 +222,7 @@ namespace DarkwoodMP
             _host.TestQuickEnd = Has("--dwmp-test-quick-end");
             // "--dwmp-test-save N": N seconds after a player joins, the host's
             // game saves (as at dawn), writing their characters.
-            if (Seconds("--dwmp-test-save", out float saveAfter))
+            if (After("--dwmp-test-save", out float saveAfter))
             {
                 StartTest(SaveAfterJoin(saveAfter));
             }
@@ -287,7 +273,8 @@ namespace DarkwoodMP
             // main menu (see StartGameWindow.Test for --dwmp-sandbox,
             // --dwmp-screen, --dwmp-shots, --dwmp-start, --dwmp-start-host,
             // --dwmp-start-name).
-            if (Has("--dwmp-test-start-window"))
+            StartTest window = TestArgRules.WindowTest(args);
+            if (window == Testing.StartTest.StartWindow)
             {
                 StartTest(
                     StartGameWindow.Test(
@@ -295,8 +282,9 @@ namespace DarkwoodMP
                         Arg("--dwmp-shots"), Arg("--dwmp-start"),
                         Arg("--dwmp-start-host"), Arg("--dwmp-start-name")));
             }
-            else if (Arg("--dwmp-screen") is string screen)
+            else if (window == Testing.StartTest.Screen)
             {
+                string screen = Arg("--dwmp-screen");
                 StartTest(
                     ScreenTest(
                         screen, Arg("--dwmp-shots"), Has("--dwmp-continue")));
@@ -375,12 +363,9 @@ namespace DarkwoodMP
                 StartTest(SoloTest(solo));
             }
 
-            if (Arg("--dwmp-shots") is string shots
-                && !Has("--dwmp-test-menu-entry") && !Has("--dwmp-solo-test")
-                && !Has("--dwmp-screen") && !Has("--dwmp-testworld")
-                && !Has("--dwmp-test-start-window"))
+            if (TestArgRules.ShotsAlone(args))
             {
-                StartTest(Shots(shots, Has("--dwmp-continue")));
+                StartTest(Shots(Arg("--dwmp-shots"), Has("--dwmp-continue")));
             }
         }
 
