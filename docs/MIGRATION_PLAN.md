@@ -503,6 +503,14 @@ Finish with `tools/run-test.sh full`.
 
 - [ ] 7.1 Flags and scripted events.
 - [ ] 7.2 Places and nights.
+  - [x] Part a: `DeathPatches`, `CoopPause`, `AfterNight`. They are
+        `CoopSession.Resets` (`World/Deaths/WorldResets`), `.Pause`
+        (`World/Pause/CoopPause`) and `.Mornings`
+        (`World/Mornings/AfterNight`), each with its `...Patches.cs`.
+        `AfterNight`'s two messages have no payload, so no bytes moved. The
+        after-night reward's part of `ControllerStartAfterNight` still runs
+        with no session, since `FlagsSync` is there from the start.
+  - [ ] Part b: `Locations`, `Hideouts`, `NightObjects`.
 - [ ] 7.3 Skills and progress.
 - [ ] 7.4 Chapters and endings. These load new worlds in a running session, so
       they're the hardest test of `WorldScope`.
