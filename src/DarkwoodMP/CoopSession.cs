@@ -154,6 +154,9 @@ namespace DarkwoodMP
         /// A location's enter and exit events with players far apart.
         public readonly World.Scripted.FarEvents FarEvents;
 
+        /// The story's state (flags, NPCs, dialogues, the journal), shared.
+        public readonly World.FlagsSync Story;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -209,6 +212,7 @@ namespace DarkwoodMP
             Hostiles = new Combat.NpcHostility(this);
             Owed = new World.Owed.OwedParts(this);
             FarEvents = new World.Scripted.FarEvents(this);
+            Story = new World.FlagsSync(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

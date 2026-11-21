@@ -55,10 +55,9 @@ namespace DarkwoodMP.World
     /// - Karma ("k") is the host's: every game adds the same +20 at dawn, and
     ///   only the host sends it.
     /// </summary>
-    public sealed class FlagsSync
+    internal sealed class FlagsSync
     {
-        public static FlagsSync Instance { get; private set; }
-        private readonly Session _session;
+        private readonly CoopSession _coop;
         /// <summary>
         /// The after-night reward each trader got.
         /// </summary>
@@ -73,25 +72,20 @@ namespace DarkwoodMP.World
                 .FieldRefAccess<Flags, Dictionary<string, Flags.Flag>>(
                     "flagsDict");
 
-        public FlagsSync(Session session)
+        public FlagsSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.FlagsDelta, OnDelta);
-            session.OnSessionEnded += () =>
-            {
-                _baseline = null;
-                _rewards.Clear();
-                _deathsAllowed.Clear();
-            };
+            _coop = coop;
+            coop.Handle(MsgType.FlagsDelta, OnDelta);
         }
 
-        private static bool Sharing => StoryRules.Sharing(SharingOf());
+        private Session Net => _coop.Net;
 
-        private static SharingFacts SharingOf()
+        private bool Sharing => StoryRules.Sharing(SharingOf());
+
+        private SharingFacts SharingOf()
         {
             bool ready = WorldShare.WorldReady;
-            var net = Session.Instance;
+            var net = _coop.Net;
             bool host = false;
             int peers = 0;
             if (ready)
@@ -111,16 +105,10 @@ namespace DarkwoodMP.World
 
         private BaselineFacts BaselineOf()
         {
-            var net = Session.Instance;
-            bool active = false;
-            bool host = false;
-            int peers = 0;
-            if (net != null)
-            {
-                active = net.Active;
-                host = net.IsHost;
-                peers = net.Peers.Count;
-            }
+            var net = _coop.Net;
+            bool active = net.Active;
+            bool host = net.IsHost;
+            int peers = net.Peers.Count;
 
             bool sameScene = UnityEngine.SceneManagement.SceneManager
                 .GetActiveScene().handle == _baselineScene;
@@ -180,7 +168,7 @@ namespace DarkwoodMP.World
         private void Flush()
         {
             _next = StoryRules.NextLook(new Seconds(Time.unscaledTime));
-            var now = Snapshot(_session.IsHost);
+            var now = Snapshot(Net.IsHost);
             if (now == null)
             {
                 return;
@@ -414,7 +402,7 @@ namespace DarkwoodMP.World
         {
             StoryKeys.ReadReward(value, out int day, out int amount);
             RewardOutcome got;
-            if (_session.IsHost)
+            if (Net.IsHost)
             {
                 got = _rewards.TakeOnHost(trader, day, amount);
             }
@@ -558,7 +546,7 @@ namespace DarkwoodMP.World
         /// Host: what the story was in the frame the last joiner's snapshot was
         /// read (null: not known).
         /// </summary>
-        private static Dictionary<string, string> _atSnapshot;
+        private Dictionary<string, string> _atSnapshot;
 
         /// <summary>
         /// Host, in the frame the world is read for a joiner's snapshot: the
@@ -569,7 +557,7 @@ namespace DarkwoodMP.World
         /// after the joiner is let in taking what there is then as known.
         /// JoinerInWorld sends the difference.
         /// </summary>
-        public static void NoteSnapshot()
+        public void NoteSnapshot()
         {
             _atSnapshot = Snapshot(true);
             SnapshotNoted++;
@@ -578,13 +566,13 @@ namespace DarkwoodMP.World
         /// <summary>
         /// How many snapshots' story was noted (for the tests).
         /// </summary>
-        internal static int SnapshotNoted;
+        internal int SnapshotNoted { get; private set; }
 
         /// <summary>
         /// Host: the world offered to joiners isn't a snapshot (LiveWorld off:
         /// the last save).
         /// </summary>
-        public static void ForgetSnapshot() => _atSnapshot = null;
+        public void ForgetSnapshot() => _atSnapshot = null;
 
         /// <summary>
         /// Host: a joiner is in the world it loaded (it asked for its
@@ -594,7 +582,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public void JoinerInWorld(ulong who)
         {
-            if (!_session.IsHost || _atSnapshot == null)
+            if (!Net.IsHost || _atSnapshot == null)
             {
                 return;
             }
@@ -615,7 +603,7 @@ namespace DarkwoodMP.World
             }
 
             Send(changed, except: 0, to: who);
-            string name = _session.NameOf(who);
+            string name = Net.NameOf(who);
             string keys = string.Join(", ", changed.Take(8).Select(e => e.Key));
             string more = "";
             if (changed.Count > 8)
@@ -637,21 +625,21 @@ namespace DarkwoodMP.World
                 start += StoryRules.PerMessage)
             {
                 int n = StoryRules.ChunkLength(start, entries.Count);
-                var w = _session.Begin(MsgType.FlagsDelta);
+                var w = Net.Begin(MsgType.FlagsDelta);
                 FlagsDelta.Write(w, entries.GetRange(start, n));
 
-                if (_session.IsHost && to != 0)
+                if (Net.IsHost && to != 0)
                 {
-                    _session.SendTo(to, w, Channel.Control, reliable: true);
+                    Net.SendTo(to, w, Channel.Control, reliable: true);
                 }
-                else if (_session.IsHost)
+                else if (Net.IsHost)
                 {
-                    _session.Broadcast(
+                    Net.Broadcast(
                         w, Channel.Control, reliable: true, except: except);
                 }
                 else
                 {
-                    _session.SendToHost(w, Channel.Control, reliable: true);
+                    Net.SendToHost(w, Channel.Control, reliable: true);
                 }
             }
 
@@ -670,7 +658,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (_session.IsClient && from != _session.HostId)
+            if (Net.IsClient && from != Net.HostId)
             {
                 return;
             }
@@ -713,7 +701,7 @@ namespace DarkwoodMP.World
                         + $"{string.Join(", ", changes)}");
             }
 
-            if (_session.IsHost && relay.Count > 0)
+            if (Net.IsHost && relay.Count > 0)
             {
                 Send(relay, except: from);
             }
@@ -725,7 +713,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private bool Take(ulong from, string key, string value)
         {
-            bool host = _session.IsHost;
+            bool host = Net.IsHost;
             switch (StoryRules.Route(key, host))
             {
                 case StoryRoute.Reward:
@@ -812,7 +800,7 @@ namespace DarkwoodMP.World
                     return false;
                 case NpcStateOutcome.NotAllowed:
                     Plugin.Log.LogInfo(
-                        $"[authority] refused {_session.NameOf(from)}'s "
+                        $"[authority] refused {Net.NameOf(from)}'s "
                             + $"state of {npc}: dead, but no kill of theirs "
                             + "was allowed here");
                     SendNpcState(from, npc, st);
@@ -869,13 +857,13 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var w = _session.Begin(MsgType.FlagsDelta);
+            var w = Net.Begin(MsgType.FlagsDelta);
             FlagsDelta.Write(w, new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("n:" + npc, NpcJson(st))
             });
 
-            _session.SendTo(to, w, Channel.Control, reliable: true);
+            Net.SendTo(to, w, Channel.Control, reliable: true);
         }
 
         /// <summary>
@@ -1380,7 +1368,7 @@ namespace DarkwoodMP.World
         static void Prefix(object __instance, out int __state)
         {
             __state = int.MinValue;
-            if (_this == null || FlagsSync.Instance == null)
+            if (_this == null || Coop.Current == null)
             {
                 return;
             }
@@ -1421,9 +1409,10 @@ namespace DarkwoodMP.World
                 st = instance.getNPCState(ev.Value);
             }
 
-            if (st != null && st.reputation != __state)
+            CoopSession coop = Coop.Current;
+            if (coop != null && st != null && st.reputation != __state)
             {
-                FlagsSync.Instance.Absorb(ev.Value, st.reputation - __state);
+                coop.Story.Absorb(ev.Value, st.reputation - __state);
             }
         }
     }

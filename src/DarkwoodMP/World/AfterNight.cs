@@ -534,7 +534,7 @@ namespace DarkwoodMP.World
             AfterNight.HostDawn(); // a new morning: not over yet
             __state = null;
             var f = Singleton<Flags>.Instance;
-            if (f == null || FlagsSync.Instance == null)
+            if (f == null || Coop.Current == null)
             {
                 return;
             }
@@ -553,7 +553,8 @@ namespace DarkwoodMP.World
             Controller __instance, Dictionary<string, int> __state)
         {
             var f = Singleton<Flags>.Instance;
-            if (__state == null || f == null)
+            CoopSession coop = Coop.Current;
+            if (__state == null || f == null || coop == null)
             {
                 return;
             }
@@ -567,8 +568,8 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                FlagsSync.Instance.Absorb(n.name, n.reputation - was);
-                FlagsSync.Instance.LocalReward(
+                coop.Story.Absorb(n.name, n.reputation - was);
+                coop.Story.LocalReward(
                     n.name, __instance.day, n.reputation - was);
             }
         }

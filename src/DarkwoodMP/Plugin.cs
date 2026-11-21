@@ -79,7 +79,6 @@ namespace DarkwoodMP
         private WorldShare _world;
         private NetEnemies _enemies;
         private Characters _characters;
-        private FlagsSync _flags;
         private WorldEvents _events;
         private bool _wasInWorld;
         // the system cursor's visibility before the panel showed it
@@ -447,7 +446,6 @@ namespace DarkwoodMP
             _enemies = new NetEnemies(_host.Session);
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
-            _flags = new FlagsSync(_host.Session);
             _events = new WorldEvents(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
@@ -2279,7 +2277,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("containers");
             _characters.Update();
             ModProfiler.Mark("characters");
-            _flags.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Story.Update();
+            }
+
             ModProfiler.Mark("flags");
             // also without co-op: the flag is kept for when others join
             _host.Tank.Update();

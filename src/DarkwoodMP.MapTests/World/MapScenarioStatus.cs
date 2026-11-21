@@ -93,23 +93,37 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator StoryAtJoin(string[] a, Result r)
         {
-            int noted = FlagsSync.SnapshotNoted;
+            int noted = SnapshotsNoted();
             Singleton<Controller>.Instance.StartCoroutine(
                 ChangeStoryAfter(noted));
             r.Info = "the story changes once the next snapshot is read";
             yield break;
         }
 
+        /// <summary>
+        /// How many snapshots' story the host noted in this session.
+        /// </summary>
+        private static int SnapshotsNoted()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return 0;
+            }
+
+            return coop.Story.SnapshotNoted;
+        }
+
         private static IEnumerator ChangeStoryAfter(int noted)
         {
             float until = Time.realtimeSinceStartup + 120f;
-            while (FlagsSync.SnapshotNoted == noted
+            while (SnapshotsNoted() == noted
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
 
-            if (FlagsSync.SnapshotNoted == noted)
+            if (SnapshotsNoted() == noted)
             {
                 Plugin.Log.LogWarning(
                     "[map] story-at-join: no snapshot was made");
