@@ -472,10 +472,12 @@ What's tested:
   fails before the fix.
 - **The network in one process.** `Session`, `Packets` and `TcpBackend` are in
   the core (Unity's clock and log come in through `IClock` and `ILog`), and a
-  `LoopbackBackend` connects a host and clients in memory. Tests cover the
-  handshake and its refusals, relaying (to the others, not back to the
-  sender), the request and verdict cycle, and each message's bytes. A test
-  over real TCP on localhost covers the framing.
+  `LoopbackBackend` (in the test project) connects a host and clients in
+  memory, and delivers each message on the receiver's next poll, so a test
+  decides the order and moves a fake clock. Tests cover the handshake and
+  its refusals, relaying (to the others, not back to the sender), the request
+  and verdict cycle, and each message's bytes. Tests over real TCP on
+  localhost cover the framing and the info query.
 - The test project's folders follow the core's.
 
 What isn't: patches, the shell's `FactsOf`, physics, culling and scripted
