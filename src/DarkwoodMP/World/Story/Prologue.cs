@@ -369,6 +369,20 @@ namespace DarkwoodMP.World.Story
         }
 
         /// <summary>
+        /// The true name of the dream that is ending, read before
+        /// Dreams.endDreaming (null: not dreaming).
+        /// </summary>
+        internal static string Ending(Dreams d)
+        {
+            if (d.dreaming && d.preset != null)
+            {
+                return Core.getTrueLocationName(d.preset.name);
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Dreams.endDreaming has run: the prologue's end puts a joiner beside
         /// the hideout's start, off the host.
         /// </summary>

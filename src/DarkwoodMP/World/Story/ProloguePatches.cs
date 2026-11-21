@@ -2,10 +2,12 @@ using HarmonyLib;
 
 namespace DarkwoodMP.World.Story
 {
+    /// The host's snapshot saved in a stage goes into that stage as the
+    /// joiner loads it (Prologue.ForSnapshot).
     [HarmonyPatch(
         typeof(Dreams.SaveState), MethodType.Constructor,
         new[] { typeof(Dreams) })]
-    static class PrologueSnapshotPatch
+    static class DreamsSaveStateCtor
     {
         static void Postfix(Dreams.SaveState __instance, Dreams dreams)
         {
@@ -17,10 +19,12 @@ namespace DarkwoodMP.World.Story
         }
     }
 
+    /// The host's snapshot saved in a stage has the player not yet in the
+    /// stage's place (Prologue.ForSnapshot).
     [HarmonyPatch(
         typeof(OutsideLocations.SaveState), MethodType.Constructor,
         new[] { typeof(OutsideLocations) })]
-    static class PrologueSnapshotPlacePatch
+    static class OutsideLocationsSaveStateCtor
     {
         static void Postfix(OutsideLocations.SaveState __instance)
         {
@@ -32,21 +36,25 @@ namespace DarkwoodMP.World.Story
         }
     }
 
+    /// The prologue's end puts a joiner beside the hideout's start
+    /// (Prologue.AfterEnd). The dream that ends is read before it ends.
+    /// High priority on the postfix: it ran before Dreaming's
+    /// DreamsEndDreaming when this was in the World folder, and a type in
+    /// World/Story now comes after World/Dreaming in the DLL, which sets
+    /// the order of patches of the same priority.
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.endDreaming))]
-    static class PrologueEndPatch
+    static class DreamsEndDreamingPrologue
     {
         static void Prefix(Dreams __instance, out string __state)
         {
-            if (__instance.dreaming && __instance.preset != null)
+            __state = null;
+            if (Coop.Current != null)
             {
-                __state = Core.getTrueLocationName(__instance.preset.name);
-            }
-            else
-            {
-                __state = null;
+                __state = Prologue.Ending(__instance);
             }
         }
 
+        [HarmonyPriority(Priority.High)]
         static void Postfix(Dreams __instance, string __state)
         {
             CoopSession coop = Coop.Current;
