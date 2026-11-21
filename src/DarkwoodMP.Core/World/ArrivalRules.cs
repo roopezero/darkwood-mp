@@ -6,9 +6,9 @@ namespace DarkwoodMP.World
     public static class ArrivalRules
     {
         /// Taken from anyone on the host, and only from the host on a
-        /// client, while in a world (EggSync.OnDestroyed,
-        /// InfectionSync.OnCleared, Fuel.OnFuel, FireSync.OnBurning's
-        /// host side, Construction.OnConstruct).
+        /// client, while in a world (Eggs.OnDestroyed,
+        /// Infections.OnCleared, Fuel.OnFuel, Fire.OnBurning's host side,
+        /// Construction.OnConstruct).
         public static bool Takes(in ArrivalFacts message)
         {
             if (!message.Session || !message.InWorld)
@@ -20,7 +20,7 @@ namespace DarkwoodMP.World
         }
 
         /// Taken only by a client, from the host, while in a world
-        /// (InfectionSync.OnSpawned, FireSync.OnBurning's client side).
+        /// (Infections.OnSpawned, Fire.OnBurning's client side).
         public static bool TakesFromHost(in ArrivalFacts message)
         {
             if (!message.Session || !message.InWorld)

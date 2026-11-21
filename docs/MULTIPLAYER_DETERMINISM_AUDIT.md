@@ -34,7 +34,7 @@ are under "In-game probe results" below.
 | Enemy damage to players | the host's enemy hits the player's proxy | player health | host, sent as `PlayerDamage` | yes | a | |
 | Durability, rot, drain and recharge of items in containers | `Inventory.refreshItems` | durability | each game, by its own clock. `SlotShare` allows it as `Drift`, and the client takes the host's durability when it opens the container | partly | a/b | small drift until the container is opened |
 | A player's own items wearing out; which items go into their death bag (`Player.cs:7589`) | the player's game | their own items | the player's own game. The bag is sent as `ObjSpawn` with its contents | yes | a | |
-| Infection spread | `Infection.cs:73`, `Infection.spread` | ground that hurts | host. A client's infection never spreads (`InfectionSync`) | yes | a | |
+| Infection spread | `Infection.cs:73`, `Infection.spread` | ground that hurts | host. A client's infection never spreads (`Infections`) | yes | a | |
 | Fire | `Burn`, `Flame`, `Liquid` delays | damage, breaking | the host's fire counts. A client's fire only shows (`World/Fire`) | yes | a | |
 | What thrown items leave (a molotov's gasoline) | `Explodes.spawnObjects` (`Explodes.cs:173`) | gasoline puddles | host, for thrown items (`ThrownLeavesPatch`) | yes | a | |
 | Non-thrown explosions that spawn objects | `Explodes.spawnObjects` on a barrel or canister that goes off in every game (`BreakSync` Explode) | puddles at random spots | **each game** | no | c/d | `ThrownLeavesPatch` (`World/ObjectActions.cs:308`) returns early for anything not thrown. The `dice-events` step logs whether any level object has a `spawnObject` |
@@ -51,7 +51,7 @@ are under "In-game probe results" below.
 | Item modifiers | `InvItemClass.addRandomModifiers` | weapon modifiers | nothing in the decompile calls it | n/a | b | |
 | `QuestRandomizer`, `UniqueItemSpawner`, `RandomSpawnArea`, `Shooter` | prototypes, or only used without random generation | | | | d | not seen in use in the real game |
 | The mod's `FindObjectsOfType` lookups | `TraderSync`, `Hideouts`, `WorldActions.DyingNpc`, `FlagsSync.KillNpc`, `ObjRef.NearestPlaced` | which copy of an object is meant | the copy nearest a sent position, or the one with the save id; never "the first found" | | a | `ObjRef.NearestPlaced` (`World/ObjRef.cs:168`) keeps the last of equal distances (`<=`), so two objects with the same name within about a unit of the key's spot could resolve differently in two games |
-| The mod's own `System.Random` | `HostIds`, `Containers`, `Hideouts`, `NightObjects`, `InfectionSync`, `EnemyLandings`, `WorldEvents` | new ids | the game that makes the thing; the id is sent | yes | a | |
+| The mod's own `System.Random` | `HostIds`, `Containers`, `Hideouts`, `NightObjects`, `Infections`, `EnemyLandings`, `WorldEvents` | new ids | the game that makes the thing; the id is sent | yes | a | |
 
 ## What protects the shared world
 
@@ -59,7 +59,7 @@ are under "In-game probe results" below.
 - **Enemies and everything they do** run on the host only (`NetEnemies`, frozen client copies).
 - **The clock and everything that depends on it** (night scenario, events, weather, random objects, restocks) is the host's (`TimeSync`, `WorldEvents`, `TraderSync`).
 - **Chance in a player's action** (trap disarm, lockpick) is rolled on the host and sent as `Authority.Result`.
-- **Damage from fire, infection and explosions:** the host's copy counts (`FireSync`, `InfectionSync`, `BreakSync`, `ThrowSync`).
+- **Damage from fire, infection and explosions:** the host's copy counts (`Fire`, `Infections`, `BreakSync`, `ThrowSync`).
 - **The world itself:** everyone loads the host's save, so worldgen, padlock codes and saved loot match.
 
 ## Fixes made

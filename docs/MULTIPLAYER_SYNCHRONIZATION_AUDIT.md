@@ -50,7 +50,7 @@ shows at once, without the viewer closing it, hovering, moving the mouse or clic
 - After a remote slot change is applied to an inventory that is open here (`SlotShare.OnSlots`, `OnRefused`,
   `Merge`; `Containers.ApplyOpen`), `UiRefresh.Changed` calls the game's own `Player.refreshRecipes` (recipes, upgrade
   button, upgrade menu, backpack, hotbar) and `Saw.refresh` for an open saw. After a remote fuel change
-  (`FuelSync.OnFuel`), `UiRefresh.FuelChanged` calls `Saw.refresh` for an open saw and refreshes the fuel bar if it
+  (`Fuel.OnFuel`), `UiRefresh.FuelChanged` calls `Saw.refresh` for an open saw and refreshes the fuel bar if it
   shows that object. Nothing runs when the window isn't open.
 - `Containers.Apply` no longer closes an open container: when the slot count matches, it loads the contents into the
   open window (`ApplyOpen`). On a client that watches it slot by slot, the contents go through `SlotShare.MergeOpen`
