@@ -42,7 +42,7 @@ namespace DarkwoodMP
         public readonly JoinerSaveIds Joiners;
 
         /// The fuel in generators and saws.
-        public readonly World.FuelSync Fuel;
+        public readonly World.Fuel.Fuel Fuel;
 
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
@@ -58,7 +58,7 @@ namespace DarkwoodMP
             Names = new ObjNames(this);
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
-            Fuel = new World.FuelSync(this);
+            Fuel = new World.Fuel.Fuel(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

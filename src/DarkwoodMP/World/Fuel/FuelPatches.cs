@@ -1,9 +1,9 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Fuel
 {
     /// <summary>
-    /// The local player pours fuel into a generator (FuelSync.Poured).
+    /// The local player pours fuel into a generator (Fuel.Poured).
     /// </summary>
     [HarmonyPatch(typeof(Generator), nameof(Generator.addFuel))]
     static class GeneratorAddFuel
@@ -24,7 +24,7 @@ namespace DarkwoodMP.World
     }
 
     /// <summary>
-    /// The local player pours fuel into a saw (FuelSync.Poured).
+    /// The local player pours fuel into a saw (Fuel.Poured).
     /// </summary>
     [HarmonyPatch(typeof(Saw), nameof(Saw.addFuel))]
     static class SawAddFuel

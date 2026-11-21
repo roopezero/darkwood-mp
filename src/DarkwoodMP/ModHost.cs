@@ -32,7 +32,7 @@ namespace DarkwoodMP
         public readonly Random IdRandom = new Random();
 
         /// The generators the game started (Generator.Start), also alone: a
-        /// world loaded before hosting has them too (FuelSync checks them).
+        /// world loaded before hosting has them too (Fuel checks them).
         public readonly HashSet<Generator> Generators =
             new HashSet<Generator>();
 

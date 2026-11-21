@@ -1,9 +1,8 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
-using DarkwoodMP.World.Fuel;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Fuel
 {
     /// <summary>
     /// Host: a generator burns fuel by the electricity skill of the player
@@ -11,7 +10,7 @@ namespace DarkwoodMP.World
     /// Player.electricityModifier for every generator). A joiner's skill is
     /// read from the character it last sent (Characters.Electrician); while it
     /// isn't known yet, ours is used, as before. The host's fuel is the one
-    /// every game keeps (FuelSync).
+    /// every game keeps (Fuel).
     ///
     /// Client: its generators burn nothing (the modifier is 0 for the call);
     /// the level comes from the host. The rest of drainFuel still runs, so the

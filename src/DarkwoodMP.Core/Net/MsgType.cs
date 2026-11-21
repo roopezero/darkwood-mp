@@ -300,7 +300,7 @@ namespace DarkwoodMP.Net
         /// result: the amount it took), or refuses it (too far, more than a
         /// can, a full tank) after sending the level back. From the host: fuel
         /// is the level and on whether it runs, after a pour and when that
-        /// changed (World.FuelSync).
+        /// changed (World.Fuel).
         /// </summary>
         Fuel = 44,
         /// <summary>

@@ -4,7 +4,7 @@ using System.Globalization;
 namespace DarkwoodMP.World.Fuel
 {
     /// The host's side of the generators' and saws' fuel (the plugin's
-    /// FuelSync): a client's pours and log cuts, and the levels it sends.
+    /// Fuel): a client's pours and log cuts, and the levels it sends.
     public static class FuelRules
     {
         /// How far from a tank a client's player may pour into it
