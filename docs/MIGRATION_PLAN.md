@@ -486,11 +486,14 @@ Finish with `tools/run-test.sh full`.
         Its frozen and hidden sets, `HitEffects` and `Starting` are the
         instance's; `Instance`, `Frozen`, `Hidden`, `HitEffects` and
         `Thaw` pass on to it, so callers didn't change. `AllCharacters`
-        is `ModHost.Characters`. Left: its messages' bytes in the core,
-        calling the core's enemy rules (`EnemyTrackRules`,
-        `EnemyRelayRules`, `EnemyHitRules`, `EnemyLoopRules`,
-        `CopyRules`, `CopyStateRules`, the rest of `FreezeRules`) from
-        the shell, and thinning `FreezePatches` and `EnemySoundPatches`.
+        is `ModHost.Characters`. Its messages' bytes are the core's
+        (`EnemySpawnMessage`, `EnemyStateMessage`, `EnemyMarkMessage` for
+        EnemyArmor and EnemyDespawn, `EnemySoundMessage`,
+        `EnemyHitMessage`, `EnemyBloodMessage`), and the shell calls
+        `EnemyTrackRules`, `EnemyRelayRules`, `EnemyLoopRules` (but
+        `Stopped`), `EnemyHitRules`, `HitRate` and `CopyRules`. Left:
+        calling `CopyStateRules` and the rest of `FreezeRules`, and
+        thinning `FreezePatches` and `EnemySoundPatches`.
   - [ ] Part b: `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings`.
         Done but `EnemyLandings`: `EnemyMotion` is `CoopSession.Motion` on
         the core's `MotionClock`; the hostile NPCs' state is
