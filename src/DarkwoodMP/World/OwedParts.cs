@@ -57,16 +57,19 @@ namespace DarkwoodMP.World
             {
                 et = t.thisEventTriggers;
             }
+
             if (et == null)
             {
                 return null;
             }
+
             int index = et.eventTriggers.IndexOf(t);
             var save = et.GetComponent<SaveableObject>();
             if (save != null && save.uniqueId > 0)
             {
                 return $"s{save.uniqueId}#{index}";
             }
+
             var p = et.transform.position;
             return FormattableString.Invariant(
                 $"{et.gameObject.scene.name}/{et.name}@{p.x:0},{p.z:0}#{index}");
@@ -92,6 +95,7 @@ namespace DarkwoodMP.World
                 OursHad.Clear();
                 _oursScene = scene;
             }
+
             return OursHad;
         }
 
@@ -110,6 +114,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return Path.Combine(
                 sm.baseSaveDirectory, "prof" + Core.currentProfile.id);
         }
@@ -123,6 +128,7 @@ namespace DarkwoodMP.World
                 {
                     path = Path.Combine(dir, "darkwoodmp_later.json");
                 }
+
                 if (path != null && File.Exists(path))
                 {
                     FileData d = JsonConvert.DeserializeObject<FileData>(
@@ -131,14 +137,17 @@ namespace DarkwoodMP.World
                     {
                         d = new FileData();
                     }
+
                     if (d.Had == null)
                     {
                         d.Had = new Dictionary<string, HashSet<string>>();
                     }
+
                     if (d.HostOwed == null)
                     {
                         d.HostOwed = new HashSet<string>();
                     }
+
                     return d;
                 }
             }
@@ -148,6 +157,7 @@ namespace DarkwoodMP.World
                     "Couldn't read who is owed their part of fired events in "
                         + $"{dir}: {e.Message}");
             }
+
             return new FileData();
         }
 
@@ -176,6 +186,7 @@ namespace DarkwoodMP.World
                 _data.HostOwed = Read(dir).HostOwed;
                 _owedScene = scene;
             }
+
             return _data;
         }
 
@@ -186,6 +197,7 @@ namespace DarkwoodMP.World
             {
                 return Characters.KeyHash(key);
             }
+
             return "#" + peer;
         }
 
@@ -199,12 +211,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             string dir = ProfileDir();
             if (dir == null || dir != _dir
                 || (_data.Had.Count == 0 && _data.HostOwed.Count == 0))
             {
                 return;
             }
+
             try
             {
                 Directory.CreateDirectory(dir);
@@ -233,16 +247,19 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (s.IsHost)
             {
                 string id = IdOf(t);
                 return id != null && Data().HostOwed.Contains(id);
             }
+
             if (t.thisEventTriggers == null
                 || WorldActions.OursAlone(t.thisEventTriggers.gameObject))
             {
                 return false;
             }
+
             return !Ours().Contains(t);
         }
 
@@ -258,6 +275,7 @@ namespace DarkwoodMP.World
             {
                 id = IdOf(t);
             }
+
             return id != null && Data().HostOwed.Add(id);
         }
 
@@ -272,11 +290,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (s.IsHost)
             {
                 string id = IdOf(t);
                 return id != null && Data().HostOwed.Remove(id);
             }
+
             return Ours().Add(t);
         }
 
@@ -302,12 +322,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var had = Data().Had;
             string key = KeyOf(peer);
             if (!had.TryGetValue(key, out var set))
             {
                 had[key] = set = new HashSet<string>();
             }
+
             set.Add(id);
         }
 
@@ -327,6 +349,7 @@ namespace DarkwoodMP.World
             {
                 Data();
             }
+
             HostSaved();
             _data = null;
         }

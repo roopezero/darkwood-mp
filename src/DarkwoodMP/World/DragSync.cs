@@ -102,6 +102,7 @@ namespace DarkwoodMP.World
             public float Heard;
             public ObjRef Ref;
         }
+
         private readonly Dictionary<string, Owner> _owners =
             new Dictionary<string, Owner>();
         // host: a non-owner last sent where it is
@@ -125,6 +126,7 @@ namespace DarkwoodMP.World
             public bool Last;
             public float Heard;
         }
+
         private readonly Dictionary<GameObject, Moving> _moving =
             new Dictionary<GameObject, Moving>();
 
@@ -163,6 +165,7 @@ namespace DarkwoodMP.World
             // when our player last hit it (a shot pushes from afar)
             public float HitAt = -1f;
         }
+
         private readonly Dictionary<Rigidbody, Loose> _loose =
             new Dictionary<Rigidbody, Loose>();
         // every loose object in the world so far has been noted
@@ -190,6 +193,7 @@ namespace DarkwoodMP.World
                 {
                     Release(m);
                 }
+
                 _moving.Clear();
                 ForgetLoose();
                 _dragging = null;
@@ -219,12 +223,15 @@ namespace DarkwoodMP.World
                 {
                     ForgetLoose();
                 }
+
                 if (_owners.Count > 0)
                 {
                     _owners.Clear();
                 }
+
                 return;
             }
+
             var player = Player.Instance;
             Item now = null;
             if (player != null)
@@ -243,6 +250,7 @@ namespace DarkwoodMP.World
                     _settleAt = Time.unscaledTime + 1.5f;
                     LetGo(_dragRef);
                 }
+
                 _dragging = now;
                 _claimed = false;
                 if (now != null)
@@ -250,6 +258,7 @@ namespace DarkwoodMP.World
                     StartDrag(now);
                 }
             }
+
             if (_dragging != null && _session.IsHost
                 && _owners.TryGetValue(_dragRef.ToString(), out var mine)
                 && mine.Id == _session.LocalId)
@@ -257,6 +266,7 @@ namespace DarkwoodMP.World
                 // the host's own drag never goes stale
                 mine.Heard = Time.unscaledTime;
             }
+
             if (Time.unscaledTime >= _nextFree)
             {
                 _nextFree = Time.unscaledTime + 1f;
@@ -270,11 +280,13 @@ namespace DarkwoodMP.World
                 _nextSend = Time.unscaledTime + SendInterval;
                 Send(_dragging, _dragRef, last: false);
             }
+
             if (_settling != null && Time.unscaledTime >= _settleAt)
             {
                 Send(_settling, _settlingRef, last: true);
                 _settling = null;
             }
+
             if (Time.unscaledTime >= _nextPushWatch)
             {
                 _nextPushWatch = Time.unscaledTime + PushWatchInterval;
@@ -302,6 +314,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var me = player.transform.position;
             if (!_looseFound)
             {
@@ -320,6 +333,7 @@ namespace DarkwoodMP.World
                     Note(b, null);
                 }
             }
+
             if (Time.unscaledTime >= _nextLook)
             {
                 _nextLook = Time.unscaledTime + PushLookInterval;
@@ -335,6 +349,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             // A client away (spectating) has no player of its own to push
             // anything: it takes the host's word on all. Our pushes count
             // wherever the host runs our area too (a separate location it
@@ -352,9 +367,11 @@ namespace DarkwoodMP.World
                     {
                         gone = new List<Rigidbody>();
                     }
+
                     gone.Add(kv.Key);
                     continue;
                 }
+
                 var t = p.Item.transform;
                 if (p.Body.isKinematic || p.Item == _dragging
                     || p.Item == _settling
@@ -365,6 +382,7 @@ namespace DarkwoodMP.World
                     Rebase(p);
                     continue;
                 }
+
                 float moved = (t.position - p.Pos).magnitude;
                 if (moved < PushMinMove
                     && Quaternion.Angle(t.rotation, p.Rot) < PushMinTurn)
@@ -373,10 +391,12 @@ namespace DarkwoodMP.World
                     p.Touched = false;
                     continue;
                 }
+
                 if (p.Since < 0f)
                 {
                     p.Since = nowT;
                 }
+
                 if (_session.IsClient && !clientAway && !p.Touched
                     && (p.Col != null
                             && p.Col.bounds.SqrDistance(me)
@@ -385,6 +405,7 @@ namespace DarkwoodMP.World
                 {
                     p.Touched = true;
                 }
+
                 if (!AtRest(p.Body) && nowT - p.Since < PushGiveUpAfter)
                 {
                     // Still sliding: where it is now goes out too (unreliably,
@@ -396,8 +417,10 @@ namespace DarkwoodMP.World
                     {
                         Send(p.Item, p.Ref, last: false);
                     }
+
                     continue;
                 }
+
                 if (_session.IsClient && !p.Touched)
                 {
                     // Not our player's doing (settling, a nudge, our copy of an
@@ -416,8 +439,10 @@ namespace DarkwoodMP.World
                             $"[world] {p.Item.name} ({p.Ref}) moved "
                                 + $"{moved:0.0} units by itself: put back");
                     }
+
                     continue;
                 }
+
                 Send(p.Item, p.Ref, last: true); // which notes it there
                 PushesSent++;
                 if (WorldActions.Debug)
@@ -427,6 +452,7 @@ namespace DarkwoodMP.World
                             + "units: sent where it is");
                 }
             }
+
             if (gone != null)
             {
                 foreach (var b in gone)
@@ -450,14 +476,17 @@ namespace DarkwoodMP.World
             {
                 b = item.GetComponent<Rigidbody>();
             }
+
             if (b == null)
             {
                 return;
             }
+
             if (!_loose.ContainsKey(b))
             {
                 Note(b, null);
             }
+
             if (_loose.TryGetValue(b, out var p))
             {
                 p.HitAt = Time.unscaledTime;
@@ -493,11 +522,13 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 // named by where the snapshot has it, which is where the joiner
                 // finds it
                 ObjRef.Pin(b.gameObject);
                 _atSnapshot[b] = (b.transform.position, b.transform.rotation);
             }
+
             SnapshotAt = Time.unscaledTime;
         }
 
@@ -524,6 +555,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int sent = 0, later = 0;
             foreach (var kv in _atSnapshot)
             {
@@ -532,18 +564,21 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var t = b.transform;
                 if ((t.position - kv.Value.pos).magnitude < PushMinMove
                     && Quaternion.Angle(t.rotation, kv.Value.rot) < PushMinTurn)
                 {
                     continue;
                 }
+
                 var item = LooseItem(b);
                 if (item == null || b.isKinematic || item == _dragging
                     || _moving.ContainsKey(b.gameObject))
                 {
                     continue; // a drag sends its own end
                 }
+
                 if (!AtRest(b))
                 {
                     if (_loose.TryGetValue(b, out var p))
@@ -553,13 +588,16 @@ namespace DarkwoodMP.World
                         p.Since = -1f;
                         later++;
                     }
+
                     continue;
                 }
+
                 var r = ObjRef.Pin(b.gameObject);
                 if (!r.Valid)
                 {
                     continue;
                 }
+
                 _session.SendTo(
                     who, Message(r, t.position, t.rotation, true),
                     Channel.Control, reliable: true);
@@ -571,6 +609,7 @@ namespace DarkwoodMP.World
                             + $"({r}) moved {(t.position - kv.Value.pos).magnitude:0.0} units since {_session.NameOf(who)}'s snapshot: sent where it is");
                 }
             }
+
             if (sent > 0 || later > 0)
             {
                 string moving = "";
@@ -578,6 +617,7 @@ namespace DarkwoodMP.World
                 {
                     moving = $", {later} still moving (sent once at rest)";
                 }
+
                 Plugin.Log.LogInfo(
                     $"{_session.NameOf(who)} is in the world: {sent} loose "
                         + "objects that moved since their snapshot sent to "
@@ -599,6 +639,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var b in root.GetComponentsInChildren<Rigidbody>(true))
             {
                 Note(b, null);
@@ -618,6 +659,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Note(go.GetComponent<Rigidbody>(), null);
         }
 
@@ -636,6 +678,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var b = go.GetComponent<Rigidbody>();
             var item = LooseItem(b);
             if (item == null || b.isKinematic || item == _dragging
@@ -643,17 +686,20 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var t = go.transform;
             float d = (t.position - pos).magnitude;
             if (d < PushMinMove)
             {
                 return false;
             }
+
             var r = ObjRef.Of(go);
             if (r.Valid && OtherOwner(r) != null)
             {
                 return false;
             }
+
             t.position = pos;
             b.position = pos;
             b.velocity = Vector3.zero;
@@ -667,6 +713,7 @@ namespace DarkwoodMP.World
                     System.FormattableString.Invariant(
                         $"[world] {go.name} ({r}) put where the host has it, {d:0.0} units from where it settled here"));
             }
+
             return true;
         }
 
@@ -699,17 +746,20 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var item = b.GetComponent<Item>();
             if (item == null)
             {
                 return null;
             }
+
             if (b.GetComponent<CharBase>() != null
                 || b.GetComponentInParent<Door>() != null
                 || b.GetComponentInParent<Window>() != null)
             {
                 return null;
             }
+
             return item;
         }
 
@@ -723,16 +773,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var item = LooseItem(b);
             if (item == null)
             {
                 return;
             }
+
             var r = ObjRef.Pin(b.gameObject);
             if (!r.Valid)
             {
                 return;
             }
+
             var p = new Loose { Item = item, Body = b, Ref = r };
             if (col != null)
             {
@@ -742,6 +795,7 @@ namespace DarkwoodMP.World
             {
                 p.Col = b.GetComponentInChildren<Collider>();
             }
+
             Rebase(p);
             _loose[b] = p;
         }
@@ -756,20 +810,24 @@ namespace DarkwoodMP.World
             {
                 return "no body";
             }
+
             if (!_loose.TryGetValue(b, out var p))
             {
                 return "not watched";
             }
+
             string text = "";
             if (p.Since >= 0f)
             {
                 text = ", away";
             }
+
             string touched = "";
             if (p.Touched)
             {
                 touched = ", touched";
             }
+
             return System.FormattableString.Invariant(
                 $"watched, known at {p.Pos.x:0.0} {p.Pos.z:0.0}{text}{touched}");
         }
@@ -793,6 +851,7 @@ namespace DarkwoodMP.World
             {
                 b = go.GetComponent<Rigidbody>();
             }
+
             if (b != null && _loose.TryGetValue(b, out var p) && p.Item != null)
             {
                 Rebase(p);
@@ -805,6 +864,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var t = item.transform;
             var w = Message(r, t.position, t.rotation, last);
             if (last)
@@ -813,6 +873,7 @@ namespace DarkwoodMP.World
                 // it goes into the culling node of where it is now
                 Recell(item.gameObject);
             }
+
             int channel;
             if (last)
             {
@@ -822,6 +883,7 @@ namespace DarkwoodMP.World
             {
                 channel = Channel.State;
             }
+
             if (_session.IsHost)
             {
                 _session.Broadcast(w, channel, reliable: last);
@@ -835,6 +897,7 @@ namespace DarkwoodMP.World
                     {
                         _unechoed[item.gameObject] = sent = new List<Vector3>();
                     }
+
                     if (sent.Count < 16)
                     {
                         sent.Add(t.position);
@@ -861,17 +924,20 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             int i = sent.FindIndex(p => (p - pos).sqrMagnitude < 0.01f);
             if (i < 0)
             {
                 _unechoed.Remove(go);
                 return false;
             }
+
             sent.RemoveRange(0, i + 1);
             if (sent.Count == 0)
             {
                 _unechoed.Remove(go);
             }
+
             return true;
         }
 
@@ -891,6 +957,7 @@ namespace DarkwoodMP.World
             {
                 lastFlag = 1;
             }
+
             w.W.Write((byte)lastFlag);
             return w;
         }
@@ -907,12 +974,14 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (Authority.Near(
                 from, item.transform.position, WorldActions.Reach)
                 && Authority.Near(from, pos, WorldActions.Reach))
             {
                 return true;
             }
+
             Plugin.Log.LogInfo(
                 $"[authority] {_session.NameOf(from)} dragged {item.name} from "
                     + "too far: put back");
@@ -932,10 +1001,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             var pos = r.ReadVector3();
             var rot = new Quaternion(
@@ -947,6 +1018,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             // Pass a client's drag on. Where it ended up goes back to its mover
             // too: if the host's game had sent a push of its own for the same
             // object at the same time, the mover got that one and would keep
@@ -961,6 +1033,7 @@ namespace DarkwoodMP.World
                     channel = Channel.Control;
                     skip = 0UL;
                 }
+
                 s.Broadcast(w, channel, reliable: last, except: skip);
             }
 
@@ -971,24 +1044,29 @@ namespace DarkwoodMP.World
                 {
                     HostIds.HostMoved(obj.Id, pos); // for when our copy is tied
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] got ObjMove {obj}: not found here");
                 }
+
                 return;
             }
+
             var go = item.gameObject;
             if (s.IsClient && _owners.TryGetValue(obj.ToString(), out var o))
             {
                 o.Heard = Time.unscaledTime; // its drag goes on
             }
+
             // we're holding it: kept for if we have to let go
             if (item == _dragging)
             {
                 _hostAt[go] = (pos, rot);
                 return;
             }
+
             if (s.IsClient && last && OurEcho(go, pos))
             {
                 if (WorldActions.Debug)
@@ -997,8 +1075,10 @@ namespace DarkwoodMP.World
                         $"[world] {go.name} ({obj}): the host passed back "
                             + "where we left it");
                 }
+
                 return;
             }
+
             if (!_moving.TryGetValue(go, out var m))
             {
                 // before it moves, so it's still found by the same name
@@ -1011,10 +1091,12 @@ namespace DarkwoodMP.World
                     Body = body,
                     WasKinematic = body != null && body.isKinematic
                 };
+
                 if (body != null)
                 {
                     body.isKinematic = true;
                 }
+
                 _moving[go] = m;
                 if (WorldActions.Debug)
                 {
@@ -1023,6 +1105,7 @@ namespace DarkwoodMP.World
                             + $"({obj})");
                 }
             }
+
             m.Pos = pos;
             m.Rot = rot;
             m.Last = last;
@@ -1040,6 +1123,7 @@ namespace DarkwoodMP.World
             {
                 limit = StaleAfter;
             }
+
             return now - heard > limit;
         }
 
@@ -1054,6 +1138,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return _session.NameOf(o.Id);
         }
 
@@ -1071,16 +1156,19 @@ namespace DarkwoodMP.World
                 CancelLocal(item, $"{other} is moving it");
                 return;
             }
+
             if (_moving.TryGetValue(item.gameObject, out var m)) // ours now
             {
                 Release(m);
                 _moving.Remove(item.gameObject);
             }
+
             _nextSend = 0f;
             if (!_dragRef.Valid)
             {
                 return;
             }
+
             if (_session.IsHost)
             {
                 _owners[_dragRef.ToString()] = new Owner
@@ -1089,9 +1177,11 @@ namespace DarkwoodMP.World
                     Heard = Time.unscaledTime,
                     Ref = _dragRef
                 };
+
                 SendOwner(_dragRef, _session.LocalId, letGo: true);
                 return;
             }
+
             var w = _session.Begin(MsgType.DragClaim);
             _dragRef.Write(w);
             Authority.Request(w, $"drag {item.name} ({_dragRef})",
@@ -1101,6 +1191,7 @@ namespace DarkwoodMP.World
                 {
                     return; // let go meanwhile, or already cancelled
                 }
+
                 if (ok)
                 {
                     _claimed = true;
@@ -1117,6 +1208,7 @@ namespace DarkwoodMP.World
                     {
                         why = Language.Get("Playermsg_tooFar", "UI");
                     }
+
                     CancelLocal(item, why);
                 }
             }, inventory: false);
@@ -1133,6 +1225,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _owners.Remove(r.ToString());
             if (_session.IsHost)
             {
@@ -1152,11 +1245,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_dragging == item)
             {
                 _dragging = null;
                 _claimed = false;
             }
+
             var go = item.gameObject;
             var player = Player.Instance;
             if (item.beingDragged)
@@ -1164,6 +1259,7 @@ namespace DarkwoodMP.World
                 // as the game lets go when the night ends
                 item.stopDragging(force: true);
             }
+
             // taken hold of by a script (the tests)
             if (player != null && player.itemBeingDragged == item)
             {
@@ -1174,6 +1270,7 @@ namespace DarkwoodMP.World
                     Object.Destroy(joint);
                 }
             }
+
             // not already shown following the other player's drag
             if (!_moving.ContainsKey(go))
             {
@@ -1188,6 +1285,7 @@ namespace DarkwoodMP.World
                 {
                     at = (p.Pos, p.Rot);
                 }
+
                 var m = new Moving
                 {
                     T = go.transform,
@@ -1198,13 +1296,16 @@ namespace DarkwoodMP.World
                     Last = true,
                     Heard = Time.unscaledTime
                 };
+
                 if (body != null)
                 {
                     body.isKinematic = true;
                 }
+
                 _moving[go] = m;
                 Combat.NetPlayerProxy.IgnoreWith(go);
             }
+
             _hostAt.Remove(go);
             Cancelled++;
             if (!string.IsNullOrEmpty(message))
@@ -1214,6 +1315,7 @@ namespace DarkwoodMP.World
                     player.displayMessage(message);
                 }
             }
+
             Plugin.Log.LogInfo(
                 $"[dragging] let go of {item.name} ({ObjRef.Of(go)}): "
                     + $"{message}");
@@ -1229,6 +1331,7 @@ namespace DarkwoodMP.World
             {
                 letGoFlag = 1;
             }
+
             w.W.Write((byte)letGoFlag);
             if (to != 0)
             {
@@ -1251,6 +1354,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = Message(
                 r, item.transform.position, item.transform.rotation, true);
             if (to != 0)
@@ -1273,6 +1377,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             var item = ObjRef.Resolve<Item>(obj);
             if (item == null)
@@ -1280,12 +1385,14 @@ namespace DarkwoodMP.World
                 Authority.Refuse("it isn't here");
                 return;
             }
+
             if (!Authority.InReach(
                 item.transform.position, WorldActions.Reach, item.name))
             {
                 SendHere(obj, from);
                 return;
             }
+
             string key = obj.ToString();
             if (_owners.TryGetValue(key, out var o) && o.Id != from
                 && !Stale(o))
@@ -1295,6 +1402,7 @@ namespace DarkwoodMP.World
                 Authority.Refuse($"{_session.NameOf(o.Id)} is moving it");
                 return;
             }
+
             _owners[key] =
                 new Owner { Id = from, Heard = Time.unscaledTime, Ref = obj };
             SendOwner(obj, from, letGo: true);
@@ -1323,6 +1431,7 @@ namespace DarkwoodMP.World
                 Free(key, o, "stopped sending");
                 owned = false;
             }
+
             if (owned && o.Id != from)
             {
                 string ck = key + "/" + from;
@@ -1336,8 +1445,10 @@ namespace DarkwoodMP.World
                             + $"{obj}, which {_session.NameOf(o.Id)} drags: "
                             + "not taken, sent where it is");
                 }
+
                 return false;
             }
+
             if (!owned && !last)
             {
                 // A push still sliding (nobody drags it): passed on to be
@@ -1351,14 +1462,17 @@ namespace DarkwoodMP.World
                 {
                     return true;
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[dragging] {_session.NameOf(from)} moved {obj} from "
                             + "too far without a claim: dropped");
                 }
+
                 return false;
             }
+
             if (!DragAllowed(from, obj, pos))
             {
                 if (owned)
@@ -1366,8 +1480,10 @@ namespace DarkwoodMP.World
                     _owners.Remove(key);
                     SendOwner(obj, 0, letGo: true);
                 }
+
                 return false;
             }
+
             if (owned)
             {
                 o.Heard = Time.unscaledTime;
@@ -1377,6 +1493,7 @@ namespace DarkwoodMP.World
                     SendOwner(obj, 0, letGo: false);
                 }
             }
+
             return true;
         }
 
@@ -1402,8 +1519,10 @@ namespace DarkwoodMP.World
                 {
                     _corrected.Clear();
                 }
+
                 return;
             }
+
             List<string> stale = null;
             foreach (var kv in _owners)
             {
@@ -1413,13 +1532,16 @@ namespace DarkwoodMP.World
                     {
                         stale = new List<string>();
                     }
+
                     stale.Add(kv.Key);
                 }
             }
+
             if (stale == null)
             {
                 return;
             }
+
             foreach (var k in stale)
             {
                 if (_session.IsHost)
@@ -1439,6 +1561,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             List<string> theirs = null;
             foreach (var kv in _owners)
             {
@@ -1448,9 +1571,11 @@ namespace DarkwoodMP.World
                     {
                         theirs = new List<string>();
                     }
+
                     theirs.Add(kv.Key);
                 }
             }
+
             if (theirs != null)
             {
                 foreach (var k in theirs)
@@ -1471,6 +1596,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             ulong owner = r.R.ReadUInt64();
             bool letGo = (r.R.ReadByte() & 1) != 0;
@@ -1488,15 +1614,18 @@ namespace DarkwoodMP.World
                     Ref = obj
                 };
             }
+
             if (_dragging == null || _dragRef.ToString() != key)
             {
                 return;
             }
+
             if (owner == _session.LocalId)
             {
                 _claimed = true;
                 return;
             }
+
             if (letGo)
             {
                 Item item = _dragging;
@@ -1509,6 +1638,7 @@ namespace DarkwoodMP.World
                 {
                     why = Language.Get("Playermsg_tooFar", "UI");
                 }
+
                 CancelLocal(item, why);
             }
         }
@@ -1545,6 +1675,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             List<GameObject> done = null;
             float k = 1f - Mathf.Exp(-15f * Time.unscaledDeltaTime);
             foreach (var kv in _moving)
@@ -1556,9 +1687,11 @@ namespace DarkwoodMP.World
                     {
                         done = new List<GameObject>();
                     }
+
                     done.Add(kv.Key);
                     continue;
                 }
+
                 bool stale = Time.unscaledTime - m.Heard > StaleAfter;
                 if (m.Last || stale)
                 {
@@ -1577,6 +1710,7 @@ namespace DarkwoodMP.World
                             Quaternion.Slerp(m.T.rotation, m.Rot, k));
                         continue;
                     }
+
                     m.T.SetPositionAndRotation(m.Pos, m.Rot);
                     if (there || Time.unscaledTime - m.Heard > GlideFor
                         || stale)
@@ -1588,14 +1722,18 @@ namespace DarkwoodMP.World
                         {
                             done = new List<GameObject>();
                         }
+
                         done.Add(kv.Key);
                     }
+
                     continue;
                 }
+
                 m.T.SetPositionAndRotation(
                     Vector3.Lerp(m.T.position, m.Pos, k),
                     Quaternion.Slerp(m.T.rotation, m.Rot, k));
             }
+
             if (done != null)
             {
                 foreach (var go in done)
@@ -1620,6 +1758,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var co = go.GetComponent<CullableObject>();
             var grid = Singleton<WorldGrid>.Instance;
             WorldGrid.Node old = null;
@@ -1627,20 +1766,24 @@ namespace DarkwoodMP.World
             {
                 old = co.node;
             }
+
             if (old == null || grid == null || grid.currentGrid == null)
             {
                 return;
             }
+
             if (grid.inVicinityOfNode(go.transform.position, old))
             {
                 return;
             }
+
             if (!grid.currentGrid.nodes.Contains(old))
             {
                 // in a grid this game isn't playing (a location kept for a
                 // joiner)
                 return;
             }
+
             try
             {
                 WorldGrid.Cullable cullable = old.getCullable(go);
@@ -1653,6 +1796,7 @@ namespace DarkwoodMP.World
                 {
                     type = WorldGrid.Cullable.Type.normal;
                 }
+
                 grid.registerToNode(go, type);
                 var now = co.node;
                 WorldGrid.Cullable cul = null;
@@ -1660,10 +1804,12 @@ namespace DarkwoodMP.World
                 {
                     cul = now.getCullable(go);
                 }
+
                 if (cul == null)
                 {
                     return;
                 }
+
                 if (now.entered && !go.activeSelf)
                 {
                     cul.show();
@@ -1672,6 +1818,7 @@ namespace DarkwoodMP.World
                 {
                     cul.hide();
                 }
+
                 if (WorldActions.Debug)
                 {
                     string text = "switched off";
@@ -1679,6 +1826,7 @@ namespace DarkwoodMP.World
                     {
                         text = "shown";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[world] {go.name} moved to another culling node here "
                             + $"({text})");
@@ -1698,6 +1846,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             m.Body.isKinematic = m.WasKinematic;
             m.Body.position = m.T.position;
             m.Body.rotation = m.T.rotation;
@@ -1729,16 +1878,19 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             string who = d.OtherOwner(ObjRef.Of(__instance.gameObject));
             if (who == null)
             {
                 return true;
             }
+
             Player instance = Player.Instance;
             if (instance != null)
             {
                 instance.displayMessage($"{who} is moving it");
             }
+
             Blocked++;
             return false;
         }

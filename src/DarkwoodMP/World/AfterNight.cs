@@ -105,6 +105,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _overDay = -1;
             _told.Clear();
         }
@@ -115,6 +116,7 @@ namespace DarkwoodMP.World
             {
                 return n;
             }
+
             return id.ToString();
         }
 
@@ -131,10 +133,12 @@ namespace DarkwoodMP.World
             {
                 PendingUpdate();
             }
+
             if (c == null || p == null || s == null || !s.IsHost)
             {
                 return;
             }
+
             TellLateMornings(s, c);
             bool frozen = c.isAfterNight && p.effects != null
                 && p.effects.hasEffectType(CharacterEffectType.timeFreeze);
@@ -144,10 +148,12 @@ namespace DarkwoodMP.World
                 _since = -1f;
                 return;
             }
+
             if (_since < 0f)
             {
                 _since = UnityEngine.Time.unscaledTime;
             }
+
             bool someoneOut = false;
             var sync = Sync.PlayerSync.Instance;
             if (CoopPause.InCoop && sync != null
@@ -164,6 +170,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (someoneOut && !_clockFreed)
             {
                 _clockFreed = true;
@@ -190,15 +197,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var c = Singleton<Controller>.Instance;
             if (c != null)
             {
                 _overDay = c.day;
             }
+
             if (s.Peers.Count == 0)
             {
                 return;
             }
+
             s.Broadcast(
                 s.Begin(MsgType.AfterNightEnded), Channel.Control,
                 reliable: true);
@@ -217,6 +227,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             s.SendToHost(
                 s.Begin(MsgType.AfterNightLeft), Channel.Control,
                 reliable: true);
@@ -243,6 +254,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _overDay = c.day;
             var d = Singleton<Dreams>.Instance;
             if (c.isAfterNight && !(d != null && d.dreaming))
@@ -258,9 +270,11 @@ namespace DarkwoodMP.World
                         "[world] closing our dialogue with the trader first");
                     return;
                 }
+
                 End(c);
                 return;
             }
+
             s.Broadcast(
                 s.Begin(MsgType.AfterNightEnded), Channel.Control,
                 reliable: true, except: from);
@@ -270,6 +284,7 @@ namespace DarkwoodMP.World
             {
                 ours = "waits for our dream";
             }
+
             Plugin.Log.LogInfo(
                 $"[world] {name} walked out of their hideout: the morning is "
                     + $"over, sent to the others (ours {ours})");
@@ -286,12 +301,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_overDay != c.day)
             {
                 _overDay = -1;
                 _told.Clear();
                 return;
             }
+
             float now = UnityEngine.Time.unscaledTime;
             foreach (var kv in sync.Remotes)
             {
@@ -301,10 +318,12 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (_told.TryGetValue(kv.Key, out float at) && now - at < 3f)
                 {
                     continue;
                 }
+
                 _told[kv.Key] = now;
                 s.SendTo(
                     kv.Key, s.Begin(MsgType.AfterNightEnded), Channel.Control,
@@ -323,6 +342,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var c = Singleton<Controller>.Instance;
             var d = Singleton<Dreams>.Instance;
             if (c == null || !c.isAfterNight || (d != null && d.dreaming))
@@ -332,6 +352,7 @@ namespace DarkwoodMP.World
                         + "was)");
                 return;
             }
+
             if (TalkingToMorningVisitor())
             {
                 // endAfterNight destroys the trader, and a dialogue or trade
@@ -346,6 +367,7 @@ namespace DarkwoodMP.World
                         + "dialogue with the trader first");
                 return;
             }
+
             End(c);
         }
 
@@ -359,11 +381,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             bool host = Session.Instance != null && Session.Instance.IsHost;
             if (!host)
             {
                 WorldActions.Replaying = true;
             }
+
             try
             {
                 c.endAfterNight();
@@ -375,6 +399,7 @@ namespace DarkwoodMP.World
                     WorldActions.Replaying = false;
                 }
             }
+
             string data =
                 "[world] the host's after-night is over: ours ended too (the "
                     + "trader left)";
@@ -384,6 +409,7 @@ namespace DarkwoodMP.World
                     "[world] a joiner's morning is over: ours ended too (the "
                         + "trader left)";
             }
+
             Plugin.Log.LogInfo(data);
         }
 
@@ -405,21 +431,25 @@ namespace DarkwoodMP.World
             {
                 w = Singleton<UI>.Instance.dialogueWindow;
             }
+
             if (p == null || w == null || w.npc == null || !p.inDialogue)
             {
                 return false;
             }
+
             var wg = Singleton<WorldGenerator>.Instance;
             if (wg == null || wg.locations == null)
             {
                 return false;
             }
+
             foreach (var l in wg.locations)
             {
                 if (l == null || !l.playerBase)
                 {
                     continue;
                 }
+
                 var go = w.npc.gameObject;
                 if ((l.trader != null
                         && (l.trader == go || go.transform.IsChildOf(
@@ -431,6 +461,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -444,18 +475,21 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var c = Singleton<Controller>.Instance;
             DialogueWindow w = null;
             if (Singleton<UI>.Instance != null)
             {
                 w = Singleton<UI>.Instance.dialogueWindow;
             }
+
             if (c == null || w == null || Player.Instance == null
                 || !WorldShare.InWorld)
             {
                 _endPending = false;
                 return;
             }
+
             // close() lets go of the NPC at once (the fade and the controls
             // follow without him), so the morning can end.
             if (!TalkingToMorningVisitor())
@@ -463,6 +497,7 @@ namespace DarkwoodMP.World
                 End(c);
                 return;
             }
+
             // does nothing while the window is still opening: tried again next
             // frame
             DialogueGuard.Close(w);
@@ -471,6 +506,7 @@ namespace DarkwoodMP.World
                 End(c);
                 return;
             }
+
             if (UnityEngine.Time.unscaledTime - _pendingSince > 10f)
             {
                 Plugin.Log.LogWarning(
@@ -499,6 +535,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             __state = new Dictionary<string, int>();
             foreach (var n in f.npcStates)
             {
@@ -517,6 +554,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var n in f.npcStates)
             {
                 if (n == null || n.name == null
@@ -525,6 +563,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 FlagsSync.Instance.Absorb(n.name, n.reputation - was);
                 FlagsSync.Instance.LocalReward(
                     n.name, __instance.day, n.reputation - was);
@@ -546,6 +585,7 @@ namespace DarkwoodMP.World
             var c = Singleton<Controller>.Instance;
             __state = c != null && c.isAfterNight;
         }
+
         static void Postfix(bool __state)
         {
             var c = Singleton<Controller>.Instance;

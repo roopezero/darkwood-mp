@@ -27,6 +27,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Crouching = false;
             p.hidingInventory = true;
             p.gotInventory = false;
@@ -44,11 +45,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var trigger = trapToDisarm.GetComponent<Trigger>();
             if (trigger == null || trigger.bendDownToDisarm)
             {
                 return; // already crouches
             }
+
             __instance.performingAction = true;
             __instance.gettingInventory = true;
             __instance.dodging = false;

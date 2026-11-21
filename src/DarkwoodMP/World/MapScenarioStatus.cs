@@ -33,11 +33,13 @@ namespace DarkwoodMP.World
                 {
                     WorldShare.TestHoldSecs = 15f;
                 }
+
                 r.Info =
                     $"joiners wait {WorldShare.TestHoldSecs:0} s from the "
                         + "first";
                 return Nothing();
             });
+
             Add("join-waited", JoinWaited);
             // "join-stop" (host, after the join): how long the snapshot for the
             // joiner stopped the host's game.
@@ -48,6 +50,7 @@ namespace DarkwoodMP.World
                 {
                     text = "sav.dat written on a worker thread";
                 }
+
                 r.Info =
                     "snapshot stopped the game for "
                         + $"{WorldShare.LastSnapshotStopMs} ms ({text}), "
@@ -63,8 +66,10 @@ namespace DarkwoodMP.World
                         "the snapshot was saved the game's way, not on a "
                             + "worker thread: " + r.Info);
                 }
+
                 return Nothing();
             });
+
             Add("story-at-join", StoryAtJoin);
             Add("join-story", JoinStory);
             Add("lan-search", LanSearch, timeout: 30f);
@@ -105,12 +110,14 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (FlagsSync.SnapshotNoted == noted)
             {
                 Plugin.Log.LogWarning(
                     "[map] story-at-join: no snapshot was made");
                 yield break;
             }
+
             yield return null; // after the frame the world was read in
             var f = Singleton<Flags>.Instance;
             var npc = f.npcStates.FirstOrDefault(n => n != null);
@@ -118,6 +125,7 @@ namespace DarkwoodMP.World
             {
                 npc.reputation += 1;
             }
+
             // a shared one, not read by the game's code
             f.setFlag("player_firstOvenInteraction", activeModifier: true);
             string name = null;
@@ -125,11 +133,13 @@ namespace DarkwoodMP.World
             {
                 name = npc.name;
             }
+
             int? reputation = null;
             if (npc != null)
             {
                 reputation = npc.reputation;
             }
+
             Plugin.Log.LogInfo(
                 $"[map] story-at-join: after the snapshot, {name}'s reputation "
                     + $"{reputation}, player_firstOvenInteraction set");
@@ -162,6 +172,7 @@ namespace DarkwoodMP.World
             {
                 r.Info = sent.Substring(sent.IndexOf("] ") + 2);
             }
+
             yield break;
         }
 
@@ -192,6 +203,7 @@ namespace DarkwoodMP.World
                     "waited "
                         + $"({lines.Skip(wait).Count(l => l.Contains("Sent Hello") || l.Contains("sending it again"))} Hellos), then joined";
             }
+
             yield break;
         }
 
@@ -207,6 +219,7 @@ namespace DarkwoodMP.World
                 r.Fail("no server browser");
                 yield break;
             }
+
             b.Refresh(Net.ServerBrowser.Tab.Lan);
             yield return null;
             float until = Time.realtimeSinceStartup + 25f;
@@ -214,6 +227,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             // the browser's update hands over the last answers
             yield return null;
             var found = b.List(Net.ServerBrowser.Tab.Lan)
@@ -232,25 +246,30 @@ namespace DarkwoodMP.World
                     {
                         name = info.Name;
                     }
+
                     int? players = null;
                     if (info != null)
                     {
                         players = info.Players;
                     }
+
                     int? maxPlayers = null;
                     if (info != null)
                     {
                         maxPlayers = info.MaxPlayers;
                     }
+
                     int? proto = null;
                     if (info != null)
                     {
                         proto = info.Proto;
                     }
+
                     return $"{f.addr} \"{name}\" {players}/{maxPlayers} proto "
                         + $"{proto} {f.e.PingMs} ms";
                 }));
             }
+
             if (!found.Any(
                 f => f.e.Info != null
                     && f.e.Info.Proto == Net.Protocol.Version
@@ -277,6 +296,7 @@ namespace DarkwoodMP.World
                 return instance.Remotes.Values.FirstOrDefault(
                     x => x.Owner != PlayerSync.DummyId);
             }
+
             return null;
         }
 
@@ -286,6 +306,7 @@ namespace DarkwoodMP.World
             {
                 return p.torsoAnimator.CurrentClip.name;
             }
+
             return "-";
         }
 
@@ -300,6 +321,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no armed trap {a[0]}");
                 yield break;
             }
+
             yield return Walk(t.transform.position, 90f);
             var item = t.GetComponent<Item>();
             AsPlayer(() => P.doDisarm(item));
@@ -307,12 +329,14 @@ namespace DarkwoodMP.World
             {
                 P.progressBar.time = 60f; // held until disarm-finish
             }
+
             float until = Time.realtimeSinceStartup + 3f;
             while (Clip(P) != "InventoryLoop"
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
+
             r.Info =
                 $"{t.name} at {Fmt(t.transform.position)} (the game's own "
                     + $"crouch: {t.bendDownToDisarm}): clip {Clip(P)}, "
@@ -338,6 +362,7 @@ namespace DarkwoodMP.World
                 r.Fail("no other player");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 4f;
             string seen = "";
             while (Time.realtimeSinceStartup < until)
@@ -354,6 +379,7 @@ namespace DarkwoodMP.World
                             last.Library,
                             typeof(tk2dSpriteAnimation)) as tk2dSpriteAnimation;
                     }
+
                     var frames = new HashSet<(int, int)>();
                     if (lib != null)
                     {
@@ -368,6 +394,7 @@ namespace DarkwoodMP.World
                             {
                                 continue;
                             }
+
                             foreach (var f in c.frames)
                             {
                                 if (f.spriteCollection != null)
@@ -379,6 +406,7 @@ namespace DarkwoodMP.World
                             }
                         }
                     }
+
                     int match = last.Sprites.Count(
                         s => frames.Contains((s.CollectionHash, s.SpriteId)));
                     string text = "not found here";
@@ -386,6 +414,7 @@ namespace DarkwoodMP.World
                     {
                         text = "found";
                     }
+
                     seen =
                         $"library {last.Library} ({text}), {match} of "
                             + $"{last.Sprites.Count} sprites from the crouch, "
@@ -398,8 +427,10 @@ namespace DarkwoodMP.World
                         yield break;
                     }
                 }
+
                 yield return null;
             }
+
             r.Fail($"{rp.Name} isn't seen crouching: {seen}");
         }
 
@@ -418,11 +449,13 @@ namespace DarkwoodMP.World
             {
                 what = a[0];
             }
+
             if (P.progressBar == null || !P.disarmingTrap)
             {
                 r.Fail($"not disarming {what} (bar {P.progressBar != null})");
                 yield break;
             }
+
             // the bar ends in its own Update, as the player's action
             WorldActions.TestAsPlayer = true;
             P.progressBar.time = 0.01f;
@@ -432,6 +465,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             WorldActions.TestAsPlayer = false;
             until = Time.realtimeSinceStartup + 4f;
             while ((P.gettingInventory || P.performingAction)
@@ -439,6 +473,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             string text = "still armed";
             if (t == null)
             {
@@ -448,6 +483,7 @@ namespace DarkwoodMP.World
             {
                 text = "sprung (the roll failed)";
             }
+
             r.Info =
                 $"{what}: {text}; clip {Clip(P)}, performingAction "
                     + $"{P.performingAction}, gettingInventory "
@@ -460,10 +496,12 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: still crouched");
             }
+
             if (P.inBearTrap)
             {
                 P.stopAllPerformingActionAnims();
             }
+
             yield return Walk(Centre, 60f);
         }
 
@@ -477,6 +515,7 @@ namespace DarkwoodMP.World
                 r.Fail("no profile");
                 yield break;
             }
+
             var was = Core.currentProfile.difficulty;
             Core.currentProfile.difficulty = GameProfile.Difficulty.nightmare;
             P.die();
@@ -485,6 +524,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (!Spectator.Active)
             {
                 Core.currentProfile.difficulty = was;
@@ -493,6 +533,7 @@ namespace DarkwoodMP.World
                         + $"{Singleton<UI>.Instance.permadeathBox != null})");
                 yield break;
             }
+
             yield return new WaitForSeconds(2f);
             var cam = Singleton<CamMain>.Instance;
             var host = Other();
@@ -504,6 +545,7 @@ namespace DarkwoodMP.World
                 dist = StateDump.Flat(
                     P.transform.position - host.Root.transform.position);
             }
+
             bool touching =
                 P.GetComponentsInChildren<Collider>().Any(c => c.enabled);
             string name = null;
@@ -511,6 +553,7 @@ namespace DarkwoodMP.World
             {
                 name = host.Name;
             }
+
             r.Info =
                 $"watching {name}: camera follows {follows}, our body {dist:0} "
                     + $"from them, colliders on {touching}, profile dead "
@@ -534,6 +577,7 @@ namespace DarkwoodMP.World
                 r.Fail("not spectating");
                 yield break;
             }
+
             var first = Spectator.ConeAngles();
             yield return new WaitForSeconds(2f);
             var later = Spectator.ConeAngles();
@@ -545,6 +589,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(1f);
                 Plugin.Log.LogInfo($"[shots] {path}");
             }
+
             r.Info =
                 $"cone: light {first.light:0}/{later.light:0}, logic "
                     + $"{first.logic:0}/{later.logic:0}, currentFOV "
@@ -567,6 +612,7 @@ namespace DarkwoodMP.World
                 r.Fail("not spectating");
                 yield break;
             }
+
             var saved = Spectator.SavedCone;
             Spectator.TestEnd();
             yield return null;
@@ -597,12 +643,14 @@ namespace DarkwoodMP.World
                 r.Fail("no other player");
                 yield break;
             }
+
             NetPlayerProxy.All.TryGetValue(rp.Owner, out var proxy);
             Collider col = null;
             if (proxy != null)
             {
                 col = proxy.GetComponent<Collider>();
             }
+
             int corrections = MapScenarioIssues.LogLines().Skip(from)
                 .Count(l => l.Contains("put back"));
             bool spectating = rp.Spectating;
@@ -612,6 +660,7 @@ namespace DarkwoodMP.World
             {
                 alive = proxy.alive;
             }
+
             r.Info =
                 $"{rp.Name}: spectating {spectating}, shown {shown}, proxy "
                     + $"alive {alive}, collider on "

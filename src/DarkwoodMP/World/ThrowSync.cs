@@ -63,6 +63,7 @@ namespace DarkwoodMP.World
                     type = kind.type;
                 }
             }
+
             return (held, type);
         }
 
@@ -77,12 +78,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var ti = go.GetComponent<ThrownItem>();
             var rb = go.GetComponent<Rigidbody>();
             if (ti == null || rb == null)
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.ItemThrown);
             Vector3 vel;
             if (dropped)
@@ -93,6 +96,7 @@ namespace DarkwoodMP.World
             {
                 vel = rb.velocity;
             }
+
             Vector3 target;
             if (dropped)
             {
@@ -102,6 +106,7 @@ namespace DarkwoodMP.World
             {
                 target = ti.landTarget;
             }
+
             float distance;
             if (dropped)
             {
@@ -111,6 +116,7 @@ namespace DarkwoodMP.World
             {
                 distance = Vector3.Distance(ti.landTarget, from);
             }
+
             Write(
                 w, _session.LocalId, type, go.transform.position,
                 go.transform.rotation, vel, target, distance);
@@ -122,6 +128,7 @@ namespace DarkwoodMP.World
             {
                 _session.SendToHost(w, Channel.Control, reliable: true);
             }
+
             if (WorldActions.Debug)
             {
                 string text = "threw";
@@ -129,6 +136,7 @@ namespace DarkwoodMP.World
                 {
                     text = "dropped";
                 }
+
                 Plugin.Log.LogInfo($"[world] {text} {type}");
             }
         }
@@ -144,12 +152,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var theirs = new List<Collider>();
             if (NetPlayerProxy.All.TryGetValue(by, out var proxy)
                 && proxy != null)
             {
                 theirs.AddRange(proxy.GetComponentsInChildren<Collider>(true));
             }
+
             if (PlayerSync.Instance != null
                 && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp)
                 && rp.Root != null)
@@ -157,6 +167,7 @@ namespace DarkwoodMP.World
                 theirs.AddRange(
                     rp.Root.GetComponentsInChildren<Collider>(true));
             }
+
             foreach (var a in mine)
             {
                 foreach (var b in theirs)
@@ -198,10 +209,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             ulong by = r.R.ReadUInt64();
             string type = r.ReadStr();
             var pos = r.ReadVector3();
@@ -218,6 +231,7 @@ namespace DarkwoodMP.World
                         + "they aren't: not thrown");
                 return;
             }
+
             if (s.IsHost)
             {
                 by = from; // never trust who a client says threw it
@@ -225,6 +239,7 @@ namespace DarkwoodMP.World
                 Write(w, by, type, pos, rot, vel, target, distance);
                 s.Broadcast(w, Channel.Control, reliable: true, except: from);
             }
+
             if (by == s.LocalId)
             {
                 return;
@@ -236,6 +251,7 @@ namespace DarkwoodMP.World
             {
                 item = instance.getItem(type, instantiate: false);
             }
+
             if (item == null || item.item == null)
             {
                 Plugin.Log.LogWarning(
@@ -269,6 +285,7 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             if (go == null)
             {
                 return;
@@ -281,11 +298,13 @@ namespace DarkwoodMP.World
                 Object.Destroy(go);
                 return;
             }
+
             var ren = go.GetComponent<Renderer>();
             if (ren != null)
             {
                 ren.enabled = true;
             }
+
             // The thrower's game makes it inside their player and keeps it from
             // hitting them (Player's aim: Physics.IgnoreCollision with the
             // player). The copy starts inside their stand-in here: without the
@@ -303,19 +322,23 @@ namespace DarkwoodMP.World
                 {
                     dex.objectThatSpawnedMe = thrower;
                 }
+
                 ThrownHits.Copies.Add(go);
                 ti.dropMe();
                 if (s.IsHost)
                 {
                     Core.addToSaveable(go, isDynamic: true);
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] {s.NameOf(by)} dropped {type}");
                 }
+
                 return;
             }
+
             rb.drag = 2f;
             rb.velocity = vel;
             if (ti.initialRotationForce == 0f)
@@ -326,6 +349,7 @@ namespace DarkwoodMP.World
             {
                 rb.AddTorque(0f, ti.initialRotationForce * 1000f, 0f);
             }
+
             ti.landTarget = target;
             ti.thrown = true;
             ti.objectThatSpawnedMe = thrower;
@@ -335,6 +359,7 @@ namespace DarkwoodMP.World
             {
                 ex.objectThatSpawnedMe = thrower;
             }
+
             ThrownHits.Copies.Add(go);
             if (item.recoverableAfterThrown)
             {
@@ -347,6 +372,7 @@ namespace DarkwoodMP.World
                 // it
                 Core.addToSaveable(go, isDynamic: true);
             }
+
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[world] {s.NameOf(by)} threw {type}");
@@ -445,10 +471,12 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (CurrentFlame == null)
             {
                 return false;
             }
+
             for (var t = CurrentFlame.transform; t != null; t = t.parent)
             {
                 if (Spawned.Contains(t.gameObject))
@@ -456,6 +484,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -479,6 +508,7 @@ namespace DarkwoodMP.World
             {
                 ThrownHits.Depth = 0;
             }
+
             return __exception;
         }
     }
@@ -494,6 +524,7 @@ namespace DarkwoodMP.World
                 typeof(Explodes), nameof(Explodes.onActivate),
                 new System.Type[0]);
         }
+
         static void Prefix() => ThrownHits.Depth++;
         static void Postfix() => ThrownHits.Depth--;
         static System.Exception Finalizer(System.Exception __exception)
@@ -502,6 +533,7 @@ namespace DarkwoodMP.World
             {
                 ThrownHits.Depth = 0;
             }
+
             return __exception;
         }
     }
@@ -532,11 +564,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (__instance.effect != null)
             {
                 NetEnemies.HitEffects =
                     new List<InvItemEffect> { __instance.effect };
             }
+
             var target = FireSync.Flammable(_transform, _collider);
             if (target != null && target.GetComponent<Burn>() == null)
             {
@@ -584,6 +618,7 @@ namespace DarkwoodMP.World
                 typeof(GameObject),
                 typeof(bool)
             });
+
             yield return AccessTools.Method(typeof(Core),
                 nameof(Core.AddPrefab), new[]
             {
@@ -651,11 +686,13 @@ namespace DarkwoodMP.World
                         declaringType = method.DeclaringType;
                     }
                 }
+
                 if (declaringType == typeof(Explodes))
                 {
                     return true;
                 }
             }
+
             return false;
         }
     }

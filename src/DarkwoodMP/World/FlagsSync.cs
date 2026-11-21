@@ -125,12 +125,15 @@ namespace DarkwoodMP.World
                 {
                     _baseline = null;
                 }
+
                 return;
             }
+
             if (Time.unscaledTime < _next)
             {
                 return;
             }
+
             Flush();
         }
 
@@ -154,6 +157,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_baseline == null) // what we start from isn't news
             {
                 _baseline = now;
@@ -171,6 +175,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (kv.Key.StartsWith("r:"))
                 {
                     // Reputation: the change, so that changes made in two games
@@ -188,10 +193,13 @@ namespace DarkwoodMP.World
                             new KeyValuePair<string, string>(
                                 kv.Key, "=" + kv.Value));
                     }
+
                     continue;
                 }
+
                 changed.Add(kv);
             }
+
             // Journal entries that went (handed over in a dialogue).
             // Dream entries dropped as the dream ended aren't sent: every game
             // drops its own.
@@ -205,6 +213,7 @@ namespace DarkwoodMP.World
                         new KeyValuePair<string, string>(kv.Key, Removed));
                 }
             }
+
             _baseline = now;
             if (changed.Count > 0)
             {
@@ -250,26 +259,31 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             UI instance = Singleton<UI>.Instance;
             Journal j = null;
             if (instance != null)
             {
                 j = instance.journal;
             }
+
             if (j == null || !j.keysDict.TryGetValue(type, out var k)
                 || k == null)
             {
                 return;
             }
+
             if (k.inDream && !SharedDream)
             {
                 return; // a key of a dream of our own: the host can't have it
             }
+
             string json = JsonConvert.SerializeObject(k);
             if (_baseline != null)
             {
                 _baseline["jk:" + type] = json;
             }
+
             Send(new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("jk:" + type, json)
@@ -288,10 +302,12 @@ namespace DarkwoodMP.World
             {
                 j = instance.journal;
             }
+
             if (j == null || key.Length < 4)
             {
                 return null;
             }
+
             string name = key.Substring(3);
             object e = null;
             switch (key[1])
@@ -301,30 +317,36 @@ namespace DarkwoodMP.World
                     {
                         e = x;
                     }
+
                     break;
                 case 'n':
                     if (j.notesDict.TryGetValue(name, out var n))
                     {
                         e = n;
                     }
+
                     break;
                 case 'k':
                     if (j.keysDict.TryGetValue(name, out var k))
                     {
                         e = k;
                     }
+
                     break;
                 case 'i':
                     if (j.itemsDict.TryGetValue(name, out var i))
                     {
                         e = i;
                     }
+
                     break;
             }
+
             if (e != null)
             {
                 return JsonConvert.SerializeObject(e);
             }
+
             return null;
         }
 
@@ -344,6 +366,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_baseline.TryGetValue("r:" + npc, out var was)
                 && int.TryParse(was, out int w))
             {
@@ -362,10 +385,12 @@ namespace DarkwoodMP.World
             {
                 st = instance.getNPCState(npc);
             }
+
             if (st == null || delta == 0)
             {
                 return;
             }
+
             st.reputation += delta;
             Absorb(npc, delta);
             RefreshReputation(npc);
@@ -383,6 +408,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_rewards.TryGetValue(trader, out var had) && had.Key == day)
             {
                 AddReputation(trader, -amount);
@@ -392,6 +418,7 @@ namespace DarkwoodMP.World
                         + $"({amount}) taken back");
                 return;
             }
+
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
             Plugin.Log.LogInfo(
                 $"[world] {trader}'s after-night reward for day {day}: "
@@ -422,6 +449,7 @@ namespace DarkwoodMP.World
                             + $"reward: another one ({amount}) not given");
                     return false;
                 }
+
                 AddReputation(trader, amount);
             }
             else
@@ -435,9 +463,11 @@ namespace DarkwoodMP.World
                 {
                     delta = amount;
                 }
+
                 // the host's is the one that counts
                 AddReputation(trader, delta);
             }
+
             _rewards[trader] = new KeyValuePair<int, int>(day, amount);
             Plugin.Log.LogInfo(
                 $"[world] {trader}'s after-night reward for day {day}: "
@@ -492,11 +522,13 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var d = new Dictionary<string, string>();
             if (host)
             {
                 d["k"] = f.karmaPoints.ToString();
             }
+
             foreach (var kv in FlagsDict(f))
             {
                 if (kv.Value != null && !PlayersOwn(kv.Key))
@@ -504,15 +536,18 @@ namespace DarkwoodMP.World
                     d["f:" + kv.Key] = $"{kv.Value.isTrue}|{kv.Value.amount}";
                 }
             }
+
             foreach (var n in f.npcStates)
             {
                 if (n == null || n.name == null)
                 {
                     continue;
                 }
+
                 d["n:" + n.name] = NpcJson(n);
                 d["r:" + n.name] = n.reputation.ToString();
             }
+
             foreach (var dl in f.dialogues)
             {
                 if (dl != null)
@@ -521,12 +556,14 @@ namespace DarkwoodMP.World
                         new CharacterDialogue.SaveState(dl));
                 }
             }
+
             UI instance = Singleton<UI>.Instance;
             Journal j = null;
             if (instance != null)
             {
                 j = instance.journal;
             }
+
             if (j != null)
             {
                 // what's found in a dream: only a shared dream's (see the
@@ -539,6 +576,7 @@ namespace DarkwoodMP.World
                         d["je:" + e.type] = JsonConvert.SerializeObject(e);
                     }
                 }
+
                 foreach (var e in j.notesDict.Values)
                 {
                     if (e != null && (dream || !e.inDream))
@@ -546,6 +584,7 @@ namespace DarkwoodMP.World
                         d["jn:" + e.type] = JsonConvert.SerializeObject(e);
                     }
                 }
+
                 foreach (var e in j.keysDict.Values)
                 {
                     if (e != null && (dream || !e.inDream))
@@ -553,6 +592,7 @@ namespace DarkwoodMP.World
                         d["jk:" + e.type] = JsonConvert.SerializeObject(e);
                     }
                 }
+
                 foreach (var e in j.itemsDict.Values)
                 {
                     if (e != null && (dream || !e.inDream))
@@ -560,10 +600,12 @@ namespace DarkwoodMP.World
                         d["ji:" + e.type] = JsonConvert.SerializeObject(e);
                     }
                 }
+
                 foreach (var name in j.locationsDict.Keys)
                 {
                     d["jl:" + name] = "";
                 }
+
                 foreach (var e in j.locationDirections)
                 {
                     if (e != null && e.locationName != null)
@@ -573,6 +615,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return d;
         }
 
@@ -607,6 +650,7 @@ namespace DarkwoodMP.World
             _atSnapshot = Snapshot(true);
             SnapshotNoted++;
         }
+
         /// <summary>
         /// How many snapshots' story was noted (for the tests).
         /// </summary>
@@ -630,11 +674,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var now = Snapshot(true);
             if (now == null)
             {
                 return;
             }
+
             var changed = new List<KeyValuePair<string, string>>();
             foreach (var kv in now)
             {
@@ -643,6 +689,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 string stored;
                 if (kv.Key.StartsWith("r:"))
                 {
@@ -652,8 +699,10 @@ namespace DarkwoodMP.World
                 {
                     stored = kv.Value;
                 }
+
                 changed.Add(new KeyValuePair<string, string>(kv.Key, stored));
             }
+
             // as Flush: a dream entry the game dropped as the dream ended isn't
             // sent
             bool shared = SharedDream;
@@ -666,10 +715,12 @@ namespace DarkwoodMP.World
                         new KeyValuePair<string, string>(kv.Key, Removed));
                 }
             }
+
             if (changed.Count == 0)
             {
                 return;
             }
+
             Send(changed, except: 0, to: who);
             string name = _session.NameOf(who);
             string keys = string.Join(", ", changed.Take(8).Select(e => e.Key));
@@ -678,6 +729,7 @@ namespace DarkwoodMP.World
             {
                 more = ", ...";
             }
+
             Plugin.Log.LogInfo(
                 $"{name} is in the world: {changed.Count} story changes since "
                     + $"their snapshot sent to them ({keys}{more})");
@@ -698,6 +750,7 @@ namespace DarkwoodMP.World
                     w.WriteStr(entries[i].Key);
                     w.WriteStr(entries[i].Value);
                 }
+
                 if (_session.IsHost && to != 0)
                 {
                     _session.SendTo(to, w, Channel.Control, reliable: true);
@@ -712,6 +765,7 @@ namespace DarkwoodMP.World
                     _session.SendToHost(w, Channel.Control, reliable: true);
                 }
             }
+
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -726,10 +780,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient && from != _session.HostId)
             {
                 return;
             }
+
             int n = r.R.ReadUInt16();
             var got = new List<KeyValuePair<string, string>>();
             for (int i = 0; i < n; i++)
@@ -737,6 +793,7 @@ namespace DarkwoodMP.World
                 got.Add(
                     new KeyValuePair<string, string>(r.ReadStr(), r.ReadStr()));
             }
+
             var relay = new List<KeyValuePair<string, string>>();
             foreach (var kv in got)
             {
@@ -800,11 +857,13 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning(
                         $"Couldn't apply {kv.Key}: {e.Message}");
                 }
+
                 if (pass)
                 {
                     relay.Add(kv);
                 }
             }
+
             if (WorldActions.Debug)
             {
                 List<string> changes = got.ConvertAll(e =>
@@ -813,12 +872,15 @@ namespace DarkwoodMP.World
                     {
                         return e.Key + " " + e.Value;
                     }
+
                     return e.Key;
                 });
+
                 Plugin.Log.LogInfo(
                     $"[world] got {got.Count} story changes: "
                         + $"{string.Join(", ", changes)}");
             }
+
             if (_session.IsHost && relay.Count > 0)
             {
                 Send(relay, except: from);
@@ -871,24 +933,29 @@ namespace DarkwoodMP.World
             {
                 return true; // not ours to judge: Apply reports it
             }
+
             if (st != null && st.dead)
             {
                 if (dead)
                 {
                     return true;
                 }
+
                 SendNpcState(from, npc, st);
                 return false;
             }
+
             if (!dead)
             {
                 return true;
             }
+
             if (_deathsAllowed.TryGetValue(npc, out float t)
                 && UnityEngine.Time.unscaledTime - t < 30f)
             {
                 return true;
             }
+
             Plugin.Log.LogInfo(
                 $"[authority] refused {_session.NameOf(from)}'s state of "
                     + $"{npc}: dead, but no kill of theirs was allowed here");
@@ -902,6 +969,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.FlagsDelta);
             w.W.Write((ushort)1);
             w.WriteStr("n:" + npc);
@@ -920,17 +988,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int v = int.Parse(value.Substring(1));
             if (value[0] != '=')
             {
                 AddReputation(npc, v);
                 return;
             }
+
             st.reputation = v;
             if (_baseline != null)
             {
                 _baseline["r:" + npc] = v.ToString();
             }
+
             RefreshReputation(npc);
         }
 
@@ -942,11 +1013,13 @@ namespace DarkwoodMP.World
                 f.karmaPoints = int.Parse(value);
                 return;
             }
+
             if (key[0] == 'j')
             {
                 ApplyJournal(key[1], key.Substring(3), value);
                 return;
             }
+
             string name = key.Substring(2);
             switch (key[0])
             {
@@ -955,6 +1028,7 @@ namespace DarkwoodMP.World
                     {
                         break;
                     }
+
                     var parts = value.Split('|');
                     if (name.StartsWith(ModPrefix))
                     {
@@ -962,6 +1036,7 @@ namespace DarkwoodMP.World
                             f, name, bool.Parse(parts[0]), int.Parse(parts[1]));
                         break;
                     }
+
                     f.setFlag(name, bool.Parse(parts[0]));
                     f.setFlag(name, int.Parse(parts[1]));
                     break;
@@ -979,10 +1054,12 @@ namespace DarkwoodMP.World
                     {
                         JsonConvert.PopulateObject(value, state);
                     }
+
                     if (state.dead && !wasDead)
                     {
                         KillNpc(name, state.deadID);
                     }
+
                     RefreshReputation(name);
                     break;
                 case 'd':
@@ -993,6 +1070,7 @@ namespace DarkwoodMP.World
                             .DeserializeObject<CharacterDialogue.SaveState>(
                                 value).loadValues(dialogue);
                     }
+
                     break;
             }
         }
@@ -1008,6 +1086,7 @@ namespace DarkwoodMP.World
             {
                 f.flagsDict[name] = flag = new Flags.Flag { name = name };
             }
+
             flag.isTrue = on;
             flag.amount = amount;
         }
@@ -1023,16 +1102,19 @@ namespace DarkwoodMP.World
             {
                 talked = Player.Instance.talkedToNPC;
             }
+
             if (talked == null || talked.name != npc
                 || talked.inventory == null
                 || talked.inventory.reputationText == null)
             {
                 return;
             }
+
             if (!talked.inventory.reputationText.gameObject.activeInHierarchy)
             {
                 return;
             }
+
             try
             {
                 talked.inventory.refreshReputation();
@@ -1059,20 +1141,24 @@ namespace DarkwoodMP.World
                 {
                     loc = instance.getLocation(name);
                 }
+
                 MapElement el = null;
                 if (loc != null)
                 {
                     el = loc.GetComponent<MapElement>();
                 }
+
                 if (el == null || el.isOnMap)
                 {
                     return;
                 }
+
                 Map map = Singleton<Map>.Instance;
                 if (map != null)
                 {
                     map.showElement(el);
                 }
+
                 Plugin.Log.LogInfo($"Journal: {name} shown on the map");
             }
             catch (Exception e)
@@ -1094,10 +1180,12 @@ namespace DarkwoodMP.World
             {
                 j = instance.journal;
             }
+
             if (j == null)
             {
                 return;
             }
+
             if (value == Removed)
             {
                 bool gone = kind switch
@@ -1108,14 +1196,17 @@ namespace DarkwoodMP.World
                     'i' => j.itemsDict.Remove(name),
                     _ => false,
                 };
+
                 if (gone)
                 {
                     Plugin.Log.LogInfo(
                         $"Journal: another player no longer has {name} (handed "
                             + "over): removed here too");
                 }
+
                 return;
             }
+
             if (kind != 'l' && kind != 'd' && DreamEntry(value) && !SharedDream)
             {
                 // Found in a shared dream that has ended here (or not begun):
@@ -1125,6 +1216,7 @@ namespace DarkwoodMP.World
                         + "in: not taken");
                 return;
             }
+
             string popup = null;
             switch (kind)
             {
@@ -1133,6 +1225,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     j.journalEntriesDict[name] =
                         JsonConvert.DeserializeObject<Journal.JournalEntry>(
                             value);
@@ -1143,6 +1236,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     j.notesDict[name] =
                         JsonConvert.DeserializeObject<Journal.Note>(value);
                     popup = "Note";
@@ -1152,6 +1246,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     j.keysDict[name] =
                         JsonConvert.DeserializeObject<Journal.Key>(value);
                     break;
@@ -1160,6 +1255,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     j.itemsDict[name] =
                         JsonConvert.DeserializeObject<Journal.Item>(value);
                     break;
@@ -1168,11 +1264,13 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     j.locationsDict[name] = name;
                     if (!QuietPlace(name))
                     {
                         popup = "Location";
                     }
+
                     ShowOnMap(name);
                     break;
                 case 'd':
@@ -1180,6 +1278,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     j.locationDirections.Add(
                         JsonConvert
                             .DeserializeObject<Journal.LocationDirection>(
@@ -1188,6 +1287,7 @@ namespace DarkwoodMP.World
                 default:
                     return;
             }
+
             Plugin.Log.LogInfo(
                 "Journal: another player's "
                     + $"{kind switch { 'e' => "entry", 'n' => "note", 'k' => "key", 'i' => "item", 'l' => "place", _ => "direction" }} {name}");
@@ -1219,6 +1319,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -1240,6 +1341,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (byId)
                 {
                     var sv = npc.GetComponent<SaveableObject>();
@@ -1248,11 +1350,13 @@ namespace DarkwoodMP.World
                         continue;
                     }
                 }
+
                 var c = npc.GetComponent<Character>();
                 if (c == null || !c.alive)
                 {
                     continue;
                 }
+
                 // A copy of one the host runs as an enemy dies with the host's
                 // state (Combat.NetEnemies).
                 if (Combat.NetEnemies.Instance != null
@@ -1260,6 +1364,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 Plugin.Log.LogInfo(
                     $"{name} was killed in another player's game");
                 WorldActions.Replaying = true;
@@ -1320,12 +1425,14 @@ namespace DarkwoodMP.World
             {
                 return true; // the language isn't loaded: leave it to the game
             }
+
             if (!has)
             {
                 Plugin.Log.LogInfo(
                     $"Journal: no popup for {_type} {_desc}, the game has no "
                         + "text for it");
             }
+
             return has;
         }
 
@@ -1353,6 +1460,7 @@ namespace DarkwoodMP.World
             {
                 _this = AccessTools.Field(mn.DeclaringType, "<>4__this");
             }
+
             return mn;
         }
 
@@ -1363,6 +1471,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var ev = _this.GetValue(__instance) as GameEvent;
             if (ev == null || ev.type != GameEvent.Type.modifyCharacter
                 || ev.characterModifyType
@@ -1370,12 +1479,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Flags instance = Singleton<Flags>.Instance;
             Flags.NPCState st = null;
             if (instance != null)
             {
                 st = instance.getNPCState(ev.Value);
             }
+
             if (st != null)
             {
                 __state = st.reputation;
@@ -1388,6 +1499,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var ev = (GameEvent)_this.GetValue(__instance);
             Flags instance = Singleton<Flags>.Instance;
             Flags.NPCState st = null;
@@ -1395,6 +1507,7 @@ namespace DarkwoodMP.World
             {
                 st = instance.getNPCState(ev.Value);
             }
+
             if (st != null && st.reputation != __state)
             {
                 FlagsSync.Instance.Absorb(ev.Value, st.reputation - __state);

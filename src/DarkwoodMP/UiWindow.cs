@@ -99,6 +99,7 @@ namespace DarkwoodMP
             {
                 y = Screen.height * top;
             }
+
             return new Rect(
                 Mathf.Max(16f, Screen.width - w - margin),
                 Mathf.Clamp(y, 16f, Mathf.Max(16f, Screen.height - h - 16f)), w,
@@ -124,6 +125,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             Open = false;
             Action handler = OnClose;
             if (handler != null)
@@ -143,6 +145,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var screen = new Vector2Int(Screen.width, Screen.height);
             if (_placedFor != screen)
             {
@@ -152,11 +155,13 @@ namespace DarkwoodMP
                 _userSized = false;
                 _fitHeight = 0;
             }
+
             if (FitContent && !_userSized && _fitHeight > 0
                 && Event.current.type == EventType.Layout)
             {
                 Rect.height = Mathf.Min(_fitHeight, Screen.height - 16 * S);
             }
+
             HandleResize();
             HandleDrag();
             if (Modal)
@@ -169,6 +174,7 @@ namespace DarkwoodMP
                 Rect = GUI.Window(
                     Id, Rect, Draw, GUIContent.none, MenuSkin.Window);
             }
+
             Clamp();
             if (_focusNext)
             {
@@ -194,9 +200,11 @@ namespace DarkwoodMP
             {
                 return TestMouse();
             }
+
             return new Vector2(
                 Input.mousePosition.x, Screen.height - Input.mousePosition.y);
         }
+
         /// <summary>
         /// The button let go somewhere the window didn't get the MouseUp
         /// (outside the game's window, say).
@@ -222,10 +230,12 @@ namespace DarkwoodMP
                 e.Use();
                 return;
             }
+
             if (!_resizing)
             {
                 return;
             }
+
             if (e.type == EventType.MouseUp || e.rawType == EventType.MouseUp
                 || Released())
             {
@@ -234,8 +244,10 @@ namespace DarkwoodMP
                 {
                     e.Use();
                 }
+
                 return;
             }
+
             var size = _sizeFrom + (MouseNow() - _resizeFrom);
             Rect.width =
                 Mathf.Clamp(size.x, MinSize.x * S, Screen.width - Rect.x);
@@ -270,6 +282,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             if (e.type == EventType.MouseUp || e.rawType == EventType.MouseUp
                 || Released())
             {
@@ -278,8 +291,10 @@ namespace DarkwoodMP
                 {
                     e.Use();
                 }
+
                 return;
             }
+
             Rect.position = _placeFrom + (MouseNow() - _dragFrom);
             if (e.type == EventType.MouseDrag)
             {
@@ -306,6 +321,7 @@ namespace DarkwoodMP
             {
                 Overlay();
             }
+
             // Title bar, with the close box at its right end.
             var bar = new Rect(2, 2, w - 4, TitleH);
             GUI.Box(bar, GUIContent.none, MenuSkin.TitleBar);
@@ -319,10 +335,12 @@ namespace DarkwoodMP
             {
                 Close();
             }
+
             if (!Open)
             {
                 return;
             }
+
             // A press on the title bar (the close box has taken its own) starts
             // a move, followed in HandleDrag.
             var ev = Event.current;
@@ -338,12 +356,14 @@ namespace DarkwoodMP
             {
                 footer = FooterHeight * S;
             }
+
             var body = new Rect(
                 Pad, bar.yMax + Pad, w - 2 * Pad, h - bar.yMax - 2 * Pad);
             if (footer > 0)
             {
                 body.height -= footer + Pad;
             }
+
             // Whether it scrolls is decided once a frame, on Layout, so the
             // Repaint after it can't differ: a scrollbar that came and went
             // within a frame narrowed the body, re-wrapped its text and pushed
@@ -352,12 +372,14 @@ namespace DarkwoodMP
             {
                 _scrolls = _contentHeight > body.height + 1;
             }
+
             bool scrolls = _scrolls;
             float inner = body.width;
             if (scrolls)
             {
                 inner -= 12 * S;
             }
+
             GUIStyle scrollbar;
             if (scrolls)
             {
@@ -367,6 +389,7 @@ namespace DarkwoodMP
             {
                 scrollbar = GUIStyle.none;
             }
+
             _scroll = GUI.BeginScrollView(
                 body, _scroll,
                 new Rect(0, 0, inner, Mathf.Max(_contentHeight, body.height)),
@@ -382,8 +405,10 @@ namespace DarkwoodMP
                 {
                     fit += footer + Pad;
                 }
+
                 _fitHeight = fit + 2;
             }
+
             GUI.EndScrollView();
             if (footer > 0)
             {
@@ -408,6 +433,7 @@ namespace DarkwoodMP
                     }
                 }
             }
+
             if (Overlay != null && Event.current.type == EventType.Repaint)
             {
                 Overlay();
@@ -475,12 +501,14 @@ namespace DarkwoodMP
                     flex++;
                 }
             }
+
             float flexW = 0;
             if (flex > 0)
             {
                 flexW = Mathf.Max(
                     0, (r.width - fixedW - gap * (widths.Length - 1)) / flex);
             }
+
             var rects = new Rect[widths.Length];
             float x = r.x;
             for (int i = 0; i < widths.Length; i++)
@@ -494,9 +522,11 @@ namespace DarkwoodMP
                 {
                     w = flexW;
                 }
+
                 rects[i] = new Rect(x, r.y, w, r.height);
                 x += w + gap;
             }
+
             return rects;
         }
 
@@ -513,6 +543,7 @@ namespace DarkwoodMP
             {
                 shade = MenuSkin.Text;
             }
+
             PixelFont.Draw(r, text, shade, align);
         }
 
@@ -528,6 +559,7 @@ namespace DarkwoodMP
                 Label(r, line, color);
                 f.Y += PixelFont.Line + S;
             }
+
             f.Y += f.Gap - S;
         }
 
@@ -562,6 +594,7 @@ namespace DarkwoodMP
                 GUI.Box(r, GUIContent.none, MenuSkin.Button);
                 clicked = false;
             }
+
             bool down = enabled && GUIUtility.hotControl != 0 && hover
                 && Input.GetMouseButton(0);
             Rect tr;
@@ -573,6 +606,7 @@ namespace DarkwoodMP
             {
                 tr = r;
             }
+
             Color color;
             if (!enabled)
             {
@@ -586,6 +620,7 @@ namespace DarkwoodMP
             {
                 color = MenuSkin.Text;
             }
+
             PixelFont.Draw(tr, text, color, TextAnchor.MiddleCenter);
             return clicked;
         }
@@ -605,6 +640,7 @@ namespace DarkwoodMP
                     new Rect(r.x, r.y, r.width, r.height + 2 * S),
                     GUIContent.none, MenuSkin.Button);
             }
+
             bool clicked = !chosen
                 && GUI.Button(
                     new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S),
@@ -618,6 +654,7 @@ namespace DarkwoodMP
             {
                 tab = new Rect(r.x, r.y + 2 * S, r.width, r.height - 2 * S);
             }
+
             Color color;
             if (chosen || hover)
             {
@@ -627,6 +664,7 @@ namespace DarkwoodMP
             {
                 color = MenuSkin.Text;
             }
+
             PixelFont.Draw(tab, text, color, TextAnchor.MiddleCenter);
             return clicked;
         }
@@ -639,6 +677,7 @@ namespace DarkwoodMP
             {
                 GUI.SetNextControlName(name);
             }
+
             if (password)
             {
                 string shown = value;
@@ -646,13 +685,16 @@ namespace DarkwoodMP
                 {
                     shown = "";
                 }
+
                 return GUI.PasswordField(r, shown, '*', max, MenuSkin.Field);
             }
+
             string text = value;
             if (text == null)
             {
                 text = "";
             }
+
             return GUI.TextField(r, text, max, MenuSkin.Field);
         }
 
@@ -682,6 +724,7 @@ namespace DarkwoodMP
             {
                 on = !on;
             }
+
             GUI.Box(b, GUIContent.none, MenuSkin.Sunken);
             if (on)
             {
@@ -691,6 +734,7 @@ namespace DarkwoodMP
                         b.height - 6 * S),
                     GUIContent.none, MenuSkin.Line);
             }
+
             Color color;
             if (!enabled)
             {
@@ -704,6 +748,7 @@ namespace DarkwoodMP
             {
                 color = MenuSkin.Text;
             }
+
             Label(
                 new Rect(b.xMax + 6 * S, r.y, r.width - box - 6 * S, r.height),
                 text, color);
@@ -723,6 +768,7 @@ namespace DarkwoodMP
                 e.Use();
                 return true;
             }
+
             return false;
         }
     }

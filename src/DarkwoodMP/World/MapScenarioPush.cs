@@ -89,11 +89,13 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(it.gameObject);
                     e["yaw"] =
                         StateDump.R(b.transform.rotation.eulerAngles.y, 1f);
                 }
             });
+
             StateDump.AddSection("leaves", ctx =>
             {
                 // Every open door's leaf, at its angle from shut (the doors
@@ -105,6 +107,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     ctx.Add(d.gameObject)["leaf"] =
                         StateDump.R(DoorLeaf.Signed(d), 1f);
                 }
@@ -130,18 +133,21 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (b.GetComponent<CharBase>() != null
                 || b.GetComponentInParent<Door>() != null
                 || b.GetComponentInParent<Window>() != null)
             {
                 return false;
             }
+
             it = b.GetComponent<Item>();
             if (it == null || it.GetComponentInParent<Player>() != null
                 || it.isDroppedItem)
             {
                 return false;
             }
+
             return Solid(b);
         }
 
@@ -156,6 +162,7 @@ namespace DarkwoodMP.World
             {
                 pl = P.gameObject.layer;
             }
+
             foreach (var c in b.GetComponentsInChildren<Collider>(true))
             {
                 if (c.GetComponentInParent<Rigidbody>(true) == b
@@ -165,6 +172,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -186,6 +194,7 @@ namespace DarkwoodMP.World
             {
                 radius = F(a[0]);
             }
+
             var things = new List<Item>();
             var unwatched = new List<string>();
             foreach (var b in Bodies(radius)
@@ -214,6 +223,7 @@ namespace DarkwoodMP.World
                     {
                         state = "shut";
                     }
+
                     what = $"door {name} leaf, {state}";
                 }
                 else if (b.GetComponentInParent<Window>() != null)
@@ -227,11 +237,13 @@ namespace DarkwoodMP.World
                     {
                         w = DragSync.Instance.WatchInfo(b);
                     }
+
                     string text = "loose";
                     if (it.draggable)
                     {
                         text = "draggable";
                     }
+
                     what = $"{text}, {w}";
                     things.Add(it);
                     if (w == "not watched" || w == "no body")
@@ -246,18 +258,22 @@ namespace DarkwoodMP.World
                     {
                         bodyNote = " on the body, one above it";
                     }
+
                     what = $"NOT SHARED (no Item{bodyNote})";
                     unwatched.Add($"{b.name} {Ref(b)}");
                 }
+
                 Plugin.Log.LogInfo(
                     FormattableString.Invariant(
                         $"[push] {b.name} {Ref(b)} at {Fmt1(b.position)} mass {b.mass:0.##} drag {b.drag:0.##} layer {b.gameObject.layer}: {what}"));
             }
+
             if (_order.Count == 0 || a.Contains("new"))
             {
                 _order.Clear();
                 _order.AddRange(things.Select(Ref));
             }
+
             r.Info = string.Join(
                 "; ",
                 things.Select(
@@ -273,6 +289,7 @@ namespace DarkwoodMP.World
                     "not watched for pushes here: "
                         + $"{string.Join(", ", unwatched)}");
             }
+
             yield break;
         }
 
@@ -283,17 +300,20 @@ namespace DarkwoodMP.World
             {
                 k = int.Parse(a[0], CultureInfo.InvariantCulture);
             }
+
             if (k < 0 || k >= _order.Count)
             {
                 r.Fail($"no thing {k} (ps-list found {_order.Count})");
                 return null;
             }
+
             var it = StateDump.All<Item>().FirstOrDefault(
                 i => i != null && Ref(i) == _order[k]);
             if (it == null)
             {
                 r.Fail($"thing {k} ({_order[k]}) not here");
             }
+
             return it;
         }
 
@@ -312,6 +332,7 @@ namespace DarkwoodMP.World
                         s, Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
                 }
             }
+
             return s;
         }
 
@@ -329,6 +350,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             dir.y = 0f;
             dir = dir.normalized;
             float until = Time.time + secs;
@@ -339,10 +361,12 @@ namespace DarkwoodMP.World
                 {
                     yield break;
                 }
+
                 rb.WakeUp();
                 rb.velocity = new Vector3(
                     dir.x * PushSpeed, rb.velocity.y, dir.z * PushSpeed);
             }
+
             if (rb != null)
             {
                 rb.velocity = new Vector3(0f, rb.velocity.y, 0f);
@@ -370,6 +394,7 @@ namespace DarkwoodMP.World
                     return d;
                 }
             }
+
             return Dir(deg);
         }
 
@@ -393,6 +418,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var rb = c.attachedRigidbody;
                 if (rb != null && !rb.isKinematic
                     && rb.constraints != RigidbodyConstraints.FreezeAll
@@ -400,12 +426,15 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (c.GetComponentInParent<CharBase>() != null)
                 {
                     continue;
                 }
+
                 return false;
             }
+
             return true;
         }
 
@@ -416,16 +445,19 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             float dist = 60f;
             if (!lean && a.Length > 2)
             {
                 dist = F(a[2]);
             }
+
             float hold = 5f;
             if (lean && a.Length > 2)
             {
                 hold = F(a[2]);
             }
+
             var start = it.transform.position;
             float back = Size(it) + 60f;
             float angle = 0f;
@@ -433,6 +465,7 @@ namespace DarkwoodMP.World
             {
                 angle = F(a[1]);
             }
+
             float ahead;
             if (lean)
             {
@@ -442,6 +475,7 @@ namespace DarkwoodMP.World
             {
                 ahead = dist + 20f;
             }
+
             var dir = ClearWay(it, angle, back, ahead);
             yield return Walk(start - dir * back, 10f, detours: 0);
             // at rest where the walk left us
@@ -454,12 +488,14 @@ namespace DarkwoodMP.World
                 r.Fail("it's gone");
                 yield break;
             }
+
             if (lean)
             {
                 // Pressed against it while it's still: a body held there. A
                 // thing in the way stops it, else it goes on.
                 yield return BodyWalk(dir, hold, null);
             }
+
             var rb = it.GetComponent<Rigidbody>();
             yield return BodyWalk(-dir, 0.4f, null); // back off it
             float rest = Time.time + 6f;
@@ -468,6 +504,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             // seen at rest (four checks a second) and sent
             yield return new WaitForSeconds(1.5f);
             r.Info = FormattableString.Invariant(
@@ -485,6 +522,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             var rb = it.GetComponent<Rigidbody>();
             var start = it.transform.position;
             var from = start - Dir(0f) * (Size(it) + 150f);
@@ -505,6 +543,7 @@ namespace DarkwoodMP.World
                         point);
                 }
             });
+
             float rest = Time.time + 6f;
             yield return new WaitForSeconds(0.3f);
             while (Time.time < rest && rb != null
@@ -512,6 +551,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(1.5f);
             float moved = StateDump.Flat(it.transform.position - start);
             r.Info =
@@ -532,6 +572,7 @@ namespace DarkwoodMP.World
             {
                 deg = F(a[0]);
             }
+
             var dir = Dir(deg);
             var d = Nearest(
                 Object.FindObjectsOfType<Door>().Where(
@@ -543,6 +584,7 @@ namespace DarkwoodMP.World
                 r.Fail("no open door");
                 yield break;
             }
+
             float before = DoorLeaf.Signed(d);
             // From DEG's side, and if the leaf doesn't turn (it's against the
             // wall that way), from the other.
@@ -558,6 +600,7 @@ namespace DarkwoodMP.World
                 // the leaf at rest (0.4 s still) and sent
                 yield return new WaitForSeconds(2.5f);
             }
+
             r.Info =
                 $"{d.name} "
                     + $"{ObjRef.Of(d.gameObject)}: leaf {before:0} -> {DoorLeaf.Signed(d):0}, we are at {Fmt1(P.transform.position)}";
@@ -580,6 +623,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     float d = StateDump.Flat(
                         rp.Root.transform.position - P.transform.position);
                     if (d < best)
@@ -589,11 +633,13 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (near == null)
             {
                 r.Fail("no other player shown here");
                 yield break;
             }
+
             yield return Walk(near.Root.transform.position, 60f);
             var on = near.Root.transform.position + new Vector3(2f, 0f, 1f);
             Place(on);
@@ -606,6 +652,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             r.Info =
                 $"put on {near.Name} "
                     + $"({StateDump.Flat(near.Root.transform.position - on):0.0} apart): {dist():0.0} apart after {4f - (until - Time.unscaledTime):0.0} s, eased {Sync.PlayerSeparation.Eased - eased:0.0} here (apart at {Sync.PlayerSeparation.Distance:0})";
@@ -613,6 +660,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: not eased apart");
             }
+
             yield return new WaitForSeconds(1f);
             if (dist() > Sync.PlayerSeparation.Distance * 3f)
             {
@@ -627,6 +675,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             var rb = it.GetComponent<Rigidbody>();
             string name = it.name;
             string id = Ref(it);
@@ -638,6 +687,7 @@ namespace DarkwoodMP.World
             {
                 watch = drag.WatchInfo(rb);
             }
+
             r.Info = FormattableString.Invariant(
                 $"{name} {id} at {pos} yaw {yaw:0}, {watch}");
             yield break;

@@ -36,6 +36,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             MenuSkin.Ensure();
             var skin = GUI.skin;
             GUI.skin = MenuSkin.Skin;
@@ -47,12 +48,14 @@ namespace DarkwoodMP
                     _drags++;
                 }
             }
+
             if (_events.Count > 0 && Event.current.type == EventType.Repaint)
             {
                 // the window isn't drawn this frame
                 Event.current = _events.Dequeue();
                 _mouse = Event.current.mousePosition;
             }
+
             _win.OnGUI();
             GUI.skin = skin;
         }
@@ -64,6 +67,7 @@ namespace DarkwoodMP
             {
                 clicks = 1;
             }
+
             return new Event
             {
                 type = type,
@@ -88,6 +92,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(2f);
             _real = true;
             _win = new UiWindow(0x0D5F, "Drag test")
@@ -97,6 +102,7 @@ namespace DarkwoodMP
                 {
                 }
             };
+
             _win.Show();
             Plugin.Log.LogInfo(
                 $"[drag-real] ready: screen {Screen.width}x{Screen.height}, "
@@ -117,6 +123,7 @@ namespace DarkwoodMP
                     grab = m;
                     start = _win.Rect.position;
                 }
+
                 if (down || held)
                 {
                     Plugin.Log.LogInfo(
@@ -128,9 +135,11 @@ namespace DarkwoodMP
                             + "off "
                             + $"{(_win.Rect.position - start - (m - grab)).x:0.#},{(_win.Rect.position - start - (m - grab)).y:0.#} lock {UnityEngine.Cursor.lockState}");
                 }
+
                 _drags = 0;
                 held = down;
             }
+
             _win.Close();
             _win = null;
             _real = false;
@@ -153,6 +162,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(3f);
             _fails = 0;
             UiWindow.TestMouse = () => _mouse;
@@ -163,6 +173,7 @@ namespace DarkwoodMP
                 {
                 }
             };
+
             Log($"screen {Screen.width}x{Screen.height}, scale {UiWindow.S}");
             var cases = new (string name, bool resize, float step, int steps)[]
             {
@@ -173,6 +184,7 @@ namespace DarkwoodMP
                 ("slow resize, 300 steps of 0.3 px", true, 0.3f, 300),
                 ("fast resize, 5 steps of 30 px", true, 30f, 5),
             };
+
             foreach (var c in cases)
             {
                 _win.ResetPlace();
@@ -190,6 +202,7 @@ namespace DarkwoodMP
                 {
                     from = new Vector2(before.x + 40, before.y + 6);
                 }
+
                 if (c.resize)
                 {
                     _events.Enqueue(
@@ -200,6 +213,7 @@ namespace DarkwoodMP
                     _mouse = from;
                     _win.BeginDrag();
                 }
+
                 for (int i = 1; i <= c.steps; i++)
                 {
                     _events.Enqueue(
@@ -207,6 +221,7 @@ namespace DarkwoodMP
                             EventType.MouseDrag, from + dir * (c.step * i),
                             dir * c.step));
                 }
+
                 _events.Enqueue(
                     Mouse(
                         EventType.MouseUp, from + dir * (c.step * c.steps),
@@ -215,6 +230,7 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 yield return null;
                 yield return null;
                 var after = _win.Rect;
@@ -228,22 +244,26 @@ namespace DarkwoodMP
                 {
                     got = after.position - before.position;
                 }
+
                 bool ok = Mathf.Abs(got.x - want.x) < 0.01f
                     && Mathf.Abs(got.y - want.y) < 0.01f;
                 if (!ok)
                 {
                     _fails++;
                 }
+
                 string text = "FAIL";
                 if (ok)
                 {
                     text = "PASS";
                 }
+
                 string change = "moved";
                 if (c.resize)
                 {
                     change = "grew";
                 }
+
                 Log(
                     $"{text} {c.name}: mouse moved ({want.x:0.##}, "
                         + $"{want.y:0.##}), window {change} ({got.x:0.##}, "
@@ -251,6 +271,7 @@ namespace DarkwoodMP
                 _win.Close();
                 yield return null;
             }
+
             _win = null;
             UiWindow.TestMouse = null;
             string s;
@@ -262,6 +283,7 @@ namespace DarkwoodMP
             {
                 s = $"done: {_fails} failed";
             }
+
             Log(s);
         }
     }

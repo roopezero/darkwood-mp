@@ -37,6 +37,7 @@ namespace DarkwoodMP.World
                 r.Info = $"threat log {Threat.Debug}";
                 return Nothing();
             });
+
             Add("mt-die", Die, timeout: 60f);
             Add("mt-spawn", SpawnEnemy, timeout: 15f);
             Add("mt-hit", HitEnemy, timeout: 40f);
@@ -74,6 +75,7 @@ namespace DarkwoodMP.World
             {
                 SetCentre(Home.Value);
             }
+
             yield return Walk(Centre, 40f);
             r.Info =
                 $"centre {Fmt(Centre)}, we're at {Fmt(P.transform.position)}";
@@ -96,6 +98,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Instance.StartCoroutine(KeepAlive());
             }
+
             _tough = on;
             r.Info = $"tough {on}";
             yield break;
@@ -110,6 +113,7 @@ namespace DarkwoodMP.World
                 {
                     yield break;
                 }
+
                 var p = P;
                 if (p != null && p.alive && p.health < p.maxHealth * 0.5f)
                 {
@@ -130,6 +134,7 @@ namespace DarkwoodMP.World
                 r.Fail("not alive");
                 yield break;
             }
+
             p.die();
             float until = Time.realtimeSinceStartup + 50f;
             yield return new WaitForSeconds(2f);
@@ -138,6 +143,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(FlagsSync.Interval + 2f);
             r.Info =
                 $"alive again {P != null && P.alive} at "
@@ -164,15 +170,18 @@ namespace DarkwoodMP.World
             {
                 return "-";
             }
+
             if (P != null && t == P.transform)
             {
                 return "host";
             }
+
             var px = t.GetComponent<NetPlayerProxy>();
             if (px != null)
             {
                 return px.OwnerName;
             }
+
             return t.name;
         }
 
@@ -186,10 +195,12 @@ namespace DarkwoodMP.World
             {
                 return "host";
             }
+
             if (who.StartsWith("c"))
             {
                 return "Client" + who.Substring(1);
             }
+
             return who;
         }
 
@@ -206,6 +217,7 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo(
                         $"[map] {c.name} #{_enemyId} now after {now}");
                 }
+
                 if (c.target != null && now != "-")
                 {
                     float mine = StateDump.Flat(
@@ -219,6 +231,7 @@ namespace DarkwoodMP.World
                     {
                         players.Add(("host", P.transform.position));
                     }
+
                     foreach (var (name, pos) in players)
                     {
                         if (name != now
@@ -229,10 +242,12 @@ namespace DarkwoodMP.World
                             {
                                 _nearerWhile[now] = set = new HashSet<string>();
                             }
+
                             set.Add(name);
                         }
                     }
                 }
+
                 yield return null;
             }
         }
@@ -243,6 +258,7 @@ namespace DarkwoodMP.World
             {
                 return "-";
             }
+
             return string.Join(
                 ", ",
                 Threat.Of(c).Values.Where(kv => kv.Key != null).Select(
@@ -259,6 +275,7 @@ namespace DarkwoodMP.World
                 r.Fail("enemies are the host's");
                 yield break;
             }
+
             var spot = MapScenarioEnemies.FreeSpot(
                 Centre + new Vector3(F(a[1]), 0f, F(a[2])));
             // spawnCharacterAround takes a non-zero offset times the distance
@@ -271,6 +288,7 @@ namespace DarkwoodMP.World
                 r.Fail($"couldn't spawn {a[0]}");
                 yield break;
             }
+
             c.transform.position = spot;
             _enemy = c;
             _targets.Clear();
@@ -294,6 +312,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return Nearest(
                 Object.FindObjectsOfType<Character>().Where(
                     x => x.alive == alive && NetEnemies.Eligible(x)
@@ -318,6 +337,7 @@ namespace DarkwoodMP.World
                 r.Fail("no enemy of the host's near us");
                 yield break;
             }
+
             float was = c.health;
             for (int i = 0; i < n && c != null && c.alive; i++)
             {
@@ -328,6 +348,7 @@ namespace DarkwoodMP.World
                         false));
                 yield return new WaitForSeconds(0.4f);
             }
+
             bool kill = a.Contains("--kill");
             if (kill)
             {
@@ -338,21 +359,25 @@ namespace DarkwoodMP.World
             {
                 yield return Walk(from, 40f);
             }
+
             uint id = 0;
             if (c != null)
             {
                 NetEnemies.Instance.NetIdOf(c, out id);
             }
+
             string enemyName = "-";
             if (c != null)
             {
                 enemyName = c.name;
             }
+
             float health = 0f;
             if (c != null)
             {
                 health = c.health;
             }
+
             r.Info =
                 $"{enemyName} #{id}: hits of {dmg:0}, health {was:0} -> "
                     + $"{health:0}, alive {c != null && c.alive}";
@@ -360,6 +385,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: still alive");
             }
+
             if (!kill && (c == null || !c.alive))
             {
                 r.Fail($"{r.Info}: it died (the test wanted it alive)");
@@ -378,24 +404,28 @@ namespace DarkwoodMP.World
                 r.Fail("no enemy (mt-spawn first)");
                 yield break;
             }
+
             string want = PlayerName(a[0]);
             float secs = 15f;
             if (a.Length > 1 && !a[1].StartsWith("--"))
             {
                 secs = F(a[1]);
             }
+
             int ni = Array.IndexOf(a, "--nearer");
             string nearer = null;
             if (ni >= 0)
             {
                 nearer = PlayerName(a[ni + 1]);
             }
+
             float until = Time.realtimeSinceStartup + secs;
             while (c != null && c.alive && NameOf(c.target) != want
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
+
             if (nearer != null)
             {
                 // Give it a moment after it turned to WHO, to be overtaken by
@@ -409,11 +439,13 @@ namespace DarkwoodMP.World
                     yield return null;
                 }
             }
+
             Transform t = null;
             if (c != null)
             {
                 t = c.target;
             }
+
             r.Info =
                 $"after {NameOf(t)}; threat: {ThreatText(c)}; targets so far: "
                     + $"{string.Join(" > ", _targets)}";
@@ -422,6 +454,7 @@ namespace DarkwoodMP.World
                 r.Fail($"{r.Info}: it's dead");
                 yield break;
             }
+
             if (NameOf(c.target) != want)
             {
                 r.Fail($"{r.Info}: not after {want}");
@@ -447,6 +480,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: it went after {who}");
             }
+
             yield break;
         }
 
@@ -466,8 +500,10 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.25f);
             }
+
             var alive = HostEnemy(true, 2500f);
             if (c == null)
             {
@@ -476,11 +512,13 @@ namespace DarkwoodMP.World
                 {
                     livingName = alive.name;
                 }
+
                 r.Fail(
                     "no dead enemy of the host's near us (a living one: "
                         + $"{livingName})");
                 yield break;
             }
+
             var inv = c.GetComponentInChildren<Inventory>(true);
             NetEnemies.Instance.NetIdOf(c, out uint id);
             string name = c.name;
@@ -491,6 +529,7 @@ namespace DarkwoodMP.World
             {
                 loot = MapScenarioWorld.Contents(inv);
             }
+
             r.Info =
                 $"{name} #{id} dead at {spot}, searchable {searchable}, loot "
                     + $"[{loot}]";
@@ -511,6 +550,7 @@ namespace DarkwoodMP.World
             {
                 inv = c.GetComponentInChildren<Inventory>(true);
             }
+
             if (c == null || inv == null || c.GetComponent<Item>() == null)
             {
                 string corpseName = "none";
@@ -518,9 +558,11 @@ namespace DarkwoodMP.World
                 {
                     corpseName = c.name;
                 }
+
                 r.Fail($"no searchable corpse near us ({corpseName})");
                 yield break;
             }
+
             yield return Walk(c.transform.position, 90f);
             int mark = MapScenarioIssues.LogMark();
             P.openedItemInventory = inv;
@@ -545,16 +587,19 @@ namespace DarkwoodMP.World
                         P.Inventory.addItemTypeToPlayer(
                             it.type, it.amount, dropIfNoRoom: true);
                     });
+
                     yield return new WaitForSeconds(1f);
                     took =
                         $"took {it.type} x{it.amount} (we carry {before} -> "
                             + $"{MapScenarioWorld.CarriedOf(it.type)})";
                 }
             }
+
             if (P.openedItemInventory == inv)
             {
                 P.openedItemInventory = null;
             }
+
             yield return new WaitForSeconds(1.5f);
             var refused = MapScenarioIssues.LogLines().Skip(mark)
                 .FirstOrDefault(
@@ -585,6 +630,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no container {a[0]}");
                 yield break;
             }
+
             double at = double.Parse(a[1], CultureInfo.InvariantCulture);
             yield return Walk(inv.transform.position);
             if (Now > at)
@@ -592,10 +638,12 @@ namespace DarkwoodMP.World
                 r.Fail($"walked past the moment ({Now - at:0.0} s late)");
                 yield break;
             }
+
             while (Now < at)
             {
                 yield return null;
             }
+
             P.setOpenedItemInventory(inv); // as the game opens it
             // the game's open: the lock is asked for, the slots watched
             yield return null;
@@ -608,6 +656,7 @@ namespace DarkwoodMP.World
                 r.Fail($"{inv.name} is empty here");
                 yield break;
             }
+
             var item = new InvItemClass(slot.invItem);
             int si = inv.slots.IndexOf(slot);
             int before = MapScenarioWorld.CarriedOf(item.type);
@@ -617,11 +666,13 @@ namespace DarkwoodMP.World
                 P.Inventory.addItemTypeToPlayer(
                     item.type, item.amount, dropIfNoRoom: true);
             });
+
             yield return new WaitForSeconds(3f);
             if (P.openedItemInventory == inv)
             {
                 P.openedItemInventory = null;
             }
+
             yield return new WaitForSeconds(2f);
             int now = MapScenarioWorld.CarriedOf(item.type);
             bool got = now > before;
@@ -632,6 +683,7 @@ namespace DarkwoodMP.World
             {
                 text = "got";
             }
+
             r.Info =
                 $"{text} {item.type} x{item.amount} (slot {si} of {inv.name} "
                     + $"{MapScenarioWorld.Ref(inv)}): we carry {before} -> "
@@ -640,6 +692,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{r.Info}: carried amount changed by something else");
             }
+
             // Rolled back: the slot is the host's again, which the winner
             // emptied (or still holds it, if nobody got it).
             if (got && back)
@@ -659,11 +712,13 @@ namespace DarkwoodMP.World
             {
                 n = Containers.Instance.LockCount;
             }
+
             r.Info = $"{n} container(s) held open";
             if (a.Length > 0 && n != int.Parse(a[0]))
             {
                 r.Fail($"{r.Info}, wanted {a[0]}");
             }
+
             yield break;
         }
 
@@ -679,6 +734,7 @@ namespace DarkwoodMP.World
                 r.Fail("not a client");
                 yield break;
             }
+
             s.Backend.Leave();
             yield return new WaitForSeconds(3f);
             r.Info = "left";
@@ -696,6 +752,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no container {a[0]}");
                 yield break;
             }
+
             yield return Walk(inv.transform.position);
             float t0 = Time.realtimeSinceStartup;
             P.openedItemInventory = inv;
@@ -708,12 +765,14 @@ namespace DarkwoodMP.World
             {
                 P.openedItemInventory = null;
             }
+
             yield return new WaitForSeconds(0.5f);
             string status = msg;
             if (status == null)
             {
                 status = "free";
             }
+
             r.Info = $"{inv.name} {MapScenarioWorld.Ref(inv)}: {status}";
             if (msg != null)
             {
@@ -735,6 +794,7 @@ namespace DarkwoodMP.World
                 r.Fail("no trader here");
                 yield break;
             }
+
             bool expectRefused = a.Contains("--refused");
             yield return Walk(npc.transform.position, 150f);
             int mark = MapScenarioIssues.LogMark();
@@ -745,6 +805,7 @@ namespace DarkwoodMP.World
             {
                 wait = 8f;
             }
+
             float until = Time.realtimeSinceStartup + wait;
             bool Told() => MapScenarioIssues.LogLines().Skip(mark)
                 .Any(
@@ -756,6 +817,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
+
             bool told = Told();
             string name = npc.name;
             ObjRef id = ObjRef.Of(npc.gameObject);
@@ -764,6 +826,7 @@ namespace DarkwoodMP.World
             {
                 dialogue = "open";
             }
+
             r.Info =
                 $"{name} {id}: told someone's talking {told}, dialogue "
                     + $"{dialogue}";
@@ -773,6 +836,7 @@ namespace DarkwoodMP.World
                 {
                     r.Fail(r.Info);
                 }
+
                 if (win.npc == npc)
                 {
                     yield return MapScenarioGaps.Close(win, npc);
@@ -800,6 +864,7 @@ namespace DarkwoodMP.World
                 r.Fail("no door");
                 yield break;
             }
+
             // let a body that was just switched on settle
             yield return new WaitForSeconds(1f);
             float swung = DoorSwing(door);
@@ -814,6 +879,7 @@ namespace DarkwoodMP.World
                 {
                     text = "open";
                 }
+
                 r.Fail($"{r.Info}: drawn {text}");
             }
         }
@@ -842,6 +908,7 @@ namespace DarkwoodMP.World
                     .OrderBy(l => StateDump.Flat(l.transform.position
                             - Centre)).FirstOrDefault();
             }
+
             if (to == null)
             {
                 string hideoutName = "none";
@@ -849,9 +916,11 @@ namespace DarkwoodMP.World
                 {
                     hideoutName = here.name;
                 }
+
                 r.Fail($"no other hideout (the centre's is {hideoutName})");
                 yield break;
             }
+
             yield return Walk(to.transform.position, 60f);
             yield return new WaitForSeconds(1.5f);
             var now = NightSpawns.BigLocationAt(P.transform.position);
@@ -861,6 +930,7 @@ namespace DarkwoodMP.World
             {
                 location = now.name;
             }
+
             r.Info =
                 $"at {spot}: {location} (went to {to.name}, "
                     + $"{StateDump.Flat(to.transform.position - Centre):0} "
@@ -884,11 +954,13 @@ namespace DarkwoodMP.World
                 r.Fail("night attackers are the host's");
                 yield break;
             }
+
             int n = 3;
             if (a.Length > 0)
             {
                 n = int.Parse(a[0]);
             }
+
             var spawner = Singleton<CharacterSpawner>.Instance;
             var call = HarmonyLib.AccessTools.Method(
                 typeof(CharacterSpawner), "spawnNightChar");
@@ -902,6 +974,7 @@ namespace DarkwoodMP.World
             {
                 hideouts.Add(P.whereAmI.bigLocation.name);
             }
+
             foreach (var px in NetPlayerProxy.All.Values.Where(
                 x => x != null && x.alive))
             {
@@ -912,17 +985,20 @@ namespace DarkwoodMP.World
                 {
                     note = " (no hideout)";
                 }
+
                 where.Add($"{px.OwnerName}: {Name(loc)}{note}");
                 if (home)
                 {
                     hideouts.Add(loc.name);
                 }
             }
+
             var sc = Singleton<NightScenarios>.Instance;
             if (sc.currentScenario == null)
             {
                 sc.setCurrentScenario();
             }
+
             string budget;
             if (sc.currentScenario == null)
             {
@@ -935,6 +1011,7 @@ namespace DarkwoodMP.World
                     sc.currentScenario.characters.Where(x => x != null).Select(
                         x => $"{x.characterName} x{x.amount}"));
             }
+
             int max;
             if (sc.currentScenario == null)
             {
@@ -947,6 +1024,7 @@ namespace DarkwoodMP.World
                         && !string.IsNullOrEmpty(x.characterName)).Sum(
                             x => Math.Max(0, x.amount));
             }
+
             int from = NightSpawns.SentLog.Count;
             bool was = spawner.spawnNocturnalCharacters;
             // Put back in a finally: left on, night attackers would spawn in
@@ -964,6 +1042,7 @@ namespace DarkwoodMP.World
             {
                 spawner.spawnNocturnalCharacters = was;
             }
+
             var sent = NightSpawns.SentLog.Skip(from).ToList();
             var per = sent.GroupBy(s => s.Hideout).ToDictionary(
                 g => g.Key, g => g.ToList());
@@ -975,6 +1054,7 @@ namespace DarkwoodMP.World
                          {
                              count = l.Count;
                          }
+
                          IEnumerable<string> spots;
                          if (per.TryGetValue(h, out var l2))
                          {
@@ -984,8 +1064,10 @@ namespace DarkwoodMP.World
                          {
                              spots = new string[0];
                          }
+
                          return $"{h}: {count} ({string.Join(",", spots)})";
                      }));
+
             int want = Math.Min(n, max);
             foreach (var h in hideouts)
             {
@@ -994,6 +1076,7 @@ namespace DarkwoodMP.World
                 {
                     got = l.Count;
                 }
+
                 if (got != want)
                 {
                     r.Fail(
@@ -1001,6 +1084,7 @@ namespace DarkwoodMP.World
                             + $"wanted {want}");
                 }
             }
+
             foreach (var h in per.Keys)
             {
                 if (!hideouts.Contains(h))
@@ -1008,10 +1092,12 @@ namespace DarkwoodMP.World
                     r.Fail($"{r.Info}: attackers sent to {h}, where nobody is");
                 }
             }
+
             if (hideouts.Count < 2)
             {
                 r.Fail($"{r.Info}: wanted players in two hideouts");
             }
+
             // They'd only fight the players: away with them (the clients'
             // copies go with the host's).
             foreach (var s in sent)
@@ -1021,6 +1107,7 @@ namespace DarkwoodMP.World
                     Object.Destroy(s.C.gameObject);
                 }
             }
+
             yield return new WaitForSeconds(1f);
         }
 
@@ -1033,8 +1120,10 @@ namespace DarkwoodMP.World
                 {
                     hideoutNote = " (hideout)";
                 }
+
                 return l.name + hideoutNote;
             }
+
             return "none";
         }
     }

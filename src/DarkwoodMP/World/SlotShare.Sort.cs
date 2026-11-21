@@ -61,11 +61,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var ctl = Singleton<Controller>.Instance;
             if (ctl != null && !InvItemClass.isNull(ctl.pickedUpItem))
             {
                 return; // an item on the cursor still belongs to a slot
             }
+
             var s = _session;
             if (s.IsClient && WorldShare.InWorld)
             {
@@ -77,6 +79,7 @@ namespace DarkwoodMP.World
                             + "host's world");
                     return;
                 }
+
                 // The host's contents must be our starting point, and what we
                 // changed before pressing goes first.
                 if (_awaiting.ContainsKey(inv))
@@ -86,10 +89,12 @@ namespace DarkwoodMP.World
                             + "host's contents");
                     return;
                 }
+
                 if (_watched.ContainsKey(inv))
                 {
                     Check(inv);
                 }
+
                 var changed = Sort(inv);
                 var w = s.Begin(MsgType.StorageSort);
                 r.Write(w);
@@ -99,6 +104,7 @@ namespace DarkwoodMP.World
                         + "changed); asked the host to sort it");
                 return;
             }
+
             var done = Sort(inv);
             Plugin.Log.LogInfo(
                 $"[slots] sorted {inv.name}: {done.Count} slot(s) changed");
@@ -122,6 +128,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             var inv = ObjRef.Resolve<Inventory>(obj);
             if (inv == null || !Is(inv))
@@ -129,6 +136,7 @@ namespace DarkwoodMP.World
                 Authority.Refuse("no such workbench storage here");
                 return;
             }
+
             var before = Keys(inv);
             string why = Containers.Refusal(from, inv);
             var ctl = Singleton<Controller>.Instance;
@@ -139,6 +147,7 @@ namespace DarkwoodMP.World
             {
                 why = "the host is moving an item in it";
             }
+
             List<Change> done;
             if (why == null)
             {
@@ -148,6 +157,7 @@ namespace DarkwoodMP.World
             {
                 done = new List<Change>();
             }
+
             // The requester gets every slot: what to keep if its prediction was
             // right, what to take if not.
             var all = new List<Change>(before.Length);
@@ -160,6 +170,7 @@ namespace DarkwoodMP.World
                     New = Json(inv, i)
                 });
             }
+
             SendChanges(obj, all, from, toOnly: true);
             if (why != null)
             {
@@ -169,10 +180,12 @@ namespace DarkwoodMP.World
                         + $"({why})");
                 return;
             }
+
             if (done.Count > 0)
             {
                 SendChanges(obj, done, from);
             }
+
             Plugin.Log.LogInfo(
                 $"[slots] {s.NameOf(from)} sorted {inv.name}: {done.Count} "
                     + "slot(s) changed here");
@@ -200,6 +213,7 @@ namespace DarkwoodMP.World
                     w.WriteStr(changes[k].Old);
                     w.WriteStr(changes[k].New);
                 }
+
                 if (toOnly)
                 {
                     s.SendTo(peer, w, Channel.Control, reliable: true);
@@ -263,6 +277,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 stacks.Add(new Stack
                 {
                     State = new InvItemClass.SaveState(it, i),
@@ -279,6 +294,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 for (int a = 0; a < b && src.State.amount > 0; a++)
                 {
                     var dst = stacks[a];
@@ -288,6 +304,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     int n = Mathf.Min(
                         src.State.amount,
                         dst.Base.maxAmount - dst.State.amount);
@@ -309,6 +326,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 for (int a = 0; a < b && src.State.durability > 0.001f; a++)
                 {
                     var dst = stacks[a];
@@ -318,12 +336,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     float n = Mathf.Min(
                         src.State.durability, max - dst.State.durability);
                     dst.State.durability += n;
                     src.State.durability -= n;
                 }
             }
+
             stacks.RemoveAll(
                 st => (st.State.amount <= 0 && st.Mergeable) || st.Empty);
 
@@ -341,6 +361,7 @@ namespace DarkwoodMP.World
                     {
                         left = x.State.type;
                     }
+
                     string right;
                     if (y.State.isRecipe)
                     {
@@ -350,21 +371,26 @@ namespace DarkwoodMP.World
                     {
                         right = y.State.type;
                     }
+
                     c = string.CompareOrdinal(left, right);
                 }
+
                 if (c == 0)
                 {
                     c = y.State.amount.CompareTo(x.State.amount);
                 }
+
                 if (c == 0)
                 {
                     c = y.State.durability.CompareTo(x.State.durability);
                 }
+
                 if (c == 0)
                 {
                     // stable: equal items keep their order
                     c = x.State.slotId.CompareTo(y.State.slotId);
                 }
+
                 return c;
             });
 
@@ -378,10 +404,12 @@ namespace DarkwoodMP.World
                     stacks[i].State.slotId = i;
                     json = JsonConvert.SerializeObject(stacks[i].State);
                 }
+
                 if (json == Json(inv, i))
                 {
                     continue;
                 }
+
                 Set(inv, i, json);
                 changes.Add(new Change
                 {
@@ -390,6 +418,7 @@ namespace DarkwoodMP.World
                     New = json
                 });
             }
+
             return changes;
         }
 
@@ -400,6 +429,7 @@ namespace DarkwoodMP.World
             {
                 return (int)s.Base.categories[0];
             }
+
             return 10000;
         }
 
@@ -419,6 +449,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             try
             {
                 int cols = Mathf.Max(1, inv.maxColumns);
@@ -435,12 +466,14 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 go.name = ButtonName;
                 foreach (var loc in go.GetComponentsInChildren<LocalizedText>(
                     true))
                 {
                     Object.DestroyImmediate(loc);
                 }
+
                 var button = go.GetComponent<global::Button>();
                 tk2dTextMesh text;
                 if (button != null && button.textMesh != null)
@@ -451,11 +484,13 @@ namespace DarkwoodMP.World
                 {
                     text = go.GetComponentInChildren<tk2dTextMesh>(true);
                 }
+
                 if (text != null)
                 {
                     text.text = "SORT & STACK";
                     text.Commit();
                 }
+
                 if (button != null)
                 {
                     button.function = "";
@@ -464,10 +499,12 @@ namespace DarkwoodMP.World
                     {
                         button.background.SetActive(true);
                     }
+
                     if (button.disabledBackground != null)
                     {
                         button.disabledBackground.SetActive(false);
                     }
+
                     button.OnFire = () =>
                     {
                         AudioController.Play("UI_placeItem");
@@ -477,6 +514,7 @@ namespace DarkwoodMP.World
                         }
                     };
                 }
+
                 Plugin.Log.LogInfo(
                     $"[slots] Sort & Stack button added to {inv.name} at {at}");
             }
@@ -502,6 +540,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var wb = __instance.GetComponent<Workbench>();
             if (wb != null && wb.normalInventory == __instance)
             {

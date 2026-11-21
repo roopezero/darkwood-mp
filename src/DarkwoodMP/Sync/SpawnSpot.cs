@@ -39,6 +39,7 @@ namespace DarkwoodMP.Sync
             {
                 others.AddRange(taken);
             }
+
             var sync = PlayerSync.Instance;
             if (sync != null)
             {
@@ -50,6 +51,7 @@ namespace DarkwoodMP.Sync
                     {
                         continue;
                     }
+
                     others.Add(last.Position);
                 }
             }
@@ -61,12 +63,14 @@ namespace DarkwoodMP.Sync
             {
                 background.Add(Hits[i]);
             }
+
             bool gridHere = Walkable(want);
 
             if (Free(p, want, want, radius, others, background, gridHere))
             {
                 return want;
             }
+
             // two joiners at once don't both pick the first free angle
             float start = Random.Range(0f, 360f);
             foreach (var ring in Rings)
@@ -82,6 +86,7 @@ namespace DarkwoodMP.Sync
                     }
                 }
             }
+
             Plugin.Log.LogInfo(
                 "[spawn] no free spot within "
                     + $"{Rings[Rings.Length - 1] * radius:0} of {want}: "
@@ -99,6 +104,7 @@ namespace DarkwoodMP.Sync
             {
                 cap = p.GetComponent<CapsuleCollider>();
             }
+
             float r = 15f;
             if (cap != null)
             {
@@ -106,6 +112,7 @@ namespace DarkwoodMP.Sync
                     Mathf.Abs(p.transform.lossyScale.x),
                     Mathf.Abs(p.transform.lossyScale.z));
             }
+
             return Mathf.Max(10f, r);
         }
 
@@ -159,6 +166,7 @@ namespace DarkwoodMP.Sync
                     }
                 }
             }
+
             return true;
         }
 
@@ -169,18 +177,22 @@ namespace DarkwoodMP.Sync
             {
                 return false;
             }
+
             if (c.gameObject.layer == 1)
             {
                 return false; // the ground (Core.canSpawnHere skips it too)
             }
+
             if (p != null && c.transform.IsChildOf(p.transform))
             {
                 return false;
             }
+
             if (c.GetComponentInParent<Combat.NetPlayerProxy>() != null)
             {
                 return false; // counted by position instead
             }
+
             return true;
         }
 

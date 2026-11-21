@@ -41,14 +41,17 @@ namespace DarkwoodMP.World
                 {
                     return "pause menu";
                 }
+
                 if (MenuWindows.AnyOpen)
                 {
                     return "mod menu";
                 }
+
                 if (Core.loadingGame)
                 {
                     return "loading";
                 }
+
                 // Core.HideUI is a static the game never clears on a new world:
                 // after the epilogue or the credits (hideVisibleUI) it stays
                 // true into the next save loaded in the same session, with the
@@ -58,20 +61,24 @@ namespace DarkwoodMP.World
                 {
                     return "UI hidden";
                 }
+
                 if (Core.EnteringDream)
                 {
                     return "entering a dream";
                 }
+
                 var ctl = Singleton<Controller>.Instance;
                 if (ctl != null && ctl.playingCutscene)
                 {
                     return "cutscene";
                 }
+
                 var wg = Singleton<WorldGenerator>.Instance;
                 if (wg != null && wg.playingIntro)
                 {
                     return "intro";
                 }
+
                 var p = Player.Instance;
                 if (p != null)
                 {
@@ -79,11 +86,13 @@ namespace DarkwoodMP.World
                     {
                         return "epilogue";
                     }
+
                     if (InFullMenu(p))
                     {
                         return "game menu";
                     }
                 }
+
                 var ui = Singleton<UI>.Instance;
                 if (ui != null)
                 {
@@ -92,22 +101,26 @@ namespace DarkwoodMP.World
                     {
                         return "video";
                     }
+
                     if (ui.loadingScreen != null
                         && ui.loadingScreen.activeInHierarchy)
                     {
                         return "loading screen";
                     }
+
                     if (ui.chapterText != null
                         && ui.chapterText.gameObject.activeInHierarchy
                         && ui.chapterText.color.a > 0.05f)
                     {
                         return "chapter text";
                     }
+
                     if (Black(ui.blackScreen) || Black(ui.blackScreenTop))
                     {
                         return "black screen";
                     }
                 }
+
                 return null;
             }
         }
@@ -131,6 +144,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             return p.inDialogue || cm.open || p.inLevelingMenu || map.opened
                 || (ui.journal != null
                     && (ui.journal.opened
@@ -148,6 +162,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var s = screen.GetComponent<tk2dBaseSprite>();
             return s != null && s.color.a > 0.5f;
         }

@@ -65,6 +65,7 @@ namespace DarkwoodMP
                     FieldFont = null;
                 }
             }
+
             if (Skin == null)
             {
                 var s = Object.Instantiate(GUI.skin);
@@ -72,11 +73,13 @@ namespace DarkwoodMP
                 {
                     s.font = FieldFont;
                 }
+
                 Window = new GUIStyle
                 {
                     border = new RectOffset(2, 2, 2, 2),
                     normal = { background = Bevel(WindowFill, Light, Dark) }
                 };
+
                 Window.onNormal.background = Window.normal.background;
                 TitleBar = Flat(TitleFill);
                 Button = new GUIStyle { border = new RectOffset(2, 2, 2, 2) };
@@ -93,11 +96,13 @@ namespace DarkwoodMP
                             new Color(0.07f, 0.07f, 0.07f), Dark, Light)
                     }
                 };
+
                 Sunken = new GUIStyle
                 {
                     border = new RectOffset(2, 2, 2, 2),
                     normal = { background = Bevel(SunkenFill, Dark, Light) }
                 };
+
                 Plain = new GUIStyle();
                 Selected = Flat(new Color(0.24f, 0.24f, 0.24f, 1f));
                 Line = Flat(new Color(0.22f, 0.22f, 0.22f, 1f));
@@ -111,6 +116,7 @@ namespace DarkwoodMP
                     alignment = TextAnchor.MiddleLeft,
                     clipping = TextClipping.Clip
                 };
+
                 foreach (var st in new[]
                 {
                     Field.normal,
@@ -126,6 +132,7 @@ namespace DarkwoodMP
                     st.background = Sunken.normal.background;
                     st.textColor = Bright;
                 }
+
                 s.settings.cursorColor = Bright;
                 s.settings.selectionColor = new Color(0.4f, 0.4f, 0.4f, 0.8f);
                 s.verticalScrollbar = new GUIStyle(s.verticalScrollbar)
@@ -134,6 +141,7 @@ namespace DarkwoodMP
                     border = new RectOffset(2, 2, 2, 2),
                     normal = { background = Bevel(SunkenFill, Dark, Light) }
                 };
+
                 s.verticalScrollbarThumb = new GUIStyle(
                     s.verticalScrollbarThumb)
                 {
@@ -141,12 +149,14 @@ namespace DarkwoodMP
                     border = new RectOffset(2, 2, 2, 2),
                     normal = { background = Bevel(ButtonFill, Light, Dark) }
                 };
+
                 s.verticalScrollbarUpButton = new GUIStyle { fixedHeight = 0 };
                 s.verticalScrollbarDownButton =
                     new GUIStyle { fixedHeight = 0 };
                 s.horizontalScrollbar = new GUIStyle { fixedHeight = 0 };
                 Skin = s;
             }
+
             // Sizes follow the screen (PixelFont.Scale).
             int scale = PixelFont.Scale;
             if (_fieldSize != scale)
@@ -185,6 +195,7 @@ namespace DarkwoodMP
                 filterMode = FilterMode.Point,
                 wrapMode = TextureWrapMode.Clamp
             };
+
             for (int x = 0; x < 5; x++)
             {
                 for (int y = 0; y < 5; y++) // y = 0 is the bottom row
@@ -194,13 +205,16 @@ namespace DarkwoodMP
                     {
                         c = topLeft;
                     }
+
                     if (y == 0 || x == 4)
                     {
                         c = bottomRight;
                     }
+
                     t.SetPixel(x, y, c);
                 }
             }
+
             t.Apply();
             return t;
         }

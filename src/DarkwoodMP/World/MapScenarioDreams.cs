@@ -50,17 +50,20 @@ namespace DarkwoodMP.World
             {
                 name = a[0];
             }
+
             if (DreamSync.Shared != null)
             {
                 r.Fail($"already in the shared dream {DreamSync.Shared}");
                 yield break;
             }
+
             DreamSync.TestOwnDream(name);
             float giveUp = Time.realtimeSinceStartup + 60f;
             while (!D.dreaming && Time.realtimeSinceStartup < giveUp)
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             // the host's stand-in for us goes Away with our next snapshots
             yield return new WaitForSeconds(3f);
             DreamPreset preset = D.preset;
@@ -69,11 +72,13 @@ namespace DarkwoodMP.World
             {
                 presetName = preset.name;
             }
+
             string shared = DreamSync.Shared;
             if (shared == null)
             {
                 shared = "none";
             }
+
             r.Info =
                 $"dreaming {presetName} (shared {shared}) at "
                     + $"{Locations.Current()}; host runs here "
@@ -105,6 +110,7 @@ namespace DarkwoodMP.World
                     .FirstOrDefault(
                         x => x.name.StartsWith("Wardrobe_Big_1_Burned"));
             }
+
             if (et == null)
             {
                 string name = null;
@@ -112,14 +118,17 @@ namespace DarkwoodMP.World
                 {
                     name = loc.name;
                 }
+
                 r.Fail($"no burnt wardrobe in {name}");
                 yield break;
             }
+
             Item item = et.GetComponent<Item>();
             if (item == null)
             {
                 item = et.GetComponentInParent<Item>();
             }
+
             int rolledBefore = Authority.RolledBack;
             yield return MoveNear(et.transform);
 
@@ -135,6 +144,7 @@ namespace DarkwoodMP.World
                 {
                     opened = "couldn't open: " + e.Message;
                 }
+
                 // Containers.Poll looks at it
                 yield return new WaitForSeconds(1f);
                 var inv = item.GetComponent<Inventory>();
@@ -142,8 +152,10 @@ namespace DarkwoodMP.World
                 {
                     AsPlayer(() => inv.hide());
                 }
+
                 yield return new WaitForSeconds(0.5f);
             }
+
             AsPlayer(
                 () => et.fireEventTrigger(
                     global::EventTrigger.Type.onCloseContainer));
@@ -199,11 +211,13 @@ namespace DarkwoodMP.World
                     ok = o;
                     why = reason;
                 }, inventory: false);
+
                 float giveUp = Time.realtimeSinceStartup + 8f;
                 while (ok == null && Time.realtimeSinceStartup < giveUp)
                 {
                     yield return null;
                 }
+
                 // an ObjState after it, if any
                 yield return new WaitForSeconds(1f);
             }
@@ -214,11 +228,13 @@ namespace DarkwoodMP.World
             {
                 text = "still there";
             }
+
             string locationName = null;
             if (loc != null)
             {
                 locationName = loc.name;
             }
+
             string chomper = "not out";
             if (ours != null)
             {
@@ -228,8 +244,10 @@ namespace DarkwoodMP.World
                 {
                     state = " (frozen)";
                 }
+
                 chomper = place + state;
             }
+
             string answer;
             if (ok == null)
             {
@@ -243,6 +261,7 @@ namespace DarkwoodMP.World
             {
                 answer = "refused: " + why;
             }
+
             r.Info =
                 $"in {locationName}: wardrobe {opened}, {text}; our chomper "
                     + $"{chomper}; {doorInfo}; " +
@@ -290,6 +309,7 @@ namespace DarkwoodMP.World
             {
                 dir = Vector3.right;
             }
+
             var at = t.position + dir * 250f;
             for (int i = 0; i < 16; i++)
             {
@@ -303,9 +323,11 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 at = spot;
                 break;
             }
+
             p.transform.position =
                 new Vector3(at.x, p.transform.position.y, at.z);
             var rb = p.GetComponent<Rigidbody>();
@@ -313,6 +335,7 @@ namespace DarkwoodMP.World
             {
                 rb.position = p.transform.position;
             }
+
             yield return new WaitForSeconds(0.5f);
         }
 
@@ -351,22 +374,26 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             if (D.dreaming)
             {
                 D.outcome = "";
                 D.initiateEndDreaming();
                 r.Info = "ended our own dream";
             }
+
             while (InDream)
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             string info = r.Info;
             if (info == null)
             {
                 info = "not dreaming";
             }
+
             r.Info = info + $"; at {Fmt(P.transform.position)}";
         }
 
@@ -381,16 +408,19 @@ namespace DarkwoodMP.World
             {
                 name = a[0];
             }
+
             if (!D.allPresets.Any(x => x != null && x.name == name))
             {
                 r.Fail($"no dream {name}");
                 yield break;
             }
+
             DreamSync.TestLevelDream(name);
             while (!D.dreaming)
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             DreamPreset preset = D.preset;
             string presetName = null;
@@ -398,6 +428,7 @@ namespace DarkwoodMP.World
             {
                 presetName = preset.name;
             }
+
             r.Info =
                 $"dreaming {presetName} (shared {DreamSync.Shared}) at "
                     + $"{Locations.Current()}";
@@ -418,10 +449,12 @@ namespace DarkwoodMP.World
             {
                 name = a[0];
             }
+
             while (!D.dreaming)
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(3f);
             bool seen = false;
             var ps = Sync.PlayerSync.Instance;
@@ -435,12 +468,14 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             DreamPreset preset = D.preset;
             string presetName = null;
             if (preset != null)
             {
                 presetName = preset.name;
             }
+
             r.Info =
                 $"dreaming {presetName} (shared {DreamSync.Shared}) at "
                     + $"{Locations.Current()}; a friend's puppet shown {seen}";
@@ -462,12 +497,14 @@ namespace DarkwoodMP.World
                 r.Fail("not dreaming");
                 yield break;
             }
+
             D.outcome = "";
             AsPlayer(() => D.initiateEndDreaming());
             while (D.dreaming || D.switchingDream)
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             string spot = Fmt(P.transform.position);
             string shared = DreamSync.Shared;
@@ -475,6 +512,7 @@ namespace DarkwoodMP.World
             {
                 shared = "none";
             }
+
             r.Info = $"back at {spot}; shared dream {shared}";
         }
 
@@ -490,6 +528,7 @@ namespace DarkwoodMP.World
                 seconds = float.Parse(
                     a[0], System.Globalization.CultureInfo.InvariantCulture);
             }
+
             yield return new WaitForSeconds(seconds);
             var loc = D.dreamLocation;
             if (loc == null)
@@ -497,6 +536,7 @@ namespace DarkwoodMP.World
                 r.Fail("no dream location");
                 yield break;
             }
+
             var ne = Combat.NetEnemies.Instance;
             var sb = new System.Text.StringBuilder();
             sb.Append(
@@ -510,6 +550,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 uint id = 0;
                 bool net = ne != null
                     && (ne.NetIdOf(c, out id) || ne.IsPuppet(c, out id));
@@ -524,6 +565,7 @@ namespace DarkwoodMP.World
                 {
                     target = c.target.name;
                 }
+
                 string state =
                     $"at {spot} tgt {target} net {net}#{id} aggr "
                         + $"{c.aggressive} sleep {c.sleeping} ";
@@ -533,16 +575,20 @@ namespace DarkwoodMP.World
                     {
                         return "?";
                     }
+
                     return m.GetType().Name;
                 });
+
                 sb.Append(line + state + $"comps {string.Join(",", scripts)}");
             }
+
             foreach (var ge in loc.GetComponentsInChildren<GameEvents>(true))
             {
                 sb.Append(
                     $"\n  events {ge.name} act "
                         + $"{ge.gameObject.activeInHierarchy}");
             }
+
             r.Info = sb.ToString();
             Plugin.Log.LogInfo("[dream-mob] " + r.Info);
         }
@@ -575,6 +621,7 @@ namespace DarkwoodMP.World
                     .FirstOrDefault(
                         x => x.name.StartsWith("Wardrobe_Big_1_Burned"));
             }
+
             if (et == null)
             {
                 string name = null;
@@ -582,9 +629,11 @@ namespace DarkwoodMP.World
                 {
                     name = loc.name;
                 }
+
                 r.Fail($"no burnt wardrobe in {name}");
                 yield break;
             }
+
             var p = P;
             // Near it, on a spot with no loose thing (a bowl, the draggable
             // wardrobe) our player would land on and push.
@@ -599,6 +648,7 @@ namespace DarkwoodMP.World
             {
                 dir = Vector3.right;
             }
+
             var at = et.transform.position + dir * 250f;
             for (int i = 0; i < 16; i++)
             {
@@ -612,9 +662,11 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 at = spot;
                 break;
             }
+
             p.transform.position =
                 new Vector3(at.x, p.transform.position.y, at.z);
             var rb = p.GetComponent<Rigidbody>();
@@ -622,6 +674,7 @@ namespace DarkwoodMP.World
             {
                 rb.position = p.transform.position;
             }
+
             yield return new WaitForSeconds(0.5f);
             AsPlayer(
                 () => et.fireEventTrigger(
@@ -637,6 +690,7 @@ namespace DarkwoodMP.World
                         && c.gameObject.activeInHierarchy
                         && ne.IsPuppet(c, out _));
             }
+
             string wardrobe = et.name;
             string there = Fmt(et.transform.position);
             string here = Fmt(p.transform.position);
@@ -645,6 +699,7 @@ namespace DarkwoodMP.World
             {
                 seen = Fmt(shown.transform.position);
             }
+
             r.Info =
                 $"closed {wardrobe} at {there} from {here}; the host's chomper "
                     + $"shown: {seen}";
@@ -674,13 +729,16 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.25f);
             }
+
             if (c == null)
             {
                 r.Fail("no chomper of the dream running here");
                 yield break;
             }
+
             foreach (var s in c.sensorTypes)
             {
                 if (s != null)
@@ -688,6 +746,7 @@ namespace DarkwoodMP.World
                     s.damage = 1;
                 }
             }
+
             var proxy = Combat.NetPlayerProxy.All.Values.FirstOrDefault(
                 x => x != null && x.Owner != Sync.PlayerSync.DummyId);
             ne.NetIdOf(c, out uint id);
@@ -698,21 +757,25 @@ namespace DarkwoodMP.World
             {
                 target = c.target.name;
             }
+
             bool? away = null;
             if (proxy != null)
             {
                 away = proxy.Away;
             }
+
             string inside = "-";
             if (proxy != null && proxy.InLocation != null)
             {
                 inside = proxy.InLocation.name;
             }
+
             string threat = "";
             if (proxy != null)
             {
                 threat = $", threat {Combat.Threat.Of(c).Get(proxy):0.#}";
             }
+
             r.Info = $"{chomper} #{id} at {spot}, target {target}; " +
                      $"the client's stand-in: away {away}, in {inside}" +
                      threat;
@@ -749,6 +812,7 @@ namespace DarkwoodMP.World
             {
                 names = $" ({string.Join(", ", running.Select(c => c.name))})";
             }
+
             r.Info = line + names;
             if (!Locations.HostRunsHere() || puppets == 0 || running.Count > 0)
             {
@@ -768,6 +832,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             r.Info = System.FormattableString.Invariant(
                 $"entered {DreamSync.EnteredAt:0.000}");
         }
@@ -782,6 +847,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return D.dreamLocation.GetComponentsInChildren<EventTriggers>(true)
                 .FirstOrDefault(
                     x => x.name.StartsWith("start_knocking_dreamHome"));
@@ -798,6 +864,7 @@ namespace DarkwoodMP.World
             {
                 ge = et.GetComponent<GameEvents>();
             }
+
             GameEvent step;
             if (ge == null)
             {
@@ -808,20 +875,24 @@ namespace DarkwoodMP.World
                 step = ge.events.FirstOrDefault(
                     e => e != null && e.type == GameEvent.Type.modifyDoor);
             }
+
             GameObject go = null;
             if (step != null)
             {
                 go = step.targetGameObjects.FirstOrDefault(g => g != null);
             }
+
             if (go == null)
             {
                 return null;
             }
+
             Door door = go.GetComponent<Door>();
             if (door == null)
             {
                 door = go.GetComponentInChildren<Door>();
             }
+
             return door;
         }
 
@@ -848,9 +919,11 @@ namespace DarkwoodMP.World
                 {
                     name = dreamLocation.name;
                 }
+
                 r.Fail($"no knocking area or door in {name}");
                 yield break;
             }
+
             var l = door.GetComponent<Locked>();
             bool locked = l != null && l.locked;
             r.Info = DoorInfo(door);
@@ -859,6 +932,7 @@ namespace DarkwoodMP.World
             {
                 want = a[0];
             }
+
             if ((want == "locked" && !locked)
                 || (want == "unlocked" && (locked || door.blocked))
                 || (want == "open" && !door.opened))
@@ -882,9 +956,11 @@ namespace DarkwoodMP.World
                 {
                     name = dreamLocation.name;
                 }
+
                 r.Fail($"no knocking area in {name}");
                 yield break;
             }
+
             var p = P;
             p.transform.position = new Vector3(
                 et.transform.position.x, p.transform.position.y,
@@ -894,6 +970,7 @@ namespace DarkwoodMP.World
             {
                 rb.position = p.transform.position;
             }
+
             yield return new WaitForSeconds(0.3f);
             AsPlayer(() => et.fireEventTrigger(global::EventTrigger.Type.area));
             yield return new WaitForSeconds(3f);
@@ -905,6 +982,7 @@ namespace DarkwoodMP.World
             {
                 state = DoorInfo(door);
             }
+
             r.Info = line + state;
         }
 
@@ -923,9 +1001,11 @@ namespace DarkwoodMP.World
                 {
                     name = dreamLocation.name;
                 }
+
                 r.Fail($"no door in {name}");
                 yield break;
             }
+
             var p = P;
             var to = door.transform.position
                 + (p.transform.position - door.transform.position).normalized
@@ -937,6 +1017,7 @@ namespace DarkwoodMP.World
             {
                 rb.position = p.transform.position;
             }
+
             yield return new WaitForSeconds(0.5f);
             var l = door.GetComponent<Locked>();
             if ((l != null && l.locked) || door.blocked)
@@ -944,11 +1025,13 @@ namespace DarkwoodMP.World
                 r.Fail($"we're locked in: {DoorInfo(door)}");
                 yield break;
             }
+
             if (!door.opened)
             {
                 AsPlayer(
                     () => door.open(p.transform.position, p.transform, 0f));
             }
+
             // a refusal by the host closes it again
             yield return new WaitForSeconds(2f);
             r.Info = DoorInfo(door);
@@ -967,6 +1050,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             string spot = Fmt(P.transform.position);
             string shared = DreamSync.Shared;
@@ -974,6 +1058,7 @@ namespace DarkwoodMP.World
             {
                 shared = "none";
             }
+
             r.Info = $"back at {spot}; shared dream {shared}";
             if (DreamSync.Shared != null)
             {

@@ -67,6 +67,7 @@ namespace DarkwoodMP.World
             {
                 return ge;
             }
+
             return null;
         }
 
@@ -79,11 +80,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var so = go.GetComponent<SaveableObject>();
             if (so != null)
             {
                 return so.Active;
             }
+
             return go.activeSelf;
         }
 
@@ -98,6 +101,7 @@ namespace DarkwoodMP.World
             {
                 loc = gameObject.transform.GetLocation();
             }
+
             string text = "not fired";
             if (ge == null)
             {
@@ -107,6 +111,7 @@ namespace DarkwoodMP.World
             {
                 text = "fired";
             }
+
             string inState = Desc(Find(In));
             string lockedState = Desc(Find(Locked));
             string outState = Desc(Find(Out));
@@ -119,6 +124,7 @@ namespace DarkwoodMP.World
             {
                 location = $"{loc.name} entered={loc.entered}";
             }
+
             return $"event {text}, {In}: {inState}, "
                 + $"{Locked}: {lockedState}, {Out}: {outState}, location "
                 + $"{location}";
@@ -130,6 +136,7 @@ namespace DarkwoodMP.World
             {
                 return "missing";
             }
+
             return $"shown={Shown(go)} active={go.activeInHierarchy} at "
                 + $"{Fmt(go.transform.position)}";
         }
@@ -142,6 +149,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             var ge = WorldEvent();
             if (IsOpen() != want)
             {
@@ -150,6 +158,7 @@ namespace DarkwoodMP.World
                 {
                     text = "open";
                 }
+
                 r.Fail($"not {text}: {State()}");
             }
             else if (want && (ge == null || !ge.fired))
@@ -191,6 +200,7 @@ namespace DarkwoodMP.World
                 {
                     yield return new WaitForSeconds(0.25f);
                 }
+
                 yield return new WaitForSeconds(2f);
                 Core.forbidInputs = false;
                 if (!InVillage())
@@ -199,6 +209,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
             }
+
             var go = Find(hole);
             var to = Find(dest);
             if (go == null || !go.activeInHierarchy)
@@ -206,11 +217,13 @@ namespace DarkwoodMP.World
                 r.Fail($"{hole} not here: {State()}");
                 yield break;
             }
+
             if (StateDump.Flat(p.transform.position - go.transform.position)
                 > 200f)
             {
                 Place(go.transform.position + new Vector3(60f, 0f, 0f));
             }
+
             yield return new WaitForSeconds(1f);
             var et = go.GetComponent<EventTriggers>();
             if (et == null)
@@ -218,6 +231,7 @@ namespace DarkwoodMP.World
                 r.Fail($"{hole} has no triggers");
                 yield break;
             }
+
             bool wasAway = o.playerInOutsideLocation;
             AsPlayer(
                 () => et.fireEventTrigger(
@@ -232,18 +246,22 @@ namespace DarkwoodMP.World
                 {
                     return false;
                 }
+
                 if (to == null)
                 {
                     to = Find(dest);
                 }
+
                 return to != null
                     && StateDump.Flat(
                         p.transform.position - to.transform.position) < 300f;
             }
+
             while (!Arrived() && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             yield return new WaitForSeconds(2f);
             // the trip's fade gives the inputs back on its own; a test step
             // doesn't wait for it
@@ -254,6 +272,7 @@ namespace DarkwoodMP.World
                 d = StateDump.Flat(
                     p.transform.position - to.transform.position);
             }
+
             if (!Arrived())
             {
                 string text;
@@ -265,11 +284,13 @@ namespace DarkwoodMP.World
                 {
                     text = $"{d:0} from it";
                 }
+
                 r.Fail(
                     $"not taken to {dest} ({text}, "
                         + $"away={o.playerInOutsideLocation}): {State()}");
                 yield break;
             }
+
             r.Info =
                 $"through {hole} to {Fmt(p.transform.position)}; {State()}";
         }
@@ -285,12 +306,14 @@ namespace DarkwoodMP.World
             {
                 AsPlayer(() => o.returnToWorld());
             }
+
             float until = Time.realtimeSinceStartup + 30f;
             while ((o.playerInOutsideLocation || o.loading)
                 && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             yield return new WaitForSeconds(2f);
             Core.forbidInputs = false;
             if (o.playerInOutsideLocation)
@@ -313,6 +336,7 @@ namespace DarkwoodMP.World
                 r.Fail("no world event " + Event);
                 yield break;
             }
+
             WorldActions.Replaying = true; // put back here only, not shared
             try
             {
@@ -328,6 +352,7 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             yield return null;
             r.Info = State();
         }

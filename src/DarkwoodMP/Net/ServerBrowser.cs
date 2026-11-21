@@ -85,6 +85,7 @@ namespace DarkwoodMP.Net
             {
                 Entries[addr] = e = new Entry { Addr = addr };
             }
+
             return e;
         }
 
@@ -109,6 +110,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             Favorites.Add(addr);
             Save();
             Query(addr);
@@ -129,6 +131,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             History[addr] = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             Save();
         }
@@ -149,6 +152,7 @@ namespace DarkwoodMP.Net
                 {
                     return;
                 }
+
                 string section = "";
                 foreach (var raw in File.ReadAllLines(_path))
                 {
@@ -157,12 +161,14 @@ namespace DarkwoodMP.Net
                     {
                         continue;
                     }
+
                     if (line.StartsWith("[") && line.EndsWith("]"))
                     {
                         section = line.Substring(1, line.Length
                                 - 2).ToUpperInvariant();
                         continue;
                     }
+
                     int eq = line.IndexOf('=');
                     string rawKey;
                     if (eq >= 0)
@@ -173,16 +179,19 @@ namespace DarkwoodMP.Net
                     {
                         rawKey = line;
                     }
+
                     string key = rawKey.Trim();
                     string val = "";
                     if (eq >= 0)
                     {
                         val = line.Substring(eq + 1).Trim();
                     }
+
                     if (key.Length == 0)
                     {
                         continue;
                     }
+
                     if (section == "FAVORITES" && !Favorites.Contains(key))
                     {
                         Favorites.Add(key);
@@ -210,12 +219,14 @@ namespace DarkwoodMP.Net
                 {
                     b.Append(a).Append("=\r\n");
                 }
+
                 b.Append("[HISTORY]\r\n");
                 foreach (var kv in History)
                 {
                     b.Append(kv.Key).Append('=').Append(kv.Value)
                         .Append("\r\n");
                 }
+
                 File.WriteAllText(_path, b.ToString());
             }
             catch (Exception e)
@@ -233,6 +244,7 @@ namespace DarkwoodMP.Net
                 SearchLan();
                 return;
             }
+
             foreach (var a in List(tab))
             {
                 Query(a);
@@ -250,6 +262,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             e.Querying = true;
             ThreadPool.QueueUserWorkItem(_ =>
             {
@@ -284,6 +297,7 @@ namespace DarkwoodMP.Net
                 {
                     /* no answer */
                 }
+
                 _done.Enqueue(() =>
                 {
                     e.Querying = false;
@@ -315,6 +329,7 @@ namespace DarkwoodMP.Net
                     list.Add(new IPEndPoint(a, p));
                 }
             }
+
             Ports(IPAddress.Broadcast);
             try
             {
@@ -324,11 +339,13 @@ namespace DarkwoodMP.Net
                     {
                         continue;
                     }
+
                     if (nic.NetworkInterfaceType
                         == NetworkInterfaceType.Loopback)
                     {
                         continue;
                     }
+
                     foreach (var u in nic.GetIPProperties().UnicastAddresses)
                     {
                         if (u.Address.AddressFamily
@@ -336,6 +353,7 @@ namespace DarkwoodMP.Net
                         {
                             continue;
                         }
+
                         byte[] ip = u.Address.GetAddressBytes();
                         IPAddress ipv4Mask = u.IPv4Mask;
                         byte[] mask = null;
@@ -343,6 +361,7 @@ namespace DarkwoodMP.Net
                         {
                             mask = ipv4Mask.GetAddressBytes();
                         }
+
                         if (mask != null && mask.Length == 4)
                         {
                             var bc = new byte[4];
@@ -350,14 +369,17 @@ namespace DarkwoodMP.Net
                             {
                                 bc[i] = (byte)(ip[i] | ~mask[i]);
                             }
+
                             Ports(new IPAddress(bc));
                         }
+
                         for (int last = 1; last < 255; last++)
                         {
                             if (last == ip[3])
                             {
                                 continue;
                             }
+
                             sweep.Add(
                                 new IPEndPoint(
                                     new IPAddress(new[]
@@ -378,6 +400,7 @@ namespace DarkwoodMP.Net
                     "Couldn't list the network adapters, searching by "
                         + $"broadcast only: {e.Message}");
             }
+
             list.AddRange(sweep);
             return list;
         }
@@ -391,6 +414,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             SearchingLan = true;
             Lan.Clear();
             ThreadPool.QueueUserWorkItem(_ =>
@@ -431,6 +455,7 @@ namespace DarkwoodMP.Net
                                     return;
                                 }
                             }
+
                             Interlocked.Exchange(
                                 ref sentAt, sw.ElapsedMilliseconds);
                         })
@@ -438,6 +463,7 @@ namespace DarkwoodMP.Net
                             IsBackground = true,
                             Name = "DarkwoodMP LAN search"
                         };
+
                         sender.Start();
                         while (true)
                         {
@@ -448,10 +474,12 @@ namespace DarkwoodMP.Net
                             {
                                 break;
                             }
+
                             if (sw.ElapsedMilliseconds > 30000)
                             {
                                 break; // the sends never finished
                             }
+
                             if (done >= 0)
                             {
                                 udp.Client.ReceiveTimeout = (int)Math.Max(
@@ -463,6 +491,7 @@ namespace DarkwoodMP.Net
                             {
                                 udp.Client.ReceiveTimeout = 200;
                             }
+
                             var from = new IPEndPoint(IPAddress.Any, 0);
                             byte[] a;
                             try
@@ -485,6 +514,7 @@ namespace DarkwoodMP.Net
                             {
                                 continue;
                             }
+
                             string addr = $"{from.Address}:{from.Port}";
                             int ping = (int)sw.ElapsedMilliseconds;
                             _done.Enqueue(() =>
@@ -499,6 +529,7 @@ namespace DarkwoodMP.Net
                                 }
                             });
                         }
+
                         Plugin.Log.LogInfo(
                             $"LAN search: asked {targets.Count} addresses "
                                 + $"({failed} couldn't be sent), the last at "
@@ -509,6 +540,7 @@ namespace DarkwoodMP.Net
                 {
                     Plugin.Log.LogWarning($"LAN search failed: {ex.Message}");
                 }
+
                 _done.Enqueue(() => SearchingLan = false);
             });
         }

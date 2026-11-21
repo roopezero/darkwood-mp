@@ -44,17 +44,20 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 if (ProcessingWorkItems(__instance))
                 {
                     // called from inside a work item: flushing would recurse
                     return;
                 }
+
                 bool pending = WorkItemsQueued(__instance)
                     || __instance.IsAnyGraphUpdatesQueued;
                 if (!pending)
                 {
                     return;
                 }
+
                 // Hand queued graph updates over, then finish every work item,
                 // waiting for the graph update thread.
                 __instance.FlushGraphUpdates();

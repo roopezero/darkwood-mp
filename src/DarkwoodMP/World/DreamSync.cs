@@ -73,6 +73,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (d.wantToDream && Core.EnteringDream)
             {
                 _hostLevelDream = true;
@@ -97,6 +98,7 @@ namespace DarkwoodMP.World
                 {
                     presetName = "";
                 }
+
                 var preset = d.getPreset(presetName);
                 if (preset != null)
                 {
@@ -117,11 +119,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _hostLevelDream = false;
             if (preset == null || S == null || !S.IsHost || !Hideouts.Together)
             {
                 return;
             }
+
             Shared = preset.name;
             _ended = false;
             var w = S.Begin(MsgType.DreamStart);
@@ -143,12 +147,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _ended = true;
             string outcome = d.outcome;
             if (outcome == null)
             {
                 outcome = "";
             }
+
             var w = EndMessage(outcome);
             if (S.IsHost)
             {
@@ -158,6 +164,7 @@ namespace DarkwoodMP.World
             {
                 S.SendToHost(w, Channel.Control, reliable: true);
             }
+
             Plugin.Log.LogInfo(
                 $"[dream] our dream {Shared} ends ({d.outcome}): everyone's "
                     + "does");
@@ -172,6 +179,7 @@ namespace DarkwoodMP.World
             {
                 shared = "";
             }
+
             w.WriteStr(shared);
             return w;
         }
@@ -227,6 +235,7 @@ namespace DarkwoodMP.World
             {
                 _inputsCheckFrom = Time.unscaledTime + InputsGrace;
             }
+
             d.outcome = outcome;
             WorldActions.Replaying = true;
             try
@@ -251,6 +260,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 // The end of a dream we're no longer in (a prologue stage that
                 // ended here a moment before).
                 if (dream != Shared)
@@ -260,6 +270,7 @@ namespace DarkwoodMP.World
                             + $"in {Shared}: not passed on");
                     return;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[dream] {S.NameOf(from)}'s dream ended ({outcome}): ours "
                         + "and everyone's end");
@@ -269,22 +280,27 @@ namespace DarkwoodMP.World
                 EndHere(d, outcome);
                 return;
             }
+
             if (from != S.HostId || Shared == null || d == null)
             {
                 return;
             }
+
             if (!d.dreaming)
             {
                 if (InDream(d) || _pendingStart != null)
                 {
                     _pendingEnd = outcome;
                 }
+
                 return;
             }
+
             if (_ended)
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"[dream] the host's dream ended ({outcome}): ours ends");
             EndHere(d, outcome);
@@ -299,11 +315,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var d = Singleton<Dreams>.Instance;
             if (d == null)
             {
                 return;
             }
+
             if (InDream(d))
             {
                 Plugin.Log.LogInfo(
@@ -311,6 +329,7 @@ namespace DarkwoodMP.World
                         + "already");
                 return;
             }
+
             _pendingStart = name;
             _pendingEnd = null;
             _startBy = Time.unscaledTime + 60f;
@@ -335,15 +354,18 @@ namespace DarkwoodMP.World
                 _inputsCheckFrom = 0f;
                 return;
             }
+
             if (!Core.forbidInputs)
             {
                 _inputsCheckFrom = 0f;
                 return;
             }
+
             if (!InputsHeldByNothing(d))
             {
                 return;
             }
+
             _inputsCheckFrom = 0f;
             Core.forbidInputs = false;
             Plugin.Log.LogInfo(
@@ -377,6 +399,7 @@ namespace DarkwoodMP.World
             {
                 CheckInputs(d);
             }
+
             if (_pendingEnd != null && d != null && d.dreaming
                 && !d.switchingDream)
             {
@@ -389,10 +412,12 @@ namespace DarkwoodMP.World
                     EndHere(d, o);
                 }
             }
+
             if (_pendingStart == null)
             {
                 return;
             }
+
             var p = Player.Instance;
             if (!NetEnemies.ClientMode || !WorldShare.InWorld || d == null
                 || p == null)
@@ -400,11 +425,13 @@ namespace DarkwoodMP.World
                 _pendingStart = null;
                 return;
             }
+
             if (InDream(d))
             {
                 _pendingStart = null;
                 return;
             }
+
             if (Time.unscaledTime > _startBy)
             {
                 Plugin.Log.LogWarning(
@@ -413,11 +440,13 @@ namespace DarkwoodMP.World
                 _pendingStart = null;
                 return;
             }
+
             var skills = Singleton<SkillsMenu>.Instance;
             if ((skills != null && skills.opened) || p.inDialogue)
             {
                 return; // a skill to choose, a talk to finish: then
             }
+
             var menu = Singleton<UI>.Instance.LevelingMenu;
             if (p.inLevelingMenu && menu != null)
             {
@@ -425,13 +454,16 @@ namespace DarkwoodMP.World
                 {
                     menu.hide(forceHide: true);
                 }
+
                 _startAt = Time.unscaledTime + 0.7f;
                 return;
             }
+
             if (Time.unscaledTime < _startAt)
             {
                 return;
             }
+
             string name = _pendingStart;
             _pendingStart = null;
             try
@@ -462,6 +494,7 @@ namespace DarkwoodMP.World
             {
                 Singleton<CamMain>.Instance.gameObject.SetActive(true);
             }
+
             d.startTransition.transition();
         }
 
@@ -514,6 +547,7 @@ namespace DarkwoodMP.World
             {
                 d.disabled = __state;
             }
+
             DreamSync.AfterConfirm(d);
             Progression.LevelTaken();
         }

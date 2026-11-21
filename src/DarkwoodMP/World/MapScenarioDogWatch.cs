@@ -37,12 +37,14 @@ namespace DarkwoodMP.World
                 r.Info = "watching";
                 return None();
             });
+
             MapScenario.Add("dw-off", (a, r) =>
             {
                 r.Info = Watch.Summary();
                 Stop();
                 return None();
             });
+
             MapScenario.Add("dw-list", (a, r) =>
             {
                 r.Info = List();
@@ -69,6 +71,7 @@ namespace DarkwoodMP.World
             {
                 Object.Destroy(_go);
             }
+
             _go = null;
         }
 
@@ -82,29 +85,35 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var p = c.transform.position;
                 if (StateDump.Flat(p - c0) > 3000f)
                 {
                     continue;
                 }
+
                 string text = "";
                 if (c.sleeping)
                 {
                     text = " asleep";
                 }
+
                 string eatingNote = "";
                 if (c.eating)
                 {
                     eatingNote = " eating";
                 }
+
                 string aniNote = "";
                 if (c.playingCustomAni)
                 {
                     aniNote = " ani:" + c.customAni;
                 }
+
                 parts.Add(
                     $"{c.name}@{p.x - c0.x:0},{p.z - c0.z:0}{text}{eatingNote}{aniNote}");
             }
+
             Plugin.Log.LogInfo("[dogwatch] list: " + string.Join("; ", parts));
             return parts.Count + " enemies: " + string.Join(
                 "; ", parts.Take(30));
@@ -117,6 +126,7 @@ namespace DarkwoodMP.World
             {
                 return id.ToString();
             }
+
             return "i" + c.GetInstanceID();
         }
 
@@ -139,6 +149,7 @@ namespace DarkwoodMP.World
                     "me "
                         + $"{StateDump.Flat(Player.Instance.transform.position - p):0}");
             }
+
             foreach (var px in NetPlayerProxy.All.Values)
             {
                 if (px != null)
@@ -149,6 +160,7 @@ namespace DarkwoodMP.World
                             + $"(at {Rel(px.transform.position)})");
                 }
             }
+
             return string.Join(" / ", parts);
         }
 
@@ -164,21 +176,26 @@ namespace DarkwoodMP.World
                 {
                     m = frame.GetMethod();
                 }
+
                 if (m == null)
                 {
                     continue;
                 }
+
                 string t = "?";
                 if (m.DeclaringType != null)
                 {
                     t = m.DeclaringType.Name;
                 }
+
                 if (t.Contains("Patch") || t == "MapScenarioDogWatch")
                 {
                     continue;
                 }
+
                 names.Add(t + "." + m.Name);
             }
+
             return string.Join(" < ", names);
         }
 
@@ -188,11 +205,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var s = Net.Session.Instance;
             if (s == null || !s.IsHost)
             {
                 return false;
             }
+
             return StateDump.Flat(c.transform.position - MapScenario.Centre)
                 < 3000f;
         }
@@ -205,6 +224,7 @@ namespace DarkwoodMP.World
                 public Character.Behaviour B;
                 public Transform T;
             }
+
             private static readonly Dictionary<Character, St> _last =
                 new Dictionary<Character, St>();
             private static float _next, _nextScan, _nextPos;
@@ -221,6 +241,7 @@ namespace DarkwoodMP.World
                 _closeNow.Clear();
                 _next = _nextScan = _nextPos = 0f;
             }
+
             public static void Woke() => Wakes++;
             public static void Alerted() => Alerts++;
             public static string Summary() =>
@@ -233,12 +254,14 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 _next = Time.unscaledTime + 0.1f;
                 var s = Net.Session.Instance;
                 if (s == null)
                 {
                     return;
                 }
+
                 if (s.IsHost)
                 {
                     HostTick();
@@ -261,12 +284,14 @@ namespace DarkwoodMP.World
                                     c.transform.position - MapScenario.Centre)
                                     < 3000f).ToList();
                 }
+
                 foreach (var c in _list)
                 {
                     if (c == null)
                     {
                         continue;
                     }
+
                     var st = new St
                     {
                         Sleep = c.sleeping,
@@ -278,6 +303,7 @@ namespace DarkwoodMP.World
                         B = c.behaviour,
                         T = c.target
                     };
+
                     if (_last.TryGetValue(c, out var o) && o.Sleep == st.Sleep
                         && o.Waking == st.Waking && o.Eat == st.Eat
                         && o.Alive == st.Alive && o.Ani == st.Ani
@@ -286,12 +312,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     bool first = !_last.ContainsKey(c);
                     _last[c] = st;
                     if (first)
                     {
                         continue;
                     }
+
                     Changes++;
                     string name = c.name;
                     string label = Id(c);
@@ -301,26 +329,31 @@ namespace DarkwoodMP.World
                     {
                         dead = "";
                     }
+
                     string asleep = "";
                     if (st.Sleep)
                     {
                         asleep = "asleep ";
                     }
+
                     string waking = "";
                     if (st.Waking)
                     {
                         waking = "waking ";
                     }
+
                     string eating = "";
                     if (st.Eat)
                     {
                         eating = "eating ";
                     }
+
                     string ani = "";
                     if (st.Ani)
                     {
                         ani = "ani:" + c.customAni + " ";
                     }
+
                     string attacking = "";
                     if (st.Atk)
                     {
@@ -329,17 +362,21 @@ namespace DarkwoodMP.World
                         {
                             attack = c.currentAttack.name;
                         }
+
                         attacking = "attacking:" + attack + " ";
                     }
+
                     string target = "-";
                     if (st.T != null)
                     {
                         target = st.T.name;
                     }
+
                     Plugin.Log.LogInfo(
                         $"[dogwatch] {name}#{label} at {place}: "
                             + $"{dead}{asleep}{waking}{eating}{ani}{attacking}{st.B} -> {target}; {Dists(c.transform.position)}");
                 }
+
                 if (Time.unscaledTime >= _nextPos)
                 {
                     _nextPos = Time.unscaledTime + 1f;
@@ -356,6 +393,7 @@ namespace DarkwoodMP.World
                                 myPlace =
                                     Rel(Player.Instance.transform.position);
                             }
+
                             Plugin.Log.LogInfo(
                                 $"[dogwatch] t {now:0.0}: proxy {owner} at "
                                     + $"{proxyPlace}, me at {myPlace}");
@@ -372,12 +410,14 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 var at = me.transform.position;
                 bool log = Time.unscaledTime >= _nextPos;
                 if (log)
                 {
                     _nextPos = Time.unscaledTime + 1f;
                 }
+
                 var near = new List<string>();
                 foreach (var c in ne.PuppetCharacters())
                 {
@@ -395,6 +435,7 @@ namespace DarkwoodMP.World
                             {
                                 asleep = " asleep";
                             }
+
                             Plugin.Log.LogInfo(
                                 "[dogwatch] our player touches the host's "
                                     + $"{name} #{id}: {d:0} apart, it at "
@@ -405,6 +446,7 @@ namespace DarkwoodMP.World
                     {
                         _closeNow.Remove(id);
                     }
+
                     if (d < 400f)
                     {
                         string text = "";
@@ -412,9 +454,11 @@ namespace DarkwoodMP.World
                         {
                             text = " asleep";
                         }
+
                         near.Add($"{c.name}#{id} {d:0}{text}");
                     }
                 }
+
                 if (log && near.Count > 0)
                 {
                     Plugin.Log.LogInfo(
@@ -434,6 +478,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 Watch.Woke();
                 string name = __instance.name;
                 string label = Id(__instance);
@@ -444,6 +489,7 @@ namespace DarkwoodMP.World
                 {
                     source = Threat.NoiseSource.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[dogwatch] WAKE {name}#{label} at {place} by {caller}; "
                         + $"noise source {source}; "
@@ -462,6 +508,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 Watch.Alerted();
                 string name = __instance.name;
                 string label = Id(__instance);
@@ -471,16 +518,19 @@ namespace DarkwoodMP.World
                 {
                     asleep = " asleep";
                 }
+
                 string eating = "";
                 if (__instance.eating)
                 {
                     eating = " eating";
                 }
+
                 string target = "-";
                 if (destTarget != null)
                 {
                     target = destTarget.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[dogwatch] ALERT {name}#{label} at "
                         + $"{place}{asleep}{eating} at {target} aggressive "
@@ -522,6 +572,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 bool crossed = __instance.hearingCounter >= 1f && __state < 1f
                     || dangerousSound;
                 int id = __instance.GetInstanceID();
@@ -530,6 +581,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 _heardAt[id] = Time.unscaledTime;
                 string name = __instance.name;
                 string label = Id(__instance);
@@ -538,16 +590,19 @@ namespace DarkwoodMP.World
                 {
                     asleep = " asleep";
                 }
+
                 string eating = "";
                 if (__instance.eating)
                 {
                     eating = " eating";
                 }
+
                 string loud = "";
                 if (crossed)
                 {
                     loud = "LOUD ";
                 }
+
                 float counter = __instance.hearingCounter;
                 string origin = Rel(Position);
                 float distance =
@@ -557,6 +612,7 @@ namespace DarkwoodMP.World
                 {
                     source = Threat.NoiseSource.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[dogwatch] HEARD {name}#{label}{asleep}{eating} "
                         + $"{loud}counter {__state:0.00}->{counter:0.00} from "

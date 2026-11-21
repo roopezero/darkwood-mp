@@ -43,6 +43,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (Time.timeScale == 0f)
             {
                 Plugin.Log.LogInfo(
@@ -50,6 +51,7 @@ namespace DarkwoodMP.World
                 Core.setTimeScale(1f);
                 AudioController.UnpauseAll(0.5f);
             }
+
             var p = Player.Instance;
             if (p != null && p.alive)
             {
@@ -71,6 +73,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             // menus and input behave as paused; time and sound go on
             Core.Paused = true;
             return false;
@@ -108,6 +111,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = Nothing();
             return false;
         }

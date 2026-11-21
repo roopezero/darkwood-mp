@@ -39,6 +39,7 @@ namespace DarkwoodMP.Sync
                 {
                     return true;
                 }
+
                 Vector3 pos = __instance.transform.position;
                 var g = astar.getNearestGraphFast(pos);
                 if (g == null || g.nodes == null || g.nodes.Length == 0
@@ -46,6 +47,7 @@ namespace DarkwoodMP.Sync
                 {
                     return true; // the game returns at once
                 }
+
                 Vector3 d = pos - (Vector3)g.nodes[0].position;
                 int x = Mathf.RoundToInt(d.x / g.nodeSize),
                     z = Mathf.RoundToInt(d.z / g.nodeSize);
@@ -54,11 +56,13 @@ namespace DarkwoodMP.Sync
                 {
                     return true;
                 }
+
                 var nodes = __instance.affectedNodes;
                 if (nodes != null)
                 {
                     Array.Clear(nodes, 0, nodes.Length);
                 }
+
                 if (Logged.Add(__instance.GetInstanceID()))
                 {
                     Plugin.Log.LogInfo(
@@ -66,6 +70,7 @@ namespace DarkwoodMP.Sync
                             + "outside the pathfinding grid: it lights no "
                             + "nodes there");
                 }
+
                 return false;
             }
             catch
@@ -81,6 +86,7 @@ namespace DarkwoodMP.Sync
             {
                 s = p.name + "/" + s;
             }
+
             return s;
         }
     }

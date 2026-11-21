@@ -35,9 +35,11 @@ namespace DarkwoodMP.Net
                 {
                     return g;
                 }
+
                 return "";
             }
         }
+
         public int Proto
         {
             get
@@ -47,9 +49,11 @@ namespace DarkwoodMP.Net
                 {
                     return v;
                 }
+
                 return 0;
             }
         }
+
         /// <summary>Whether this build can join it, and why not.</summary>
         public string Incompatibility
         {
@@ -59,10 +63,12 @@ namespace DarkwoodMP.Net
                 {
                     return "not a Darkwood server";
                 }
+
                 if (Proto != Protocol.Version)
                 {
                     return $"different DarkwoodMP version ({Version})";
                 }
+
                 return null;
             }
         }
@@ -77,6 +83,7 @@ namespace DarkwoodMP.Net
                 b.AddRange(Encoding.UTF8.GetBytes(f));
                 b.Add(Sep);
             }
+
             b.Add(End);
             return b.ToArray();
         }
@@ -93,6 +100,7 @@ namespace DarkwoodMP.Net
             {
                 text = "";
             }
+
             return new string(
                 text.Where(c => c != (char)Sep
                         && drop.IndexOf(c) < 0).ToArray());
@@ -105,11 +113,13 @@ namespace DarkwoodMP.Net
             {
                 passwordFlag = "1";
             }
+
             string localCharsFlag = "0";
             if (LocalChars)
             {
                 localCharsFlag = "1";
             }
+
             var f = new List<string>
             {
                 Clean(Name, ""),
@@ -119,6 +129,7 @@ namespace DarkwoodMP.Net
                 localCharsFlag,
                 Clean(Version, "")
             };
+
             foreach (var kv in Fields)
             {
                 string k = Clean(kv.Key, "=");
@@ -127,6 +138,7 @@ namespace DarkwoodMP.Net
                     f.Add(k + "=" + Clean(kv.Value, ""));
                 }
             }
+
             return Encode("INFO", f.ToArray());
         }
 
@@ -136,16 +148,19 @@ namespace DarkwoodMP.Net
             {
                 return null;
             }
+
             var parts = Encoding.UTF8.GetString(b, 0, n - 1).Split((char)Sep);
             if (parts.Length < 7 || parts[0] != "INFO")
             {
                 return null;
             }
+
             if (!int.TryParse(parts[2], out int players)
                 || !int.TryParse(parts[3], out int max))
             {
                 return null;
             }
+
             var info = new ServerInfo
             {
                 Name = parts[1],
@@ -155,6 +170,7 @@ namespace DarkwoodMP.Net
                 LocalChars = parts[5] == "1",
                 Version = parts[6],
             };
+
             for (int i = 7; i < parts.Length; i++)
             {
                 int eq = parts[i].IndexOf('=');
@@ -164,6 +180,7 @@ namespace DarkwoodMP.Net
                         parts[i].Substring(eq + 1);
                 }
             }
+
             return info;
         }
     }

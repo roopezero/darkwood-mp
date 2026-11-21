@@ -40,6 +40,7 @@ namespace DarkwoodMP.World
             public ObjRef Ref;
             public float X, Z;
         }
+
         private static readonly List<Patch> _cleared = new List<Patch>();
 
         /// <summary>
@@ -69,6 +70,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var p = inf.transform.position;
             _cleared.Add(new Patch { Ref = r, X = p.x, Z = p.z });
         }
@@ -82,11 +84,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!WorldActions.Sharing)
             {
                 _cleared.Clear();
                 return;
             }
+
             var w = S.Begin(MsgType.InfectionCleared);
             Write(w, _cleared);
             string what = $"infection cleared: {_cleared.Count}";
@@ -120,10 +124,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             int n = r.R.ReadUInt16();
             var done = new List<Patch>();
             for (int i = 0; i < n; i++)
@@ -134,11 +140,13 @@ namespace DarkwoodMP.World
                     X = r.R.ReadSingle(),
                     Z = r.R.ReadSingle()
                 };
+
                 var inf = Find(p);
                 if (inf == null || inf.disappearing)
                 {
                     continue;
                 }
+
                 // A client's player clears only what its burning weapon
                 // reached.
                 if (s.IsHost
@@ -147,6 +155,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 WorldActions.Replaying = true;
                 try
                 {
@@ -161,8 +170,10 @@ namespace DarkwoodMP.World
                 {
                     WorldActions.Replaying = false;
                 }
+
                 done.Add(p);
             }
+
             string line =
                 $"[world] infection cleared: {done.Count} (from "
                     + $"{s.NameOf(from)})";
@@ -173,6 +184,7 @@ namespace DarkwoodMP.World
                     $", {n - done.Count} not here, already gone or out of "
                         + "reach";
             }
+
             Plugin.Log.LogInfo(line + missed);
             if (s.IsHost && done.Count == 0 && n > 0)
             {
@@ -180,6 +192,7 @@ namespace DarkwoodMP.World
                     "none of that infection is within their reach");
                 return;
             }
+
             if (s.IsHost && done.Count > 0)
             {
                 var w = s.Begin(MsgType.InfectionCleared);
@@ -216,6 +229,7 @@ namespace DarkwoodMP.World
             {
                 return inf;
             }
+
             Infection best = null;
             float bestD = 20f * 20f;
             foreach (var i in Resources.FindObjectsOfTypeAll<Infection>())
@@ -225,6 +239,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var pos = i.transform.position;
                 float d = (pos.x - p.X) * (pos.x - p.X)
                     + (pos.z - p.Z) * (pos.z - p.Z);
@@ -234,10 +249,12 @@ namespace DarkwoodMP.World
                     best = i;
                 }
             }
+
             if (best == null && WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[world] infection {p.Ref} not found here");
             }
+
             return best;
         }
 
@@ -256,6 +273,7 @@ namespace DarkwoodMP.World
             {
                 parent = ObjRef.Of(inf.transform.parent.gameObject);
             }
+
             var p = inf.transform.position;
             var w = S.Begin(MsgType.InfectionSpawned);
             w.W.Write(id);
@@ -266,6 +284,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     $"[world] sent infection spawned Spawned:{id} at {p}");
             }
+
             S.Broadcast(w, Channel.Control, reliable: true);
         }
 
@@ -277,6 +296,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             long id = r.R.ReadInt64();
             var pos = r.ReadVector3();
             var parentRef = ObjRef.Read(r);
@@ -284,11 +304,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Transform parent = null;
             if (parentRef.Valid)
             {
                 parent = ObjRef.Resolve<Transform>(parentRef);
             }
+
             WorldActions.Replaying = true;
             try
             {
@@ -301,6 +323,7 @@ namespace DarkwoodMP.World
                 {
                     parentGO = Core.ItemContainer;
                 }
+
                 var go = Core.AddPrefab(
                     "Traps/infection_splat", pos, Quaternion.Euler(90f, 0f, 0f),
                     parentGO, worldSpace: true);
@@ -309,10 +332,12 @@ namespace DarkwoodMP.World
                 {
                     inf = go.GetComponent<Infection>();
                 }
+
                 if (inf == null)
                 {
                     return;
                 }
+
                 ObjRef.RegisterSpawned(id, go);
                 // the host's spreads; its new patches come as messages
                 inf.timesToSpread = 0;
@@ -347,12 +372,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             // A client's own player's burning weapon only; its copy of the
             // host's fire clears what the host's does, and the host says so.
             if (NetEnemies.ClientMode && !LiquidLitPatch.OwnSwing)
             {
                 return;
             }
+
             InfectionSync.Cleared(__instance);
         }
     }
@@ -371,8 +398,10 @@ namespace DarkwoodMP.World
             {
                 InfectionSync.Growing++;
             }
+
             return __state;
         }
+
         static System.Exception Finalizer(
             System.Exception __exception, bool __state)
         {
@@ -380,6 +409,7 @@ namespace DarkwoodMP.World
             {
                 InfectionSync.Growing--;
             }
+
             return __exception;
         }
     }
@@ -398,6 +428,7 @@ namespace DarkwoodMP.World
             {
                 InfectionSync.Growing--;
             }
+
             return __exception;
         }
     }
@@ -413,6 +444,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             InfectionSync.Spawned(__instance);
         }
     }

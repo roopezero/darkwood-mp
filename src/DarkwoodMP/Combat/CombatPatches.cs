@@ -21,6 +21,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var proxy = _collider.GetComponent<NetPlayerProxy>();
             if (proxy == null)
             {
@@ -33,6 +34,7 @@ namespace DarkwoodMP.Combat
             {
                 return false; // players don't hit players
             }
+
             // Only the colliders: the game clears them as the pooled sensor is
             // spawned again (MeleeSensor.OnSpawned), but never its
             // gameObjectsToIgnore, so a pooled sensor would never hit the same
@@ -41,6 +43,7 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             s.collidersToIgnore.Add(_collider);
             if (!s.doesNotNeedLineOfSight
                 && !Core.canSeeAttack(s.attackerTransform, proxy.transform))
@@ -52,8 +55,10 @@ namespace DarkwoodMP.Combat
                             + $"{proxy.OwnerName}'s stand-in blocked: no line "
                             + "of sight");
                 }
+
                 return false;
             }
+
             if (World.MapScenarioDogWatch.On)
             {
                 Plugin.Log.LogInfo(
@@ -67,12 +72,14 @@ namespace DarkwoodMP.Combat
             {
                 strength = attacker.strengthModifier;
             }
+
             float damage = s.damage * strength;
             meleeSensorDelegate handler = s.onHit;
             if (handler != null)
             {
                 handler();
             }
+
             PlayerDamage.Send(
                 proxy.Owner, damage, s.attackerTransform, s.shadowSensor,
                 s.effects);
@@ -121,16 +128,19 @@ namespace DarkwoodMP.Combat
                 {
                     y = __instance.transform.eulerAngles.y;
                 }
+
                 NetEnemies instance = NetEnemies.Instance;
                 if (instance != null)
                 {
                     instance.HostBlood(__instance, y);
                 }
             }
+
             if (!Threat.Enabled || attackerTransform == null)
             {
                 return;
             }
+
             if (dealt > 0f)
             {
                 Threat.OnDamaged(
@@ -220,6 +230,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             if (!Proxies.Any)
             {
                 // Alone (or a joiner): the game's own refresh, except that its
@@ -231,13 +242,16 @@ namespace DarkwoodMP.Combat
                 {
                     return true;
                 }
+
                 Distances(out int dx, out int dy);
                 Run(__instance, __instance.currentGrid, new List<Centre>
                 {
                     new Centre { Pos = pos, Dx = dx, Dy = dy }
                 }, false, force);
+
                 return false;
             }
+
             RefreshAll(__instance, __instance.currentGrid, pos, instant, force);
             World.FarEvents.Tick();
             return false;
@@ -259,6 +273,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var o = Singleton<OutsideLocations>.Instance;
             var wg = Singleton<WorldGrid>.Instance;
             if (o == null || !o.loading || wg == null || wg.disableRefresh
@@ -267,10 +282,12 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             if (Time.realtimeSinceStartup < _loadingRefreshAt)
             {
                 return;
             }
+
             _loadingRefreshAt = Time.realtimeSinceStartup + 0.5f;
             var world = wg.getGrid("World");
             var grids = new Dictionary<WorldGrid.Grid, List<Centre>>();
@@ -280,26 +297,32 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 var g = GridOf(wg, world, p);
                 if (g == null)
                 {
                     continue;
                 }
+
                 if (!grids.TryGetValue(g, out var list))
                 {
                     grids[g] = list = new List<Centre>();
                 }
+
                 list.Add(Of(p));
             }
+
             foreach (var kv in grids)
             {
                 if (_running.TryGetValue(kv.Key, out var old) && old != null)
                 {
                     wg.StopCoroutine(old);
                 }
+
                 _running[kv.Key] =
                     wg.StartCoroutine(EnterSpread(kv.Key, kv.Value));
             }
+
             if (grids.Count > 0)
             {
                 LoadingRefreshes++;
@@ -340,6 +363,7 @@ namespace DarkwoodMP.Combat
                     centres.Add(Of(p));
                 }
             }
+
             var world = wg.getGrid("World");
             bool away = world != null && world != current;
             // The other grids, each with the players in it: the world's (only
@@ -349,23 +373,28 @@ namespace DarkwoodMP.Combat
             {
                 others[world] = new List<Centre>();
             }
+
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p == null)
                 {
                     continue;
                 }
+
                 var g = GridOf(wg, world, p);
                 if (g == null || g == current)
                 {
                     continue;
                 }
+
                 if (!others.TryGetValue(g, out var list))
                 {
                     others[g] = list = new List<Centre>();
                 }
+
                 list.Add(Of(p));
             }
+
             if (away != _wasAway)
             {
                 _wasAway = away;
@@ -379,12 +408,15 @@ namespace DarkwoodMP.Combat
                     {
                         count = w.Count;
                     }
+
                     message =
                         $"The host is away ({name}): the world is kept running "
                             + $"around {count} other player(s)";
                 }
+
                 log.LogInfo(message);
             }
+
             Run(wg, current, centres, instant, force);
             foreach (var kv in others)
             {
@@ -405,8 +437,10 @@ namespace DarkwoodMP.Combat
                 {
                     wg.StopCoroutine(old);
                 }
+
                 _running.Remove(g);
             }
+
             if (instant)
             {
                 Refresh(g, centres, force);
@@ -438,10 +472,12 @@ namespace DarkwoodMP.Combat
             {
                 return wg.getGrid(Core.getTrueLocationName(p.InLocation.name));
             }
+
             if (p.Away)
             {
                 return null;
             }
+
             return world;
         }
 
@@ -465,6 +501,7 @@ namespace DarkwoodMP.Combat
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -478,6 +515,7 @@ namespace DarkwoodMP.Combat
                     n.enter(force);
                 }
             }
+
             foreach (var n in g.nodes)
             {
                 if (!Near(n.position, centres))
@@ -513,6 +551,7 @@ namespace DarkwoodMP.Combat
                     leave.Add(nodes[i]);
                 }
             }
+
             foreach (var n in leave)
             {
                 n.leave(force);
@@ -541,6 +580,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             bool puppet = NetEnemies.Instance != null
                 && NetEnemies.Instance.IsPuppet(__instance, out _);
             NetEnemies.Freeze(__instance, hide: !puppet);
@@ -565,6 +605,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             // A copy of the host's enemy plays the host's clips on its sprite
             // animator, which enableComponents(false)
             // (Location.activateCharacters as its area was left) switched off:
@@ -578,6 +619,7 @@ namespace DarkwoodMP.Combat
                     a.enabled = true;
                 }
             }
+
             return false;
         }
     }
@@ -601,6 +643,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var c = __instance.GetComponent<Character>();
             return c == null || !NetEnemies.Hidden.Contains(c);
         }
@@ -626,6 +669,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             Plugin.Log.LogInfo(
                 $"[enemy] {__instance.type} at "
                     + $"{__instance.transform.position}: not spawned here, the "
@@ -657,6 +701,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var list = __instance.charactersList;
             for (int i = list.Count - 1; i >= 0; i--)
             {
@@ -667,6 +712,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 try
                 {
                     list.RemoveAt(i);
@@ -677,6 +723,7 @@ namespace DarkwoodMP.Combat
                     {
                         co = c.gameObject.AddComponent<CullableObject>();
                     }
+
                     co.registerMe();
                     Plugin.Log.LogInfo(
                         $"[enemy] {c.name}'s corpse at {c.transform.position} "
@@ -742,18 +789,21 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             if (!ne.IsPuppet(__instance, out uint id))
             {
                 if (NetEnemies.Frozen.Contains(__instance))
                 {
                     return false; // a frozen one isn't really there
                 }
+
                 // A friendly NPC our player hits: the host's copy takes it, and
                 // turns on us there.
                 return !HostileNpcs.ClientHit(
                     __instance, Damage, attackerTransform, canCutInHalf,
                     byPlayer, canInterrupt, normalHit);
             }
+
             // A flame of no damage can still set it alight (its burn goes with
             // the hit).
             if (Damage <= 0f
@@ -762,12 +812,14 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             // Something thrown (its impact, explosion or the fire it left) hits
             // the enemy in the host's copy of the throw.
             if (World.ThrownHits.Now())
             {
                 return false;
             }
+
             // Of flames, only our own weapon's are ours to send (Flame calls
             // every hit byPlayer); any other fire burns on the host.
             var flame = World.ThrownHits.CurrentFlame;
@@ -775,6 +827,7 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             // Only what our own player does to it is ours to send. Anything
             // else here (a trap, fire, an explosion) happened on the host too,
             // where it hurt the enemy already.
@@ -785,6 +838,7 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             ne.ClientHit(
                 id, Damage, canCutInHalf, fromPlayer, canInterrupt, normalHit,
                 NetEnemies.HitEffects);
@@ -808,6 +862,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             NetEnemies.Instance.HostSound(parentObj, audioID, volume);
         }
     }
@@ -835,12 +890,14 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var s = Net.Session.Instance;
             if (s == null || !s.IsHost || s.Peers.Count == 0
                 || NetEnemies.Instance == null)
             {
                 return;
             }
+
             NetEnemies.Instance.HostSound(__instance.transform, "", 0f);
         }
     }
@@ -867,10 +924,12 @@ namespace DarkwoodMP.Combat
             {
                 return; // set by whoever raised it (a remote player's noise)
             }
+
             if (OwnNoise <= 0 && !CalledFromPlayer())
             {
                 return;
             }
+
             var s = Net.Session.Instance;
             if (s != null && s.IsClient && NetEnemies.ClientMode)
             {
@@ -883,13 +942,16 @@ namespace DarkwoodMP.Combat
                 {
                     flags |= 1;
                 }
+
                 if (gunshot)
                 {
                     flags |= 2;
                 }
+
                 w.W.Write((byte)flags);
                 s.SendToHost(w, Net.Channel.Control, reliable: true);
             }
+
             Threat.NoiseSource = Player.Instance;
         }
 
@@ -919,15 +981,18 @@ namespace DarkwoodMP.Combat
                         t = method.DeclaringType;
                     }
                 }
+
                 if (t == null || t == typeof(PlayerNoisePatch)
                     || t == typeof(Character))
                 {
                     continue;
                 }
+
                 // Player's methods, or its lambdas/iterators
                 return t == typeof(Player)
                     || (t.DeclaringType == typeof(Player));
             }
+
             return false;
         }
 
@@ -948,6 +1013,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Vector3 pos = r.ReadVector3();
             float range = Mathf.Clamp(r.R.ReadSingle(), 0f, 2000f);
             float volume = Mathf.Clamp(r.R.ReadSingle(), 0f, 5f);
@@ -957,10 +1023,12 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             if ((proxy.transform.position - pos).sqrMagnitude > 500f * 500f)
             {
                 return; // it's meant to be where they are
             }
+
             var before = Threat.NoiseSource;
             Threat.NoiseSource = proxy;
             try
@@ -1007,6 +1075,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             switch (__instance)
             {
                 case Door _:
@@ -1017,6 +1086,7 @@ namespace DarkwoodMP.Combat
                         {
                             index = 1;
                         }
+
                         __state = __args[index] is Transform t && t != null
                             && t.GetComponent<Player>() != null;
                     }
@@ -1024,6 +1094,7 @@ namespace DarkwoodMP.Combat
                     {
                         __state = false;
                     }
+
                     break;
                 case MeleeSensor m:
                     __state = m.type == MeleeSensor.MeleeSensorType.player;
@@ -1032,6 +1103,7 @@ namespace DarkwoodMP.Combat
                     __state = true; // it checks our player itself
                     break;
             }
+
             if (__state)
             {
                 PlayerNoisePatch.OwnNoise++;
@@ -1045,6 +1117,7 @@ namespace DarkwoodMP.Combat
             {
                 PlayerNoisePatch.OwnNoise--;
             }
+
             return __exception;
         }
     }
@@ -1078,11 +1151,13 @@ namespace DarkwoodMP.Combat
                 NetEnemies.HitEffects = __instance.effects;
             }
         }
+
         static void Postfix()
         {
             NetEnemies.HitEffects = null;
             HostileNpcs.EndHit();
         }
+
         static System.Exception Finalizer(System.Exception __exception)
         {
             NetEnemies.HitEffects = null;
@@ -1111,6 +1186,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var c = __instance.GetComponent<Character>();
             return c == null
                 || (!NetEnemies.Instance.IsPuppet(c, out _)
@@ -1135,6 +1211,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             // An NPC a joiner's event sends after "the player" (a dialogue's
             // outcome, run here for them) goes for them.
             NetPlayerProxy requester = null;
@@ -1142,16 +1219,19 @@ namespace DarkwoodMP.Combat
             {
                 requester = World.Authority.Requester;
             }
+
             if (requester != null)
             {
                 HostileNpcs.SendAfter(__instance, requester);
                 return false;
             }
+
             var best = Threat.BestPlayerFor(__instance);
             if (best == null || best is Player)
             {
                 return true; // the host's player: as the game does it
             }
+
             JoinerAi.GoFor(__instance, best.transform);
             if (Threat.Debug)
             {
@@ -1159,6 +1239,7 @@ namespace DarkwoodMP.Combat
                     $"[threat] {__instance.name} sent after the player: goes "
                         + $"for {((NetPlayerProxy)best).OwnerName}");
             }
+
             return false;
         }
     }
@@ -1227,6 +1308,7 @@ namespace DarkwoodMP.Combat
             {
                 return 3;
             }
+
             return 0;
         }
 
@@ -1313,20 +1395,24 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var c = __instance;
             if (c.summonsAfterEscaping)
             {
                 return false;
             }
+
             if (c.wantToDespawn)
             {
                 c.runAway(Threat.FleeFrom(c));
                 return false;
             }
+
             if (c.behaviour != Character.Behaviour.escaping)
             {
                 return false;
             }
+
             Vector3 me = c.transform.position;
             // the game's radius and layers
             int n = Physics.OverlapSphereNonAlloc(me, 500f, _near, 2099200);
@@ -1339,11 +1425,13 @@ namespace DarkwoodMP.Combat
                 {
                     cb = _near[i].GetComponent<CharBase>();
                 }
+
                 if (!Proxies.IsPlayer(cb)
                     || (cb is NetPlayerProxy && !cb.alive))
                 {
                     continue;
                 }
+
                 float d = Core.trueDistance(cb.transform.position, me);
                 if (d < best)
                 {
@@ -1351,13 +1439,16 @@ namespace DarkwoodMP.Combat
                     nearest = cb;
                 }
             }
+
             if (nearest != null)
             {
                 c.runAway(nearest.transform.position);
             }
+
             return false;
         }
     }
+
     /// <summary>
     /// The game's own Character.cutMeInHalf (a chomper cut by a blade) destroys
     /// the upper half's Rigidbody but leaves it active until its Cut_half
@@ -1379,6 +1470,7 @@ namespace DarkwoodMP.Combat
             {
                 return null;
             }
+
             return __exception;
         }
     }

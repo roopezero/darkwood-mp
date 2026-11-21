@@ -79,6 +79,7 @@ namespace DarkwoodMP.World
                 {
                     return "-";
                 }
+
                 return $"{s.invItem.type}x{s.invItem.amount}";
             }));
 
@@ -98,21 +99,25 @@ namespace DarkwoodMP.World
             {
                 want = int.Parse(a[1]);
             }
+
             while (want > 0 && p.Hotbar.slots.Count < want)
             {
                 p.upgradeHotbar();
             }
+
             if (a.Length > 0 && a[0] == "keep")
             {
                 _mark = Hotbar(p);
                 r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}";
                 yield break;
             }
+
             int n = 0;
             if (a.Length > 0)
             {
                 n = int.Parse(a[0]);
             }
+
             var slots = p.Hotbar.slots;
             foreach (var s in slots)
             {
@@ -121,6 +126,7 @@ namespace DarkwoodMP.World
                     s.removeItem();
                 }
             }
+
             p.switchToItem(p.fists);
             int at = n % slots.Count;
             slots[at].inventory = p.Hotbar;
@@ -135,6 +141,7 @@ namespace DarkwoodMP.World
             {
                 instance.SaveNow();
             }
+
             r.Info = $"hotbar {_mark} in chapter {Chapter}, {HotbarUi(p)}";
         }
 
@@ -152,16 +159,19 @@ namespace DarkwoodMP.World
                     intValue = Chapter + 1,
                     eventAmount = 1
                 };
+
                 Singleton<Controller>.Instance.StartCoroutine(
                     step.fire(P.gameObject));
                 yield return new WaitForSecondsRealtime(2f);
             }
+
             while (Chapter != 2
                 || SceneManager.GetActiveScene().name != "chapter2"
                 || !WorldShare.WorldReady || Chapters.Generating)
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             r.Info =
                 $"in chapter {Chapter} ({SceneManager.GetActiveScene().name}) "
                     + $"at {Pos(P)}, hotbar {Hotbar(P)}";
@@ -179,6 +189,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 t = e.eventTriggers.FirstOrDefault(
                     x => x != null && x.gameEvents != null
                         && x.gameEvents.name == a[0]);
@@ -188,6 +199,7 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
+
             if (et == null)
             {
                 string wanted = a[0];
@@ -196,9 +208,11 @@ namespace DarkwoodMP.World
                 {
                     location = "the world";
                 }
+
                 r.Fail($"no trigger for {wanted} here (in {location})");
                 yield break;
             }
+
             // Its area is off while we land in it and the host sees us there:
             // the host checks the exit is within reach of where it last saw us,
             // and the area set off in the frame we landed sent it before our
@@ -209,6 +223,7 @@ namespace DarkwoodMP.World
             {
                 c.enabled = false;
             }
+
             Place(et.transform.position + new Vector3(40f, 0f, 0f));
             yield return new WaitForSeconds(2f);
             string area = et.name;
@@ -220,6 +235,7 @@ namespace DarkwoodMP.World
             {
                 place = "the world";
             }
+
             r.Info =
                 $"set off {area} ({kind}) for {eventName} at {spot} in "
                     + $"{place}, chapter {Chapter}";
@@ -250,6 +266,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSecondsRealtime(0.2f);
             }
+
             yield return In(a, r);
         }
 
@@ -279,11 +296,14 @@ namespace DarkwoodMP.World
                     {
                         have = characters.HasCharacter;
                     }
+
                     r.Fail(line + $"have {have}, at {Pos(P)}");
                     yield break;
                 }
+
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             // its place and its things settle
             yield return new WaitForSecondsRealtime(3f);
             var p = P;
@@ -294,6 +314,7 @@ namespace DarkwoodMP.World
             {
                 d = StateDump.Flat(p.transform.position - host.Value);
             }
+
             string ui = HotbarUi(p);
             int told = Count("[notice] The host is starting chapter 2");
             int chapter = Chapter;
@@ -304,6 +325,7 @@ namespace DarkwoodMP.World
             {
                 away = $"{d:0} away";
             }
+
             bool ground = OnGround(p);
             float nearest = Characters.NearestChunk(p.transform.position);
             WorldGenerator generator = Singleton<WorldGenerator>.Instance;
@@ -312,6 +334,7 @@ namespace DarkwoodMP.World
             {
                 size = generator.chunkSize;
             }
+
             WorldGenerator world = Singleton<WorldGenerator>.Instance;
             int? chunks = null;
             if (world != null)
@@ -322,6 +345,7 @@ namespace DarkwoodMP.World
                     chunks = list.Count;
                 }
             }
+
             r.Info =
                 $"told {told}x; chapter {chapter} ({scene}) at {spot}, host "
                     + $"{away}, ground {ground} (nearest chunk {nearest:0}, "
@@ -369,6 +393,7 @@ namespace DarkwoodMP.World
             {
                 name = a[0];
             }
+
             Core.forbidInputs = true;
             P.halt();
             D.wantToDream = true;
@@ -379,6 +404,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             yield return new WaitForSecondsRealtime(1f);
             Dreams d = D;
             bool? dreaming = null;
@@ -386,6 +412,7 @@ namespace DarkwoodMP.World
             {
                 dreaming = d.dreaming;
             }
+
             Dreams dreams = D;
             string presetName = null;
             if (dreams != null)
@@ -396,11 +423,13 @@ namespace DarkwoodMP.World
                     presetName = preset.name;
                 }
             }
+
             string shared = DreamSync.Shared;
             if (shared == null)
             {
                 shared = "none";
             }
+
             r.Info =
                 $"dreaming {dreaming} ({presetName}), entering "
                     + $"{Core.EnteringDream}, shared {shared}, chapter "
@@ -430,17 +459,21 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             string answer = line;
             if (answer == null)
             {
                 answer = refused;
             }
+
             if (answer == null)
             {
                 answer = "no answer from the host";
             }
+
             r.Info = answer.Trim();
             if (refused != null)
             {
@@ -463,6 +496,7 @@ namespace DarkwoodMP.World
             {
                 heldText = "nothing held";
             }
+
             r.Info =
                 $"{heldText.Trim()}; chapter {Chapter}, generating "
                     + $"{Chapters.Generating}, dreaming {Dreaming}";
@@ -508,12 +542,15 @@ namespace DarkwoodMP.World
                         .Select(
                             rp => Pos(rp.Root.transform)).ToList();
                 }
+
                 if (seen.Count >= want)
                 {
                     break;
                 }
+
                 yield return new WaitForSecondsRealtime(1f);
             }
+
             int starts = Count("Starting chapter 2:"),
                 runs = Count("set off chapter 2") - Count("can't run here yet");
             r.Info =
@@ -553,6 +590,7 @@ namespace DarkwoodMP.World
             {
                 return "ui none";
             }
+
             int shown =
                 bar.thisUI.GetComponentsInChildren<UIInvSlot>(false).Length;
             int without = bar.slots.Count(
@@ -562,6 +600,7 @@ namespace DarkwoodMP.World
             {
                 return $"ui ok {shown}";
             }
+
             return $"ui {shown} shown for {bar.slots.Count} slots, {without} "
                 + "slots not shown";
         }
@@ -578,11 +617,13 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (ps.Remotes.TryGetValue(s.HostId, out var rp)
                 && rp.Root != null && rp.Root.activeInHierarchy)
             {
                 return rp.Root.transform.position;
             }
+
             return (Vector3?)null;
         }
 
@@ -612,8 +653,10 @@ namespace DarkwoodMP.World
             {
                 return "(no player)";
             }
+
             return Pos(p.transform);
         }
+
         private static string Pos(Transform t) =>
             $"({t.position.x:0}, {t.position.z:0})";
     }

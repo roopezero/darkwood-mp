@@ -50,9 +50,11 @@ namespace DarkwoodMP.World
                 {
                     return Plugin.Cfg.SkillsKey.Value;
                 }
+
                 return KeyCode.K;
             }
         }
+
         public static string KeyName => Key.ToString();
 
         private const string Title = "Skills";
@@ -65,6 +67,7 @@ namespace DarkwoodMP.World
                 {
                     return _win;
                 }
+
                 _win = new UiWindow(0x5d17, Title)
                 {
                     MinSize = new Vector2(300, 260),
@@ -78,6 +81,7 @@ namespace DarkwoodMP.World
                     FooterHeight = 26,
                     OnClose = Closed,
                 };
+
                 return _win;
             }
         }
@@ -91,22 +95,26 @@ namespace DarkwoodMP.World
                 why = "not in a world";
                 return false;
             }
+
             if (Core.Paused || Core.forbidInputs || p.inMenu() || p.dying
                 || p.health <= 0f)
             {
                 why = "busy";
                 return false;
             }
+
             if (Spectator.Active)
             {
                 why = "watching";
                 return false;
             }
+
             if (SkillTree.Tiers == null)
             {
                 why = "no skills";
                 return false;
             }
+
             return true;
         }
 
@@ -118,6 +126,7 @@ namespace DarkwoodMP.World
                 Win.Close();
                 return;
             }
+
             var p = Player.Instance;
             if (!CanOpen(p, out string why))
             {
@@ -125,6 +134,7 @@ namespace DarkwoodMP.World
                     $"[skills] the panel can't open now ({why})");
                 return;
             }
+
             _good = _negative = _message = null;
             _rects.Clear();
             Win.ResetPlace();
@@ -160,12 +170,14 @@ namespace DarkwoodMP.World
                     "[skills] panel closed (a game menu, the pause menu, or "
                         + "the world went)");
             }
+
             // Escape is taken in SkillsPanelEscape, before the game's pause
             // menu sees it.
             if (coopPanelOpen || GUIUtility.keyboardControl != 0)
             {
                 return;
             }
+
             var key = Key;
             if (key != KeyCode.None && Input.GetKeyDown(key))
             {
@@ -179,6 +191,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             MenuSkin.Ensure();
             var skin = GUI.skin;
             GUI.skin = MenuSkin.Skin;
@@ -199,6 +212,7 @@ namespace DarkwoodMP.World
                 Ui.Text(f, "No skills here.");
                 return;
             }
+
             var chosen = SkillTree.Chosen(p);
             int level = p.currentLevel,
                 points = SkillTree.Points(level, chosen);
@@ -219,6 +233,7 @@ namespace DarkwoodMP.World
             {
                 color = MenuSkin.Text;
             }
+
             Ui.Label(top[0], $"Skill points: {points}", color);
             Ui.Label(
                 top[1], $"Level {level}", MenuSkin.Dim, TextAnchor.MiddleRight);
@@ -232,6 +247,7 @@ namespace DarkwoodMP.World
                 rows = Math.Max(rows, t.skills.Count);
                 negRows = Math.Max(negRows, t.negativeSkills.Count);
             }
+
             float colW = f.Width / Math.Max(1, n),
                 icon = Mathf.Min(Icon, colW - 8 * UiWindow.S),
                 gap = 6 * UiWindow.S;
@@ -252,6 +268,7 @@ namespace DarkwoodMP.World
                 {
                     tierColor = MenuSkin.Dim;
                 }
+
                 PixelFont.Draw(
                     c, tier, tierColor, TextAnchor.MiddleCenter,
                     PixelFont.Kind.Title);
@@ -266,8 +283,10 @@ namespace DarkwoodMP.World
                 {
                     opens = $"level {t.level}";
                 }
+
                 Ui.Label(under, opens, MenuSkin.Dim, TextAnchor.MiddleCenter);
             }
+
             f.Space(2);
             var grid = f.Next(rows * (icon + gap));
             for (int i = 0; i < n; i++)
@@ -279,6 +298,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var cell = new Rect(
                         grid.x + i * colW, grid.y + k * (icon + gap), colW,
                         icon + gap);
@@ -289,6 +309,7 @@ namespace DarkwoodMP.World
                         sk.name == _good, false);
                 }
             }
+
             if (negRows > 0)
             {
                 var lr = f.Next(PixelFont.Line + 4 * UiWindow.S);
@@ -311,6 +332,7 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         var cell = new Rect(
                             ngrid.x + i * colW, ngrid.y + k * (icon + gap),
                             colW, icon + gap);
@@ -339,10 +361,12 @@ namespace DarkwoodMP.World
             {
                 show = _good;
             }
+
             if (show == null)
             {
                 show = _negative;
             }
+
             if (show != null)
             {
                 SkillTree.TierOf(show, out bool neg);
@@ -357,6 +381,7 @@ namespace DarkwoodMP.World
                 {
                     nameColor = MenuSkin.Bright;
                 }
+
                 PixelFont.Draw(
                     line, title, nameColor, TextAnchor.MiddleLeft,
                     PixelFont.Kind.Title);
@@ -388,6 +413,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 Ui.Label(f, Capital(state), MenuSkin.Dim);
                 Ui.Text(f, SkillDesc(show));
             }
@@ -398,14 +424,17 @@ namespace DarkwoodMP.World
                 {
                     text = "Choose a skill to learn.";
                 }
+
                 Ui.Text(f, text, MenuSkin.Dim);
             }
+
             // Never shorter than what was drawn, so a description that takes
             // more room than measured can't make the body grow while hovering.
             if (f.Y - detailTop > _detailH)
             {
                 _detailH = f.Y - detailTop;
             }
+
             f.Y = Mathf.Max(f.Y, detailTop + _detailH);
         }
 
@@ -420,6 +449,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int lines = 2;
             foreach (var t in tiers)
             {
@@ -437,6 +467,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             float S = UiWindow.S, gap = 4 * S;   // Flow.Gap
             _detailW = width;
             // As Draw lays them out: the name (Line + 2S and a gap), the state
@@ -452,6 +483,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var chosen = SkillTree.Chosen(p);
             int level = p.currentLevel;
             bool needNeg =
@@ -485,6 +517,7 @@ namespace DarkwoodMP.World
                     status = "";
                 }
             }
+
             Rect cell = c[0];
             string fitted = PixelFont.Fit(status, c[0].width);
             Color tint;
@@ -496,6 +529,7 @@ namespace DarkwoodMP.World
             {
                 tint = MenuSkin.Dim;
             }
+
             Ui.Label(cell, fitted, tint);
             bool ready = false;
             if (_good != null && !SkillTree.Waiting)
@@ -505,12 +539,15 @@ namespace DarkwoodMP.World
                 {
                     negative = _negative;
                 }
+
                 ready = SkillTree.Check(level, chosen, _good, negative) == null;
             }
+
             if (Event.current.type == EventType.Repaint)
             {
                 _learnRect = ToScreen(c[1]);
             }
+
             if (Ui.Button(c[1], "Learn", ready))
             {
                 LearnChosen();
@@ -527,6 +564,7 @@ namespace DarkwoodMP.World
             {
                 negative = _negative;
             }
+
             if (SkillTree.Learn(_good, negative, out string why))
             {
                 _good = _negative = _message = null;
@@ -569,11 +607,13 @@ namespace DarkwoodMP.World
             {
                 mouse = Event.current.mousePosition;
             }
+
             bool hover = cell.Contains(mouse);
             if (hover)
             {
                 _hover = sk.name;
             }
+
             var frame = new Rect(
                 r.x - 3 * S, r.y - 3 * S, r.width + 6 * S, r.height + 6 * S);
             GUI.Box(frame, GUIContent.none, MenuSkin.Sunken);
@@ -597,6 +637,7 @@ namespace DarkwoodMP.World
             {
                 tint = new Color(0.25f, 0.25f, 0.25f);
             }
+
             if (negative)
             {
                 float brightness = 0.3f;
@@ -615,8 +656,10 @@ namespace DarkwoodMP.World
                         brightness = 0.65f;
                     }
                 }
+
                 tint = new Color(1f, 0.4f, 0.4f) * brightness;
             }
+
             tint.a = 1f;
             if (!SkillIcons.Draw(r, sk.name, tint))
             {
@@ -624,6 +667,7 @@ namespace DarkwoodMP.World
                     r, PixelFont.Fit(SkillName(sk.name), r.width), tint,
                     TextAnchor.MiddleCenter);
             }
+
             if (Event.current.type == EventType.Repaint)
             {
                 if (have)
@@ -637,6 +681,7 @@ namespace DarkwoodMP.World
                     {
                         c = LearnedFrame;
                     }
+
                     Outline(frame, 2 * S, c);
                 }
                 else if (picked)
@@ -647,6 +692,7 @@ namespace DarkwoodMP.World
                 {
                     Outline(frame, S, HoverFrame);
                 }
+
                 if (have)
                 {
                     Color markColor;
@@ -658,10 +704,13 @@ namespace DarkwoodMP.World
                     {
                         markColor = LearnedFrame;
                     }
+
                     CheckMark(new Vector2(frame.xMax, frame.y), S, markColor);
                 }
+
                 _rects[sk.name] = new[] { ToScreen(r), ToScreen(cell) };
             }
+
             if (GUI.Button(cell, GUIContent.none, GUIStyle.none) && can
                 && !have)
             {
@@ -688,6 +737,7 @@ namespace DarkwoodMP.World
                         _good = sk.name;
                     }
                 }
+
                 // A negative skill goes with the first skill of its own tier: a
                 // pick that doesn't fit the other drops it.
                 if (_good != null && _negative != null
@@ -703,12 +753,14 @@ namespace DarkwoodMP.World
                         _negative = null;
                     }
                 }
+
                 var p = Player.Instance;
                 if (_good != null && _negative != null && p != null
                     && !SkillTree.NeedsNegative(SkillTree.Chosen(p), _good))
                 {
                     _negative = null;
                 }
+
                 try
                 {
                     AudioController.Play("UI_click");
@@ -771,6 +823,7 @@ namespace DarkwoodMP.World
             {
                 return s;
             }
+
             return char.ToUpperInvariant(s[0]) + s.Substring(1);
         }
 
@@ -793,6 +846,7 @@ namespace DarkwoodMP.World
             {
                 return s;
             }
+
             try
             {
                 if (global::Language.HasKey(key, "Skills"))
@@ -808,10 +862,12 @@ namespace DarkwoodMP.World
             {
                 s = fallback;
             }
+
             if (s == null)
             {
                 s = fallback;
             }
+
             s = Clean(s);
             cache[key] = s;
             return s;
@@ -831,9 +887,11 @@ namespace DarkwoodMP.World
                     {
                         skip = 4;
                     }
+
                     i += 1 + skip;
                     continue;
                 }
+
                 char ch;
                 if (s[i] == '\r')
                 {
@@ -843,8 +901,10 @@ namespace DarkwoodMP.World
                 {
                     ch = s[i];
                 }
+
                 sb.Append(ch);
             }
+
             return sb.ToString().Trim();
         }
 
@@ -877,6 +937,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var chosen = SkillTree.Chosen(p);
             bool needNeg = SkillTree.NeedsNegative(chosen, good);
             string needed = null;
@@ -884,6 +945,7 @@ namespace DarkwoodMP.World
             {
                 needed = negative;
             }
+
             return SkillTree.Check(p.currentLevel, chosen, good, needed)
                 == null;
         }
@@ -926,6 +988,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             icon = rs[0];
             cell = rs[1];
             return true;
@@ -950,11 +1013,13 @@ namespace DarkwoodMP.World
             {
                 first = skills[0];
             }
+
             Rect firstCell = default;
             if (first != null)
             {
                 firstCell = _rects[first][1];
             }
+
             Rect win = Win.Rect;
             bool scrolls = Win.TestScrolls;
             float content = Win.TestContentHeight;
@@ -976,6 +1041,7 @@ namespace DarkwoodMP.World
                     {
                         fc = _rects[first][1];
                     }
+
                     if (Win.Rect.size != win.size
                         || Win.TestScrolls != scrolls
                         || Mathf.Abs(Win.TestContentHeight - content) > 0.5f
@@ -987,6 +1053,7 @@ namespace DarkwoodMP.World
                         {
                             hover = "nothing";
                         }
+
                         Plugin.Log.LogInfo(
                             $"[skills] FAIL hovering {sk} ({hover}): window "
                                 + $"{Win.Rect.width}x{Win.Rect.height}, "
@@ -996,6 +1063,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             TestMouse = null;
             string text;
             if (bad == 0)
@@ -1006,6 +1074,7 @@ namespace DarkwoodMP.World
             {
                 text = $"FAIL {bad} frames moved";
             }
+
             Plugin.Log.LogInfo(
                 $"[skills] hover sweep: {frames} frames, {text}");
             if (done != null)
@@ -1030,6 +1099,7 @@ namespace DarkwoodMP.World
             {
                 Toggle();
             }
+
             yield return new WaitForSecondsRealtime(1f);
             while (p != null && Open && SkillTree.Points(p) > 0 && n < 10)
             {
@@ -1041,6 +1111,7 @@ namespace DarkwoodMP.World
                         $"{SkillTree.Points(p)} points but nothing to learn");
                     break;
                 }
+
                 int before = SkillTree.Points(p);
                 foreach (var sk in new[] { choice[0], choice[1] })
                 {
@@ -1048,11 +1119,13 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     if (!_rects.TryGetValue(sk, out var rs))
                     {
                         fails.Add($"{sk} not drawn");
                         continue;
                     }
+
                     bool reached = false;
                     yield return RealMouse.MoveTo(
                         rs[1].center, ok => reached = ok);
@@ -1064,32 +1137,38 @@ namespace DarkwoodMP.World
                     {
                         over = "nothing";
                     }
+
                     string picked = _good;
                     if (picked == null)
                     {
                         picked = "nothing";
                     }
+
                     string pickedNegative = _negative;
                     if (pickedNegative == null)
                     {
                         pickedNegative = "nothing";
                     }
+
                     string why = _message;
                     if (why == null)
                     {
                         why = "none";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[skills] real click {n} on {sk} (reached {reached}, "
                             + $"mouse {mouse}, cell {cell}): over {over}, "
                             + $"chosen {picked} with {pickedNegative}, message "
                             + $"{why}");
                 }
+
                 float until = Time.realtimeSinceStartup + 8f;
                 while (SkillTree.Waiting && Time.realtimeSinceStartup < until)
                 {
                     yield return null;
                 }
+
                 yield return null;
                 yield return RealMouse.MoveTo(_learnRect.center);
                 yield return RealMouse.Click();
@@ -1099,6 +1178,7 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                 }
+
                 yield return new WaitForSecondsRealtime(0.3f);
                 var have = SkillTree.Chosen(p);
                 bool ok2 = have.Contains(choice[0])
@@ -1110,12 +1190,14 @@ namespace DarkwoodMP.World
                 {
                     outcome = "learned";
                 }
+
                 string skill = choice[0];
                 string withNegative = "";
                 if (choice[1] != null)
                 {
                     withNegative = " with " + choice[1];
                 }
+
                 int after = SkillTree.Points(p);
                 bool panelOpen = Open;
                 string stillPicked = _good;
@@ -1123,11 +1205,13 @@ namespace DarkwoodMP.World
                 {
                     stillPicked = "nothing";
                 }
+
                 string reason = _message;
                 if (reason == null)
                 {
                     reason = "none";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[skills] real click {n} on Learn (mouse {pointer}, "
                         + $"button {button}): {outcome} {skill}{withNegative}, "
@@ -1141,39 +1225,47 @@ namespace DarkwoodMP.World
                     {
                         text = "+" + choice[1];
                     }
+
                     string good = _good;
                     if (good == null)
                     {
                         good = "nothing";
                     }
+
                     string negative = _negative;
                     if (negative == null)
                     {
                         negative = "nothing";
                     }
+
                     string message = _message;
                     if (message == null)
                     {
                         message = "none";
                     }
+
                     fails.Add(
                         $"choice {n} ({choice[0]}{text}) not learned: chosen "
                             + $"{good} with {negative}, message {message}");
                     break;
                 }
             }
+
             if (!Open)
             {
                 fails.Add("the panel closed");
             }
+
             if (p != null && SkillTree.Points(p) > 0 && fails.Count == 0)
             {
                 fails.Add($"{SkillTree.Points(p)} points left");
             }
+
             if (SkillTree.NegativesWrong(p) is string wrong)
             {
                 fails.Add("negative skills: " + wrong);
             }
+
             if (done != null)
             {
                 done(fails);
@@ -1195,6 +1287,7 @@ namespace DarkwoodMP.World
             "Secondary Attack",
             "Attack"
         };
+
         private static readonly bool[] _pressedOnPanel = new bool[3];
         private static int _mouseFrame = -1;
         private static bool _overPanel;
@@ -1214,6 +1307,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _mouseFrame = Time.frameCount;
             var m = Input.mousePosition;
             _overPanel =
@@ -1243,6 +1337,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             MouseState();
             bool held =
                 _pressedOnPanel[0] || _pressedOnPanel[1] || _pressedOnPanel[2];
@@ -1251,6 +1346,7 @@ namespace DarkwoodMP.World
             {
                 TestEaten++;
             }
+
             return eat;
         }
     }
@@ -1270,6 +1366,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = false;
             return false;
         }
@@ -1286,6 +1383,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = false;
             return false;
         }
@@ -1304,6 +1402,7 @@ namespace DarkwoodMP.World
             {
                 return true; // a film to skip goes first
             }
+
             SkillsPanel.CloseFromEscape();
             return false;
         }
@@ -1333,6 +1432,7 @@ namespace DarkwoodMP.World
                     {
                         spr = go.GetComponent<tk2dSprite>();
                     }
+
                     if (spr != null && spr.Collection != null)
                     {
                         _coll = spr.Collection.inst;
@@ -1341,6 +1441,7 @@ namespace DarkwoodMP.World
                     {
                         _coll = null;
                     }
+
                     if (_coll == null)
                     {
                         Plugin.Log.LogWarning(
@@ -1354,10 +1455,12 @@ namespace DarkwoodMP.World
                         $"[skills] no skill icons: {e.Message}");
                 }
             }
+
             if (_coll == null)
             {
                 return false;
             }
+
             if (!_ids.TryGetValue(skill, out int id))
             {
                 id = _coll.GetSpriteIdByName("skill_" + skill, -1);
@@ -1374,10 +1477,12 @@ namespace DarkwoodMP.World
                             + $"{string.Join(" ", Array.ConvertAll(d0.uvs, u => $"({u.x:0.###},{u.y:0.###})"))}");
                 }
             }
+
             if (id < 0 || Event.current.type != EventType.Repaint)
             {
                 return id >= 0;
             }
+
             var def = _coll.spriteDefinitions[id];
             Material mat;
             if (def.materialInst != null)
@@ -1388,15 +1493,18 @@ namespace DarkwoodMP.World
             {
                 mat = def.material;
             }
+
             Texture tex = null;
             if (mat != null)
             {
                 tex = mat.mainTexture;
             }
+
             if (tex == null || def.uvs == null || def.uvs.Length < 4)
             {
                 return false;
             }
+
             float u0 = float.MaxValue,
                 v0 = float.MaxValue,
                 u1 = float.MinValue,
@@ -1408,6 +1516,7 @@ namespace DarkwoodMP.World
                 u1 = Mathf.Max(u1, uv.x);
                 v1 = Mathf.Max(v1, uv.y);
             }
+
             var old = GUI.color;
             GUI.color = tint * old;
             if (def.flipped == tk2dSpriteDefinition.FlipMode.None)
@@ -1425,6 +1534,7 @@ namespace DarkwoodMP.World
                     r, tex, new Rect(u0, v0, u1 - u0, v1 - v0), true);
                 GUI.matrix = m;
             }
+
             GUI.color = old;
             return true;
         }

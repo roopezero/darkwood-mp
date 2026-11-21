@@ -72,9 +72,11 @@ namespace DarkwoodMP
                 {
                     return instance._browser;
                 }
+
                 return null;
             }
         }
+
         private DirectPanel _direct;
         private WorldShare _world;
         private NetEnemies _enemies;
@@ -114,6 +116,7 @@ namespace DarkwoodMP
                     return "To host, load your world first (Start Game), then "
                         + "press Esc and choose Multiplayer in the pause menu.";
                 }
+
                 // After leaving someone's game you're still in your copy of
                 // their world (your own saves are untouched).
                 WorldShare share = WorldShare.Instance;
@@ -123,12 +126,14 @@ namespace DarkwoodMP
                         + "host, go back to the main menu and load your own "
                         + "world.";
                 }
+
                 if (EpilogueSync.InEpilogueAlone())
                 {
                     return "This world is in the epilogue, which can't be "
                         + "shared once it has begun. Host from a save before "
                         + "the end of the game.";
                 }
+
                 return null;
             }
         }
@@ -185,6 +190,7 @@ namespace DarkwoodMP
             {
                 yield return null; // the load starts
             }
+
             while (!WorldShare.WorldReady)
             {
                 if (WorldShare.MainMenuReady())
@@ -194,17 +200,21 @@ namespace DarkwoodMP
                             + "loaded: not hosting");
                     yield break;
                 }
+
                 yield return null;
             }
+
             if (_session.Active)
             {
                 yield break;
             }
+
             if (CantHostReason is string why)
             {
                 Log.LogWarning($"[start game] can't host: {why}");
                 yield break;
             }
+
             if (steam && _steam is IGuiSection steamGui)
             {
                 steamGui.Host();
@@ -220,6 +230,7 @@ namespace DarkwoodMP
                 {
                     status = _tcp.Status;
                 }
+
                 Log.LogInfo(
                     $"[start game] hosting with Direct on port {port}: "
                         + $"{status}");
@@ -246,10 +257,12 @@ namespace DarkwoodMP
             {
                 password = Cfg.Password.Value;
             }
+
             if (maxPlayers <= 0)
             {
                 maxPlayers = Cfg.MaxPlayers.Value;
             }
+
             return _tcp.Host(serverName, port, password, maxPlayers);
         }
 
@@ -287,6 +300,7 @@ namespace DarkwoodMP
                 TurnOff(problem);
                 return;
             }
+
             try
             {
                 ProbeCore();
@@ -296,6 +310,7 @@ namespace DarkwoodMP
                 TurnOff(e.Message);
                 return;
             }
+
             Cfg = new ModConfig
             {
                 PlayerName = Config.Bind(
@@ -385,6 +400,7 @@ namespace DarkwoodMP
                 PlayerCount = () => _session.PlayerCount,
                 MapPort = OpensPort
             };
+
             _session.Add(_tcp);
             _browser = new ServerBrowser(Paths.ConfigPath);
             _direct = new DirectPanel(_tcp, _browser, _session);
@@ -396,6 +412,7 @@ namespace DarkwoodMP
                     _panel.Show();
                 }
             };
+
             _panel = new UiWindow(0x0D3A, "Multiplayer")
             {
                 MinSize = new Vector2(300, 160),
@@ -415,6 +432,7 @@ namespace DarkwoodMP
                 FooterHeight = 13 + 8,
                 OnClose = () => SetPanel(false),
             };
+
             new StartGameWindow();
             SaveBook.Register(_session);
             OptionsWindow.Init();
@@ -481,6 +499,7 @@ namespace DarkwoodMP
             {
                 Core.dontPlayIntroLogos = true;
             }
+
             StartCoroutine(LogStartTimes());
 
             var args = Environment.GetCommandLineArgs();
@@ -490,6 +509,7 @@ namespace DarkwoodMP
             {
                 LoadProfiler.Start(_harmony);
             }
+
             // "--dwmp-test-control PORT": take test commands from
             // tools/run-test.sh (one game for a whole test run).
             int tc = Array.IndexOf(args, "--dwmp-test-control");
@@ -498,6 +518,7 @@ namespace DarkwoodMP
             {
                 TestControl.Start(this, controlPort);
             }
+
             ApplyTestArgs(args);
         }
 
@@ -521,8 +542,10 @@ namespace DarkwoodMP
                 {
                     return args[i + 1];
                 }
+
                 return null;
             }
+
             bool Has(string name) => Array.IndexOf(args, name) >= 0;
             foreach (var a in args)
             {
@@ -531,6 +554,7 @@ namespace DarkwoodMP
                     TestMode = true;
                 }
             }
+
             LoadingScreen.ShotsDir = Arg("--dwmp-load-shots");
             // "--dwmp-window WxH": play in a window of that size (to check the
             // UI at other sizes); without it, the size from before is put back.
@@ -541,6 +565,7 @@ namespace DarkwoodMP
                 {
                     wh = windowArg.Split('x');
                 }
+
                 if (wh != null && wh.Length == 2
                     && int.TryParse(wh[0], out int ww)
                     && int.TryParse(wh[1], out int hh))
@@ -550,6 +575,7 @@ namespace DarkwoodMP
                         _sizeBefore = (Screen.width, Screen.height,
                             Screen.fullScreenMode);
                     }
+
                     Screen.SetResolution(ww, hh, FullScreenMode.Windowed);
                     Log.LogInfo($"--dwmp-window: {ww}x{hh}");
                 }
@@ -559,6 +585,7 @@ namespace DarkwoodMP
                     _sizeBefore = null;
                 }
             }
+
             // "--dwmp-low-quality": Unity's lowest quality level;
             // "--dwmp-fps N": at most N frames a second (vsync off). For the
             // map4 test, where five games share one machine. Only set, never
@@ -571,16 +598,19 @@ namespace DarkwoodMP
             {
                 _testPresence = true;
             }
+
             if (Has("--dwmp-low-quality"))
             {
                 QualitySettings.SetQualityLevel(0, true);
                 Log.LogInfo("--dwmp-low-quality: quality level 0");
             }
+
             if (int.TryParse(Arg("--dwmp-fps"), out int fps) && fps > 0)
             {
                 _fpsCap = fps;
                 Log.LogInfo($"--dwmp-fps: {fps}");
             }
+
             bool Seconds(string name, out float s) => float.TryParse(
                 Arg(name), System.Globalization.NumberStyles.Float,
                 System.Globalization.CultureInfo.InvariantCulture, out s);
@@ -598,6 +628,7 @@ namespace DarkwoodMP
                 Log.LogInfo(
                     $"--dwmp-upnp-test: the router is {PortMapper.TestRouter}");
             }
+
             if (Has("--dwmp-host"))
             {
                 if (int.TryParse(Arg("--dwmp-max-players"), out int mp))
@@ -608,8 +639,10 @@ namespace DarkwoodMP
                 {
                     TcpBackend.TestMaxPlayers = 0;
                 }
+
                 HostDirect(Arg("--dwmp-password"), TcpBackend.TestMaxPlayers);
             }
+
             // "--dwmp-continue N": load your own profile N once the main menu
             // is up; "--dwmp-sandbox DIR": a copy of the saves in DIR.
             if (int.TryParse(Arg("--dwmp-continue"), out int profileId))
@@ -618,6 +651,7 @@ namespace DarkwoodMP
                     _world.ContinueOwnProfile(
                         profileId, Arg("--dwmp-sandbox")));
             }
+
             Threat.Debug = Has("--dwmp-debug-threat");
             ModProfiler.Enabled = Has("--dwmp-profile-mod");
             LoadSpeed.Verify = Has("--dwmp-verify-load");
@@ -626,12 +660,14 @@ namespace DarkwoodMP
             {
                 StartTest(WorldTest.Run());
             }
+
             // "--dwmp-test-client-actions": as a client, use up a rope and open
             // a door; the scripted host refuses it.
             if (Has("--dwmp-test-client-actions"))
             {
                 StartTest(WorldTest.ClientActions());
             }
+
             // "--dwmp-test-client-menu": as a client, once our character has
             // come, go back to the main menu as the pause menu does (the
             // session must end), then join the same server again from the
@@ -640,24 +676,28 @@ namespace DarkwoodMP
             {
                 StartTest(ClientMenuRejoin(Arg("--dwmp-join")));
             }
+
             // "--dwmp-steam-test": host a Steam lobby once Steam is up, log it,
             // leave (the most one account can test).
             if (Has("--dwmp-steam-test"))
             {
                 StartTest(SteamSelfTest());
             }
+
             // "--dwmp-test-reload N": N seconds after a player joins, your game
             // loads its world again (players should follow).
             if (Seconds("--dwmp-test-reload", out float reloadAfter))
             {
                 StartTest(ReloadAfterJoin(reloadAfter));
             }
+
             // "--dwmp-test-death": 6 seconds after a player joins, your
             // character dies (for testing death with others in the world).
             if (Has("--dwmp-test-death"))
             {
                 StartTest(DieAfterJoin());
             }
+
             // "--dwmp-test-fx": 4 seconds after a player joins, your character
             // is hit for 1 (blood, a pain sound) and burns for 3 seconds
             // without damage, so they see and hear it on your puppet.
@@ -665,18 +705,21 @@ namespace DarkwoodMP
             {
                 StartTest(FxAfterJoin());
             }
+
             // "--dwmp-test-night": once a player is in, send a night worm and a
             // night attacker at them (logged "[night test]").
             if (Has("--dwmp-test-night"))
             {
                 StartTest(Combat.NightSpawns.TestAfterJoin());
             }
+
             // "--dwmp-test-menu N": N seconds after a player joins, your game
             // goes back to the main menu (the server should stop).
             if (Seconds("--dwmp-test-menu", out float menuAfter))
             {
                 StartTest(MenuAfterJoin(menuAfter));
             }
+
             // "--dwmp-test-chapter": once your world is ready, log the triggers
             // in your world that start a chapter ("[chapter test] trigger KIND
             // ID INDEX at X Z"), for a scripted player to ask for.
@@ -684,12 +727,14 @@ namespace DarkwoodMP
             {
                 StartTest(ChapterTriggers());
             }
+
             // "--dwmp-test-end N": N seconds after a player joins, your game
             // starts the epilogue (the game's end).
             if (Seconds("--dwmp-test-end", out float endAfter))
             {
                 StartTest(EndAfterJoin(endAfter));
             }
+
             // "--dwmp-test-quick-end": as a joiner, skip the epilogue and the
             // credits soon after they start.
             Chapters.TestQuick = Has("--dwmp-test-quick-end");
@@ -699,6 +744,7 @@ namespace DarkwoodMP
             {
                 StartTest(SaveAfterJoin(saveAfter));
             }
+
             _spawnType = Arg("--dwmp-spawn");
             // "--dwmp-test-blast": once a player joins, an enemy bomb, damage
             // aura and flame go off at them (see Combat.AreaHitsTest).
@@ -707,6 +753,7 @@ namespace DarkwoodMP
                 StartTest(AreaHitsTest.Run());
                 StartTest(EnemyFxTest.Run());
             }
+
             // "--dwmp-test-away" (with --dwmp-dummy): knock an object near you,
             // then be away (as in a separate location) for a few seconds; logs
             // the push sent and the enemies kept running near the dummy.
@@ -714,16 +761,19 @@ namespace DarkwoodMP
             {
                 StartTest(World.AwayTest.Run());
             }
+
             // "--dwmp-join host:port": join a server once the main menu is up.
             if (Arg("--dwmp-join") is string join)
             {
                 StartTest(JoinWhenReady(join));
             }
+
             // "--dwmp-dummy": leave a test dummy once in a world.
             if (Has("--dwmp-dummy"))
             {
                 StartTest(DummyWhenInWorld());
             }
+
             // "--dwmp-test-menu-entry": check that the menu's list takes a
             // click, Join Game in the main menu (or, with --dwmp-continue,
             // Multiplayer in the pause menu), and opens the co-op panel.
@@ -732,6 +782,7 @@ namespace DarkwoodMP
                 StartTest(
                     MenuEntryTest(Has("--dwmp-continue"), Arg("--dwmp-shots")));
             }
+
             // "--dwmp-screen WxH": a window of that size once the main menu is
             // up (for checking other screen shapes; with --dwmp-shots DIR,
             // screenshots of the menu and, with --dwmp-continue, the world and
@@ -754,6 +805,7 @@ namespace DarkwoodMP
                     ScreenTest(
                         screen, Arg("--dwmp-shots"), Has("--dwmp-continue")));
             }
+
             // "--dwmp-testworld": start the test world from the main menu
             // ("--dwmp-reset": from a fresh copy); with --dwmp-shots DIR,
             // screenshots of the area once it's built.
@@ -765,18 +817,21 @@ namespace DarkwoodMP
                     StartTest(TestWorldShots(tdir));
                 }
             }
+
             // "--dwmp-dump-prefabs": once in a world, log every prefab the save
             // system knows (name -> path).
             if (Has("--dwmp-dump-prefabs"))
             {
                 StartTest(DumpPrefabs());
             }
+
             // "--dwmp-dump-ui": log the main menu's objects (and the fonts
             // loaded), for building UI that matches it.
             if (Has("--dwmp-dump-ui"))
             {
                 StartTest(DumpUi());
             }
+
             // "--dwmp-shots DIR": screenshots of the menus, the Multiplayer
             // window, the server browser and its connect dialog (and, in a
             // world with a player in, the pause menu) into DIR.
@@ -792,12 +847,14 @@ namespace DarkwoodMP
             {
                 StartTest(OptionsTest.Run(optDir, Has("--dwmp-continue")));
             }
+
             // "--dwmp-test-drag": a window moved and resized by made-up mouse
             // events, slowly and fast ("[drag]" lines).
             if (Has("--dwmp-test-drag"))
             {
                 StartTest(DragTest.Run());
             }
+
             // "--dwmp-test-tooltips DIR": once in a world, dump the items' and
             // map elements' data into DIR and check that each has a description
             // (the game's or the mod's, World/Tooltips.cs) ("[tooltips]"
@@ -806,16 +863,19 @@ namespace DarkwoodMP
             {
                 StartTest(World.Tooltips.Test(tipDir));
             }
+
             // "--dwmp-test-drag-real": the test window open for two minutes for
             // a real mouse to drag ("[drag-real]" lines).
             if (Has("--dwmp-test-drag-real"))
             {
                 StartTest(DragTest.RunReal());
             }
+
             if (Arg("--dwmp-solo-test") is string solo)
             {
                 StartTest(SoloTest(solo));
             }
+
             if (Arg("--dwmp-shots") is string shots
                 && !Has("--dwmp-test-menu-entry") && !Has("--dwmp-solo-test")
                 && !Has("--dwmp-screen") && !Has("--dwmp-testworld")
@@ -838,6 +898,7 @@ namespace DarkwoodMP
                     StopCoroutine(c);
                 }
             }
+
             _tests.Clear();
             MapScenario.Stop();
             OptionsTest.RestoreIfCutShort();
@@ -862,6 +923,7 @@ namespace DarkwoodMP
                 player.inShop = false;
                 player.talkedToNPC = null;
             }
+
             Threat.Debug = false;
             WorldActions.Debug = false;
             LoadSpeed.Verify = false;
@@ -890,6 +952,7 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 Log.LogInfo(
                     $"Main menu ready {Time.realtimeSinceStartup:0.0} s after "
                         + "start");
@@ -897,15 +960,18 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 float left = Time.realtimeSinceStartup;
                 while (!WorldShare.WorldReady && !WorldShare.MainMenuReady())
                 {
                     yield return null;
                 }
+
                 if (!WorldShare.WorldReady)
                 {
                     continue;
                 }
+
                 Log.LogInfo(
                     $"World ready {Time.realtimeSinceStartup:0.0} s after "
                         + $"start, {Time.realtimeSinceStartup - left:0.0} s "
@@ -914,6 +980,7 @@ namespace DarkwoodMP
                 {
                     LoadProfiler.Report();
                 }
+
                 if (first && LoadSpeed.Verify)
                 {
                     Log.LogInfo(
@@ -921,6 +988,7 @@ namespace DarkwoodMP
                             + $"nodes, {LoadSpeed.Mismatches} different from "
                             + "the game's search");
                 }
+
                 first = false;
                 while (WorldShare.InWorld)
                 {
@@ -943,10 +1011,12 @@ namespace DarkwoodMP
             {
                 yield break;
             }
+
             if (before > 0f)
             {
                 yield return new WaitForSecondsRealtime(before);
             }
+
             ScreenCapture.CaptureScreenshot(path);
             yield return new WaitForSecondsRealtime(after);
             if (log != null)
@@ -964,12 +1034,14 @@ namespace DarkwoodMP
                 string path = System.IO.Path.Combine(dir, name + ".png");
                 return Screenshot(path, before: 1.5f, log: $"[shots] {path}");
             }
+
             if (!inWorldToo)
             {
                 while (!WorldShare.MainMenuReady())
                 {
                     yield return null;
                 }
+
                 yield return new WaitForSecondsRealtime(4f);
                 yield return Shot("main-menu");
                 Log.LogInfo($"[shots] {MenuList.Check()}");
@@ -987,19 +1059,23 @@ namespace DarkwoodMP
                 yield return Shot("main-menu-connect");
                 SetPanel(false);
             }
+
             if (!inWorldToo)
             {
                 Log.LogInfo("[shots] done");
                 yield break;
             }
+
             while (!WorldShare.WorldReady)
             {
                 yield return null;
             }
+
             while (_session.Active && _session.Peers.Count == 0)
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(8f);
             yield return Shot("world");
             string hudBefore = PauseHud.Shown();
@@ -1046,6 +1122,7 @@ namespace DarkwoodMP
             {
                 text = "PASS";
             }
+
             Log.LogInfo($"[shots] {shot}: {text} HUD shown {now}, want {want}");
         }
 
@@ -1061,11 +1138,13 @@ namespace DarkwoodMP
             {
                 text = "PASS";
             }
+
             string reason = World.UiState.Reason;
             if (reason == null)
             {
                 reason = "the world in play";
             }
+
             Log.LogInfo(
                 $"[shots] {shot}: {text} world overlays hidden {now} "
                     + $"({reason}), want {hidden}");
@@ -1082,6 +1161,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(6f);
             Log.LogInfo($"[solo] session active {_session.Active}");
             yield return Shot("solo-world");
@@ -1102,6 +1182,7 @@ namespace DarkwoodMP
             {
                 controls = Singleton<MainMenu>.Instance.ControlsMenu;
             }
+
             if (controls != null)
             {
                 var keys = new List<string>();
@@ -1122,9 +1203,11 @@ namespace DarkwoodMP
                         keys.Add($"{a}=? {e.GetType().Name}");
                     }
                 }
+
                 Log.LogInfo(
                     $"[solo] the game's keys: {string.Join(", ", keys)}");
             }
+
             Log.LogInfo($"[solo] skill tiers: {SkillTree.Describe()}");
             var p = Player.Instance;
             var ctl = Singleton<Controller>.Instance;
@@ -1159,6 +1242,7 @@ namespace DarkwoodMP
                 {
                     text = " with " + choice[1];
                 }
+
                 string outcome;
                 if (why == null)
                 {
@@ -1168,6 +1252,7 @@ namespace DarkwoodMP
                 {
                     outcome = "FAIL " + why;
                 }
+
                 Log.LogInfo(
                     $"[solo] learned {choice[0]}{text}: {outcome}, points "
                         + $"{pointsBefore} -> {SkillTree.Points(p)}");
@@ -1179,6 +1264,7 @@ namespace DarkwoodMP
                 {
                     repeat = "refused (" + again + ")";
                 }
+
                 Log.LogInfo($"[solo] the same skill again: {repeat}");
 
                 // The mouse (the panel's test mouse) on the learned icon's
@@ -1194,11 +1280,13 @@ namespace DarkwoodMP
                     {
                         testHover = "nothing";
                     }
+
                     Log.LogInfo(
                         $"[solo] test mouse at {choice[0]}'s icon edge: over "
                             + $"{testHover}; icon {icon}, cell {cell}");
                     SkillsPanel.TestMouse = null;
                 }
+
                 // Hovering every skill in turn mustn't change the window, its
                 // scrollbar or the grid's place.
                 yield return SkillsPanel.TestHoverSweep(null);
@@ -1219,17 +1307,20 @@ namespace DarkwoodMP
                     {
                         hovered = "nothing";
                     }
+
                     string testChosen = SkillsPanel.TestChosen;
                     if (testChosen == null)
                     {
                         testChosen = "nothing";
                     }
+
                     Log.LogInfo(
                         $"[solo] real mouse: over {hovered}, chosen "
                             + $"{testChosen}, the game's mouse reads eaten "
                             + $"{SkillsPanel.TestEaten - eaten}");
                     yield return Shot("solo-skills-real-mouse");
                 }
+
                 // Several points spent one after another with the real mouse: a
                 // skill, its negative one if needed, Learn.
                 if (RealMouse.Available)
@@ -1249,6 +1340,7 @@ namespace DarkwoodMP
                     {
                         result = "FAIL " + string.Join("; ", clickFails);
                     }
+
                     Log.LogInfo(
                         $"[solo] real clicks on {had} points: {result}: "
                             + $"{Progression.TestState()}");
@@ -1259,6 +1351,7 @@ namespace DarkwoodMP
                         "[solo] no ydotool: the real clicks were not tried");
                 }
             }
+
             SkillsPanel.TestPressKey();
             yield return new WaitForSecondsRealtime(1.5f);
             Log.LogInfo(
@@ -1274,6 +1367,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             bool morningWas = ctl.isAfterNight;
             ctl.isAfterNight = false;
             Log.LogInfo(
@@ -1318,6 +1412,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(1f);
             Log.LogInfo(
                 $"[solo] after a full bar at the stove: level {levelBefore} -> "
@@ -1347,8 +1442,10 @@ namespace DarkwoodMP
                 {
                     path = System.IO.Path.Combine(shots, $"{size}-{name}.png");
                 }
+
                 return Screenshot(path);
             }
+
             // Loading a world sets the game's own resolution again, so in a
             // world the size is set once it's up.
             if (!inWorld)
@@ -1357,6 +1454,7 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 Screen.SetResolution(w, h, FullScreenMode.Windowed);
                 yield return new WaitForSecondsRealtime(3f);
                 Log.LogInfo(
@@ -1379,10 +1477,12 @@ namespace DarkwoodMP
                 Log.LogInfo("[screen] done");
                 yield break;
             }
+
             while (!WorldShare.WorldReady)
             {
                 yield return null;
             }
+
             Screen.SetResolution(w, h, FullScreenMode.Windowed);
             yield return new WaitForSecondsRealtime(4f);
             Log.LogInfo(
@@ -1418,16 +1518,19 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 yield return new WaitForSecondsRealtime(2f);
                 yield return CheckMenuEntry("main menu", shots);
                 yield break;
             }
+
             // Loading the world turns the menu's buttons off at once, so the
             // main menu is checked on its own.
             while (!WorldShare.WorldReady)
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(3f);
             Core.showHidePauseMenu();
             yield return new WaitForSecondsRealtime(2f);
@@ -1447,6 +1550,7 @@ namespace DarkwoodMP
             {
                 label = "Join Game";
             }
+
             bool took = MenuList.Click(label);
             yield return null;
             yield return null;
@@ -1460,6 +1564,7 @@ namespace DarkwoodMP
                         shots, $"panel-{where.Replace(' ', '-')}.png"),
                     before: 1f);
             }
+
             SetPanel(false);
             yield return null;
         }
@@ -1470,6 +1575,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(6f);
             // Out of the house and turned towards the area's west side, so some
             // of it is in sight.
@@ -1498,6 +1604,7 @@ namespace DarkwoodMP
                     before: 1.5f, after: 1f);
                 Player.Instance.closeInventory();
             }
+
             Log.LogInfo("[testworld] shots done");
         }
 
@@ -1507,11 +1614,13 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             var sm = Singleton<SaveManager>.Instance;
             foreach (var kv in sm.prefabDictionary)
             {
                 Log.LogInfo($"[prefab] {kv.Key} = {kv.Value}");
             }
+
             Log.LogInfo($"[prefab] {sm.prefabDictionary.Count} prefabs");
             var idb = Singleton<ItemsDatabase>.Instance;
             if (idb != null)
@@ -1529,16 +1638,19 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(3f);
             var menu = Singleton<MainMenu>.Instance;
             if (menu != null)
             {
                 DumpTree(menu.transform, 0);
             }
+
             foreach (var f in Resources.FindObjectsOfTypeAll<Font>())
             {
                 Log.LogInfo($"[ui] font {f.name} dynamic={f.dynamic}");
             }
+
             var ui = Singleton<UI>.Instance;
             if (ui != null)
             {
@@ -1550,6 +1662,7 @@ namespace DarkwoodMP
                             + $"pos={c.localPosition}");
                 }
             }
+
             try
             {
                 foreach (var kv in global::Language.GetAllKeysForSheet("UI"))
@@ -1569,6 +1682,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var comps = string.Join(",",
                 Array.ConvertAll(t.GetComponents<Component>(), c =>
             {
@@ -1576,8 +1690,10 @@ namespace DarkwoodMP
                 {
                     return "?";
                 }
+
                 return c.GetType().Name;
             }));
+
             string extra = "";
             var tm = t.GetComponent<tk2dTextMesh>();
             if (tm != null)
@@ -1589,8 +1705,10 @@ namespace DarkwoodMP
                 {
                     fontName = font.name;
                 }
+
                 extra += $" text=\"{text}\" font={fontName}";
             }
+
             var sp = t.GetComponent<tk2dBaseSprite>();
             if (sp != null)
             {
@@ -1600,22 +1718,26 @@ namespace DarkwoodMP
                 {
                     name = currentSprite.name;
                 }
+
                 tk2dSpriteCollectionData collection = sp.Collection;
                 string spriteCollectionName = null;
                 if (collection != null)
                 {
                     spriteCollectionName = collection.spriteCollectionName;
                 }
+
                 extra +=
                     $" sprite={name} coll={spriteCollectionName} "
                         + $"color={sp.color}";
             }
+
             var mb = t.GetComponent<Button>();
             if (mb != null)
             {
                 extra +=
                     $" button function={mb.function} localized={mb.localized}";
             }
+
             Log.LogInfo(
                 $"[ui] {new string(' ', depth * 2)}{t.name} "
                     + $"active={t.gameObject.activeSelf} "
@@ -1633,6 +1755,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(5f);
             _playerSync.SpawnDummy(new Vector3(120f, 0f, 0f));
             Log.LogInfo("--dwmp-dummy: dummy left 120 units east of you");
@@ -1640,6 +1763,7 @@ namespace DarkwoodMP
             {
                 yield break;
             }
+
             yield return new WaitForSeconds(2f);
             // "--dwmp-spawn TYPE": an enemy (a CharacterType name) between you
             // and the dummy, after it.
@@ -1656,6 +1780,7 @@ namespace DarkwoodMP
             {
                 mid = Player.Instance.transform.position;
             }
+
             Vector3 spot = mid + new Vector3(0f, 0f, 250f);
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
                 Player.Instance.gameObject, spot, 1f, _spawnType,
@@ -1669,11 +1794,13 @@ namespace DarkwoodMP
             {
                 data = $"--dwmp-spawn: couldn't spawn {_spawnType}";
             }
+
             Log.LogInfo(data);
             if (c == null || !Threat.Debug)
             {
                 yield break;
             }
+
             yield return new WaitForSeconds(3f);
             Log.LogInfo($"[threat test] {c.name}.attackPlayer()");
             c.attackPlayer();
@@ -1702,8 +1829,10 @@ namespace DarkwoodMP
                     Log.LogWarning("--dwmp-steam-test: no Steam");
                     yield break;
                 }
+
                 yield return null;
             }
+
             var steam = (SteamBackend)_steam;
             steam.Host();
             until = Time.realtimeSinceStartup + 20f;
@@ -1711,6 +1840,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             Log.LogInfo(
                 $"--dwmp-steam-test: {steam.Status}; host={steam.IsHost}; in "
                     + $"session={_session.Active} as #{_session.LocalId}; "
@@ -1726,6 +1856,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(seconds);
             Log.LogInfo("--dwmp-test-reload: loading the world again");
             Singleton<UI>.Instance.quickLoadGame();
@@ -1737,6 +1868,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             int n = 0;
             foreach (var et in Resources.FindObjectsOfTypeAll<EventTriggers>())
             {
@@ -1744,6 +1876,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 for (int i = 0; i < et.eventTriggers.Count; i++)
                 {
                     var t = et.eventTriggers[i];
@@ -1752,6 +1885,7 @@ namespace DarkwoodMP
                     {
                         ge = t.gameEvents;
                     }
+
                     if (ge == null
                         || !ge.events.Exists(
                             e => e != null
@@ -1761,6 +1895,7 @@ namespace DarkwoodMP
                     {
                         continue;
                     }
+
                     var r = World.ObjRef.Of(et.gameObject);
                     var at = et.transform.position;
                     var step = ge.events.Find(
@@ -1775,6 +1910,7 @@ namespace DarkwoodMP
                     n++;
                 }
             }
+
             foreach (var ge in Resources.FindObjectsOfTypeAll<GameEvents>())
             {
                 if (ge != null && ge.gameObject.scene.IsValid()
@@ -1790,6 +1926,7 @@ namespace DarkwoodMP
                             + $"{ge.transform.position.z:0}");
                 }
             }
+
             // This world's own chapter event is in a separate location, loaded
             // only when someone goes there; put a stand-in event with the same
             // step beside the host, for a scripted player to ask for.
@@ -1805,6 +1942,7 @@ namespace DarkwoodMP
                 intValue = next,
                 eventAmount = 1
             });
+
             World.ObjRef.RegisterSpawned(990001, go);
             var tr = World.ObjRef.Of(go);
             Log.LogInfo(
@@ -1822,6 +1960,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(seconds);
             Log.LogInfo("--dwmp-test-end: starting the epilogue");
             // The step the game's last event runs (GameEvent startDream into
@@ -1832,6 +1971,7 @@ namespace DarkwoodMP
                 Value = Chapters.EpilogueDream,
                 eventAmount = 1
             };
+
             Singleton<Controller>.Instance.StartCoroutine(
                 step.fire(Player.Instance.gameObject));
         }
@@ -1842,6 +1982,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(seconds);
             Log.LogInfo("--dwmp-test-menu: going back to the main menu");
             Core.returnToMainMenu();
@@ -1853,6 +1994,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(6f);
             Log.LogInfo(
                 "--dwmp-test-death: dying with "
@@ -1870,6 +2012,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(4f);
             var p = Player.Instance;
             Log.LogInfo($"--dwmp-test-fx: hit for 1 (health {p.health:0})");
@@ -1881,6 +2024,7 @@ namespace DarkwoodMP
             {
                 p.gameObject.AddComponent<Burn>().burnTime = 3f;
             }
+
             yield return new WaitForSeconds(5f);
             Log.LogInfo(
                 $"--dwmp-test-fx: done (health {p.health:0}, burning "
@@ -1893,6 +2037,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(seconds);
             Log.LogInfo("--dwmp-test-save: saving the world");
             Singleton<SaveManager>.Instance.Save(doJson: true, force: true);
@@ -1906,6 +2051,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(3f);
             Log.LogInfo(
                 "[menu test] back to the main menu, as the pause menu's Back "
@@ -1914,12 +2060,14 @@ namespace DarkwoodMP
             {
                 Singleton<MainMenu>.Instance.close();
             }
+
             Core.returnToMainMenu();
             yield return null;
             while (!WorldShare.MainMenuReady())
             {
                 yield return null;
             }
+
             if (_session.Active)
             {
                 Log.LogInfo(
@@ -1932,6 +2080,7 @@ namespace DarkwoodMP
                     "[menu test] PASS: at the main menu, out of the host's "
                         + "game");
             }
+
             yield return new WaitForSeconds(1f);
             Log.LogInfo(
                 $"[menu test] joining {address} again from the Multiplayer "
@@ -1946,6 +2095,7 @@ namespace DarkwoodMP
             {
                 data = $"[menu test] FAIL: not joining ({_tcp.Status})";
             }
+
             Log.LogInfo(data);
         }
 
@@ -1955,6 +2105,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             Log.LogInfo($"--dwmp-join: joining {address}");
             _tcp.Join(address, Cfg.Password.Value);
         }
@@ -1977,6 +2128,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 try
                 {
                     _harmony.CreateClassProcessor(type).Patch();
@@ -1991,15 +2143,18 @@ namespace DarkwoodMP
                     {
                         message = innerException.Message;
                     }
+
                     if (message == null)
                     {
                         message = e.Message;
                     }
+
                     Log.LogError(
                         $"Patch {type.Name} doesn't fit this build of the "
                             + $"game, skipped: {message}");
                 }
             }
+
             if (failed > 0)
             {
                 Log.LogWarning(
@@ -2026,6 +2181,7 @@ namespace DarkwoodMP
             {
                 outer = outer.DeclaringType;
             }
+
             return outer.Name.StartsWith(
                 "MapScenario", StringComparison.Ordinal)
                 || outer == typeof(LocationSetsPatch)
@@ -2049,6 +2205,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 try
                 {
                     _harmony.CreateClassProcessor(type).Patch();
@@ -2062,15 +2219,18 @@ namespace DarkwoodMP
                     {
                         message = innerException.Message;
                     }
+
                     if (message == null)
                     {
                         message = e.Message;
                     }
+
                     Log.LogError(
                         $"Test patch {type.Name} doesn't fit this build of the "
                             + $"game, skipped: {message}");
                 }
             }
+
             Log.LogInfo($"{ok} test patches applied");
         }
 
@@ -2100,6 +2260,7 @@ namespace DarkwoodMP
                 QualitySettings.vSyncCount = 0;
                 Application.targetFrameRate = _fpsCap;
             }
+
             if (_steam == null && !_steamUnavailable
                 && Time.unscaledTime >= _nextSteamCheck)
             {
@@ -2117,12 +2278,14 @@ namespace DarkwoodMP
             {
                 SetPanel(false);
             }
+
             // The browser was opened alone (Join Game) and closed without
             // joining: nothing of the co-op windows is left.
             if (_showMenu && !_panel.Open && !_direct.AnyOpen)
             {
                 SetPanel(false);
             }
+
             MenuEntry.Update();
             LoadProfiler.Frame();
             TestControl.Update();
@@ -2137,6 +2300,7 @@ namespace DarkwoodMP
                     Singleton<Controller>.Instance.buttonsDisabled = false;
                 }
             }
+
             if (windows && Core.mainMenu
                 && Singleton<Controller>.Instance != null
                 && !Singleton<Controller>.Instance.buttonsDisabled)
@@ -2144,6 +2308,7 @@ namespace DarkwoodMP
                 Singleton<Controller>.Instance.buttonsDisabled = true;
                 _buttonsOffByUs = true;
             }
+
             // After the buttons are let go: an answered question's action, then
             // the menu's list (and a click on it).
             ConfirmDialog.Update();
@@ -2195,12 +2360,14 @@ namespace DarkwoodMP
                 _nextWorldLabel = Time.unscaledTime + 2f;
                 _tcp.WorldLabel = WorldLabel();
             }
+
             if ((_steam != null || _testPresence)
                 && Time.unscaledTime >= _nextPresence)
             {
                 _nextPresence = Time.unscaledTime + 5f;
                 UpdatePresence();
             }
+
             JoinScreen.Update(_session, _world);
             LoadingScreen.Update();
             Chapters.Update();
@@ -2222,11 +2389,13 @@ namespace DarkwoodMP
                     instance.HostUpdate();
                 }
             }
+
             NpcSync npcs = NpcSync.Instance;
             if (npcs != null)
             {
                 npcs.Update();
             }
+
             ModProfiler.Mark("npcs");
             DialogueGuard.Update();
             TestWorld.Update();
@@ -2236,6 +2405,7 @@ namespace DarkwoodMP
                 ThrownHits.Clear();
                 EnemyAreaHits.Clear();
             }
+
             _wasInWorld = WorldShare.InWorld;
             ModProfiler.EndFrame();
         }
@@ -2265,6 +2435,7 @@ namespace DarkwoodMP
                     {
                         _steamInstance = null;
                     }
+
                     if (t != null)
                     {
                         _steamInitialized = t.GetField(
@@ -2276,6 +2447,7 @@ namespace DarkwoodMP
                     {
                         _steamInitialized = null;
                     }
+
                     if (_steamInstance == null || _steamInitialized == null)
                     {
                         _steamUnavailable = true;
@@ -2284,6 +2456,7 @@ namespace DarkwoodMP
                         return false;
                     }
                 }
+
                 var manager =
                     _steamInstance.GetValue(null) as UnityEngine.Object;
                 return manager != null
@@ -2333,6 +2506,7 @@ namespace DarkwoodMP
             {
                 stored = "";
             }
+
             Cfg.PlayerName.Value = stored;
             UpdateLocalName();
         }
@@ -2352,10 +2526,12 @@ namespace DarkwoodMP
                     name = null;
                 }
             }
+
             if (string.IsNullOrWhiteSpace(name))
             {
                 name = Environment.UserName;
             }
+
             if (string.IsNullOrWhiteSpace(name))
             {
                 _session.LocalName = "Player";
@@ -2376,8 +2552,10 @@ namespace DarkwoodMP
                     alignment = TextAnchor.MiddleCenter,
                     fontStyle = FontStyle.Bold
                 };
+
                 NameTagStyle.normal.textColor = new Color(0.9f, 0.85f, 0.7f);
             }
+
             _playerSync.DrawNameTags();
             TestWorld.DrawLabels();
             Spectator.DrawGui();
@@ -2390,6 +2568,7 @@ namespace DarkwoodMP
                 DragTest.OnGUI();
                 return;
             }
+
             MenuSkin.Ensure();
             var skin = GUI.skin;
             GUI.skin = MenuSkin.Skin;
@@ -2403,6 +2582,7 @@ namespace DarkwoodMP
                 _panel.OnGUI();
                 _direct.OnGUI();
             }
+
             MenuWindows.DrawAll();
             ConfirmDialog.OnGUI();
             GUI.skin = skin;
@@ -2422,6 +2602,7 @@ namespace DarkwoodMP
                 {
                     _cursorBefore = UnityEngine.Cursor.visible;
                 }
+
                 if (!UnityEngine.Cursor.visible)
                 {
                     UnityEngine.Cursor.visible = true;
@@ -2465,6 +2646,7 @@ namespace DarkwoodMP
             {
                 Ui.Text(f, _world.LoadStatus, MenuSkin.Bright);
             }
+
             if (TestWorld.Active)
             {
                 Ui.Text(
@@ -2485,6 +2667,7 @@ namespace DarkwoodMP
                     f, "Joining a game leaves the one you're in (save first).",
                     MenuSkin.Dim);
             }
+
             if (!_session.Active && CantHostReason is string why)
             {
                 Ui.Text(f, why, MenuSkin.Dim);
@@ -2504,6 +2687,7 @@ namespace DarkwoodMP
                         "Steam isn't running (the GOG version, say): use a "
                             + "direct connection.";
                 }
+
                 Ui.Text(f, text, MenuSkin.Dim);
             }
 
@@ -2522,6 +2706,7 @@ namespace DarkwoodMP
                 {
                     hostId = _session.HostId;
                 }
+
                 foreach (var kv in _session.Names)
                 {
                     string hostTag = "";
@@ -2529,11 +2714,13 @@ namespace DarkwoodMP
                     {
                         hostTag = "  (host)";
                     }
+
                     string youTag = "";
                     if (kv.Key == _session.LocalId)
                     {
                         youTag = "  (you)";
                     }
+
                     string tags = hostTag + youTag;
                     Ui.Label(f, kv.Value + tags);
                 }
@@ -2556,6 +2743,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             Ui.Heading(f, "Test world");
             if (inMenu)
             {
@@ -2571,45 +2759,55 @@ namespace DarkwoodMP
                 {
                     label = "Start the test world";
                 }
+
                 if (Ui.Button(r[0], label))
                 {
                     SetPanel(false);
                     StartCoroutine(TestWorld.Start(_world, reset: false));
                 }
+
                 if (TestWorld.Exists && Ui.Button(r[1], "Reset it"))
                 {
                     SetPanel(false);
                     StartCoroutine(TestWorld.Start(_world, reset: true));
                 }
+
                 if (TestWorld.Status != null)
                 {
                     Ui.Text(f, TestWorld.Status);
                 }
+
                 return;
             }
+
             var t = f.Row(Ui.RowH, 0, 0, 0, 0, 0);
             if (Ui.Button(t[0], "Kit"))
             {
                 TestWorld.GiveKit();
             }
+
             if (Ui.Button(t[1], "Dawn"))
             {
                 TestWorld.SetTime(Singleton<Controller>.Instance.dayTime + 5);
             }
+
             if (Ui.Button(t[2], "Noon"))
             {
                 TestWorld.SetTime(720);
             }
+
             if (Ui.Button(t[3], "Dusk"))
             {
                 TestWorld.SetTime(
                     Singleton<Controller>.Instance.nightTime - 30);
             }
+
             if (Ui.Button(t[4], "Night"))
             {
                 TestWorld.SetTime(
                     Singleton<Controller>.Instance.nightTime + 30);
             }
+
             Ui.Label(f, "Spawn an enemy near you:", MenuSkin.Dim);
             var list = new List<string>(TestWorld.Enemies);
             for (int i = 0; i < list.Count; i += 4)
@@ -2640,11 +2838,13 @@ namespace DarkwoodMP
                 {
                     return "";
                 }
+
                 var (day, chapter) = DayAndChapter();
                 if (chapter > 0)
                 {
                     return $"Day {day}, chapter {chapter}";
                 }
+
                 return $"Day {day}";
             }
             catch
@@ -2665,6 +2865,7 @@ namespace DarkwoodMP
             {
                 chapter = Singleton<WorldGenerator>.Instance.chapterID;
             }
+
             return (day, chapter);
         }
 
@@ -2688,10 +2889,12 @@ namespace DarkwoodMP
                 text = $"DarkwoodMP {PluginInfo.Version}";
                 Log.LogWarning($"Steam presence: {e.Message}");
             }
+
             if (text.Length > 256)
             {
                 text = text.Substring(0, 256); // Steam's limit for a value
             }
+
             bool changed = text != _lastPresence;
             _lastPresence = text;
             if (_steam == null)
@@ -2700,8 +2903,10 @@ namespace DarkwoodMP
                 {
                     Log.LogInfo($"[presence] {text} (no Steam: not set)");
                 }
+
                 return;
             }
+
             try
             {
                 SetSteamPresence(text, changed);
@@ -2721,11 +2926,13 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             int players = 1;
             if (_session.Active)
             {
                 players = _session.PlayerCount;
             }
+
             sb.SetPresence(text, players);
             if (log)
             {
@@ -2746,6 +2953,7 @@ namespace DarkwoodMP
                 parts.Add("In the main menu");
                 return string.Join(" · ", parts);
             }
+
             var (day, chapter) = DayAndChapter();
             string item;
             if (chapter > 0)
@@ -2756,12 +2964,14 @@ namespace DarkwoodMP
             {
                 item = $"Day {day}";
             }
+
             parts.Add(item);
             string biome = BiomeName();
             if (!string.IsNullOrEmpty(biome))
             {
                 parts.Add(biome);
             }
+
             if (!_session.Active)
             {
                 parts.Add("Playing alone");
@@ -2786,6 +2996,7 @@ namespace DarkwoodMP
                     parts.Add($"In co-op, {count}");
                 }
             }
+
             return string.Join(" · ", parts);
         }
 
@@ -2803,16 +3014,19 @@ namespace DarkwoodMP
             {
                 return "";
             }
+
             if (Singleton<OutsideLocations>.Instance != null
                 && Singleton<OutsideLocations>.Instance.playerInOutsideLocation)
             {
                 return "";
             }
+
             var b = Player.Instance.whereAmI.currentInfoBiome;
             if (b == null || b.type == Biome.Type.empty)
             {
                 return "";
             }
+
             // The game's sheet has biome_forest, _forest_mutated, _meadow and
             // _swamp; dense forest is forest on its map.
             Biome.Type biomeType;
@@ -2824,6 +3038,7 @@ namespace DarkwoodMP
             {
                 biomeType = b.type;
             }
+
             string key = "biome_" + biomeType;
             string name = "";
             try
@@ -2839,19 +3054,23 @@ namespace DarkwoodMP
                             keys.Add(k);
                         }
                     }
+
                     Log.LogInfo(
                         "[presence] the game's biome names: "
                             + $"{string.Join(", ", keys)}");
                 }
+
                 name = Language.Get(key, "UI");
             }
             catch
             {
             }
+
             if (!string.IsNullOrEmpty(name) && name != key)
             {
                 return name;
             }
+
             switch (b.type)
             {
                 case Biome.Type.meadow:
@@ -2922,6 +3141,7 @@ namespace DarkwoodMP
             {
                 session.Dispose();
             }
+
             Harmony harmony = _harmony;
             if (harmony != null)
             {

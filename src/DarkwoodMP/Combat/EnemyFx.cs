@@ -70,11 +70,13 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             _next = Time.unscaledTime + 0.5f;
             if (Hosting)
             {
                 HostCombat();
             }
+
             if (NetEnemies.ClientMode && WorldShare.InWorld)
             {
                 BansheeSight();
@@ -101,6 +103,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 bool fight = false;
                 if (proxy.alive)
                 {
@@ -116,11 +119,13 @@ namespace DarkwoodMP.Combat
                         }
                     }
                 }
+
                 _inCombat.TryGetValue(proxy.Owner, out bool was);
                 if (fight == was)
                 {
                     continue;
                 }
+
                 _inCombat[proxy.Owner] = fight;
                 if (Threat.Debug || WorldActions.Debug)
                 {
@@ -129,19 +134,23 @@ namespace DarkwoodMP.Combat
                     {
                         text = "is";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[enemyfx] {proxy.OwnerName} {text} in combat");
                 }
+
                 if (proxy.Owner == Sync.PlayerSync.DummyId)
                 {
                     continue;
                 }
+
                 var w = s.Begin(MsgType.CombatMusic);
                 int fightFlag = 0;
                 if (fight)
                 {
                     fightFlag = 1;
                 }
+
                 w.W.Write((byte)fightFlag);
                 s.SendTo(proxy.Owner, w, Channel.Control, reliable: true);
             }
@@ -154,12 +163,14 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             HostSaysInCombat = r.R.ReadByte() != 0;
             var me = Player.Instance;
             if (me == null || !WorldShare.InWorld)
             {
                 return;
             }
+
             bool want = HostSaysInCombat
                 || (me.charactersAttackingMe != null
                     && me.charactersAttackingMe.Count > 0);
@@ -168,16 +179,19 @@ namespace DarkwoodMP.Combat
                 // the setter starts or fades out the combat track
                 me.InCombat = want;
             }
+
             string text = "off";
             if (want)
             {
                 text = "on";
             }
+
             string hostSays = "none is";
             if (HostSaysInCombat)
             {
                 hostSays = "an enemy is after us";
             }
+
             Plugin.Log.LogInfo(
                 $"[enemyfx] combat music {text} (the host says {hostSays})");
         }
@@ -195,6 +209,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var s = Session.Instance;
             var w = s.Begin(MsgType.EnemyEffect);
             w.W.Write(kind);
@@ -204,6 +219,7 @@ namespace DarkwoodMP.Combat
             {
                 w.W.Write(rotY);
             }
+
             s.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -222,11 +238,13 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var e = NetEnemies.Instance;
             if (e == null || !e.IdOf(c, out uint id))
             {
                 return;
             }
+
             var s = Session.Instance;
             foreach (var peer in e.PeersSeeing(c))
             {
@@ -246,6 +264,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             byte kind = r.R.ReadByte();
             if (kind == 3)
             {
@@ -257,19 +276,23 @@ namespace DarkwoodMP.Combat
                 {
                     c = instance.PuppetOf(id);
                 }
+
                 if (c == null)
                 {
                     return;
                 }
+
                 Show(() => c.modifyEmitter(toggle));
                 string text = "on";
                 if (toggle == 0)
                 {
                     text = "off";
                 }
+
                 Plugin.Log.LogInfo($"[enemyfx] {c.name}'s emitter {text}");
                 return;
             }
+
             string name = r.ReadStr();
             var pos = r.ReadVector3();
             float rotY = 0f;
@@ -277,6 +300,7 @@ namespace DarkwoodMP.Combat
             {
                 rotY = r.R.ReadSingle();
             }
+
             var me = Player.Instance;
             if (me == null || EnemyAreaHits.PlayerAway()
                 || Core.trueDistance(me.transform.position, pos) > 4000f)
@@ -289,11 +313,13 @@ namespace DarkwoodMP.Combat
                         "too far (at "
                             + $"{me.transform.position.x:0},{me.transform.position.z:0})";
                 }
+
                 log.LogInfo(
                     $"[enemyfx] the host's enemy made {name}, not shown: our "
                         + $"player is {where}");
                 return;
             }
+
             if (Show(() =>
                 {
                     if (kind == 1)
@@ -352,6 +378,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             bool away = EnemyAreaHits.PlayerAway();
             Character nearest = null;
             float nearestDist = float.MaxValue;
@@ -362,12 +389,14 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 bool far = c.inSightOfPlayer != null
                     && c.inSightOfPlayer.playerCanBeFarAway;
                 if (!me.isInSight(c.transform, far))
                 {
                     continue;
                 }
+
                 now.Add(c);
                 float d = Mathf.Max(
                     1f,
@@ -379,6 +408,7 @@ namespace DarkwoodMP.Combat
                     nearest = c;
                 }
             }
+
             // Out of sight now: as onBansheeOutOfSightOfPlayer does for its
             // look.
             foreach (var c in _seen)
@@ -388,27 +418,32 @@ namespace DarkwoodMP.Combat
                     SightLight(c, false);
                 }
             }
+
             if (now.Count == 0)
             {
                 if (_seen.Count > 0)
                 {
                     Unseen(me);
                 }
+
                 _seen.Clear();
                 return;
             }
+
             if (_seen.Count == 0)
             {
                 Plugin.Log.LogInfo(
                     "[enemyfx] our player sees the host's banshee "
                         + $"{nearest.name} ({nearestDist:0} away)");
             }
+
             _seen.Clear();
             foreach (var c in now)
             {
                 _seen.Add(c);
                 SightLight(c, true);
             }
+
             // As onBansheeSeePlayer and bansheeAgitated do, for the nearest
             // one.
             if (me.bansheeAgitatedSoundAO == null)
@@ -416,11 +451,13 @@ namespace DarkwoodMP.Combat
                 me.bansheeAgitatedSoundAO = AudioController.Play(
                     "banshee_agitated_player", me._transform);
             }
+
             CamMain instance = Singleton<CamMain>.Instance;
             if (instance != null)
             {
                 instance.shake(0.5f, 1200f / nearestDist);
             }
+
             var ui = Singleton<UI>.Instance;
             if (ui != null)
             {
@@ -442,6 +479,7 @@ namespace DarkwoodMP.Combat
                 me.bansheeAgitatedSoundAO.Stop(1f);
                 me.bansheeAgitatedSoundAO = null;
             }
+
             var ui = Singleton<UI>.Instance;
             if (ui != null)
             {
@@ -452,8 +490,10 @@ namespace DarkwoodMP.Combat
                         ui.bansheeOverlay.gameObject, 0f, 0.5f,
                         timeScaleDependent: true);
                 }
+
                 ui.wantToRemoveBansheeOverlay();
             }
+
             Plugin.Log.LogInfo(
                 "[enemyfx] the host's banshees are out of our player's sight");
         }
@@ -484,11 +524,13 @@ namespace DarkwoodMP.Combat
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(8f);
             if (p == null)
             {
                 yield break;
             }
+
             var at = p.transform.position;
             var c = AreaHitsTest.NearestEnemy(at);
             if (c != null)
@@ -506,6 +548,7 @@ namespace DarkwoodMP.Combat
                             + $"{e.Message}");
                 }
             }
+
             Plugin.Log.LogInfo(
                 "--dwmp-test-blast: the forest spirit's effect beside "
                     + $"{p.OwnerName}");
@@ -526,6 +569,7 @@ namespace DarkwoodMP.Combat
                     2, EnemyPooledFxPatch.ForestSpirit,
                     at + new Vector3(100f, 0f, 0f), 0f);
             }
+
             yield return new WaitForSeconds(1f);
             var ctl = Singleton<Controller>.Instance;
             if (ctl != null)
@@ -535,6 +579,7 @@ namespace DarkwoodMP.Combat
                 ctl.isAfterNight = true;
                 ctl.endAfterNight();
             }
+
             Plugin.Log.LogInfo("--dwmp-test-blast: effects done");
         }
     }
@@ -552,11 +597,13 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             if (!__instance.InCombat)
             {
                 // (setting it off and on again would fade the music out)
                 __instance.InCombat = true;
             }
+
             return false;
         }
     }

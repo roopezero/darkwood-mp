@@ -24,11 +24,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var s = Net.Session.Instance;
             if (s != null && s.IsHost && s.Peers.Count > 0 && InPlayerDeath())
             {
                 return false;
             }
+
             return true;
         }
 
@@ -51,12 +53,14 @@ namespace DarkwoodMP.World
                         t = method.DeclaringType;
                     }
                 }
+
                 if (t != null && t.DeclaringType == typeof(Player)
                     && t.Name.Contains("onDeath"))
                 {
                     return true;
                 }
             }
+
             return false;
         }
     }
@@ -74,6 +78,7 @@ namespace DarkwoodMP.World
                     "A death didn't respawn the world's enemies: others are "
                         + "playing in it");
             }
+
             return ok;
         }
     }
@@ -96,6 +101,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     "A death didn't skip the night: others are playing in it");
             }
+
             return ok;
         }
     }

@@ -114,11 +114,13 @@ namespace DarkwoodMP.Combat
                 // so a lasting rise in latency is followed, in a few seconds
                 _offset += (gap - _offset) * 0.01f;
             }
+
             _jitter += (Mathf.Abs(gap - _offset) - _jitter) * 0.05f;
             if (_lastSent >= 0f && sent > _lastSent && sent - _lastSent < 0.5f)
             {
                 _interval += (sent - _lastSent - _interval) * 0.1f;
             }
+
             _lastSent = sent;
             Stats.Batch(sent, now);
         }
@@ -141,6 +143,7 @@ namespace DarkwoodMP.Combat
                         $"[enemy] drawn {_delay * 1000f:0} ms behind the host (interval {_interval * 1000f:0} ms, arrivals vary by {_jitter * 1000f:0} ms)"));
             }
         }
+
         private static float _nextLog;
 
         /// <summary>A state for one enemy.</summary>
@@ -163,10 +166,12 @@ namespace DarkwoodMP.Combat
                     return;
                 }
             }
+
             if (s.Count == MaxSamples)
             {
                 s.RemoveAt(0);
             }
+
             s.Add(new Sample { T = sent, Pos = pos, Rot = rot });
         }
 
@@ -183,11 +188,13 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             float at = now - _offset - _delay;
             while (s.Count > 2 && s[1].T <= at)
             {
                 s.RemoveAt(0); // keep the one before the moment drawn
             }
+
             var a = s[0];
             if (s.Count == 1 || at <= a.T)
             {
@@ -196,6 +203,7 @@ namespace DarkwoodMP.Combat
                 t.Speed = 0f;
                 return true;
             }
+
             for (int i = 0; i + 1 < s.Count; i++)
             {
                 var b = s[i + 1];
@@ -204,12 +212,14 @@ namespace DarkwoodMP.Combat
                     a = b;
                     continue;
                 }
+
                 float k = (at - a.T) / Mathf.Max(0.001f, b.T - a.T);
                 pos = Vector3.Lerp(a.Pos, b.Pos, k);
                 rot = Quaternion.Slerp(a.Rot, b.Rot, k);
                 t.Speed = Flat(b.Pos - a.Pos) / Mathf.Max(0.001f, b.T - a.T);
                 return true;
             }
+
             // Past the last state: on at its last speed for a moment.
             var last = s[s.Count - 1];
             var prev = s[s.Count - 2];
@@ -224,6 +234,7 @@ namespace DarkwoodMP.Combat
             {
                 pos = last.Pos;
             }
+
             if (carry && at - last.T < MaxAhead)
             {
                 t.Speed = Flat(last.Pos - prev.Pos) / span;
@@ -232,6 +243,7 @@ namespace DarkwoodMP.Combat
             {
                 t.Speed = 0f;
             }
+
             rot = last.Rot;
             return true;
         }
@@ -269,6 +281,7 @@ namespace DarkwoodMP.Combat
                 {
                     return;
                 }
+
                 Batches++;
                 if (_lastNow >= 0f)
                 {
@@ -279,16 +292,19 @@ namespace DarkwoodMP.Combat
                     {
                         MaxGap = g;
                     }
+
                     if (g > 0.15f)
                     {
                         LateGaps++;
                     }
+
                     float hg = sent - _lastSent;
                     if (hg > MaxHostGap)
                     {
                         MaxHostGap = hg;
                     }
                 }
+
                 _lastNow = now;
                 _lastSent = sent;
             }
@@ -299,6 +315,7 @@ namespace DarkwoodMP.Combat
                 {
                     return;
                 }
+
                 Frames++;
                 if (dt > MaxFrame)
                 {
@@ -314,6 +331,7 @@ namespace DarkwoodMP.Combat
                     t.HasDrawn = false;
                     return;
                 }
+
                 if (t.HasDrawn && dt > 0.0001f)
                 {
                     float speed = t.Speed;
@@ -329,9 +347,11 @@ namespace DarkwoodMP.Combat
                         {
                             Jumps++;
                         }
+
                         SumErr += Mathf.Min(3f, Mathf.Abs(got / want - 1f));
                     }
                 }
+
                 t.Drawn = pos;
                 t.HasDrawn = true;
             }
@@ -345,11 +365,13 @@ namespace DarkwoodMP.Combat
                     p95 = _gaps[
                         Mathf.Min(_gaps.Count - 1, (int)(_gaps.Count * 0.95f))];
                 }
+
                 float meanGap = 0f;
                 if (_gaps.Count > 0)
                 {
                     meanGap = SumGap / _gaps.Count * 1000f;
                 }
+
                 string arrivals = FormattableString.Invariant(
                     $"{Batches} batches, gap avg {meanGap:0} ms p95 {p95 * 1000f:0} max {MaxGap * 1000f:0} (over 150 ms: {LateGaps}; host's max {MaxHostGap * 1000f:0}); ");
                 string motion = FormattableString.Invariant(
@@ -359,6 +381,7 @@ namespace DarkwoodMP.Combat
                 {
                     error = SumErr / Moving * 100f;
                 }
+
                 return arrivals + motion + FormattableString.Invariant(
                     $"speed error avg {error:0}%; delay {_delay * 1000f:0} ms (interval {_interval * 1000f:0}, jitter {_jitter * 1000f:0})");
             }
@@ -370,6 +393,7 @@ namespace DarkwoodMP.Combat
                     return FormattableString.Invariant(
                         $"{n * 100f / Moving:0.0}%");
                 }
+
                 return "-";
             }
         }

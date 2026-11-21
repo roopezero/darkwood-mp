@@ -54,12 +54,15 @@ namespace DarkwoodMP.Net
                 {
                     return false;
                 }
+
                 if (IsHost)
                 {
                     return _lobby.IsMember(id);
                 }
+
                 return id == _lobby.Owner;
             };
+
             _transport.OnMessage += (from, data, len, ch) =>
             {
                 Action<ulong, byte[], int> handler = OnMessage;
@@ -68,6 +71,7 @@ namespace DarkwoodMP.Net
                     handler(from.m_SteamID, data, len);
                 }
             };
+
             _lobby.OnEntered += () =>
             {
                 Action entered = OnEntered;
@@ -76,6 +80,7 @@ namespace DarkwoodMP.Net
                     entered();
                 }
             };
+
             _lobby.OnLeft += () =>
             {
                 _transport.ClearPending();
@@ -85,6 +90,7 @@ namespace DarkwoodMP.Net
                     left();
                 }
             };
+
             // A player whose connection died without leaving the lobby (its PC
             // lost power, its network dropped): the lobby only notices much
             // later. Only for peers that got in, or a host that let us in: a
@@ -97,6 +103,7 @@ namespace DarkwoodMP.Net
                 {
                     return;
                 }
+
                 if (IsHost && session.Peers.Contains(who.m_SteamID))
                 {
                     Plugin.Log.LogInfo(
@@ -113,6 +120,7 @@ namespace DarkwoodMP.Net
                     _lobby.LoseHost("Lost the connection to the host");
                 }
             };
+
             // Every member hears of every departure. A client only acts on the
             // host's: for anyone else the host's PlayerLeft does the cleanup
             // (and shows "X left", which needs the name still known then).
@@ -122,6 +130,7 @@ namespace DarkwoodMP.Net
                 {
                     return;
                 }
+
                 _transport.CloseSession(who);
                 Action<ulong> lost = OnPeerLost;
                 if (lost != null)
@@ -140,11 +149,13 @@ namespace DarkwoodMP.Net
                     Ui.Text(f, "In a direct game.", MenuSkin.Dim);
                     return;
                 }
+
                 if (Plugin.CantHostReason == null
                     && Ui.Button(f, "Host with Steam (friends join by invite)"))
                 {
                     _lobby.Host();
                 }
+
                 Ui.Text(
                     f,
                     "To join: accept a friend's Steam invite, or Join Game in "
@@ -152,17 +163,20 @@ namespace DarkwoodMP.Net
                     MenuSkin.Dim);
                 return;
             }
+
             Ui.Text(f, Status, MenuSkin.Bright);
             if (Ui.Button(f, "Invite Steam friends"))
             {
                 _lobby.OpenInviteDialog();
             }
+
             if (!IsHost && session.Connected
                 && Ui.Button(
                     f, "Reload the host's world (if things look out of sync)"))
             {
                 Rejoin();
             }
+
             if (Ui.Button(f, "Leave"))
             {
                 Leave();
@@ -180,6 +194,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             var lobby = _lobby.Id;
             Leave();
             _lobby.Join(lobby);
@@ -206,21 +221,25 @@ namespace DarkwoodMP.Net
             {
                 group = _lobby.Id.m_SteamID.ToString();
             }
+
             string size = "";
             if (_lobby.InLobby)
             {
                 size = players.ToString();
             }
+
             if (status != _presStatus)
             {
                 SteamFriends.SetRichPresence("status", status);
                 _presStatus = status;
             }
+
             if (group != _presGroup)
             {
                 SteamFriends.SetRichPresence("steam_player_group", group);
                 _presGroup = group;
             }
+
             if (size != _presSize)
             {
                 SteamFriends.SetRichPresence("steam_player_group_size", size);
@@ -239,6 +258,7 @@ namespace DarkwoodMP.Net
             {
                 instance.SaveNow();
             }
+
             _lobby.Leave();
         }
 

@@ -47,6 +47,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             snap.Position += offset;
             RemoveRemote(DummyId);
             var d = GetOrCreate(DummyId, "Dummy");
@@ -71,6 +72,7 @@ namespace DarkwoodMP.Sync
                 RemoveRemote(id);
                 _left[id] = Time.unscaledTime;
             };
+
             session.OnPeerConnected += id => _left.Remove(id);
             session.OnSessionEnded += () =>
             {
@@ -79,6 +81,7 @@ namespace DarkwoodMP.Sync
                 {
                     r.Destroy();
                 }
+
                 Remotes.Clear();
             };
         }
@@ -96,6 +99,7 @@ namespace DarkwoodMP.Sync
             {
                 r.Tick();
             }
+
             PlayerSeparation.Update(this, _session.LocalId);
             MapMarkers.Tick();
         }
@@ -124,11 +128,13 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             _snap.Owner = _session.LocalId;
             if (!_session.Active || !_session.Connected)
             {
                 return;
             }
+
             // A joiner isn't shown until its character is placed
             // (World.Characters.Placing), off the others.
             var characters = World.Characters.Instance;
@@ -136,6 +142,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.PlayerState);
             _snap.Write(w);
             int ch;
@@ -147,6 +154,7 @@ namespace DarkwoodMP.Sync
             {
                 ch = Channel.State;
             }
+
             if (_session.IsHost)
             {
                 _session.Broadcast(w, ch, reliable);
@@ -183,10 +191,12 @@ namespace DarkwoodMP.Sync
             {
                 id = _incoming.Owner;
             }
+
             if (LeftJustNow(id))
             {
                 return;
             }
+
             if (_session.IsHost)
             {
                 // Never trust the owner field from a client, nor a place it
@@ -203,6 +213,7 @@ namespace DarkwoodMP.Sync
                 {
                     _incoming.Position = _moves.Check(from, _incoming.Position);
                 }
+
                 var w = _session.Begin(MsgType.PlayerState);
                 _incoming.Write(w);
                 _session.Broadcast(
@@ -217,6 +228,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var remote =
                 GetOrCreate(_incoming.Owner, _session.NameOf(_incoming.Owner));
             remote.Push(_incoming);
@@ -228,10 +240,12 @@ namespace DarkwoodMP.Sync
             {
                 return false;
             }
+
             if (Time.unscaledTime - at < LeftIgnore)
             {
                 return true;
             }
+
             _left.Remove(id);
             return false;
         }
@@ -252,8 +266,10 @@ namespace DarkwoodMP.Sync
                         }
                     };
                 }
+
                 Remotes[id] = r;
             }
+
             return r;
         }
 
@@ -279,31 +295,37 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             if (MapMarkers.MapOpen)
             {
                 MapMarkers.DrawNames();
                 return;
             }
+
             if (World.UiState.WorldOverlaysHidden)
             {
                 return;
             }
+
             var cam = Camera.main;
             if (cam == null)
             {
                 return;
             }
+
             foreach (var r in Remotes.Values)
             {
                 if (r.Root == null || !r.Root.activeSelf)
                 {
                     continue;
                 }
+
                 var sp = cam.WorldToScreenPoint(r.Root.transform.position);
                 if (sp.z < 0)
                 {
                     continue;
                 }
+
                 var rect =
                     new Rect(sp.x - 100, Screen.height - sp.y - 60, 200, 22);
                 if (r.Owner != DummyId)
@@ -311,12 +333,14 @@ namespace DarkwoodMP.Sync
                     // names can arrive after the first snapshot
                     r.Name = _session.NameOf(r.Owner);
                 }
+
                 string label = r.Name;
                 var last = r.Last;
                 if (last != null && r.Alive)
                 {
                     label += $"  {last.Health}%";
                 }
+
                 if (r.Owner == DummyId && Time.time < _dummyFlashUntil)
                 {
                     label += $"  -{_dummyDamage:0}";
@@ -325,6 +349,7 @@ namespace DarkwoodMP.Sync
                 {
                     _dummyDamage = 0f;
                 }
+
                 GUI.Label(rect, label, Plugin.NameTagStyle);
             }
         }

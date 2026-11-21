@@ -45,6 +45,7 @@ namespace DarkwoodMP.Combat
             public NetPlayerProxy Proxy;
             public Location Loc;
         }
+
         private static readonly ConditionalWeakTable<Character, Sent> _sent =
             new ConditionalWeakTable<Character, Sent>();
 
@@ -61,6 +62,7 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             proxy = s.Proxy;
             loc = s.Loc;
             return true;
@@ -83,10 +85,12 @@ namespace DarkwoodMP.Combat
                 {
                     loc = _near[i].GetComponent<Location>();
                 }
+
                 if (loc == null)
                 {
                     continue;
                 }
+
                 float d = Core.trueDistance(pos, loc.transform.position);
                 if (d < best)
                 {
@@ -94,15 +98,18 @@ namespace DarkwoodMP.Combat
                     closest = loc;
                 }
             }
+
             if (closest == null || !closest.isSubLocation)
             {
                 return closest;
             }
+
             var t = closest.transform;
             if (t.parent != null && t.parent.parent != null)
             {
                 return t.parent.parent.GetComponent<Location>();
             }
+
             return null;
         }
 
@@ -134,6 +141,7 @@ namespace DarkwoodMP.Combat
             public Location Loc;
             public string Kind;
         }
+
         private static readonly ConditionalWeakTable<Character, Spent> _spent =
             new ConditionalWeakTable<Character, Spent>();
 
@@ -148,6 +156,7 @@ namespace DarkwoodMP.Combat
             {
                 return n;
             }
+
             return 0;
         }
 
@@ -170,6 +179,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var hideouts = new List<(Location Loc, NetPlayerProxy Proxy)>();
             var host = Player.Instance;
             // The host's player as the game checks it (the game sends nobody
@@ -179,11 +189,13 @@ namespace DarkwoodMP.Combat
             {
                 hostLoc = host.whereAmI.bigLocation;
             }
+
             if (!Singleton<OutsideLocations>.Instance.playerInOutsideLocation
                 && hostLoc != null && hostLoc.playerBase)
             {
                 hideouts.Add((hostLoc, null));
             }
+
             foreach (var proxy in LivingProxies())
             {
                 if (AtHideout(proxy.transform.position, out var loc)
@@ -192,6 +204,7 @@ namespace DarkwoodMP.Combat
                     hideouts.Add((loc, proxy));
                 }
             }
+
             foreach (var h in hideouts)
             {
                 SpawnNightChar(spawner, h.Proxy, h.Loc);
@@ -209,10 +222,12 @@ namespace DarkwoodMP.Combat
             {
                 scenarios.setCurrentScenario();
             }
+
             if (scenarios.currentScenario == null)
             {
                 return null;
             }
+
             foreach (var toSpawn in scenarios.currentScenario.characters)
             {
                 if (toSpawn == null
@@ -222,6 +237,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 GameObject at;
                 if (proxy != null)
                 {
@@ -231,6 +247,7 @@ namespace DarkwoodMP.Combat
                 {
                     at = Player.Instance.gameObject;
                 }
+
                 var c = spawner.spawnCharacterAround(
                     at, Vector3.zero, 1500f, toSpawn.characterName,
                     nocturnal: true);
@@ -238,6 +255,7 @@ namespace DarkwoodMP.Combat
                 {
                     return null;
                 }
+
                 if (proxy != null)
                 {
                     _sent.Remove(c);
@@ -250,10 +268,12 @@ namespace DarkwoodMP.Combat
                         c.setWaypoints(loc.waypoints);
                     }
                 }
+
                 if (LaterChapter() && Random.Range(0f, 1f) > 0.5f)
                 {
                     c.gameObject.AddComponent<ShadowArmor>();
                 }
+
                 toSpawn.spawned++;
                 if (loc != null)
                 {
@@ -261,6 +281,7 @@ namespace DarkwoodMP.Combat
                     {
                         _out[loc] = kinds = new Dictionary<string, int>();
                     }
+
                     kinds.TryGetValue(toSpawn.characterName, out int n);
                     kinds[toSpawn.characterName] = n + 1;
                     _spent.Remove(c);
@@ -270,16 +291,19 @@ namespace DarkwoodMP.Combat
                         Kind = toSpawn.characterName
                     });
                 }
+
                 string who = "the host";
                 if (proxy != null)
                 {
                     who = proxy.OwnerName;
                 }
+
                 string where = "-";
                 if (loc != null)
                 {
                     where = loc.name;
                 }
+
                 SentLog.Add((where, who, c));
                 Plugin.Log.LogInfo(
                     $"[night] {c.name} sent at {who}'s hideout {where} "
@@ -289,6 +313,7 @@ namespace DarkwoodMP.Combat
                                    $"{Core.trueDistance(c.transform.position, at.transform.position):0} from them");
                 return c;
             }
+
             return null;
         }
 
@@ -302,6 +327,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             _spent.Remove(c);
             if (s.Loc != null && _out.TryGetValue(s.Loc, out var kinds)
                 && kinds.TryGetValue(s.Kind, out int n))
@@ -326,12 +352,14 @@ namespace DarkwoodMP.Combat
             {
                 return Singleton<WorldGenerator>.Instance.chapterID > 1;
             }
+
             var scene = GameObject.Find(Helpers.GetSceneName());
             Location l = null;
             if (scene != null)
             {
                 l = scene.GetComponent<Location>();
             }
+
             return l != null && l.chapterId > 1;
         }
 
@@ -350,6 +378,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 try
                 {
                     var host = Player.Instance;
@@ -360,11 +389,13 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
+
                     if (!host.effects.hasEffectType(
                         CharacterEffectType.shadowWard))
                     {
                         SpawnWorm(spawner, null);
                     }
+
                     foreach (var proxy in LivingProxies())
                     {
                         if (WormWanted(proxy))
@@ -405,6 +436,7 @@ namespace DarkwoodMP.Combat
             {
                 around = Player.Instance._transform.position;
             }
+
             Vector3 pos = Core.randomPosAround(
                 around, 1500f, 2000f, canBeInside: true,
                 mustBeInsideGraph: false);
@@ -416,10 +448,12 @@ namespace DarkwoodMP.Combat
             {
                 c = go.GetComponent<Character>();
             }
+
             if (c == null)
             {
                 return null;
             }
+
             if (proxy == null)
             {
                 c.attackPlayer();
@@ -430,8 +464,10 @@ namespace DarkwoodMP.Combat
                 {
                     c.aggressiveness = Aggressiveness.attackOnSight;
                 }
+
                 c.attackCharacter(proxy.transform);
             }
+
             spawner.nocturnalCharacters.Add(c.gameObject);
             if (proxy != null && Threat.Debug)
             {
@@ -439,6 +475,7 @@ namespace DarkwoodMP.Combat
                     $"[night] night worm sent at {proxy.OwnerName}, "
                         + $"{Core.trueDistance(pos, around):0} from them");
             }
+
             return c;
         }
 
@@ -453,6 +490,7 @@ namespace DarkwoodMP.Combat
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             var spawner = Singleton<CharacterSpawner>.Instance;
             foreach (var proxy in LivingProxies())
@@ -463,6 +501,7 @@ namespace DarkwoodMP.Combat
                 {
                     locationName = loc.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[night test] {proxy.OwnerName} at "
                         + $"{proxy.transform.position}: location "
@@ -481,6 +520,7 @@ namespace DarkwoodMP.Combat
                     {
                         target = worm.target.name;
                     }
+
                     line =
                         $"[night test] worm for {owner} at {position}, "
                             + $"{distance:0} from them, going for {target}";
@@ -489,6 +529,7 @@ namespace DarkwoodMP.Combat
                 {
                     line = $"[night test] no worm for {proxy.OwnerName}";
                 }
+
                 log.LogInfo(line);
                 // A night attacker as at a hideout: the host's own location if
                 // the proxy isn't at one.
@@ -504,6 +545,7 @@ namespace DarkwoodMP.Combat
                         at = null;
                     }
                 }
+
                 if (at != null)
                 {
                     var c = SpawnNightChar(spawner, proxy, at);
@@ -522,6 +564,7 @@ namespace DarkwoodMP.Combat
                                 + $"{proxy.OwnerName} (the scenario has none "
                                 + "left)";
                     }
+
                     Plugin.Log.LogInfo(data);
                     JoinerAi.Test(c, proxy);
                 }
@@ -532,6 +575,7 @@ namespace DarkwoodMP.Combat
                             + $"from for {proxy.OwnerName}");
                 }
             }
+
             Plugin.Log.LogInfo("[night test] done");
         }
     }
@@ -549,10 +593,12 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             if (!Proxies.Any)
             {
                 return true; // alone: the game's own
             }
+
             try
             {
                 NightSpawns.NightChars(__instance);
@@ -562,6 +608,7 @@ namespace DarkwoodMP.Combat
                 Plugin.Log.LogWarning(
                     $"Night attacker spawn failed: {e.Message}");
             }
+
             return false;
         }
     }

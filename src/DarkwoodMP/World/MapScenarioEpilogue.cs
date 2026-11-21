@@ -45,10 +45,12 @@ namespace DarkwoodMP.World
                     name = preset.name;
                 }
             }
+
             if (name == null)
             {
                 name = "none";
             }
+
             bool dreaming = D != null && D.dreaming;
             bool inEpilogue = P != null && P.inEpilogue;
             string shared = DreamSync.Shared;
@@ -56,6 +58,7 @@ namespace DarkwoodMP.World
             {
                 shared = "none";
             }
+
             return $"preset {name} dreaming {dreaming} inEpilogue {inEpilogue} "
                 + $"shared {shared} playing {EpilogueSync.Playing}";
         }
@@ -77,6 +80,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return false;
         }
 
@@ -92,12 +96,14 @@ namespace DarkwoodMP.World
                 Value = Chapters.EpilogueDream,
                 eventAmount = 1
             };
+
             Singleton<Controller>.Instance.StartCoroutine(
                 step.fire(P.gameObject));
             while (!InPart(Chapters.EpilogueDream))
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             r.Info = Where();
             if (!EpilogueSync.Playing || DreamSync.Shared == null)
@@ -116,6 +122,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(4f);
             string state = Where();
             bool? active = null;
@@ -124,6 +131,7 @@ namespace DarkwoodMP.World
             {
                 active = session.Active;
             }
+
             r.Info =
                 $"{state}; session {active}; a friend's puppet shown "
                     + $"{FriendShown()}";
@@ -145,11 +153,13 @@ namespace DarkwoodMP.World
             {
                 from = D.preset.name;
             }
+
             if (D.preset == null || D.preset.outcomes.Count == 0)
             {
                 r.Fail($"no outcomes: {Where()}");
                 yield break;
             }
+
             D.outcome = D.preset.outcomes[0].name;
             string outcome = D.outcome;
             AsPlayer(() => D.initiateEndDreaming());
@@ -160,6 +170,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             r.Info = $"ended {from} ({outcome}): {Where()}";
             if (D.preset == null || D.preset.name == from || !P.inEpilogue)
@@ -183,6 +194,7 @@ namespace DarkwoodMP.World
             {
                 from = Chapters.EpilogueDream;
             }
+
             float until = Time.realtimeSinceStartup + 90f;
             while (Time.realtimeSinceStartup < until
                 && !(D.dreaming && !D.switchingDream && D.preset != null
@@ -190,6 +202,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(3f);
             r.Info = $"{Where()}; a friend's puppet shown {FriendShown()}";
             if (D.preset == null || D.preset.name == from || !P.inEpilogue)
@@ -210,12 +223,14 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             Net.Session instance = Net.Session.Instance;
             bool? active = null;
             if (instance != null)
             {
                 active = instance.Active;
             }
+
             r.Info = $"in the credits; session {active}";
             yield return ExitCredits();
         }
@@ -234,14 +249,17 @@ namespace DarkwoodMP.World
                     credits = true;
                     yield return ExitCredits();
                 }
+
                 yield return new WaitForSeconds(0.5f);
             }
+
             Net.Session instance = Net.Session.Instance;
             bool? active = null;
             if (instance != null)
             {
                 active = instance.Active;
             }
+
             r.Info =
                 $"at the main menu (credits seen {credits}); session {active}";
             if (!credits)
@@ -265,6 +283,7 @@ namespace DarkwoodMP.World
             {
                 return "";
             }
+
             foreach (var e in o.effects)
             {
                 if (e != null
@@ -275,6 +294,7 @@ namespace DarkwoodMP.World
                     return e.destPrefab.name;
                 }
             }
+
             return "";
         }
 
@@ -291,6 +311,7 @@ namespace DarkwoodMP.World
             {
                 want = a[0];
             }
+
             var path = new System.Collections.Generic.List<string>();
             for (int hop = 0; hop < 5
                 && !(D.preset != null && D.preset.name.Contains(want)); hop++)
@@ -300,11 +321,13 @@ namespace DarkwoodMP.World
                 {
                     from = D.preset.name;
                 }
+
                 if (D.preset == null || D.preset.outcomes.Count == 0)
                 {
                     r.Fail($"no outcomes: {Where()}");
                     yield break;
                 }
+
                 var pick = D.preset.outcomes[0];
                 foreach (var o in D.preset.outcomes)
                 {
@@ -314,6 +337,7 @@ namespace DarkwoodMP.World
                         break;
                     }
                 }
+
                 D.outcome = pick.name;
                 path.Add($"{from} -{pick.name}-> {Dest(pick)}");
                 AsPlayer(() => D.initiateEndDreaming());
@@ -324,8 +348,10 @@ namespace DarkwoodMP.World
                 {
                     yield return new WaitForSeconds(0.5f);
                 }
+
                 yield return new WaitForSeconds(4f);
             }
+
             r.Info = $"{string.Join("; ", path)}: {Where()}";
             if (D.preset == null || !D.preset.name.Contains(want)
                 || !P.inEpilogue)
@@ -344,11 +370,13 @@ namespace DarkwoodMP.World
             {
                 want = a[0];
             }
+
             float until = Time.realtimeSinceStartup + 300f;
             while (Time.realtimeSinceStartup < until && !InPartLike(want))
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(3f);
             r.Info = $"{Where()}; a friend's puppet shown {FriendShown()}";
             if (!InPartLike(want))
@@ -376,11 +404,13 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
+
             if (found == null)
             {
                 r.Fail($"no {EpilogueSync.BurnEvents} here: {Where()}");
                 yield break;
             }
+
             AsPlayer(() => found.fire());
             yield return new WaitForSeconds(2f);
             r.Info =
@@ -407,12 +437,14 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
+
             float until = Time.realtimeSinceStartup + 30f;
             while (Time.realtimeSinceStartup < until
                 && !(found != null && found.fired))
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             r.Info =
                 $"{EpilogueSync.BurnEvents} found {found != null} fired "
                     + $"{found != null && found.fired}; heard "
@@ -436,6 +468,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             if (!P.crawling && P.startingCrawling)
             {
                 // A test shortcut: our player stands where the test put it, not
@@ -446,6 +479,7 @@ namespace DarkwoodMP.World
                 P.performingAction = false;
                 P.crawling = true;
             }
+
             if (!P.crawling)
             {
                 r.Fail(
@@ -453,6 +487,7 @@ namespace DarkwoodMP.World
                         + $"{P.startingCrawling} dying {P.dying}");
                 yield break;
             }
+
             yield return new WaitForSeconds(1f);
             P.die();
             yield return new WaitForSeconds(1f);
@@ -480,6 +515,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(12f);
             var outcomes = Object.FindObjectOfType<EpilogueOutcomes>();
             string text = "not shown";
@@ -494,6 +530,7 @@ namespace DarkwoodMP.World
                     text = "not burned";
                 }
             }
+
             r.Info =
                 $"pan released {EpilogueSync.PanReleased}; spectating "
                     + $"{Spectator.Active}; host's burned "
@@ -538,6 +575,7 @@ namespace DarkwoodMP.World
                 AccessTools.Method(typeof(global::Credits), "exitToMainMenu")
                     .Invoke(c, null);
             }
+
             while (!WorldShare.MainMenuReady())
             {
                 yield return new WaitForSeconds(0.5f);

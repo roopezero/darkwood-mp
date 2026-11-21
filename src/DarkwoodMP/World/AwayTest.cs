@@ -37,6 +37,7 @@ namespace DarkwoodMP.World
                     n++;
                 }
             }
+
             return n;
         }
 
@@ -52,11 +53,13 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var b = it.GetComponent<Rigidbody>();
                 if (b == null || b.isKinematic)
                 {
                     continue;
                 }
+
                 float d = (it.transform.position - me).sqrMagnitude;
                 if (d < bestD)
                 {
@@ -64,6 +67,7 @@ namespace DarkwoodMP.World
                     best = it;
                 }
             }
+
             if (best == null)
             {
                 Plugin.Log.LogInfo(
@@ -71,6 +75,7 @@ namespace DarkwoodMP.World
                         + "push");
                 yield break;
             }
+
             int sent = DragSync.PushesSent;
             var from = best.transform.position;
             var body = best.GetComponent<Rigidbody>();
@@ -86,6 +91,7 @@ namespace DarkwoodMP.World
             {
                 heading = Vector3.right;
             }
+
             body.velocity = heading * 150f;
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: knocked {best.name} at "
@@ -101,11 +107,13 @@ namespace DarkwoodMP.World
             {
                 to = from;
             }
+
             string movedName = "it";
             if (best != null)
             {
                 movedName = best.name;
             }
+
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: {movedName} moved "
                     + $"{(to - from).magnitude:0} units to {to.x:0},{to.z:0}; "
@@ -119,12 +127,14 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(6f);
             float wait = Time.realtimeSinceStartup + 30f;
             while (!WorldActions.Sharing && Time.realtimeSinceStartup < wait)
             {
                 yield return null;
             }
+
             yield return Push();
             var dummy = PlayerSync.Instance.Remotes[PlayerSync.DummyId];
             var o = Singleton<OutsideLocations>.Instance;
@@ -134,6 +144,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo("--dwmp-test-away: no world grid");
                 yield break;
             }
+
             Vector3 at;
             if (dummy.Root != null)
             {
@@ -143,6 +154,7 @@ namespace DarkwoodMP.World
             {
                 at = Vector3.zero;
             }
+
             int before = ActiveNear(at);
             // What OutsideLocations.transportToLocation does to the world
             // (leave every node of the world's grid, switch to the location's
@@ -169,6 +181,7 @@ namespace DarkwoodMP.World
             {
                 name = currentGrid.name;
             }
+
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: in {name} (away "
                     + $"{PlayerCapture.LocalAway()}): " +
@@ -189,12 +202,14 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             int loaded = Locations.LoadedForOthers;
             string place = "the world";
             if (PlayerCapture.LocalAway())
             {
                 place = Locations.Current();
             }
+
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: locations loaded for the others: {loaded}; "
                     + $"our player is in {place}");
@@ -204,6 +219,7 @@ namespace DarkwoodMP.World
             {
                 gridName = current.name;
             }
+
             Plugin.Log.LogInfo(
                 $"--dwmp-test-away: back in {gridName} (away "
                     + $"{PlayerCapture.LocalAway()}); {ActiveNear(at)} enemies "

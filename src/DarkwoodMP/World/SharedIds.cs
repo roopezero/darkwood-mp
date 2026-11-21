@@ -61,8 +61,10 @@ namespace DarkwoodMP.World
                     {
                         return 0;
                     }
+
                     return _hostMin;
                 }
+
                 return _loaded;
             }
         }
@@ -79,6 +81,7 @@ namespace DarkwoodMP.World
                 {
                     return _hostMax;
                 }
+
                 return _loaded;
             }
         }
@@ -93,6 +96,7 @@ namespace DarkwoodMP.World
             {
                 return _snapshot;
             }
+
             return _saved;
         }
 
@@ -105,19 +109,23 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_hostScene != Scene)
             {
                 // joiners let in to an earlier world don't count here
                 ResetHost();
             }
+
             if (n < _hostMin)
             {
                 _hostMin = n;
             }
+
             if (n > _hostMax)
             {
                 _hostMax = n;
             }
+
             Plugin.Log.LogInfo(
                 $"#{peer} joined with save ids below {n}; save ids below "
                     + $"{_hostMin} are shared with every player");

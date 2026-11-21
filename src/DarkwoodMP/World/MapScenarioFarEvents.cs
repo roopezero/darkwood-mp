@@ -97,9 +97,11 @@ namespace DarkwoodMP.World
                     {
                         note = ", not safe";
                     }
+
                     return $"{name} at {at} ({triggers} enter/exit "
                         + $"triggers{note})";
                 })));
+
             yield return Info(r, $"{locs.Count} world locations");
         }
 
@@ -139,6 +141,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             foreach (var t in LocationTriggers(l))
             {
                 foreach (var g in new[]
@@ -158,6 +161,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return true;
         }
 
@@ -177,6 +181,7 @@ namespace DarkwoodMP.World
             {
                 location = far.FirstOrDefault();
             }
+
             return location;
         }
 
@@ -199,6 +204,7 @@ namespace DarkwoodMP.World
                 r.Fail("no player or no target");
                 yield break;
             }
+
             string t = a[0];
             Vector3 to;
             string what;
@@ -214,11 +220,13 @@ namespace DarkwoodMP.World
                     l = WorldLocations().FirstOrDefault(
                         x => Name(x) == t.Substring(4));
                 }
+
                 if (l == null)
                 {
                     r.Fail($"no location for {t}");
                     yield break;
                 }
+
                 to = l.transform.position + new Vector3(150f, 0f, 0f);
                 what = $"{Name(l)} ({EventCount(l)} enter/exit triggers)";
             }
@@ -239,6 +247,7 @@ namespace DarkwoodMP.World
                     r.Fail("no generator");
                     yield break;
                 }
+
                 to = g.transform.position + new Vector3(100f, 0f, 0f);
                 what =
                     $"by {g.name}, "
@@ -253,6 +262,7 @@ namespace DarkwoodMP.World
                     r.Fail("no joiner");
                     yield break;
                 }
+
                 to = j.transform.position + new Vector3(150f, 0f, 0f);
                 what = $"beside {j.OwnerName}";
                 _hostArrived = Time.realtimeSinceStartup;
@@ -271,6 +281,7 @@ namespace DarkwoodMP.World
                 r.Fail($"unknown target {t}");
                 yield break;
             }
+
             // our own player moves: what it sets off from here on is its own
             WatchSteps = false;
             float jumped = StateDump.Flat(to - p.transform.position);
@@ -295,6 +306,7 @@ namespace DarkwoodMP.World
                 r.Fail("no joiner");
                 yield break;
             }
+
             Location l = null;
             float until = Time.realtimeSinceStartup + 10f;
             // The location by the client is entered, and its enter events have
@@ -308,8 +320,10 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.25f);
             }
+
             if (l == null)
             {
                 r.Fail(
@@ -317,6 +331,7 @@ namespace DarkwoodMP.World
                         + $"{Fmt(j.transform.position)}");
                 yield break;
             }
+
             var es = Since(FarEvents.Log, _since, Name(l));
             string info =
                 $"{Name(l)}: entered {l.entered}, its events here "
@@ -347,6 +362,7 @@ namespace DarkwoodMP.World
                     "our player got steps of an event it didn't set off: "
                         + info);
             }
+
             r.Info = info;
         }
 
@@ -364,13 +380,16 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.25f);
             }
+
             if (l == null)
             {
                 r.Fail("no world location by our player");
                 yield break;
             }
+
             var es = Since(FarEvents.Log, _since, Name(l));
             r.Info =
                 $"{Name(l)}: entered {l.entered}, its events here [{Show(es)}]";
@@ -407,6 +426,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return list;
         }
 
@@ -423,11 +443,13 @@ namespace DarkwoodMP.World
             {
                 j = Player.Instance;
             }
+
             if (j == null)
             {
                 r.Fail("no joiner");
                 yield break;
             }
+
             float t0 = Time.realtimeSinceStartup;
             yield return new WaitForSeconds(5f);
             var near = new HashSet<string>(WorldLocations()
@@ -464,6 +486,7 @@ namespace DarkwoodMP.World
                 r.Fail("no location by the client (fe-jump to-client first)");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 8f;
             List<FarEvents.Entry> es = null;
             while (Time.realtimeSinceStartup < until)
@@ -473,8 +496,10 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.25f);
             }
+
             r.Info = $"{_shared}: its events since we came [{Show(es)}]";
             if (!es.Any(
                 e => e.Kind == "enter"
@@ -498,6 +523,7 @@ namespace DarkwoodMP.World
                 r.Fail("no shared location");
                 yield break;
             }
+
             yield return new WaitForSeconds(2f);
             var es = Since(FarEvents.Log, _hostArrived, _shared);
             r.Info =
@@ -522,11 +548,13 @@ namespace DarkwoodMP.World
                 r.Fail("no shared location");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 15f;
             while (l.entered && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             var es = Since(FarEvents.Log, _hostArrived, _shared);
             r.Info =
                 $"{_shared}: entered {l.entered}, its events since we came "
@@ -554,6 +582,7 @@ namespace DarkwoodMP.World
                 r.Fail("no joiner");
                 yield break;
             }
+
             var gen = FuelSync.Generators.Where(g => g != null && !g.isSaw)
                 .OrderBy(
                     g => StateDump.Flat(
@@ -564,6 +593,7 @@ namespace DarkwoodMP.World
                 r.Info = "no generator in this world";
                 yield break;
             }
+
             bool clientNearer = StateDump.Flat(
                 gen.transform.position - j.transform.position)
                 < StateDump.Flat(
@@ -582,11 +612,13 @@ namespace DarkwoodMP.World
             {
                 skill = instance.Electrician(j.Owner);
             }
+
             string skillText = "not known";
             if (skill.HasValue)
             {
                 skillText = skill.Value.ToString();
             }
+
             r.Info =
                 $"{GeneratorDrainSkillPatch.Last}; used {used:0.###} (the "
                     + $"client nearer: {clientNearer}, its electrician skill "
@@ -612,6 +644,7 @@ namespace DarkwoodMP.World
                     "the others' areas weren't refreshed while we loaded: "
                         + r.Info);
             }
+
             yield break;
         }
     }
@@ -634,6 +667,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (MapScenarioFarEvents.PlayerStepsRun.Count < 50)
             {
                 string objectName = "?";
@@ -641,6 +675,7 @@ namespace DarkwoodMP.World
                 {
                     objectName = thisGO.name;
                 }
+
                 MapScenarioFarEvents.PlayerStepsRun.Add(
                     $"{__instance.type} ({objectName})");
             }

@@ -57,6 +57,7 @@ namespace DarkwoodMP.World
             Crawled = 3,
             Burn = 4
         }
+
         /// <summary>
         /// The crater's events that set the Being on fire: the burned-forest
         /// ending, once they run.
@@ -99,6 +100,7 @@ namespace DarkwoodMP.World
                     CheckPan();
                 }
             };
+
             s.OnSessionEnded += () =>
             {
                 // The host went away in the middle of the epilogue: our game
@@ -108,6 +110,7 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Instance.StartCoroutine(PanelAfterCredits());
                 }
+
                 Playing = false;
                 Reset();
             };
@@ -143,6 +146,7 @@ namespace DarkwoodMP.World
                 {
                     yield break; // joined someone meanwhile
                 }
+
                 if (SceneManager.GetActiveScene().name == "credits")
                 {
                     credits = true;
@@ -151,8 +155,10 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSecondsRealtime(1f);
             }
+
             yield return new WaitForSecondsRealtime(1f);
             Plugin.Log.LogInfo("[epilogue] after the credits: the co-op panel");
             Plugin.Instance.OpenPanel();
@@ -169,11 +175,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var p = Player.Instance;
             if (p != null && p.inEpilogue)
             {
                 return true;
             }
+
             var d = Singleton<Dreams>.Instance;
             return d != null
                 && (d.dreaming || d.wantToDream || d.dreamPrepared)
@@ -190,6 +198,7 @@ namespace DarkwoodMP.World
             {
                 return "The host is playing the ending.";
             }
+
             return null;
         }
 
@@ -234,6 +243,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] test: in the epilogue: "
                     + $"{Player.Instance != null && Player.Instance.inEpilogue}, shared dream {DreamSync.Shared}");
@@ -254,6 +264,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             foreach (var o in d.preset.outcomes)
             {
                 if (o != null && o.name == outcome)
@@ -261,6 +272,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             Plugin.Log.LogWarning(
                 $"[epilogue] refused a dream end: {d.preset.name} has no "
                     + $"outcome \"{outcome}\"");
@@ -279,6 +291,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Playing = false;
             if (s.IsHost)
             {
@@ -290,8 +303,10 @@ namespace DarkwoodMP.World
                 {
                     instance.StopServer(GameEnd(1));
                 }
+
                 return;
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] our outcomes are over: to the credits, leaving the "
                     + "session");
@@ -309,15 +324,18 @@ namespace DarkwoodMP.World
                     backend.Leave();
                 }
             }
+
             WorldShare instance = WorldShare.Instance;
             if (instance != null)
             {
                 instance.SetLoadStatus(why);
             }
+
             if (_toMenu)
             {
                 return;
             }
+
             _toMenu = true;
             Plugin.Instance.StartCoroutine(ToMenu());
         }
@@ -345,6 +363,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (_panGo)
             {
                 if (_ownPan)
@@ -353,9 +372,11 @@ namespace DarkwoodMP.World
                     // first
                     return false;
                 }
+
                 _ownPan = true;
                 return true;
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] our pan over the burning forest waits for the "
                     + "others");
@@ -374,6 +395,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _ownDeath = true;
             _deathAt = p.transform.position;
             Plugin.Log.LogInfo(
@@ -385,6 +407,7 @@ namespace DarkwoodMP.World
                 Crawled(s.LocalId);
                 return;
             }
+
             var w = s.Begin(MsgType.EpilogueStep);
             w.W.Write((byte)Step.Crawled);
             w.WriteStr("");
@@ -411,11 +434,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_firstDeath < 0f)
             {
                 _firstDeath = Time.realtimeSinceStartup;
                 Plugin.Instance.StartCoroutine(PanTimeout());
             }
+
             CheckPan();
         }
 
@@ -443,10 +468,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!_crawled.Contains(s.LocalId))
             {
                 return;
             }
+
             foreach (var peer in s.Peers)
             {
                 if (!_crawled.Contains(peer))
@@ -454,6 +481,7 @@ namespace DarkwoodMP.World
                     return;
                 }
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] every player has crawled to their death: the pan "
                     + "runs for everyone");
@@ -483,16 +511,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _panGo = true;
             if (Spectator.Epilogue)
             {
                 Spectator.EndWatch();
             }
+
             var p = Player.Instance;
             if (p == null || !p.inEpilogue)
             {
                 return;
             }
+
             Core.forbidInputs = true;
             Vector3 from;
             if (_ownDeath)
@@ -503,11 +534,13 @@ namespace DarkwoodMP.World
             {
                 from = p.transform.position;
             }
+
             if (_ownDeath)
             {
                 // where the game keeps a dead player
                 p._transform.position = from - new Vector3(0f, 10f, 0f);
             }
+
             Plugin.Instance.StartCoroutine(Pan(from));
         }
 
@@ -520,6 +553,7 @@ namespace DarkwoodMP.World
             {
                 cam.followTarget = follow.transform;
             }
+
             float t = 0f;
             bool fired = false;
             while (t < 30f && follow != null)
@@ -546,6 +580,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 yield return null;
             }
         }
@@ -561,6 +596,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = s.Begin(MsgType.EpilogueStep);
             w.W.Write((byte)Step.Outcomes);
             string burnedText = "0";
@@ -568,6 +604,7 @@ namespace DarkwoodMP.World
             {
                 burnedText = "1";
             }
+
             w.WriteStr(burnedText);
             s.Broadcast(w, Channel.Control, reliable: true);
         }
@@ -583,15 +620,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsHost)
             {
                 SendOutcomes(o.burnedForest);
                 return;
             }
+
             if (_hostBurned < 0 || o.burnedForest == (_hostBurned == 1))
             {
                 return;
             }
+
             Plugin.Log.LogWarning(
                 "[epilogue] our outcomes screen had burnedForest "
                     + $"{o.burnedForest}, the host's {_hostBurned == 1}: using "
@@ -611,6 +651,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Plugin.Instance.StartCoroutine(OffsetSoon());
         }
 
@@ -623,6 +664,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             var taken = new List<Vector3>();
             foreach (var r in sync.Remotes.Values)
             {
@@ -631,12 +673,14 @@ namespace DarkwoodMP.World
                     taken.Add(r.Root.transform.position);
                 }
             }
+
             Vector3 at = p.transform.position;
             Vector3 to = Sync.SpawnSpot.Find(p, at, taken);
             if ((to - at).sqrMagnitude < 1f)
             {
                 yield break;
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] the part starts where another player stands: ours "
                     + $"moves over by {(to - at).magnitude:0}");
@@ -660,6 +704,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (phase == 0)
             {
                 Plugin.Log.LogInfo(
@@ -672,6 +717,7 @@ namespace DarkwoodMP.World
                 {
                     instance.SaveNow();
                 }
+
                 Plugin.Notice(
                     "The host has reached the end of the game: the epilogue "
                         + "begins");
@@ -679,8 +725,10 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Instance.StartCoroutine(JoinEpilogue());
                 }
+
                 return true;
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] the host went to the credits: so do we");
             bool credits =
@@ -693,6 +741,7 @@ namespace DarkwoodMP.World
             {
                 Chapters.ToCredits();
             }
+
             return true;
         }
 
@@ -716,15 +765,18 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning(
                         $"[epilogue] couldn't start the epilogue: {e.Message}");
                 }
+
                 if (!started)
                 {
                     yield return new WaitForSecondsRealtime(1f);
                 }
             }
+
             if (!Playing)
             {
                 yield break;
             }
+
             if (started)
             {
                 until = Time.realtimeSinceStartup + 60f;
@@ -734,6 +786,7 @@ namespace DarkwoodMP.World
                     yield return null;
                 }
             }
+
             if (Player.Instance != null && Player.Instance.inEpilogue)
             {
                 Plugin.Log.LogInfo(
@@ -741,10 +794,12 @@ namespace DarkwoodMP.World
                         + $"{DreamSync.Shared})");
                 yield break;
             }
+
             if (!Playing)
             {
                 yield break;
             }
+
             Plugin.Log.LogWarning(
                 "[epilogue] the epilogue didn't start here: leaving, the end "
                     + "screen instead");
@@ -766,11 +821,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (Singleton<OutsideLocations>.Instance != null
                 && Singleton<OutsideLocations>.Instance.loading)
             {
                 return false;
             }
+
             DreamSync.Share(Chapters.EpilogueDream);
             Core.forbidInputs = true;
             p.halt();
@@ -791,6 +848,7 @@ namespace DarkwoodMP.World
             {
                 o.destroyLocation("outside_roadToHome_01");
             }
+
             yield return null;
             yield return null;
             dreams.StartCoroutine(dreams.prepareDream(Chapters.EpilogueDream));
@@ -803,18 +861,21 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var what = (Step)r.R.ReadByte();
             string value = r.ReadStr();
             if (!Playing)
             {
                 return;
             }
+
             if (s.IsHost)
             {
                 if (!s.Peers.Contains(from))
                 {
                     return;
                 }
+
                 if (what == Step.Burn)
                 {
                     Plugin.Log.LogInfo(
@@ -822,20 +883,24 @@ namespace DarkwoodMP.World
                     Burned(from);
                     return;
                 }
+
                 if (what != Step.Crawled)
                 {
                     return;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[epilogue] {s.NameOf(from)} crawled to their death in "
                         + "the burning forest");
                 Crawled(from);
                 return;
             }
+
             if (from != s.HostId)
             {
                 return;
             }
+
             if (what == Step.Outcomes)
             {
                 if (value == "1")
@@ -846,17 +911,21 @@ namespace DarkwoodMP.World
                 {
                     _hostBurned = 0;
                 }
+
                 return;
             }
+
             if (what == Step.Burn)
             {
                 Burned(r.R.ReadUInt64());
                 return;
             }
+
             if (what != Step.Pan)
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 "[epilogue] the host says the camera pans over the burning "
                     + "forest: ours too");
@@ -881,6 +950,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _burnShared = true;
             Plugin.Log.LogInfo(
                 "[epilogue] our player set the Being on fire: the forest burns "
@@ -910,6 +980,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _burnShared = true;
             if (s.IsHost)
             {
@@ -919,6 +990,7 @@ namespace DarkwoodMP.World
                 w.W.Write(who);
                 s.Broadcast(w, Channel.Control, reliable: true, except: who);
             }
+
             Plugin.Notice(
                 $"{s.NameOf(who)} set the Being on fire. The forest burns.");
             GameEvents found = null;
@@ -931,6 +1003,7 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
+
             if (found == null)
             {
                 Plugin.Log.LogWarning(
@@ -938,10 +1011,12 @@ namespace DarkwoodMP.World
                         + "has no such events");
                 return;
             }
+
             if (found.fired && !found.multipleFire)
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"[epilogue] {s.NameOf(who)} set the Being on fire: running "
                     + $"{BurnEvents} here too");

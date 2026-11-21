@@ -47,6 +47,7 @@ namespace DarkwoodMP.World
             {
                 return "-";
             }
+
             return $"{s.invItem.type}x{s.invItem.amount}";
         }
 
@@ -70,18 +71,22 @@ namespace DarkwoodMP.World
                 {
                     return args[i + k];
                 }
+
                 return null;
             }
+
             int wantLevel = -1;
             if (Opt("--level") != null)
             {
                 wantLevel = int.Parse(Opt("--level"));
             }
+
             int grown = -1;
             if (Opt("--grown") != null)
             {
                 grown = int.Parse(Opt("--grown"));
             }
+
             if (args.Contains("--after-reload"))
             {
                 float by = Time.realtimeSinceStartup + 220f;
@@ -90,21 +95,25 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                 }
+
                 if (Scene == _sceneBefore || !WorldShare.WorldReady)
                 {
                     r.Fail("our world wasn't loaded again");
                     yield break;
                 }
+
                 // the host's contents of the storage (SlotShare.Update asks for
                 // them)
                 yield return new WaitForSeconds(5f);
             }
+
             var wb = Bench();
             if (wb == null)
             {
                 r.Fail("no workbench");
                 yield break;
             }
+
             var st = wb.normalInventory;
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until
@@ -113,6 +122,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             int want = WorkbenchStorage.Wanted(wb, Level);
             r.Info =
                 $"{MapScenarioWorld.Ref(st)} level {Level}: {st.slots.Count} "
@@ -124,11 +134,13 @@ namespace DarkwoodMP.World
                 r.Fail($"level {Level}, not {wantLevel}: {r.Info}");
                 yield break;
             }
+
             if (st.slots.Count != want)
             {
                 r.Fail($"slot count isn't the level's: {r.Info}");
                 yield break;
             }
+
             if (grown >= 0 && st.slots.Count - _countBefore != grown)
             {
                 r.Fail(
@@ -136,15 +148,18 @@ namespace DarkwoodMP.World
                         + $"{r.Info}");
                 yield break;
             }
+
             if (grown < 0)
             {
                 // what a later --grown counts from (in this game)
                 _countBefore = st.slots.Count;
             }
+
             if (!args.Contains("--after-reload"))
             {
                 _sceneBefore = Scene;
             }
+
             if (Opt("--slot") != null)
             {
                 int i = int.Parse(Opt("--slot"));
@@ -152,6 +167,7 @@ namespace DarkwoodMP.World
                 {
                     i += st.slots.Count;
                 }
+
                 string type = Opt("--slot", 2);
                 int amount = int.Parse(Opt("--slot", 3));
                 var s = st.slots[i];
@@ -165,6 +181,7 @@ namespace DarkwoodMP.World
                     ok = !InvItemClass.isNull(s.invItem)
                         && s.invItem.type == type && s.invItem.amount == amount;
                 }
+
                 r.Info += $"; slot {i}: {Slot(s)}";
                 if (!ok)
                 {
@@ -174,6 +191,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
             }
+
             if (st.open)
             {
                 string drawn = MapScenarioUi.Drawn(st);
@@ -181,13 +199,16 @@ namespace DarkwoodMP.World
                 {
                     drawn = Layout(st);
                 }
+
                 if (drawn != null)
                 {
                     r.Fail($"drawn wrong: {drawn}; {r.Info}");
                     yield break;
                 }
+
                 r.Info += "; drawn right";
             }
+
             string dir = Opt("--shot");
             if (dir != null)
             {
@@ -198,6 +219,7 @@ namespace DarkwoodMP.World
                 {
                     text = "client";
                 }
+
                 string path =
                     Path.Combine(dir, $"wb-rows-{text}-{st.slots.Count}.png");
                 ScreenCapture.CaptureScreenshot(path);
@@ -218,6 +240,7 @@ namespace DarkwoodMP.World
             {
                 cam = Core.CamUI.GetComponent<Camera>();
             }
+
             var at = new List<Vector3>();
             for (int i = 0; i < st.slots.Count; i++)
             {
@@ -226,13 +249,16 @@ namespace DarkwoodMP.World
                 {
                     return $"slot {i} isn't drawn";
                 }
+
                 at.Add(ui.transform.position);
             }
+
             float distance = 60f;
             if (at.Count > 1)
             {
                 distance = Vector3.Distance(at[0], at[1]);
             }
+
             float size = distance * 0.9f;
             for (int i = 0; i < at.Count; i++)
             {
@@ -244,6 +270,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             int cols = Mathf.Max(1, st.maxColumns);
             for (int i = cols; i < at.Count; i++)
             {
@@ -253,12 +280,14 @@ namespace DarkwoodMP.World
                     return $"slot {i} isn't under slot {i - cols}";
                 }
             }
+
             var button = st.thisUI.transform.Find(SlotShare.ButtonName);
             if (button != null && button.position.z >= at[at.Count - 1].z)
             {
                 return $"Sort & Stack ({button.position}) isn't under the last "
                     + $"row ({at[at.Count - 1]})";
             }
+
             if (cam != null)
             {
                 Vector3[] second;
@@ -270,6 +299,7 @@ namespace DarkwoodMP.World
                 {
                     second = new Vector3[0];
                 }
+
                 foreach (var p in new[] { at[0], at[at.Count - 1] }.Concat(
                     second))
                 {
@@ -281,6 +311,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return null;
         }
 
@@ -300,6 +331,7 @@ namespace DarkwoodMP.World
                 r.Fail("no workbench");
                 yield break;
             }
+
             var st = wb.normalInventory;
             if (P.openedItemInventory2 != st || P.openedItemInventory == null
                 || !P.openedItemInventory.isWorkbench)
@@ -307,6 +339,7 @@ namespace DarkwoodMP.World
                 r.Fail("the workbench isn't open here");
                 yield break;
             }
+
             bool max = a.Length > 0 && a[0] == "max";
             int first = Level, firstCount = st.slots.Count;
             var done = new List<string>();
@@ -324,6 +357,7 @@ namespace DarkwoodMP.World
                 {
                     up = wb.levels[level - 1].upgradeRecipe;
                 }
+
                 if (up == null || up.recipes.Count == 0)
                 {
                     if (n == 0)
@@ -333,8 +367,10 @@ namespace DarkwoodMP.World
                                 + "levels)");
                         yield break;
                     }
+
                     break;
                 }
+
                 var recipe = up.recipes[0];
                 foreach (var req in recipe.requirements)
                 {
@@ -346,6 +382,7 @@ namespace DarkwoodMP.World
                                 req.item.type, req.amount, dropIfNoRoom: true));
                     }
                 }
+
                 yield return new WaitForSeconds(0.8f);
                 int before = st.slots.Count;
                 if (n == 0)
@@ -353,6 +390,7 @@ namespace DarkwoodMP.World
                     _countBefore = before;
                     _sceneBefore = Scene;
                 }
+
                 AsPlayer(() => up.doCraft(recipe));
                 yield return new WaitForSeconds(1f);
                 done.Add(
@@ -365,6 +403,7 @@ namespace DarkwoodMP.World
                             + $"{string.Join("; ", done)}");
                     yield break;
                 }
+
                 if (st.slots.Count != before + WorkbenchStorage.RowSize)
                 {
                     r.Fail(
@@ -373,6 +412,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
             }
+
             r.Info =
                 $"level {first} -> {Level} of {wb.levels.Count} levels; "
                     + $"storage {firstCount} -> {st.slots.Count} slots; "
@@ -394,12 +434,14 @@ namespace DarkwoodMP.World
                         + "world)");
                 yield break;
             }
+
             var wb = Bench();
             if (wb == null)
             {
                 r.Fail("no workbench");
                 yield break;
             }
+
             var st = wb.normalInventory;
             int count = st.slots.Count, level = Level;
             int i = int.Parse(a[0]);
@@ -407,6 +449,7 @@ namespace DarkwoodMP.World
             {
                 i += count;
             }
+
             string before = Slot(st.slots[i]);
             try
             {
@@ -417,6 +460,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"[map] wb-rows-reload: closeInventory: {e.Message}");
             }
+
             yield return new WaitForSeconds(0.8f);
             try
             {
@@ -427,6 +471,7 @@ namespace DarkwoodMP.World
                 r.Fail($"Save threw: {e.Message}");
                 yield break;
             }
+
             yield return new WaitForSeconds(1.5f);
             Plugin.Log.LogInfo(
                 $"[map] wb-rows-reload: saved ({count} slots, slot {i} "
@@ -438,11 +483,13 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (!WorldShare.WorldReady)
             {
                 r.Fail("the world didn't load again");
                 yield break;
             }
+
             yield return new WaitForSeconds(1f);
             wb = Bench();
             if (wb == null)
@@ -450,12 +497,14 @@ namespace DarkwoodMP.World
                 r.Fail("no workbench after the reload");
                 yield break;
             }
+
             st = wb.normalInventory;
             string after = "(no such slot)";
             if (i < st.slots.Count)
             {
                 after = Slot(st.slots[i]);
             }
+
             r.Info =
                 $"before: level {level}, {count} slots, slot {i} {before}; "
                     + $"after: level {Level}, {st.slots.Count} slots, slot {i} "
@@ -472,8 +521,10 @@ namespace DarkwoodMP.World
                 {
                     expected = $"{a[1]}x{a[2]}";
                 }
+
                 ok = after == expected;
             }
+
             if (Level != level || st.slots.Count != count || after != before
                 || !ok)
             {

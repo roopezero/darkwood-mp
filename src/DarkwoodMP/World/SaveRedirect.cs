@@ -83,10 +83,12 @@ namespace DarkwoodMP.World
             {
                 dir = Dir;
             }
+
             if (dir == null)
             {
                 return true;
             }
+
             __result = dir;
             return false;
         }

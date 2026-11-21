@@ -925,6 +925,7 @@ namespace DarkwoodMP.Net
             {
                 written = "";
             }
+
             var b = Encoding.UTF8.GetBytes(written);
             int n = Math.Min(b.Length, ushort.MaxValue);
             if (n < b.Length)
@@ -934,6 +935,7 @@ namespace DarkwoodMP.Net
                         + "message: use WriteBigStr for "
                         + $"it\n{Environment.StackTrace}");
             }
+
             _w.Write((ushort)n);
             _w.Write(b, 0, n);
         }
@@ -949,6 +951,7 @@ namespace DarkwoodMP.Net
             {
                 written = "";
             }
+
             var b = Encoding.UTF8.GetBytes(written);
             _w.Write((uint)b.Length);
             _w.Write(b);
@@ -986,11 +989,13 @@ namespace DarkwoodMP.Net
             {
                 throw new InvalidDataException($"bigstr of {n} bytes");
             }
+
             var b = _r.ReadBytes((int)n);
             if (b.Length != n)
             {
                 throw new EndOfStreamException();
             }
+
             return Encoding.UTF8.GetString(b);
         }
     }
@@ -1006,6 +1011,7 @@ namespace DarkwoodMP.Net
             {
                 return 0;
             }
+
             unchecked
             {
                 uint h = 2166136261;
@@ -1014,6 +1020,7 @@ namespace DarkwoodMP.Net
                     h ^= s[i];
                     h *= 16777619;
                 }
+
                 return (int)h;
             }
         }

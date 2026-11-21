@@ -58,11 +58,13 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
+
             if (host == null)
             {
                 r.Fail($"none of {string.Join(", ", Hosts)} here");
                 yield break;
             }
+
             if (a.Length > 0)
             {
                 _sound = a[0];
@@ -71,6 +73,7 @@ namespace DarkwoodMP.World
             {
                 _sound = Fallback;
             }
+
             if (AudioController.GetAudioItem(_sound) == null)
             {
                 r.Fail($"no audio item {_sound}");
@@ -91,6 +94,7 @@ namespace DarkwoodMP.World
                 floatValue = 1f,
                 eventAmount = 1
             });
+
             var exit =
                 new GameObject("dwmp_whisper_exit").AddComponent<GameEvents>();
             exit.transform.SetParent(go.transform, false);
@@ -102,6 +106,7 @@ namespace DarkwoodMP.World
                 Value = _sound,
                 eventAmount = 1
             });
+
             _et = go.AddComponent<EventTriggers>();
             _t = new global::EventTrigger
             {
@@ -110,6 +115,7 @@ namespace DarkwoodMP.World
                 gameEvents = enter,
                 gameEventsExit = exit
             };
+
             _et.eventTriggers.Add(_t);
             // EventTriggers.Awake ran before the trigger was in its list
             _t.thisEventTriggers = _et;
@@ -140,6 +146,7 @@ namespace DarkwoodMP.World
                 r.Fail("no area (whisper-setup first)");
                 yield break;
             }
+
             yield return Walk(_et.transform.position, 150f);
             AsPlayer(
                 () => _et.fireEventTrigger(global::EventTrigger.Type.area));
@@ -149,6 +156,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             r.Info =
                 $"entered: {_sound} playing {Playing()}, trigger fired "
                     + $"{_t.fired}";
@@ -169,6 +177,7 @@ namespace DarkwoodMP.World
                 r.Fail("no area (whisper-setup first)");
                 yield break;
             }
+
             _et.exited++;
             AsPlayer(
                 () => _et.fireEventTriggerExit(global::EventTrigger.Type.area));
@@ -177,6 +186,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             r.Info =
                 $"left: {_sound} playing {Playing()}, exit ran {_t.firedExit}";
             if (Playing())
@@ -196,12 +206,14 @@ namespace DarkwoodMP.World
                 r.Fail("no area (whisper-setup first)");
                 yield break;
             }
+
             bool want = a.Length == 0 || a[0] == "playing";
             float until = Time.realtimeSinceStartup + 5f;
             while (Playing() != want && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             yield return new WaitForSeconds(0.5f);
             string sound = _sound;
             bool playing = Playing();
@@ -210,6 +222,7 @@ namespace DarkwoodMP.World
             {
                 wanted = "playing";
             }
+
             r.Info =
                 $"{sound} playing {playing} (want {wanted}); entered "
                     + $"{_et.entered}, left {_et.exited}, exit ran "
@@ -225,6 +238,7 @@ namespace DarkwoodMP.World
                 {
                     why = $"stuck hearing the whispers here: {r.Info}";
                 }
+
                 r.Fail(why);
             }
         }
@@ -241,6 +255,7 @@ namespace DarkwoodMP.World
                 r.Fail("no area (whisper-setup first)");
                 yield break;
             }
+
             // From outside it, as a player walks in (OnTriggerEnter counts a
             // player in only from its edge once it has been entered before).
             yield return Walk(
@@ -252,6 +267,7 @@ namespace DarkwoodMP.World
             {
                 box = _et.gameObject.AddComponent<BoxCollider>();
             }
+
             box.isTrigger = true;
             // A cube, as the object it's on is turned (the game's sprites lie
             // at 90 degrees) and may be scaled.
@@ -263,6 +279,7 @@ namespace DarkwoodMP.World
             {
                 rb = _et.gameObject.AddComponent<Rigidbody>();
             }
+
             rb.isKinematic = true;
             rb.useGravity = false;
             yield return Walk(_et.transform.position, 100f);
@@ -272,6 +289,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered "
@@ -294,6 +312,7 @@ namespace DarkwoodMP.World
                 r.Fail("no area (whisper-setup first)");
                 yield break;
             }
+
             yield return Walk(
                 _et.transform.position + new Vector3(0f, 0f, -700f), 80f);
             float until = Time.realtimeSinceStartup + 5f;
@@ -302,6 +321,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             r.Info =
                 $"in the area: {ScriptedEvents.OurPlayerInside(_et)} (entered "
                     + $"{_et.entered}, left {_et.exited}); {_sound} playing "
@@ -311,6 +331,7 @@ namespace DarkwoodMP.World
             {
                 Object.Destroy(box);
             }
+
             if (ScriptedEvents.OurPlayerInside(_et))
             {
                 r.Fail($"still in the area: {r.Info}");
@@ -319,6 +340,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"the whispers go on here: {r.Info}");
             }
+
             yield return Walk(Centre, 60f);
         }
     }

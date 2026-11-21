@@ -25,6 +25,7 @@ namespace DarkwoodMP.Net
                         return k;
                     }
                 }
+
                 var bytes = new byte[32];
                 // Qualified: the game has a RandomNumberGenerator of its own in
                 // the global namespace.
@@ -33,6 +34,7 @@ namespace DarkwoodMP.Net
                 {
                     rng.GetBytes(bytes);
                 }
+
                 string key = BitConverter.ToString(bytes).Replace("-", "")
                     .ToLowerInvariant();
                 File.WriteAllText(path, key);

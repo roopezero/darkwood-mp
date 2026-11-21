@@ -26,6 +26,7 @@ namespace DarkwoodMP
             {
                 want = CursorLockMode.None;
             }
+
             if (UnityEngine.Cursor.lockState != want)
             {
                 UnityEngine.Cursor.lockState = want;

@@ -72,6 +72,7 @@ namespace DarkwoodMP.World
                             typeof(SkillsMenu),
                             "skillTiers").GetValue(menu) as SkillTiers;
                     }
+
                     if (_tiers == null)
                     {
                         var go = Resources.Load("SkillTiers") as GameObject;
@@ -81,10 +82,12 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 if (_tiers != null)
                 {
                     return _tiers.tiers;
                 }
+
                 return null;
             }
         }
@@ -102,6 +105,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             foreach (var t in tiers)
             {
                 tier = t;
@@ -112,6 +116,7 @@ namespace DarkwoodMP.World
                         return sk;
                     }
                 }
+
                 negative = true;
                 foreach (var sk in t.negativeSkills)
                 {
@@ -120,8 +125,10 @@ namespace DarkwoodMP.World
                         return sk;
                     }
                 }
+
                 negative = false;
             }
+
             tier = null;
             return null;
         }
@@ -145,6 +152,7 @@ namespace DarkwoodMP.World
             {
                 return TierNames[index];
             }
+
             return (index + 1).ToString();
         }
 
@@ -159,6 +167,7 @@ namespace DarkwoodMP.World
             {
                 return set;
             }
+
             foreach (var t in tiers)
             {
                 foreach (var sk in t.skills)
@@ -168,6 +177,7 @@ namespace DarkwoodMP.World
                         set.Add(sk.name);
                     }
                 }
+
                 foreach (var sk in t.negativeSkills)
                 {
                     if (sk != null && sk.chosen)
@@ -176,6 +186,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return set;
         }
 
@@ -189,6 +200,7 @@ namespace DarkwoodMP.World
                     n++;
                 }
             }
+
             return n;
         }
 
@@ -210,6 +222,7 @@ namespace DarkwoodMP.World
             {
                 return 0;
             }
+
             return Points(p.currentLevel, Chosen(p));
         }
 
@@ -244,22 +257,27 @@ namespace DarkwoodMP.World
             {
                 return "there's no such skill";
             }
+
             if (chosen.Contains(good))
             {
                 return "you have this skill already";
             }
+
             if (t.level > level)
             {
                 return $"this tier opens at level {t.level}";
             }
+
             if (GoodIn(t, chosen) >= 2)
             {
                 return "this tier's two skills are taken";
             }
+
             if (Points(level, chosen) <= 0)
             {
                 return "no skill points left: take a level at a stove";
             }
+
             return null;
         }
 
@@ -278,27 +296,33 @@ namespace DarkwoodMP.World
             {
                 return "there's no such negative skill";
             }
+
             if (chosen.Contains(negative))
             {
                 return "you have this negative skill already";
             }
+
             if (t.level > level)
             {
                 return $"this tier opens at level {t.level}";
             }
+
             if (HasGood(t, chosen))
             {
                 return "this tier's negative skill was taken with its first "
                     + "skill";
             }
+
             if (!TierNeedsNegative(t, chosen))
             {
                 return "this tier's negative skill is taken";
             }
+
             if (good != null && TierOf(good, out _) != t)
             {
                 return "it goes with the first skill of its own tier";
             }
+
             return null;
         }
 
@@ -314,6 +338,7 @@ namespace DarkwoodMP.World
             {
                 return why;
             }
+
             bool need = NeedsNegative(chosen, good);
             if (string.IsNullOrEmpty(negative))
             {
@@ -322,12 +347,15 @@ namespace DarkwoodMP.World
                     return "a negative skill of its tier has to be taken with "
                         + "it";
                 }
+
                 return null;
             }
+
             if (!need)
             {
                 return "no negative skill goes with this skill";
             }
+
             return CantTakeNegative(level, chosen, negative, good);
         }
 
@@ -352,11 +380,13 @@ namespace DarkwoodMP.World
                 why = "not in a world";
                 return false;
             }
+
             if (_waiting)
             {
                 why = "waiting for the host";
                 return false;
             }
+
             var chosen = Chosen(p);
             int level = p.currentLevel;
             why = Check(level, chosen, good, negative);
@@ -364,6 +394,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var gs = Find(good);
             var ns = Find(negative);
             Give(gs, ns);
@@ -372,6 +403,7 @@ namespace DarkwoodMP.World
             {
                 text = " with " + negative;
             }
+
             Plugin.Log.LogInfo(
                 $"[skills] learned {good}{text}: {Points(p)} points left");
             if (NetEnemies.ClientMode && WorldShare.InWorld && S != null
@@ -386,6 +418,7 @@ namespace DarkwoodMP.World
                 {
                     sentNegative = "";
                 }
+
                 w.WriteStr(sentNegative);
                 var had = chosen.ToList();
                 w.W.Write((byte)Math.Min(had.Count, 255));
@@ -393,6 +426,7 @@ namespace DarkwoodMP.World
                 {
                     w.WriteStr(had[i]);
                 }
+
                 Authority.Request(w, $"learn {good}", (ok, reason, _) =>
                 {
                     _waiting = false;
@@ -400,6 +434,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     Take(gs);
                     Take(ns);
                     Plugin.Log.LogInfo(
@@ -412,6 +447,7 @@ namespace DarkwoodMP.World
                     }
                 }, inventory: false);
             }
+
             return true;
         }
 
@@ -422,6 +458,7 @@ namespace DarkwoodMP.World
             {
                 negative.initialize(destBool: true);
             }
+
             good.initialize(destBool: true);
             if (good.isActivatedManually)
             {
@@ -433,6 +470,7 @@ namespace DarkwoodMP.World
                         activeModifier: true);
                 }
             }
+
             p.skills.refreshAll();
             p.gainExp(0);
             try
@@ -442,6 +480,7 @@ namespace DarkwoodMP.World
             catch
             {
             }
+
             SkillsMenu menu = Singleton<SkillsMenu>.Instance;
             if (menu != null)
             {
@@ -455,6 +494,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             sk.initialize(destBool: false);
             Player instance = Player.Instance;
             if (instance != null)
@@ -479,15 +519,18 @@ namespace DarkwoodMP.World
             {
                 chosen.Add(r.ReadStr());
             }
+
             if (!S.IsHost || !Authority.Handling)
             {
                 return;
             }
+
             if (Tiers == null)
             {
                 Authority.Refuse("the host isn't in a world");
                 return;
             }
+
             int most = Progression.MostLevels(Player.Instance);
             if (level > most)
             {
@@ -496,18 +539,21 @@ namespace DarkwoodMP.World
                         + $"({most})");
                 return;
             }
+
             string why = Check(level, chosen, good, negative);
             if (why != null)
             {
                 Authority.Refuse(why);
                 return;
             }
+
             string name = S.NameOf(from);
             string withNegative = "";
             if (negative.Length > 0)
             {
                 withNegative = " with " + negative;
             }
+
             Plugin.Log.LogInfo(
                 $"[skills] {name} learned {good}{withNegative} at level "
                     + $"{level}");
@@ -523,6 +569,7 @@ namespace DarkwoodMP.World
             {
                 return "no tiers";
             }
+
             var parts = new List<string>();
             for (int i = 0; i < tiers.Count; i++)
             {
@@ -533,6 +580,7 @@ namespace DarkwoodMP.World
                           "negative: "
                         + $"{string.Join(", ", t.negativeSkills.Where(s => s != null).Select(s => s.name))}");
             }
+
             return string.Join(" | ", parts);
         }
 
@@ -547,6 +595,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var chosen = Chosen(p);
             var wrong = new List<string>();
             for (int i = 0; i < tiers.Count; i++)
@@ -564,10 +613,12 @@ namespace DarkwoodMP.World
                             + $"{GoodIn(t, chosen)} skills");
                 }
             }
+
             if (wrong.Count > 0)
             {
                 return string.Join(", ", wrong);
             }
+
             return null;
         }
 
@@ -582,6 +633,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var chosen = Chosen(p);
             int level = p.currentLevel;
             foreach (var t in tiers)
@@ -592,10 +644,12 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     if (!NeedsNegative(chosen, g.name))
                     {
                         return new[] { g.name, null };
                     }
+
                     foreach (var ng in t.negativeSkills)
                     {
                         if (ng != null
@@ -606,6 +660,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return null;
         }
     }

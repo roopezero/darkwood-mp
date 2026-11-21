@@ -59,6 +59,7 @@ namespace DarkwoodMP.World
                     _ovens[id] = Player.Instance.experienceMachine;
                 }
             };
+
             s.OnPeerDisconnected += id => _ovens.Remove(id);
             s.OnSessionEnded += () => _ovens.Clear();
         }
@@ -84,6 +85,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             foreach (var loc in Object.FindObjectsOfType<Location>())
             {
                 if (loc != null && loc.hideoutId == id && !loc.isSubLocation)
@@ -91,6 +93,7 @@ namespace DarkwoodMP.World
                     return loc;
                 }
             }
+
             return null;
         }
 
@@ -106,6 +109,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var s = S;
             if (s.IsClient)
             {
@@ -122,18 +126,22 @@ namespace DarkwoodMP.World
                             "[world] sent porter transport from hideout "
                                 + $"{src.hideoutId}");
                     }
+
                     Authority.Request(
                         w, $"porter transport from hideout {src.hideoutId}",
                         inventory: false);
                 }
+
                 return false;
             }
+
             // Host: a joiner's event is done when its own PorterTransport
             // comes, for its hideout.
             if (ScriptedEvents.Current == ScriptedEvents.Part.HostAndShared)
             {
                 return false;
             }
+
             Player.Instance.whereAmI.checkWhereAmI();
             var dest = Player.Instance.whereAmI.bigLocation;
             if (Why(src, dest) is string why)
@@ -143,6 +151,7 @@ namespace DarkwoodMP.World
                         + $"({why})");
                 return false;
             }
+
             Deliver(src, dest);
             return false;
         }
@@ -153,18 +162,22 @@ namespace DarkwoodMP.World
             {
                 return "no such hideout to take things from";
             }
+
             if (dest == null || !dest.playerBase || dest.hideoutId <= 0)
             {
                 return "not at a hideout";
             }
+
             if (dest == src)
             {
                 return "already at that hideout";
             }
+
             if (dest.porterDeliveryPosition == null)
             {
                 return $"{dest.name} has no place for the porter's package";
             }
+
             return null;
         }
 
@@ -175,17 +188,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int hid = r.R.ReadByte();
             if (!Authority.Handling)
             {
                 return;
             }
+
             var proxy = Authority.Requester;
             if (proxy == null)
             {
                 Authority.Refuse("where they are isn't known yet");
                 return;
             }
+
             var dest = NightSpawns.BigLocationAt(proxy.transform.position);
             var src = HideoutById(hid);
             if (Why(src, dest) is string why)
@@ -193,6 +209,7 @@ namespace DarkwoodMP.World
                 Authority.Refuse(why);
                 return;
             }
+
             Deliver(src, dest);
         }
 
@@ -215,6 +232,7 @@ namespace DarkwoodMP.World
                     item.assignClass();
                 }
             }
+
             string contents =
                 JsonConvert.SerializeObject(new Inventory.SaveState(inv));
             inv.gameObject.SetActive(false);
@@ -241,6 +259,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var src = HideoutById(r.R.ReadByte());
             var dest = HideoutById(r.R.ReadByte());
             long id = r.R.ReadInt64(), spawnerId = r.R.ReadInt64();
@@ -252,14 +271,17 @@ namespace DarkwoodMP.World
                 {
                     fromName = src.name;
                 }
+
                 string toName = "?";
                 if (dest != null)
                 {
                     toName = dest.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] got porter delivery from {fromName} to {toName}");
             }
+
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try
@@ -269,11 +291,13 @@ namespace DarkwoodMP.World
                 {
                     src.getAllInvSlots();
                 }
+
                 if (dest == null || dest.porterDeliveryPosition == null)
                 {
                     Plugin.Log.LogWarning("The porter's hideout isn't here");
                     return;
                 }
+
                 var inv = MakePackage(dest, id);
                 Inventory.SaveState saveState =
                     JsonConvert.DeserializeObject<Inventory.SaveState>(
@@ -282,6 +306,7 @@ namespace DarkwoodMP.World
                 {
                     saveState.loadValues(inv);
                 }
+
                 inv.gameObject.SetActive(false);
                 MakeSpawner(dest, inv.gameObject, spawnerId);
                 PorterLeaves();
@@ -342,6 +367,7 @@ namespace DarkwoodMP.World
                     porterChar.removeMe();
                 }
             }
+
             Singleton<Flags>.Instance.setFlag(
                 "porter_inTransit", activeModifier: true);
         }
@@ -360,6 +386,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var s = S;
             if (s.IsHost)
             {
@@ -367,12 +394,14 @@ namespace DarkwoodMP.World
                 // tells the others
                 return true;
             }
+
             var w = s.Begin(MsgType.PorterCalled);
             w.Write(loc.porterPosition.transform.position);
             if (Debug)
             {
                 Plugin.Log.LogInfo($"[world] sent porter call at {loc.name}");
             }
+
             Authority.Request(
                 w, $"porter call at {loc.name}", inventory: false);
             return false;
@@ -388,6 +417,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = S.Begin(MsgType.PorterCalled);
             w.Write(loc.porterPosition.transform.position);
             S.Broadcast(w, Channel.Control, reliable: true);
@@ -408,6 +438,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 float d = Vector3.Distance(
                     loc.porterPosition.transform.position, pos);
                 if (d < bestD)
@@ -416,6 +447,7 @@ namespace DarkwoodMP.World
                     bestD = d;
                 }
             }
+
             return best;
         }
 
@@ -426,6 +458,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var pos = r.ReadVector3();
             var loc = PorterLocationAt(pos);
             if (s.IsHost)
@@ -434,51 +467,61 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 if (loc == null)
                 {
                     Authority.Refuse("there's no porter's place there");
                     return;
                 }
+
                 var proxy = Authority.Requester;
                 if (proxy == null)
                 {
                     Authority.Refuse("where they are isn't known yet");
                     return;
                 }
+
                 if (NightSpawns.BigLocationAt(proxy.transform.position) != loc)
                 {
                     Authority.Refuse($"they aren't at {loc.name}");
                     return;
                 }
+
                 if (!Core.isDay())
                 {
                     Authority.Refuse("the porter comes in the daytime only");
                     return;
                 }
+
                 var flags = Singleton<Flags>.Instance;
                 if (flags.isFlagTrue("porter_inTransit"))
                 {
                     Authority.Refuse("the porter is on the way already");
                     return;
                 }
+
                 if (flags.isFlagTrue("porter_killed"))
                 {
                     Authority.Refuse("the porter is dead");
                     return;
                 }
+
                 if (loc.porter != null)
                 {
                     Authority.Refuse("the porter is there already");
                     return;
                 }
+
                 // PorterCallPatch sends it to everyone, the whistler too
                 loc.spawnPorter();
                 return;
             }
+
             if (from != s.HostId)
             {
                 return;
             }
+
             if (Debug)
             {
                 string placeName = "no porter's place here";
@@ -486,12 +529,15 @@ namespace DarkwoodMP.World
                 {
                     placeName = loc.name;
                 }
+
                 Plugin.Log.LogInfo($"[world] got porter call: " + placeName);
             }
+
             if (loc == null)
             {
                 return;
             }
+
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try
@@ -522,6 +568,7 @@ namespace DarkwoodMP.World
                 SendOven(machine, putOut);
                 return false;
             }
+
             // Client: lit here at once; the host says whether the old one goes
             // out.
             Authority.Request(BeginOven(machine, prev),
@@ -531,16 +578,19 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 if (!wasOn)
                 {
                     machine.disable();
                 }
+
                 if (Player.Instance != null
                     && Player.Instance.experienceMachine == machine)
                 {
                     Player.Instance.experienceMachine = prev;
                 }
             }, inventory: false);
+
             return false;
         }
 
@@ -555,11 +605,13 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (Player.Instance != null
                 && Player.Instance.experienceMachine == prev)
             {
                 return null;
             }
+
             foreach (var kv in _ovens)
             {
                 if (kv.Key != except && kv.Value == prev)
@@ -567,6 +619,7 @@ namespace DarkwoodMP.World
                     return null;
                 }
             }
+
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try
@@ -577,6 +630,7 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = was;
             }
+
             return prev;
         }
 
@@ -594,6 +648,7 @@ namespace DarkwoodMP.World
             {
                 goesOut = ObjRef.Of(other.gameObject);
             }
+
             goesOut.Write(w);
             return w;
         }
@@ -609,8 +664,10 @@ namespace DarkwoodMP.World
                 {
                     note = $", {putOut.name} out";
                 }
+
                 Plugin.Log.LogInfo($"[world] sent oven {lit.name} lit" + note);
             }
+
             S.Broadcast(w, Channel.Control, reliable: true);
         }
 
@@ -621,10 +678,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             var litRef = ObjRef.Read(r);
             var otherRef = ObjRef.Read(r);
             var lit = ObjRef.Resolve<ExperienceMachine>(litRef);
@@ -635,21 +694,25 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 if (lit == null)
                 {
                     Authority.Refuse("no such oven here");
                     return;
                 }
+
                 if (!Authority.InReach(
                     lit.transform.position, WorldActions.Reach, lit.name))
                 {
                     return;
                 }
+
                 if (lit.transform.GetLocation() == null)
                 {
                     Authority.Refuse("that oven isn't at a hideout");
                     return;
                 }
+
                 LightHere(lit);
                 _ovens[from] = lit;
                 if (Debug)
@@ -657,9 +720,11 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo(
                         $"[world] {s.NameOf(from)} lit the oven {lit.name}");
                 }
+
                 SendOven(lit, PutOut(other, lit, except: from));
                 return;
             }
+
             if (Debug)
             {
                 string line = $"[world] got oven {litRef} lit";
@@ -668,17 +733,21 @@ namespace DarkwoodMP.World
                 {
                     otherOut = $", {otherRef} out";
                 }
+
                 string missing = "";
                 if (lit == null)
                 {
                     missing = ": not found here";
                 }
+
                 Plugin.Log.LogInfo(line + otherOut + missing);
             }
+
             if (lit != null && !lit.isOn)
             {
                 LightHere(lit);
             }
+
             if (other != null && other != lit && Player.Instance != null
                 && Player.Instance.experienceMachine != other)
             {
@@ -706,6 +775,7 @@ namespace DarkwoodMP.World
             {
                 mine = p.experienceMachine;
             }
+
             bool was = WorldActions.Replaying;
             WorldActions.Replaying = true;
             try
@@ -738,16 +808,19 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (ge.getTargetGameObjectsFromParent || ge.getTargetFromLocation
                 || (ge.locationObjects != null && ge.locationObjects.Count > 0))
             {
                 return false;
             }
+
             var src = ge.sourceTransform.GetComponent<Inventory>();
             if (src == null || IsPlayers(src))
             {
                 return false;
             }
+
             int n = 0;
             foreach (var go in Targets(ge))
             {
@@ -756,12 +829,15 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (IsPlayers(inv))
                 {
                     return false;
                 }
+
                 n++;
             }
+
             return n > 0;
         }
 
@@ -777,6 +853,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (ge.targetUniqueObjects != null
                 && Singleton<UniqueObjects>.Instance != null)
             {
@@ -807,19 +884,23 @@ namespace DarkwoodMP.World
             {
                 yield return inner.Current;
             }
+
             if (!Together || !S.IsHost || Containers.Instance == null)
             {
                 yield break;
             }
+
             Inventory src = null;
             if (ge.sourceTransform != null)
             {
                 src = ge.sourceTransform.GetComponent<Inventory>();
             }
+
             if (src != null)
             {
                 Containers.Instance.SendContents(src);
             }
+
             foreach (var go in Targets(ge))
             {
                 var inv = go.GetComponent<Inventory>();
@@ -828,6 +909,7 @@ namespace DarkwoodMP.World
                     Containers.Instance.SendContents(inv);
                 }
             }
+
             if (Debug)
             {
                 Transform sourceTransform = ge.sourceTransform;
@@ -836,6 +918,7 @@ namespace DarkwoodMP.World
                 {
                     name = sourceTransform.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] moveInventory from {name} done here; sent the "
                         + "containers");
@@ -868,9 +951,11 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __state = false;
             return false;
         }
+
         static void Postfix(Location __instance, bool __state)
         {
             if (__state)
@@ -893,6 +978,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             return Hideouts.Light(__instance, machine);
         }
     }

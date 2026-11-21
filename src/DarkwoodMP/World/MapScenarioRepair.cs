@@ -56,10 +56,12 @@ namespace DarkwoodMP.World
                 {
                     return "door gone";
                 }
+
                 return $"{_door.name} {MapScenarioWorld.Ref(_door)} "
                     + $"broken={_door.destroyed} health {_door.health}";
             }
         }
+
         private static string ItemInfo
         {
             get
@@ -68,6 +70,7 @@ namespace DarkwoodMP.World
                 {
                     return "item gone";
                 }
+
                 return $"{_item.name} {MapScenarioWorld.Ref(_item)} "
                     + $"broken={_item.destroyed} health "
                     + $"{_item.health}/{_item.maxHealth}";
@@ -84,11 +87,13 @@ namespace DarkwoodMP.World
             {
                 _door = null;
             }
+
             if (_door == null)
             {
                 r.Fail("usage: rp-door N (no such door)");
                 yield break;
             }
+
             r.Info = $"{DoorInfo} at {Fmt(_door.transform.position)}";
         }
 
@@ -99,11 +104,13 @@ namespace DarkwoodMP.World
                 r.Fail("no door (rp-door first)");
                 yield break;
             }
+
             yield return Walk(_door.transform.position);
             if (!_door.destroyed)
             {
                 AsPlayer(() => _door.destroyDoor(false));
             }
+
             yield return new WaitForSeconds(1f);
             r.Info = DoorInfo;
             if (_door == null || !_door.destroyed)
@@ -119,17 +126,20 @@ namespace DarkwoodMP.World
                 r.Fail("no door (rp-door first)");
                 yield break;
             }
+
             yield return Walk(_door.transform.position);
             if (!_door.destroyed)
             {
                 r.Fail($"{DoorInfo}: it isn't broken here");
                 yield break;
             }
+
             for (int i = 0; i < 3 && _door != null && _door.destroyed; i++)
             {
                 AsPlayer(() => _door.barricade(byPlayer: true));
                 yield return new WaitForSeconds(0.3f);
             }
+
             yield return new WaitForSeconds(1.5f); // the host's answer
             r.Info = DoorInfo;
             if (_door == null || _door.destroyed)
@@ -155,6 +165,7 @@ namespace DarkwoodMP.World
                 r.Fail("no breakable furniture there");
                 yield break;
             }
+
             var c = _item.GetComponent<Constructible>();
             bool made = c == null;
             if (made)
@@ -172,11 +183,13 @@ namespace DarkwoodMP.World
                     }
                 };
             }
+
             string menu = "its own";
             if (made)
             {
                 menu = "added";
             }
+
             r.Info =
                 $"{ItemInfo} at {Fmt(_item.transform.position)}, construction "
                     + $"menu {menu} (only when broken: {c.onlyWhenDestroyed}, "
@@ -190,11 +203,13 @@ namespace DarkwoodMP.World
                 r.Fail("no furniture (rp-furniture first)");
                 yield break;
             }
+
             yield return Walk(_item.transform.position);
             if (!_item.destroyed)
             {
                 AsPlayer(() => _item.getHit(_item.health + 1, P.transform));
             }
+
             yield return new WaitForSeconds(1f);
             r.Info = ItemInfo;
             if (_item == null || !_item.destroyed)
@@ -210,18 +225,21 @@ namespace DarkwoodMP.World
                 r.Fail("no furniture (rp-furniture first)");
                 yield break;
             }
+
             var c = _item.GetComponent<Constructible>();
             if (c == null)
             {
                 r.Fail($"{ItemInfo}: no construction menu");
                 yield break;
             }
+
             yield return Walk(_item.transform.position);
             if (!_item.destroyed)
             {
                 r.Fail($"{ItemInfo}: it isn't broken here");
                 yield break;
             }
+
             AsPlayer(() => c.construct(manual: false, 0));
             float until = Time.realtimeSinceStartup + 4f;
             while (_item != null && _item.destroyed
@@ -229,6 +247,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.1f);
             }
+
             yield return new WaitForSeconds(1f);
             r.Info = ItemInfo;
             if (_item == null || _item.destroyed)
@@ -244,6 +263,7 @@ namespace DarkwoodMP.World
             {
                 secs = F(a[0]);
             }
+
             float until = Time.realtimeSinceStartup + secs;
             string broke = null;
             while (Time.realtimeSinceStartup < until && broke == null)
@@ -256,8 +276,10 @@ namespace DarkwoodMP.World
                 {
                     broke = "the furniture broke again: " + ItemInfo;
                 }
+
                 yield return new WaitForSeconds(0.1f);
             }
+
             r.Info = $"{DoorInfo}; {ItemInfo}";
             if (broke != null)
             {

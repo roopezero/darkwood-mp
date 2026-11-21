@@ -110,6 +110,7 @@ namespace DarkwoodMP.World
             {
                 return 0;
             }
+
             return reqs[Mathf.Clamp(level, 0, reqs.Count - 1)];
         }
 
@@ -130,11 +131,13 @@ namespace DarkwoodMP.World
             {
                 max = p.levelRequirements.Count;
             }
+
             int l = 0;
             while (l < max && SharedExp >= Req(p, l))
             {
                 l++;
             }
+
             return l;
         }
 
@@ -148,6 +151,7 @@ namespace DarkwoodMP.World
             {
                 return SharedLevel;
             }
+
             return Math.Max(SharedLevel, Allowed(p));
         }
 
@@ -160,6 +164,7 @@ namespace DarkwoodMP.World
                 {
                     return Singleton<UI>.Instance.LevelingMenu;
                 }
+
                 return null;
             }
         }
@@ -177,11 +182,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int want = Display(p, p.currentLevel);
             if (p.experience == want)
             {
                 return;
             }
+
             p.experience = want;
             var menu = StoveMenu;
             var skills = Singleton<SkillsMenu>.Instance;
@@ -210,6 +217,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return Path.Combine(
                 Path.Combine(
                     sm.baseSaveDirectory, "prof" + Core.currentProfile.id),
@@ -230,11 +238,13 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             string path = SavedPath();
             if (path == null)
             {
                 return null;
             }
+
             if (path != _savedPath)
             {
                 _saved = null;
@@ -252,12 +262,14 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning(
                         $"[progress] couldn't read {path}: {e.Message}");
                 }
+
                 if (_saved != null)
                 {
                     if (_saved.Resets == null)
                     {
                         _saved.Resets = new Dictionary<string, int>();
                     }
+
                     SharedExp = _saved.Exp;
                     SharedLevel = _saved.Level;
                     Plugin.Log.LogInfo(
@@ -265,6 +277,7 @@ namespace DarkwoodMP.World
                             + $"level {SharedLevel}");
                 }
             }
+
             bool begin = false;
             if (_saved == null && start)
             {
@@ -277,6 +290,7 @@ namespace DarkwoodMP.World
                     begin = s.Peers.Count > 0;
                 }
             }
+
             if (begin)
             {
                 _saved =
@@ -287,6 +301,7 @@ namespace DarkwoodMP.World
                     "[progress] shared progression starts from yours: essence "
                         + $"{SharedExp}, level {SharedLevel}");
             }
+
             return _saved;
         }
 
@@ -330,6 +345,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int exp = Math.Max(SharedExp, p.experience),
                 level = Math.Max(SharedLevel, p.currentLevel);
             if (exp != SharedExp || level != SharedLevel)
@@ -342,11 +358,13 @@ namespace DarkwoodMP.World
                         $"[progress] shared essence {SharedExp}, level "
                             + $"{SharedLevel}");
                 }
+
                 if (!Solo)
                 {
                     SendState(0);
                 }
             }
+
             Apply(p);
         }
 
@@ -361,6 +379,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             try
             {
                 File.WriteAllText(
@@ -381,12 +400,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (amount <= 0 || amount > 100000)
             {
                 SendState(from);
                 Authority.Refuse($"implausible essence {amount}");
                 return;
             }
+
             if (BarFull(p))
             {
                 SendState(from);
@@ -395,6 +416,7 @@ namespace DarkwoodMP.World
                         + "level at a stove");
                 return;
             }
+
             SharedExp += amount;
             _saved.Exp = SharedExp;
             Plugin.Log.LogInfo(
@@ -412,6 +434,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int allowed = Allowed(p);
             if (level > allowed)
             {
@@ -419,11 +442,13 @@ namespace DarkwoodMP.World
                     $"[progress] {S.NameOf(from)} says level {level}; the "
                         + $"shared essence allows {allowed}");
             }
+
             level = Math.Min(level, allowed);
             if (level <= SharedLevel)
             {
                 return;
             }
+
             SharedLevel = _saved.Level = level;
             Plugin.Log.LogInfo(
                 $"[progress] {S.NameOf(from)} took level {level}: everyone can "
@@ -440,6 +465,7 @@ namespace DarkwoodMP.World
                 {
                     hashed = "";
                 }
+
                 return WorldFiles.Hex(
                     sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(
                         0, 32);
@@ -454,6 +480,7 @@ namespace DarkwoodMP.World
                 {
                     return Singleton<Controller>.Instance.day;
                 }
+
                 return 0;
             }
         }
@@ -472,6 +499,7 @@ namespace DarkwoodMP.World
             {
                 return AfterNight.Local;
             }
+
             var sync = Sync.PlayerSync.Instance;
             return sync != null && sync.Remotes.TryGetValue(peer, out var rp)
                 && rp.Last != null && rp.Last.AfterNight;
@@ -489,17 +517,20 @@ namespace DarkwoodMP.World
                 why = NotMorning;
                 return false;
             }
+
             var saved = HostSaved(start: true, alone: who == "host");
             if (saved == null)
             {
                 why = "nobody shares the progression";
                 return false;
             }
+
             if (saved.Resets.TryGetValue(who, out int day) && day == Today)
             {
                 why = "you already reset your skills today";
                 return false;
             }
+
             saved.Resets[who] = Today;
             return true;
         }
@@ -510,11 +541,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!TakeReset(KeyHash(key), from, out string why))
             {
                 Authority.Refuse(why);
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"[progress] {S.NameOf(from)} reset their skills (day "
                     + $"{Today})");
@@ -536,6 +569,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             SharedExp = r.R.ReadInt32();
             SharedLevel = r.R.ReadByte();
             bool first = !_known;
@@ -548,10 +582,12 @@ namespace DarkwoodMP.World
                 {
                     yours = player.currentLevel;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[progress] shared essence {SharedExp}, level "
                         + $"{SharedLevel}; yours {yours}");
             }
+
             Apply(Player.Instance);
         }
 
@@ -565,6 +601,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = S.Begin(MsgType.LevelTaken);
             w.W.Write((byte)Mathf.Clamp(p.currentLevel, 0, 255));
             S.SendToHost(w, Channel.Control, reliable: true);
@@ -593,6 +630,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (ClientActive)
             {
                 // predicted; the host's ProgressState follows
@@ -634,6 +672,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _nextSync = Time.unscaledTime + 1f;
             var s = S;
             // Back at the main menu: forget the world's file, so a reload
@@ -644,6 +683,7 @@ namespace DarkwoodMP.World
                 _saved = null;
                 _savedPath = null;
             }
+
             if (s != null && s.IsHost && Hideouts.Together)
             {
                 HostSync();
@@ -677,6 +717,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             p.currentLevel++;
             p.gainSaturation(5f);
             var d = Singleton<Dreams>.Instance;
@@ -688,6 +729,7 @@ namespace DarkwoodMP.World
                 // a client's level brings no dream of its own
                 d.disabled = true;
             }
+
             try
             {
                 p.gainExp(0);
@@ -699,6 +741,7 @@ namespace DarkwoodMP.World
                 catch
                 {
                 }
+
                 if (d != null && !d.disabled)
                 {
                     int l = p.currentLevel;
@@ -709,27 +752,32 @@ namespace DarkwoodMP.World
                         d.startTransition.dreamToTransitionTo =
                             "dream_bunker_underground_01";
                     }
+
                     if (l == 3 && !d.hadDreamAtLvl3)
                     {
                         d.wantToDream = true;
                         d.hadDreamAtLvl3 = true;
                     }
+
                     if (l == 5 && !d.hadDreamAtLvl5)
                     {
                         d.wantToDream = true;
                         d.hadDreamAtLvl5 = true;
                     }
+
                     if (l == 6 && !d.hadDreamAtLvl6)
                     {
                         d.wantToDream = true;
                         d.hadDreamAtLvl6 = true;
                     }
+
                     if (l == 7 && !d.hadDreamAtLvl7)
                     {
                         d.wantToDream = true;
                         d.hadDreamAtLvl7 = true;
                     }
                 }
+
                 if (d != null && d.wantToDream
                     && (!Core.randomGeneration
                         || d.hasUnspawnedRandomPresetForChapter(
@@ -740,6 +788,7 @@ namespace DarkwoodMP.World
                     {
                         Singleton<CamMain>.Instance.gameObject.SetActive(true);
                     }
+
                     Singleton<UI>.Instance.InventorySelectionPrompt.Hide();
                     d.startTransition.transition();
                     menu.hide(forceHide: true);
@@ -756,6 +805,7 @@ namespace DarkwoodMP.World
                     d.disabled = was;
                 }
             }
+
             DreamSync.AfterConfirm(d);
             LevelTaken();
             Plugin.Log.LogInfo(
@@ -781,6 +831,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var all = new HashSet<PlayerSkill>();
             foreach (var sk in ps.skills)
             {
@@ -789,6 +840,7 @@ namespace DarkwoodMP.World
                     all.Add(sk);
                 }
             }
+
             foreach (var sk in ps.progressionSkills)
             {
                 if (sk != null)
@@ -796,6 +848,7 @@ namespace DarkwoodMP.World
                     all.Add(sk);
                 }
             }
+
             var menu = Singleton<SkillsMenu>.Instance;
             var tiers = SkillTree.Tiers;
             if (tiers != null)
@@ -809,6 +862,7 @@ namespace DarkwoodMP.World
                             all.Add(sk);
                         }
                     }
+
                     foreach (var sk in t.negativeSkills)
                     {
                         if (sk != null)
@@ -818,6 +872,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             int n = 0;
             foreach (var sk in all)
             {
@@ -827,17 +882,20 @@ namespace DarkwoodMP.World
                     n++;
                 }
             }
+
             ps.skills.RemoveAll(sk => sk == null || all.Contains(sk));
             if (menu != null && menu.chosenSkills != null)
             {
                 menu.chosenSkills.Clear();
             }
+
             ps.SkillPoints = 0;
             ps.refreshAll();
             if (!keepLevel)
             {
                 p.currentLevel = 0;
             }
+
             Plugin.Log.LogInfo(
                 $"[progress] skills reset: {n} taken back, level "
                     + $"{p.currentLevel}");
@@ -861,12 +919,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (NetEnemies.ClientMode)
             {
                 if (_waitingReset)
                 {
                     return;
                 }
+
                 _waitingReset = true;
                 Authority.Request(S.Begin(MsgType.SkillReset), "reset skills",
                     (ok, reason, _) =>
@@ -883,18 +943,22 @@ namespace DarkwoodMP.World
                         {
                             instance.displayMessage(reason);
                         }
+
                         Plugin.Log.LogInfo(
                             $"[progress] reset refused: {reason}");
                     }
                 }, inventory: false);
+
                 return;
             }
+
             if (!TakeReset("host", 0, out string why))
             {
                 p.displayMessage(why);
                 Plugin.Log.LogInfo($"[progress] reset refused: {why}");
                 return;
             }
+
             DoReset(p);
         }
 
@@ -904,6 +968,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             ClearSkills(p, keepLevel: true);
             if (NetEnemies.ClientMode)
             {
@@ -914,6 +979,7 @@ namespace DarkwoodMP.World
             {
                 HostSync();
             }
+
             p.displayMessage(
                 $"Skills reset: {SkillTree.Points(p)} skill points to spend "
                     + $"({SkillsPanel.KeyName})");
@@ -929,11 +995,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int waiting = 0;
             if (Hideouts.Together || Solo)
             {
                 waiting = Math.Max(0, SharedLevel - p.currentLevel);
             }
+
             int points = SkillTree.Points(p);
             bool morning = InMorning(0);
             var lines = new List<string>(2);
@@ -941,12 +1009,14 @@ namespace DarkwoodMP.World
             {
                 lines.Add($"Levels to take: {waiting}");
             }
+
             if (points > 0)
             {
                 lines.Add(
                     $"Skill points to spend: {points} ({SkillsPanel.KeyName}: "
                         + "Skills)");
             }
+
             if (lines.Count == 0 && !morning)
             {
                 return;
@@ -961,12 +1031,14 @@ namespace DarkwoodMP.World
             {
                 button = "Asking the host...";
             }
+
             float w =
                 PixelFont.Width("Reset skills (mornings, once a day)") + 24 * s;
             foreach (var l in lines)
             {
                 w = Math.Max(w, PixelFont.Width(l) + 2 * pad);
             }
+
             float row = 0f;
             if (morning)
             {
@@ -976,6 +1048,7 @@ namespace DarkwoodMP.World
                     row += pad;
                 }
             }
+
             float h = 2 * pad + lines.Count * line + row;
             float x = Mathf.Round((Screen.width - w) / 2f),
                 y = Mathf.Round(Screen.height - h - 40 * s);
@@ -988,12 +1061,14 @@ namespace DarkwoodMP.World
                     MenuSkin.Bright, TextAnchor.MiddleCenter);
                 ly += line;
             }
+
             if (morning)
             {
                 if (lines.Count > 0)
                 {
                     ly += pad;
                 }
+
                 if (Ui.Button(
                     new Rect(x + pad, ly, w - 2 * pad, Ui.RowH), button,
                     !_waitingReset))
@@ -1001,6 +1076,7 @@ namespace DarkwoodMP.World
                     ResetHere();
                 }
             }
+
             GUI.skin = skin;
         }
 
@@ -1023,6 +1099,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int given = 0;
             if (chooseSkills)
             {
@@ -1038,6 +1115,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             p.skills.refreshAll();
             p.currentLevel += n;
             p.experience = Req(p, p.currentLevel - 1);
@@ -1054,6 +1132,7 @@ namespace DarkwoodMP.World
             {
                 return "no player";
             }
+
             int chosen = 0;
             if (p.skills != null)
             {
@@ -1065,6 +1144,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return $"level {p.currentLevel}, essence {p.experience} (next "
                 + $"level at {Req(p, p.currentLevel)}), shared essence "
                 + $"{SharedExp} level {SharedLevel}, " +
@@ -1088,6 +1168,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             Progression.TakeLevelAtStove();
             return false;
         }
@@ -1107,12 +1188,14 @@ namespace DarkwoodMP.World
                 __state = 0;
             }
         }
+
         static void Postfix(int __state)
         {
             if (Player.Instance == null || WorldActions.Replaying)
             {
                 return;
             }
+
             int added = Player.Instance.experience - __state;
             if (added > 0)
             {

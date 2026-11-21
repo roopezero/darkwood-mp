@@ -73,10 +73,12 @@ namespace DarkwoodMP.World
             {
                 c = null;
             }
+
             if (c == null || !c.alive)
             {
                 return false;
             }
+
             return NetEnemies.Instance == null
                 || !NetEnemies.Instance.NetIdOf(c, out _);
         }
@@ -87,6 +89,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsHost)
             {
                 HostUpdate();
@@ -103,6 +106,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _nextMoved = Time.unscaledTime + MovedEvery;
             bool all = Time.unscaledTime >= _nextAll;
             if (all)
@@ -110,6 +114,7 @@ namespace DarkwoodMP.World
                 _nextAll = Time.unscaledTime + AllEvery;
                 FindNpcs();
             }
+
             var list = new List<(int id, Vector2 p)>();
             foreach (var (id, npc) in _npcs)
             {
@@ -117,6 +122,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var pos = c.transform.position;
                 var p = new Vector2(pos.x, pos.z);
                 bool moved = !_sent.TryGetValue(id, out var was)
@@ -125,13 +131,16 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 _sent[id] = p;
                 list.Add((id, p));
             }
+
             if (list.Count == 0)
             {
                 return;
             }
+
             for (int start = 0; start < list.Count; start += 200)
             {
                 int n = Mathf.Min(200, list.Count - start);
@@ -143,6 +152,7 @@ namespace DarkwoodMP.World
                     w.W.Write(list[i].p.x);
                     w.W.Write(list[i].p.y);
                 }
+
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
         }
@@ -160,6 +170,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var kv in sm.uniqueIdDict)
             {
                 if (kv.Key <= 0 || kv.Key >= SharedIds.SendLimit
@@ -167,6 +178,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var npc = kv.Value.GetComponent<NPC>();
                 if (npc != null)
                 {
@@ -181,6 +193,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int n = r.R.ReadUInt16();
             for (int i = 0; i < n; i++)
             {
@@ -208,11 +221,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var node = grid.getNode(at);
             if (node == null || node == co.node)
             {
                 return;
             }
+
             var cullable = co.node.getCullable(go);
             co.node.removeCullable(go);
             co.node = node;
@@ -220,6 +235,7 @@ namespace DarkwoodMP.World
             {
                 node.cullables.Add(cullable);
             }
+
             if (go.activeSelf != node.entered)
             {
                 go.SetActive(node.entered);
@@ -232,11 +248,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var sm = Singleton<SaveManager>.Instance;
             if (sm == null)
             {
                 return;
             }
+
             float dt = Time.deltaTime;
             foreach (var kv in _target)
             {
@@ -245,12 +263,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var npc = so.GetComponent<NPC>();
                 if (!Movable(npc, out var c))
                 {
                     _gone.Add(kv.Key);
                     continue;
                 }
+
                 var t = c.transform;
                 var pos = t.position;
                 var to = new Vector3(kv.Value.x, pos.y, kv.Value.y);
@@ -259,6 +279,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (d > Snap)
                 {
                     t.position = to;
@@ -269,15 +290,19 @@ namespace DarkwoodMP.World
                             $"[world] {npc.name} is at the host's "
                                 + $"{to.x:0},{to.z:0} ({d:0} away)");
                     }
+
                     continue;
                 }
+
                 t.position =
                     Vector3.MoveTowards(pos, to, Mathf.Max(250f, d * 4f) * dt);
             }
+
             foreach (var id in _gone)
             {
                 _target.Remove(id);
             }
+
             _gone.Clear();
         }
     }

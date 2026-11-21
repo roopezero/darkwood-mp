@@ -87,6 +87,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 foreach (var et in ets.eventTriggers)
                 {
                     if (et == null
@@ -95,6 +96,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     n++;
                     foreach (var (label, ge) in new[]
                     {
@@ -110,12 +112,14 @@ namespace DarkwoodMP.World
                                 {
                                     continue;
                                 }
+
                                 string text = "";
                                 if (e.type == GameEvent.Type.runFunction
                                     || e.type == GameEvent.Type.fireEvent)
                                 {
                                     text = " " + e.Value;
                                 }
+
                                 string k = $"{label} {e.type}{text}";
                                 if (count.TryGetValue(k, out int c))
                                 {
@@ -130,6 +134,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             yield return null;
             r.Info = $"{n} repeatable area triggers: " + string.Join(
                 "; ", count.Select(kv => $"{kv.Key} x{kv.Value}"));
@@ -143,17 +148,20 @@ namespace DarkwoodMP.World
                 r.Fail("no mark (vw-mark first)");
                 yield break;
             }
+
             var p = Player.Instance;
             float dist = 200f;
             if (a.Length > 0)
             {
                 dist = F(a[0]);
             }
+
             int times = 3;
             if (a.Length > 1)
             {
                 times = int.Parse(a[1], CultureInfo.InvariantCulture);
             }
+
             var start = p.transform.position;
             var dir = _mark.Value - start;
             dir.y = 0f;
@@ -172,6 +180,7 @@ namespace DarkwoodMP.World
                 {
                     to = start;
                 }
+
                 while (StateDump.Flat(to - p.transform.position) > 1f)
                 {
                     var d = to - p.transform.position;
@@ -183,6 +192,7 @@ namespace DarkwoodMP.World
                     w.Frame(false);
                 }
             }
+
             r.Info =
                 $"{Me()} paced {dist:0} x{times} at {speed:0}/s, now "
                     + $"{StateDump.Flat(p.transform.position - _mark.Value):0} "
@@ -199,6 +209,7 @@ namespace DarkwoodMP.World
             {
                 return "no mark";
             }
+
             var parts = new List<string>();
             foreach (var s in Object.FindObjectsOfType<tk2dBaseSprite>(true))
             {
@@ -216,15 +227,18 @@ namespace DarkwoodMP.World
                     {
                         off = " (off)";
                     }
+
                     parts.Add(
                         $"{name} rgb {red:0.00},{green:0.00},{blue:0.00} "
                             + $"a{alpha:0.00}{off}");
                 }
             }
+
             if (parts.Count == 0)
             {
                 return "none";
             }
+
             return string.Join(", ", parts);
         }
 
@@ -239,6 +253,7 @@ namespace DarkwoodMP.World
             {
                 return "no mark";
             }
+
             var parts = new List<string>();
             foreach (var et in Object.FindObjectsOfType<EventTriggers>())
             {
@@ -255,10 +270,12 @@ namespace DarkwoodMP.World
                             + $"{Helpers.isComponentAtPos(p.transform.position, 1 << et.gameObject.layer, et)}");
                 }
             }
+
             if (parts.Count == 0)
             {
                 return "none";
             }
+
             return string.Join("; ", parts);
         }
 
@@ -275,6 +292,7 @@ namespace DarkwoodMP.World
             {
                 want = a[0];
             }
+
             string[] names;
             if (want != null)
             {
@@ -284,6 +302,7 @@ namespace DarkwoodMP.World
             {
                 names = a;
             }
+
             float Alpha() => Object.FindObjectsOfType<tk2dBaseSprite>(true)
                 .Where(
                     s => s != null && names.Length > 0 && s.name == names[0]
@@ -296,30 +315,37 @@ namespace DarkwoodMP.World
                     {
                         return s.color.a;
                     }
+
                     return 0f;
                 }).DefaultIfEmpty(0f).Max();
+
             bool Ok()
             {
                 if (want == null)
                 {
                     return true;
                 }
+
                 if (want == "dark")
                 {
                     return Alpha() > 0.5f;
                 }
+
                 return Alpha() < 0.1f;
             }
+
             float wait = 16f;
             if (want == null)
             {
                 wait = 0f;
             }
+
             float until = Time.realtimeSinceStartup + wait;
             while (!Ok() && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             Vector3? mark = _mark;
             Vector3 origin;
             if (mark.HasValue)
@@ -330,6 +356,7 @@ namespace DarkwoodMP.World
             {
                 origin = Vector3.zero;
             }
+
             r.Info =
                 $"{Me()} "
                     + $"{StateDump.Flat(Player.Instance.transform.position - origin):0} from the mark: {ColorsNow(names)}";
@@ -349,11 +376,13 @@ namespace DarkwoodMP.World
             {
                 i = int.Parse(a[1], CultureInfo.InvariantCulture);
             }
+
             if (i >= list.Count)
             {
                 r.Fail("not found");
                 yield break;
             }
+
             var root = list[i].transform;
             if (a.Length < 3 || a[2] != "self")
             {
@@ -364,6 +393,7 @@ namespace DarkwoodMP.World
                     root = root.parent;
                 }
             }
+
             var sb = new System.Text.StringBuilder();
             void Walk(Transform t, int depth)
             {
@@ -381,6 +411,7 @@ namespace DarkwoodMP.World
                 {
                     saved = $" saved={so.Active}";
                 }
+
                 sb.Append(
                     $"\n{new string(' ', depth * 2)}{name} active={active} "
                         + $"layer={layer} at {spot} y {height:0}{saved} "
@@ -392,15 +423,18 @@ namespace DarkwoodMP.World
                     {
                         text = "/trigger";
                     }
+
                     string offNote = "/off";
                     if (c.enabled)
                     {
                         offNote = "";
                     }
+
                     sb.Append(
                         $" col:{c.GetType().Name}{text}{offNote} "
                             + $"{c.bounds.size.x:0}x{c.bounds.size.z:0}");
                 }
+
                 var ets = t.GetComponent<EventTriggers>();
                 if (ets != null)
                 {
@@ -411,6 +445,7 @@ namespace DarkwoodMP.World
                         {
                             disabledNote = " disabled";
                         }
+
                         sb.Append(
                             $"\n{new string(' ', depth * 2 + 2)}> trigger "
                                 + $"{et.type} fired={et.fired} "
@@ -435,6 +470,7 @@ namespace DarkwoodMP.World
                                             targetGameObjects =
                                                 new List<GameObject>();
                                         }
+
                                         string names = string.Join(",",
                                             targetGameObjects.Select(g =>
                                         {
@@ -442,19 +478,23 @@ namespace DarkwoodMP.World
                                             {
                                                 return "null";
                                             }
+
                                             return g.name;
                                         }));
+
                                         List<string> ids =
                                             e.targetUniqueObjects;
                                         if (ids == null)
                                         {
                                             ids = new List<string>();
                                         }
+
                                         string disabled = "";
                                         if (e.disabled)
                                         {
                                             disabled = " disabled";
                                         }
+
                                         sb.Append(
                                             $"\n{new string(' ', depth * 2 + 4)}{label} {e.type} '{e.Value}' '{e.Value2}' f={e.floatValue} dur={e.duration} delay={e.delay} mod={e.activeModifier} color={e.destColor} targets=[{names}|{string.Join(",", ids)}] fromParent={e.getTargetGameObjectsFromParent}{disabled}");
                                     }
@@ -463,11 +503,13 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 foreach (Transform c in t)
                 {
                     Walk(c, depth + 1);
                 }
             }
+
             Walk(root, 0);
             Plugin.Log.LogInfo($"[view] vw-tree {root.name}:{sb}");
             r.Info =
@@ -489,15 +531,18 @@ namespace DarkwoodMP.World
             {
                 return "host";
             }
+
             string n = s.LocalName;
             if (n == null)
             {
                 n = "";
             }
+
             if (n.StartsWith("Client"))
             {
                 return "c" + n.Substring(6);
             }
+
             return n;
         }
 
@@ -545,6 +590,7 @@ namespace DarkwoodMP.World
             {
                 saved = so.Active.ToString();
             }
+
             string colliders = "";
             if (cols.Count != 0)
             {
@@ -557,10 +603,13 @@ namespace DarkwoodMP.World
                     {
                         off = ":off";
                     }
+
                     return $"{name}:{layer}{off}";
                 }));
+
                 colliders = $" [{list}]";
             }
+
             return $"{path} at {spot} ({distance:0} from the centre), " +
                    $"active {active}, saved {saved}, " +
                    $"view-layer colliders {cols.Count}{colliders}";
@@ -573,11 +622,13 @@ namespace DarkwoodMP.World
                 r.Fail("usage: vw-find PATTERN [N]");
                 yield break;
             }
+
             int n = 8;
             if (a.Length > 1)
             {
                 n = int.Parse(a[1], CultureInfo.InvariantCulture);
             }
+
             var list = Matches(a[0]);
             r.Info = $"{list.Count} spots with '{a[0]}': " + string.Join(
                 "; ", list.Take(n).Select(Describe));
@@ -591,6 +642,7 @@ namespace DarkwoodMP.World
                 r.Fail("usage: vw-mark PATTERN INDEX");
                 yield break;
             }
+
             var list = Matches(a[0]);
             int i = int.Parse(a[1], CultureInfo.InvariantCulture);
             if (i >= list.Count)
@@ -598,6 +650,7 @@ namespace DarkwoodMP.World
                 r.Fail($"only {list.Count} spots with '{a[0]}'");
                 yield break;
             }
+
             _mark = new Vector3(
                 list[i].transform.position.x, 0f, list[i].transform.position.z);
             _markName = list[i].name;
@@ -618,6 +671,7 @@ namespace DarkwoodMP.World
             {
                 d = Vector3.right;
             }
+
             return d.normalized;
         }
 
@@ -628,11 +682,13 @@ namespace DarkwoodMP.World
                 r.Fail("no mark (vw-mark first)");
                 yield break;
             }
+
             if (a.Length < 1)
             {
                 r.Fail("usage: vw-stage LEAD;host=GAP/SIDE,...");
                 yield break;
             }
+
             var parts = a[0].Split(';');
             float lead = F(parts[0]), gap = 0f, side = 0f;
             string me = Me();
@@ -643,6 +699,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var gs = p[1].Split('/');
                 gap = F(gs[0]);
                 if (gs.Length > 1)
@@ -650,6 +707,7 @@ namespace DarkwoodMP.World
                     side = F(gs[1]);
                 }
             }
+
             var back = Back();
             var right = new Vector3(back.z, 0f, -back.x);
             var to = _mark.Value + back * (lead + gap) + right * side;
@@ -695,10 +753,12 @@ namespace DarkwoodMP.World
                 {
                     light = FovLight(p);
                 }
+
                 if (light == null || Time.timeScale == 0f)
                 {
                     return;
                 }
+
                 Frames++;
                 var mr = light.GetComponent<MeshRenderer>();
                 if (light.gameObject.activeInHierarchy && mr != null
@@ -713,6 +773,7 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         string k = Sync.ViewWatch.Path(h.collider.transform)
                             + $" [layer {h.collider.gameObject.layer}]";
                         if (DarkBy.TryGetValue(k, out int n))
@@ -723,12 +784,14 @@ namespace DarkwoodMP.World
                         {
                             DarkBy[k] = 1;
                         }
+
                         if (IsOurs(h.collider) || IsGhost(h.collider))
                         {
                             BadDark.Add(k);
                         }
                     }
                 }
+
                 // A light switched off isn't redrawn (Light2D.LateUpdate
                 // returns first), so its mesh is the one from before: walking
                 // straight through scenery a player can't cross (roots)
@@ -737,6 +800,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 Audits++;
                 float m = Mismatch(light, out _);
                 if (m > WorstMismatch)
@@ -744,10 +808,12 @@ namespace DarkwoodMP.World
                     WorstMismatch = m;
                     WorstAt = Fmt(p.transform.position);
                 }
+
                 if (m > MaxMismatch)
                 {
                     BadAudits++;
                 }
+
                 foreach (var g in GhostBlockers(light))
                 {
                     Ghosts.Add(g);
@@ -763,11 +829,13 @@ namespace DarkwoodMP.World
                         " (by "
                             + $"{string.Join("; ", DarkBy.OrderByDescending(x => x.Value).Take(6).Select(x => $"{x.Key} x{x.Value}"))})";
                 }
+
                 string place = "";
                 if (WorstAt != "")
                 {
                     place = " at " + WorstAt;
                 }
+
                 string ghosts;
                 if (Ghosts.Count == 0)
                 {
@@ -777,6 +845,7 @@ namespace DarkwoodMP.World
                 {
                     ghosts = string.Join("; ", Ghosts.Take(6));
                 }
+
                 return $"{Frames} frames: black {Dark}{causes}, " +
                     $"mesh audits {Audits} (worst {WorstMismatch:P0} not "
                     + $"matching our rays{place}, {BadAudits} over "
@@ -791,16 +860,19 @@ namespace DarkwoodMP.World
                     return "our view went black over something only co-op put "
                         + $"there: {string.Join("; ", BadDark)}";
                 }
+
                 if (BadAudits > 0)
                 {
                     return "our view cone wasn't worked out where we stand "
                         + $"({BadAudits} of {Audits} audits)";
                 }
+
                 if (Ghosts.Count > 0)
                 {
                     return "something switched off cuts our view: "
                         + $"{string.Join("; ", Ghosts)}";
                 }
+
                 return null;
             }
         }
@@ -820,12 +892,14 @@ namespace DarkwoodMP.World
                 r.Fail("no mark (vw-mark first)");
                 yield break;
             }
+
             var p = Player.Instance;
             float len = 3000f;
             if (a.Length > 0)
             {
                 len = F(a[0]);
             }
+
             float speed;
             if (a.Length > 1)
             {
@@ -835,6 +909,7 @@ namespace DarkwoodMP.World
             {
                 speed = RunSpeed;
             }
+
             // Down the line from where we stand towards the mark, LEN long (not
             // past the mark).
             var from = p.transform.position;
@@ -857,8 +932,10 @@ namespace DarkwoodMP.World
                 {
                     nextAudit = Time.time + 0.5f;
                 }
+
                 w.Frame(audit);
             }
+
             // A moment at the end, standing still: the view settles where we
             // arrived.
             float until = Time.time + 2f;
@@ -867,6 +944,7 @@ namespace DarkwoodMP.World
                 yield return eof;
                 w.Frame(true);
             }
+
             r.Info =
                 $"{Me()} walked {gone:0} at {speed:0}/s in "
                     + $"{Time.time - t0:0.0} s to {Fmt(p.transform.position)}, " +
@@ -888,11 +966,13 @@ namespace DarkwoodMP.World
             {
                 light = FovLight(p);
             }
+
             if (light == null)
             {
                 r.Fail("no view light");
                 yield break;
             }
+
             var w = new Watch();
             var eof = new WaitForEndOfFrame();
             float until = Time.time + 3f, next = 0f;
@@ -904,8 +984,10 @@ namespace DarkwoodMP.World
                 {
                     next = Time.time + 0.5f;
                 }
+
                 w.Frame(audit);
             }
+
             if (a.Length > 1)
             {
                 Directory.CreateDirectory(a[0]);
@@ -914,6 +996,7 @@ namespace DarkwoodMP.World
                 yield return new WaitForSecondsRealtime(1f);
                 Plugin.Log.LogInfo($"[shots] {path}");
             }
+
             Mismatch(light, out string audit1);
             string who = Me();
             string spot = Fmt(p.transform.position);
@@ -924,6 +1007,7 @@ namespace DarkwoodMP.World
                     $", {StateDump.Flat(p.transform.position - _mark.Value):0} "
                         + "from the mark";
             }
+
             r.Info = $"{who} at {spot}{distance}: " +
                      $"cone {light.LightConeAngle:0} (currentFOV "
                 + $"{CurrentFov(p):0}), radius {light.LightRadius:0}; "
@@ -936,11 +1020,13 @@ namespace DarkwoodMP.World
                 bad = "our view is black here (by "
                     + $"{string.Join("; ", w.DarkBy.Keys)})";
             }
+
             if (bad == null
                 && !MapScenarioLights.ViewSource().StartsWith("view: ours"))
             {
                 bad = "the view lights aren't our own";
             }
+
             if (bad != null)
             {
                 r.Fail($"{bad}; {r.Info}");
@@ -958,6 +1044,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return c.GetComponentInParent<Combat.NetPlayerProxy>() != null;
         }
 
@@ -974,6 +1061,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             for (var t = c.transform; t != null; t = t.parent)
             {
                 if (t.name == "OutsideLocations")
@@ -981,6 +1069,7 @@ namespace DarkwoodMP.World
                     return false;
                 }
             }
+
             for (var t = c.transform; t != null; t = t.parent)
             {
                 var so = t.GetComponent<SaveableObject>();
@@ -989,6 +1078,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -1011,9 +1101,11 @@ namespace DarkwoodMP.World
                     {
                         kind = ", switched off in the save";
                     }
+
                     list.Add($"{path} [layer {layer}{kind}]");
                 }
             }
+
             return list;
         }
 
@@ -1034,6 +1126,7 @@ namespace DarkwoodMP.World
                 info = "no mesh";
                 return 0f;
             }
+
             var verts = mesh.vertices;
             var o = light.transform.position;
             float R = light.LightRadius;
@@ -1047,6 +1140,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 n++;
                 bool hit = Physics.Raycast(
                     o, d / dist, out var h, R, light.ShadowLayer);
@@ -1065,11 +1159,13 @@ namespace DarkwoodMP.World
                     bad++;
                 }
             }
+
             if (n == 0)
             {
                 info = "empty";
                 return 0f;
             }
+
             float m = (float)bad / n;
             info = $"{n} rays ({hits} hit), {bad} not matching ours ({m:P0})";
             return m;
@@ -1088,6 +1184,7 @@ namespace DarkwoodMP.World
             {
                 return "no facing";
             }
+
             f.Normalize();
             float cone = Mathf.Clamp(light.LightConeAngle, 0f, 360f),
                 R = light.LightRadius;
@@ -1107,6 +1204,7 @@ namespace DarkwoodMP.World
                 {
                     reach = h.distance / R;
                 }
+
                 Dictionary<string, int> stops;
                 if (ang < 0f)
                 {
@@ -1116,6 +1214,7 @@ namespace DarkwoodMP.World
                 {
                     stops = stopR;
                 }
+
                 if (hit)
                 {
                     string k = h.collider.name;
@@ -1128,6 +1227,7 @@ namespace DarkwoodMP.World
                         stops[k] = 1;
                     }
                 }
+
                 if (ang < 0f)
                 {
                     left += reach;
@@ -1139,25 +1239,30 @@ namespace DarkwoodMP.World
                     nr++;
                 }
             }
+
             string top(Dictionary<string, int> s)
             {
                 if (s.Count == 0)
                 {
                     return "nothing";
                 }
+
                 return string.Join(", ", s.OrderByDescending(x => x.Value)
                         .Take(3).Select(x => $"{x.Key} x{x.Value}"));
             }
+
             float leftReach = 0f;
             if (nl > 0)
             {
                 leftReach = left / nl;
             }
+
             float rightReach = 0f;
             if (nr > 0)
             {
                 rightReach = right / nr;
             }
+
             return $"reach left {leftReach:P0} (stopped by {top(stopL)}), "
                 + $"right {rightReach:P0} (stopped by {top(stopR)})";
         }

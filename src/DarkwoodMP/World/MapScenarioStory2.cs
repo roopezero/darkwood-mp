@@ -26,6 +26,7 @@ namespace DarkwoodMP.World
             public LaterTestCounter C;
             public int Had;
         }
+
         private static readonly Dictionary<string, Made> _made =
             new Dictionary<string, Made>();
 
@@ -57,17 +58,20 @@ namespace DarkwoodMP.World
                     et = null;
                 }
             }
+
             if (et == null || et.eventTriggers.Count == 0)
             {
                 r.Fail("no such trigger (later-setup first)");
                 yield break;
             }
+
             var t = et.eventTriggers[0];
             t.fired = true;
             if (t.gameEvents != null)
             {
                 t.gameEvents.fired = true;
             }
+
             yield return null;
             r.Info =
                 $"{et.name} marked fired as loaded; owed to our player "
@@ -100,6 +104,7 @@ namespace DarkwoodMP.World
             {
                 Object.Destroy(old);
             }
+
             var go = new GameObject(name);
             go.transform.position = pos;
             return go;
@@ -117,6 +122,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var last = bag.slots.FindLast(
                 s => s != null && !InvItemClass.isNull(s.invItem)
                     && s.invItem.type != Item);
@@ -145,17 +151,20 @@ namespace DarkwoodMP.World
                 targetGameObjects = new List<GameObject> { m.C.gameObject },
                 eventAmount = 1
             });
+
             var db = Singleton<ItemsDatabase>.Instance;
             GameObject prefab = null;
             if (db != null && db.itemsDict.TryGetValue(Item, out var path))
             {
                 prefab = Resources.Load(path) as GameObject;
             }
+
             if (prefab == null || prefab.GetComponent<InvItem>() == null)
             {
                 r.Fail($"no item prefab {Item}");
                 return null;
             }
+
             ge.events.Add(new GameEvent
             {
                 type = GameEvent.Type.addOrRemoveInvItem,
@@ -164,6 +173,7 @@ namespace DarkwoodMP.World
                 amount = 1,
                 eventAmount = 1
             });
+
             return ge;
         }
 
@@ -181,16 +191,19 @@ namespace DarkwoodMP.World
                 r.Fail("caused-setup ID LAMP DX DZ");
                 yield break;
             }
+
             var lamp = MapScenarioWorld.Find<Item>(a[1], i => i.switchable);
             if (lamp == null)
             {
                 r.Fail($"nothing switchable called {a[1]}");
                 yield break;
             }
+
             if (lamp.isOn)
             {
                 lamp.turnOff();
             }
+
             var m = new Made();
             var go = Root("dwmp_caused_" + a[0], At(a[2], a[3]));
             var ge = Events(go, m, r);
@@ -198,6 +211,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             m.Et = go.AddComponent<EventTriggers>();
             m.T = new global::EventTrigger
             {
@@ -205,6 +219,7 @@ namespace DarkwoodMP.World
                 multipleFire = false,
                 gameEvents = ge
             };
+
             m.Et.eventTriggers.Add(m.T);
             m.T.thisEventTriggers = m.Et;
             ActionWhenTurnedOn awto = lamp.GetComponent<ActionWhenTurnedOn>();
@@ -212,6 +227,7 @@ namespace DarkwoodMP.World
             {
                 awto = lamp.gameObject.AddComponent<ActionWhenTurnedOn>();
             }
+
             awto.actions.Add(new ActionWhenTurnedOn.Action
             {
                 type = ActionWhenTurnedOn.Action.Type.refreshWhenTurnedOn,
@@ -220,6 +236,7 @@ namespace DarkwoodMP.World
                 interval = 0.5f,
                 requirements = new List<EventTriggerRequirement>(),
             });
+
             MakeRoom();
             m.Had = MapScenarioWorld.CarriedOf(Item);
             _made[a[0]] = m;
@@ -241,6 +258,7 @@ namespace DarkwoodMP.World
                 r.Fail("caused-check ID N GOT (caused-setup first)");
                 yield break;
             }
+
             int want = int.Parse(a[1]), wantGot = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 8f;
             while ((m.C.N < want
@@ -249,6 +267,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             yield return new WaitForSeconds(1.5f);
             int got = MapScenarioWorld.CarriedOf(Item) - m.Had;
             r.Info =

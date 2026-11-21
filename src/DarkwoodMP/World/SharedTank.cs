@@ -53,17 +53,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _next = Time.unscaledTime + Interval;
             if (!WorldShare.InWorld || WorldShare.Loading || Core.mainMenu
                 || Filled)
             {
                 return;
             }
+
             var p = Player.Instance;
             if (p == null || p.Inventory == null)
             {
                 return;
             }
+
             // As the requirement looks: in the bags, or among the journal's
             // items.
             bool holds = p.Inventory.getItemInPlayer(
@@ -84,15 +87,18 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (!holds)
             {
                 return;
             }
+
             var f = Singleton<Flags>.Instance;
             if (f == null)
             {
                 return;
             }
+
             FlagsSync.SetModFlag(f, Flag, true, 0);
             Plugin.Log.LogInfo(
                 "[world] our player holds a full oxygen tank: every player "
@@ -108,19 +114,23 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (ReferenceEquals(itemType, _tankPrefab))
             {
                 return true;
             }
+
             if (!(itemType is GameObject go))
             {
                 return false;
             }
+
             InvItem item = go.GetComponent<InvItem>();
             if (item == null || item.type != Item)
             {
                 return false;
             }
+
             _tankPrefab = itemType;
             return true;
         }
@@ -143,10 +153,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!SharedTank.IsTank(__instance.itemType) || !SharedTank.Filled)
             {
                 return;
             }
+
             __result = __instance.activeModifier;
         }
     }

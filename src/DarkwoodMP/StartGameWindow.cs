@@ -80,6 +80,7 @@ namespace DarkwoodMP
                 FooterHeight = 13 + 8,
                 OnClose = CommitName,
             };
+
             MenuWindows.OpenStartGame = Show;
             MenuWindows.Register(() => _win.Open);
             MenuWindows.Draw += OnGUI;
@@ -113,6 +114,7 @@ namespace DarkwoodMP
             {
                 state = sm.loadGameProfiles();
             }
+
             bool any = state != null && state.profiles != null
                 && state.profiles.Any(p => p != null && p.Active);
             if (!any && sm != null && sm.CheckIfWorldFilesExist())
@@ -122,6 +124,7 @@ namespace DarkwoodMP
                         + "are save files. The game's own profiles screen can "
                         + "restore it from a backup.";
             }
+
             // Five slots, as the game always has; a slot that isn't active (or
             // whose character died for good) is free.
             _profiles = new List<GameProfile>();
@@ -134,11 +137,13 @@ namespace DarkwoodMP
                     profileCount = profiles.Count;
                 }
             }
+
             int known = 0;
             if (profileCount.HasValue)
             {
                 known = profileCount.Value;
             }
+
             int count = Math.Max(5, known);
             for (int i = 0; i < count; i++)
             {
@@ -148,6 +153,7 @@ namespace DarkwoodMP
                 {
                     p = state.profiles[i];
                 }
+
                 bool used = p != null && p.Active && !p.dead;
                 if (used)
                 {
@@ -157,6 +163,7 @@ namespace DarkwoodMP
                 {
                     _profiles.Add(new GameProfile(i + 1, _Active: false, 0));
                 }
+
                 var slot = new Slot { Id = i + 1 };
                 if (used)
                 {
@@ -167,12 +174,15 @@ namespace DarkwoodMP
                 {
                     slot.Profile = null;
                 }
+
                 _slots.Add(slot);
             }
+
             if (_choice != 0 && !_slots.Any(s => s.Id == _choice && !s.Free))
             {
                 _choice = -1;
             }
+
             if (_choice < 0)
             {
                 // The save played last, or New Game when there's none.
@@ -184,8 +194,10 @@ namespace DarkwoodMP
                 {
                     choice = last.Id;
                 }
+
                 _choice = choice;
             }
+
             _overwrite = 0;
             LoadName();
         }
@@ -197,10 +209,12 @@ namespace DarkwoodMP
             {
                 timeSaved = p.timeSaved;
             }
+
             if (DateTime.TryParse(timeSaved, out var t))
             {
                 return t;
             }
+
             return DateTime.MinValue;
         }
 
@@ -212,9 +226,11 @@ namespace DarkwoodMP
                 {
                     return _slots.FirstOrDefault(s => s.Id == _choice);
                 }
+
                 return null;
             }
         }
+
         private Slot FreeSlot => _slots.FirstOrDefault(s => s.Free);
         /// <summary>
         /// The slot a new game goes in: the first free one, or the one chosen
@@ -229,6 +245,7 @@ namespace DarkwoodMP
                 {
                     return freeSlot.Id;
                 }
+
                 return _overwrite;
             }
         }
@@ -275,6 +292,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var e = Event.current;
             if (e.type == EventType.KeyDown && e.keyCode == KeyCode.Escape
                 && !ConfirmDialog.Open)
@@ -283,6 +301,7 @@ namespace DarkwoodMP
                 Close();
                 return;
             }
+
             _win.OnGUI();
         }
 
@@ -294,10 +313,12 @@ namespace DarkwoodMP
             {
                 return "Hard";
             }
+
             if (d == GameProfile.Difficulty.nightmare)
             {
                 return "Nightmare";
             }
+
             return "Normal";
         }
 
@@ -308,6 +329,7 @@ namespace DarkwoodMP
             {
                 s += $", chapter {Mathf.Clamp(p.chapter, 1, 10)}";
             }
+
             return s + ", " + Difficulty(p.difficulty).ToLowerInvariant();
         }
 
@@ -324,11 +346,13 @@ namespace DarkwoodMP
             {
                 with = "with " + string.Join(", ", s.PlayedWith);
             }
+
             string nameTag = "";
             if (name != "")
             {
                 nameTag = $": {name}";
             }
+
             return $"Slot {s.Id}" + nameTag
                 + $"  -  {Summary(s.Profile)}  -  {with}";
         }
@@ -339,6 +363,7 @@ namespace DarkwoodMP
             {
                 return $"New Game  (in slot {FreeSlot.Id})";
             }
+
             return $"New Game  (every slot is in use: overwrite one)";
         }
 
@@ -354,6 +379,7 @@ namespace DarkwoodMP
                     Singleton<MainMenu>.Instance.displayProfilesMenu();
                 }
             }
+
             DrawList(f);
             if (_choice > 0)
             {
@@ -381,6 +407,7 @@ namespace DarkwoodMP
                         + "Game, Multiplayer).",
                     MenuSkin.Dim);
             }
+
             DrawHost(f, _host);
         }
 
@@ -396,6 +423,7 @@ namespace DarkwoodMP
             {
                 _listOpen = !_listOpen;
             }
+
             string text;
             if (_choice > 0 && Chosen != null)
             {
@@ -405,6 +433,7 @@ namespace DarkwoodMP
             {
                 text = NewGameLine();
             }
+
             float pad = 6 * S, arrow = 14 * S;
             var textBox =
                 new Rect(r.x + pad, r.y, r.width - 2 * pad - arrow, r.height);
@@ -418,12 +447,14 @@ namespace DarkwoodMP
             {
                 textColor = MenuSkin.Text;
             }
+
             Ui.Label(textBox, fittedText, textColor);
             string caret = "v";
             if (_listOpen)
             {
                 caret = "^";
             }
+
             Ui.Label(
                 new Rect(r.xMax - pad - arrow, r.y, arrow, r.height), caret,
                 MenuSkin.Bright, TextAnchor.MiddleCenter);
@@ -450,10 +481,12 @@ namespace DarkwoodMP
                 {
                     MenuSkin.Selected.Draw(row, false, false, false, false);
                 }
+
                 if (GUI.Button(row, GUIContent.none, MenuSkin.Plain))
                 {
                     Choose(rows[i].Item1);
                 }
+
                 var rowBox = new Rect(
                     row.x + pad - 2 * S, row.y, row.width - 2 * pad,
                     row.height);
@@ -468,8 +501,10 @@ namespace DarkwoodMP
                 {
                     rowColor = MenuSkin.Text;
                 }
+
                 Ui.Label(rowBox, fittedRow, rowColor);
             }
+
             f.Y = box.yMax + f.Gap;
         }
 
@@ -479,6 +514,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var p = s.Profile;
             var c = f.Row(Ui.RowH, 90, 0, 110);
             Ui.Label(c[0], "Name");
@@ -491,6 +527,7 @@ namespace DarkwoodMP
                         + "be undone.",
                     "Delete", () => Delete(s.Id));
             }
+
             Info(f, "Played", $"{Summary(p)};  last saved {p.timeSaved}");
             string text;
             if (s.PlayedWith.Count == 0)
@@ -501,6 +538,7 @@ namespace DarkwoodMP
             {
                 text = string.Join(", ", s.PlayedWith);
             }
+
             Info(f, "Played with", text);
             if (!p.isCompatible)
             {
@@ -525,9 +563,11 @@ namespace DarkwoodMP
                 {
                     Ui.Label(c[0], label, MenuSkin.Dim);
                 }
+
                 Ui.Label(c[1], lines[i], MenuSkin.Bright);
                 f.Y += PixelFont.Line + S;
             }
+
             f.Y += f.Gap - S;
         }
 
@@ -540,6 +580,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             Ui.Text(
                 f,
                 "Every save slot is in use. Choose a save to overwrite (it's "
@@ -561,6 +602,7 @@ namespace DarkwoodMP
                     {
                         text = $" ({label})";
                     }
+
                     ConfirmDialog.Ask(
                         "Overwrite save",
                         $"Start the new game in slot {id}{text}? Its save "
@@ -569,6 +611,7 @@ namespace DarkwoodMP
                         "Overwrite", () => _overwrite = id);
                 }
             }
+
             if (_overwrite > 0)
             {
                 Ui.Text(
@@ -588,6 +631,7 @@ namespace DarkwoodMP
             {
                 p = chosen.Profile;
             }
+
             GameProfile.Difficulty diff;
             if (on || p == null)
             {
@@ -597,6 +641,7 @@ namespace DarkwoodMP
             {
                 diff = p.difficulty;
             }
+
             bool skip;
             if (on || p == null)
             {
@@ -606,6 +651,7 @@ namespace DarkwoodMP
             {
                 skip = p.skippedPrologue;
             }
+
             bool backer;
             if (on || p == null)
             {
@@ -615,6 +661,7 @@ namespace DarkwoodMP
             {
                 backer = p.backerOnlyContent;
             }
+
             Fade(on, () =>
             {
                 var c = f.Row(Ui.RowH, 90, 0, 0, 0);
@@ -631,6 +678,7 @@ namespace DarkwoodMP
                         _difficulty = d;
                     }
                 }
+
                 string about =
                     "Dying costs you some of what you carried, and the game "
                         + "goes on.";
@@ -642,6 +690,7 @@ namespace DarkwoodMP
                 {
                     about = "One life: dying deletes the save.";
                 }
+
                 Ui.Text(f, about, MenuSkin.Dim);
                 var k = f.Row(Ui.RowH, 0, 0);
                 bool ns = Check(k[0], skip, "Skip the prologue", on);
@@ -668,10 +717,12 @@ namespace DarkwoodMP
                 {
                     cfg.HostWith.Value = "steam";
                 }
+
                 if (Choice(c[2], "Direct", !steam, on))
                 {
                     cfg.HostWith.Value = "direct";
                 }
+
                 if (!steamUp)
                 {
                     string text = "Waiting for Steam...";
@@ -681,6 +732,7 @@ namespace DarkwoodMP
                             "Steam isn't running (the GOG version, say): "
                                 + "Direct only.";
                     }
+
                     Ui.Text(f, text, MenuSkin.Dim);
                 }
 
@@ -704,6 +756,7 @@ namespace DarkwoodMP
                     {
                         cfg.DirectPort.Value = pn;
                     }
+
                     Ui.Label(
                         pm[3], "Max players", null, TextAnchor.MiddleRight);
                     if (Ui.Button(
@@ -711,6 +764,7 @@ namespace DarkwoodMP
                     {
                         cfg.MaxPlayers.Value--;
                     }
+
                     Ui.Label(
                         pm[5], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright,
                         TextAnchor.MiddleCenter);
@@ -721,6 +775,7 @@ namespace DarkwoodMP
                     {
                         cfg.MaxPlayers.Value++;
                     }
+
                     cfg.Password.Value = Ui.Field(
                         f, "Password", cfg.Password.Value, 32, password: true);
                     cfg.OpenPort.Value = Check(
@@ -735,10 +790,12 @@ namespace DarkwoodMP
                 {
                     cfg.NewCharacters.Value = "fresh";
                 }
+
                 if (Choice(ch[2], "Copy of you", copy, on))
                 {
                     cfg.NewCharacters.Value = "copy";
                 }
+
                 string hint;
                 if (steam)
                 {
@@ -754,6 +811,7 @@ namespace DarkwoodMP
                         cfg.OpenPort.Value)
                         + " Hosting starts once your world has loaded.";
                 }
+
                 Ui.Text(f, hint, MenuSkin.Dim);
             });
         }
@@ -772,6 +830,7 @@ namespace DarkwoodMP
                 GUI.color =
                     new Color(color.r, color.g, color.b, color.a * 0.45f);
             }
+
             try
             {
                 draw();
@@ -793,6 +852,7 @@ namespace DarkwoodMP
             {
                 return Ui.Button(r, text, enabled && GUI.enabled);
             }
+
             GUI.Box(r, GUIContent.none, MenuSkin.Pressed);
             PixelFont.Draw(
                 new Rect(r.x + S, r.y + S, r.width, r.height), text,
@@ -811,15 +871,18 @@ namespace DarkwoodMP
             {
                 Ui.Label(c[0], PixelFont.Fit(why, c[0].width), MenuSkin.Dim);
             }
+
             string text = "Start";
             if (_host)
             {
                 text = "Start and host";
             }
+
             if (Ui.Button(c[1], text, why == null))
             {
                 Start();
             }
+
             if (Ui.Button(c[2], "Cancel"))
             {
                 Close();
@@ -833,6 +896,7 @@ namespace DarkwoodMP
             {
                 return "Wait for the main menu.";
             }
+
             if (_choice > 0)
             {
                 Slot chosen = Chosen;
@@ -840,16 +904,20 @@ namespace DarkwoodMP
                 {
                     return "No save in that slot.";
                 }
+
                 if (Chosen.Profile.isCompatible == false)
                 {
                     return "This save needs the game's profiles screen.";
                 }
+
                 return null;
             }
+
             if (NewSlot > 0)
             {
                 return null;
             }
+
             return "Choose a save to overwrite.";
         }
 
@@ -861,6 +929,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             CommitName();
             var plugin = Plugin.Instance;
             bool host = _host && !plugin.Session.Active;
@@ -880,8 +949,10 @@ namespace DarkwoodMP
                     {
                         how = "Steam";
                     }
+
                     text = $", then host with {how}";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[start game] continue slot {p.id} (day {p.day}){text}");
                 mm.creatingProfile = false;
@@ -901,8 +972,10 @@ namespace DarkwoodMP
                     {
                         via = "Steam";
                     }
+
                     hosting = $", then host with {via}";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[start game] new game in slot {id} "
                         + $"({Difficulty(_difficulty)}, skip prologue "
@@ -920,6 +993,7 @@ namespace DarkwoodMP
                     difficulty = _difficulty,
                     backerOnlyContent = _backer
                 };
+
                 Core.currentProfile = p;
                 Singleton<Controller>.Instance.skipTutorial = _skipPrologue;
                 Close();
@@ -930,6 +1004,7 @@ namespace DarkwoodMP
                     SaveBook.SetName(id, name);
                 }
             }
+
             if (host)
             {
                 plugin.HostWhenReady(steam);
@@ -956,6 +1031,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(2f);
             if (screen != null)
             {
@@ -965,6 +1041,7 @@ namespace DarkwoodMP
                     FullScreenMode.Windowed);
                 yield return new WaitForSecondsRealtime(3f);
             }
+
             if (sandbox != null)
             {
                 SaveRedirect.Begin(sandbox);
@@ -974,6 +1051,7 @@ namespace DarkwoodMP
                     yield break;
                 }
             }
+
             var w = Instance;
             MenuList.Click("Start Game");
             yield return new WaitForSecondsRealtime(1f);
@@ -990,14 +1068,17 @@ namespace DarkwoodMP
                 {
                     about = Line(s);
                 }
+
                 Plugin.Log.LogInfo($"[start window] slot {s.Id}: " + about);
             }
+
             if (!w.Open)
             {
                 if (sandbox != null)
                 {
                     SaveRedirect.End();
                 }
+
                 yield break;
             }
 
@@ -1008,18 +1089,21 @@ namespace DarkwoodMP
                 {
                     yield break;
                 }
+
                 System.IO.Directory.CreateDirectory(shots);
                 yield return new WaitForSecondsRealtime(0.7f);
                 ScreenCapture.CaptureScreenshot(
                     System.IO.Path.Combine(shots, prefix + what + ".png"));
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             Slot firstUsed = w._slots.FirstOrDefault(s => !s.Free);
             int firstSave = 0;
             if (firstUsed != null)
             {
                 firstSave = firstUsed.Id;
             }
+
             if (shots != null)
             {
                 yield return Shot("start-save");
@@ -1045,8 +1129,10 @@ namespace DarkwoodMP
                     yield return Shot("start-delete");
                     ConfirmDialog.Cancel();
                 }
+
                 w._host = false;
             }
+
             if (start == null)
             {
                 w.Close();
@@ -1054,9 +1140,11 @@ namespace DarkwoodMP
                 {
                     SaveRedirect.End();
                 }
+
                 Plugin.Log.LogInfo("[start window] done");
                 yield break;
             }
+
             int slot;
             if (start == "new")
             {
@@ -1066,16 +1154,19 @@ namespace DarkwoodMP
             {
                 slot = int.Parse(start);
             }
+
             w.Choose(slot);
             if (name != null)
             {
                 w._name = name;
             }
+
             w._host = hostWith != null;
             if (hostWith != null)
             {
                 Plugin.Cfg.HostWith.Value = hostWith;
             }
+
             yield return Shot("start-go");
             string target;
             if (slot == 0)
@@ -1086,16 +1177,19 @@ namespace DarkwoodMP
             {
                 target = $"slot {slot}";
             }
+
             string hosting = hostWith;
             if (hosting == null)
             {
                 hosting = "no";
             }
+
             string answer = w.CantStart();
             if (answer == null)
             {
                 answer = "yes";
             }
+
             Plugin.Log.LogInfo(
                 $"[start window] pressing Start: {target}, host {hosting}; can "
                     + $"start: {answer}");
@@ -1109,6 +1203,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             Plugin.Log.LogInfo($"[start game] delete slot {id}");
             // As the profiles screen's Delete (MainMenu.confirmBoxYes,
             // deleteProfile).
@@ -1119,6 +1214,7 @@ namespace DarkwoodMP
             {
                 _choice = -1;
             }
+
             _nameFor = -1;
             Refresh();
         }

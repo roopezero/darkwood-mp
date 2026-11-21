@@ -21,6 +21,7 @@ namespace DarkwoodMP.World
             {
                 return n;
             }
+
             return 0;
         }
     }
@@ -68,6 +69,7 @@ namespace DarkwoodMP.World
             {
                 return Resources.Load(path) as GameObject;
             }
+
             return null;
         }
 
@@ -85,12 +87,14 @@ namespace DarkwoodMP.World
                 r.Fail("tank-setup ID DX DZ");
                 yield break;
             }
+
             var prefab = TankPrefab();
             if (prefab == null)
             {
                 r.Fail($"no item {SharedTank.Item}");
                 yield break;
             }
+
             string id = a[0];
             var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Root("dwmp_tank_" + id, pos);
@@ -114,12 +118,14 @@ namespace DarkwoodMP.World
                     targetUniqueObjects = new List<string> { "player" },
                     eventAmount = 1
                 });
+
                 var t = new global::EventTrigger
                 {
                     type = global::EventTrigger.Type.onActivate,
                     multipleFire = true,
                     gameEvents = ge
                 };
+
                 t.eventRequirements.Add(new EventTriggerRequirement
                 {
                     type = EventTriggerRequirement.Type.playerState,
@@ -127,9 +133,11 @@ namespace DarkwoodMP.World
                     itemType = prefab,
                     activeModifier = has
                 });
+
                 et.eventTriggers.Add(t);
                 t.thisEventTriggers = et;
             }
+
             Counter().N.Remove(id);
             Counter().N.Remove(id + "-no");
             _tanks[id] = (et, pos);
@@ -160,12 +168,14 @@ namespace DarkwoodMP.World
                         last.invItem.type, last.invItem.amount);
                 }
             }
+
             bag.addItemTypeToPlayer(SharedTank.Item, 1, dropIfNoRoom: true);
             float until = Time.realtimeSinceStartup + 8f;
             while (!SharedTank.Filled && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             r.Info =
                 $"carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}, "
                     + $"filled {SharedTank.Filled}";
@@ -208,6 +218,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             var saved =
                 new Flags.SaveState(Singleton<Flags>.Instance).flags.Exists(
                     x => x != null && x.name == SharedTank.Flag && x.isTrue);
@@ -232,6 +243,7 @@ namespace DarkwoodMP.World
                 r.Fail("tank-fire ID YES NO (tank-setup first)");
                 yield break;
             }
+
             int yes = int.Parse(a[1]), no = int.Parse(a[2]);
             yield return Walk(m.pos, 100f);
             yield return new WaitForSeconds(0.5f);
@@ -245,6 +257,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.1f);
             }
+
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"with the tank ran {c.Of(a[0])} (want {yes}), without it "
@@ -265,6 +278,7 @@ namespace DarkwoodMP.World
             public EventTriggers Et;
             public Transform To;
         }
+
         private static readonly Dictionary<string, Trip> _trips =
             new Dictionary<string, Trip>();
 
@@ -281,6 +295,7 @@ namespace DarkwoodMP.World
                 r.Fail("trip-setup ID DX DZ DX2 DZ2");
                 yield break;
             }
+
             var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             var go = Root("dwmp_trip_" + a[0], pos);
             var to = Root(
@@ -296,6 +311,7 @@ namespace DarkwoodMP.World
                 magnitude = 0.1f,
                 eventAmount = 1
             });
+
             var et = go.AddComponent<EventTriggers>();
             var t = new global::EventTrigger
             {
@@ -303,6 +319,7 @@ namespace DarkwoodMP.World
                 multipleFire = true,
                 gameEvents = ge
             };
+
             et.eventTriggers.Add(t);
             t.thisEventTriggers = et;
             _trips[a[0]] = new Trip { Et = et, To = to };
@@ -325,6 +342,7 @@ namespace DarkwoodMP.World
                 r.Fail("trip-go ID (trip-setup first)");
                 yield break;
             }
+
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(1f);
             int corrections = Sync.MoveCheck.Corrections;
@@ -339,6 +357,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             bool arrived = There();
             // a correction comes within a few State updates
             yield return new WaitForSeconds(3f);
@@ -355,6 +374,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"the host put us back: {r.Info}");
             }
+
             Core.forbidInputs = false;
             // a jump back would be a speed hack to the host's movement check
             yield return Walk(Centre);
@@ -367,6 +387,7 @@ namespace DarkwoodMP.World
             public global::EventTrigger T;
             public LaterTestCounter C;
         }
+
         private static readonly Dictionary<string, Made> _made =
             new Dictionary<string, Made>();
 
@@ -378,6 +399,7 @@ namespace DarkwoodMP.World
             {
                 steps = p.gameObject.AddComponent<PlayerStepCounter>();
             }
+
             return steps;
         }
 
@@ -388,6 +410,7 @@ namespace DarkwoodMP.World
             {
                 Object.Destroy(old);
             }
+
             var go = new GameObject(name);
             go.transform.position = pos;
             return go;
@@ -407,6 +430,7 @@ namespace DarkwoodMP.World
                 r.Fail("own-setup ID DX DZ once|multi|eventsonce");
                 yield break;
             }
+
             string id = a[0];
             var pos = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             // eventsonce: the trigger fires each time, its GameEvents run once
@@ -429,6 +453,7 @@ namespace DarkwoodMP.World
                 targetUniqueObjects = new List<string> { "player" },
                 eventAmount = 1
             });
+
             ge.events.Add(new GameEvent
             {
                 type = GameEvent.Type.runFunction,
@@ -441,6 +466,7 @@ namespace DarkwoodMP.World
                 },
                 eventAmount = 1
             });
+
             ge.events.Add(new GameEvent
             {
                 type = GameEvent.Type.runFunction,
@@ -448,6 +474,7 @@ namespace DarkwoodMP.World
                 targetGameObjects = new List<GameObject> { m.C.gameObject },
                 eventAmount = 1
             });
+
             m.Et = go.AddComponent<EventTriggers>();
             m.T = new global::EventTrigger
             {
@@ -455,6 +482,7 @@ namespace DarkwoodMP.World
                 multipleFire = multi,
                 gameEvents = ge
             };
+
             m.Et.eventTriggers.Add(m.T);
             m.T.thisEventTriggers = m.Et;
             _made[id] = m;
@@ -476,6 +504,7 @@ namespace DarkwoodMP.World
                 r.Fail("own-fire ID OWN (own-setup first)");
                 yield break;
             }
+
             int want = int.Parse(a[1]);
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
@@ -489,6 +518,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.1f);
             }
+
             yield return new WaitForSeconds(1f);
             int got = c.Of(a[0]) - had;
             r.Info =
@@ -498,6 +528,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail(r.Info);
             }
+
             MapScenario.Place(Centre);
         }
 
@@ -513,12 +544,14 @@ namespace DarkwoodMP.World
                 r.Fail("own-count ID OWN SHARED (own-setup first)");
                 yield break;
             }
+
             int own = int.Parse(a[1]), shared = int.Parse(a[2]);
             float until = Time.realtimeSinceStartup + 4f;
             while (m.C.N < shared && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             yield return new WaitForSeconds(1f);
             int got = Counter().Of(a[0]);
             r.Info =
@@ -536,6 +569,7 @@ namespace DarkwoodMP.World
             {
                 return "null";
             }
+
             return o.name;
         }
 
@@ -546,6 +580,7 @@ namespace DarkwoodMP.World
             {
                 state = "/" + q.playerState;
             }
+
             return $"{q.type}{state} item={Name(q.itemType)} key='{q.keyType}' "
                 + $"n={q.amount} mod={q.activeModifier} "
                 + $"dest={Name(q.destTransform)}";
@@ -561,25 +596,30 @@ namespace DarkwoodMP.World
             {
                 prefabs = new List<Object>();
             }
+
             string prefabNames = string.Join(",", prefabs.Select(Name));
             List<GameObject> targets = e.targetGameObjects;
             if (targets == null)
             {
                 targets = new List<GameObject>();
             }
+
             string targetNames = string.Join(",", targets.Select(g =>
             {
                 if (g == null)
                 {
                     return "null";
                 }
+
                 return $"{g.name}@{Fmt(g.transform.position)}";
             }));
+
             List<string> uniques = e.targetUniqueObjects;
             if (uniques == null)
             {
                 uniques = new List<string>();
             }
+
             string uniqueNames = string.Join(",", uniques);
             List<Location.GetObject> places = e.locationObjects;
             int count = 0;
@@ -587,11 +627,13 @@ namespace DarkwoodMP.World
             {
                 count = places.Count;
             }
+
             string note = "";
             if (e.disabled)
             {
                 note = " disabled";
             }
+
             return head + $" prefabs=[{prefabNames}]"
                 + $" targets=[{targetNames}|{uniqueNames}]"
                 + $" loc={count}{note}";
@@ -609,6 +651,7 @@ namespace DarkwoodMP.World
             {
                 pat = a[0];
             }
+
             var sb = new System.Text.StringBuilder();
             int n = 0;
             bool Wanted(Component c)
@@ -617,6 +660,7 @@ namespace DarkwoodMP.World
                 {
                     return false;
                 }
+
                 var root = c.transform.root;
                 return c.name.IndexOf(
                     pat, System.StringComparison.OrdinalIgnoreCase) >= 0
@@ -627,35 +671,42 @@ namespace DarkwoodMP.World
                             pat,
                             System.StringComparison.OrdinalIgnoreCase) >= 0);
             }
+
             bool Mentions(GameEvents g) => g != null && g.events.Any(e =>
             {
                 if (e == null)
                 {
                     return false;
                 }
+
                 string content = e.Value;
                 if (content == null)
                 {
                     content = "";
                 }
+
                 if (content.IndexOf(
                     "dive", System.StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     return true;
                 }
+
                 List<Object> prefabs = e.prefabList;
                 if (prefabs == null)
                 {
                     prefabs = new List<Object>();
                 }
+
                 return prefabs.Any(o => o != null && o.name.Contains("oxygen"));
             });
+
             foreach (var et in Object.FindObjectsOfType<EventTriggers>(true))
             {
                 if (et == null || et.eventTriggers == null)
                 {
                     continue;
                 }
+
                 bool any = Wanted(et)
                     || et.eventTriggers.Any(
                         t => t != null
@@ -669,6 +720,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 sb.Append(
                     $"\n{et.transform.root.name}/{et.name} at "
                         + $"{Fmt(et.transform.position)} "
@@ -679,12 +731,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     n++;
                     string text = "";
                     if (t.disabled)
                     {
                         text = " disabled";
                     }
+
                     sb.Append(
                         $"\n  > {t.type} '{t.reactsToItemType}' "
                             + $"fired={t.fired} multi={t.multipleFire}{text} "
@@ -696,6 +750,7 @@ namespace DarkwoodMP.World
                             sb.Append($"\n    req {Req(q)}");
                         }
                     }
+
                     foreach (var (label, ge) in new[]
                     {
                         ("do", t.gameEvents),
@@ -719,6 +774,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             foreach (var g in Object.FindObjectsOfType<GameEvents>(true))
             {
                 if (g == null || g.GetComponent<EventTriggers>() != null
@@ -726,6 +782,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 sb.Append(
                     $"\n[events] {g.transform.root.name}/{g.name} at "
                         + $"{Fmt(g.transform.position)} "
@@ -738,6 +795,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             foreach (var type in new[]
             {
                 "oxygenTank_full",
@@ -750,11 +808,13 @@ namespace DarkwoodMP.World
                 {
                     prefab = Resources.Load(path) as GameObject;
                 }
+
                 InvItem inv = null;
                 if (prefab != null)
                 {
                     inv = prefab.GetComponent<InvItem>();
                 }
+
                 var jd = Singleton<JournalDatabase>.Instance;
                 bool hasPrefab = prefab != null;
                 bool? important = null;
@@ -762,6 +822,7 @@ namespace DarkwoodMP.World
                 {
                     important = inv.isImportantItem;
                 }
+
                 string head =
                     $"\n[item] {type}: prefab={hasPrefab} "
                         + $"important={important} "
@@ -781,11 +842,13 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 sb.Append(
                     head
                         + $" inJournal={inJournal} "
                         + $"carried={MapScenarioWorld.CarriedOf(type)}");
             }
+
             // Every loaded step that acts on the player
             // (ScriptedEvents.TargetsPlayer), by type and function, and how
             // many of them also name other targets.
@@ -802,18 +865,21 @@ namespace DarkwoodMP.World
                         {
                             argument = " " + e.Value;
                         }
+
                         GameEvent.Type kind = e.type;
                         string step = "";
                         if (ScriptedEvents.IsPlayerStep(e.type))
                         {
                             step = " (player step)";
                         }
+
                         string k = kind + argument + step;
                         int seen = 0;
                         if (onPlayer.TryGetValue(k, out var c))
                         {
                             seen = c;
                         }
+
                         onPlayer[k] = seen + 1;
                         List<GameObject> targetGameObjects =
                             e.targetGameObjects;
@@ -822,6 +888,7 @@ namespace DarkwoodMP.World
                         {
                             count = targetGameObjects.Count;
                         }
+
                         List<string> targetUniqueObjects =
                             e.targetUniqueObjects;
                         int uniqueCount = 0;
@@ -829,6 +896,7 @@ namespace DarkwoodMP.World
                         {
                             uniqueCount = targetUniqueObjects.Count;
                         }
+
                         if (count + uniqueCount > 1)
                         {
                             mixed++;
@@ -836,6 +904,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             sb.Append(
                 "\n[on player] "
                     + $"{string.Join("; ", onPlayer.OrderByDescending(x => x.Value).Select(x => $"{x.Key} x{x.Value}"))}; with other targets too: {mixed}");
@@ -845,6 +914,7 @@ namespace DarkwoodMP.World
             {
                 uo = instance.getObject("player");
             }
+
             sb.Append(
                 $"\n[unique] player -> {Name(uo)} is Player.Instance: "
                     + $"{uo != null && Player.Instance != null && uo == Player.Instance.gameObject}");

@@ -54,6 +54,7 @@ namespace DarkwoodMP.World
                 {
                     return Singleton<UI>.Instance.dialogueWindow;
                 }
+
                 return null;
             }
         }
@@ -71,6 +72,7 @@ namespace DarkwoodMP.World
             {
                 inv = w.npc.GetComponent<Inventory>();
             }
+
             if (inv != null)
             {
                 _shopUI = inv.thisUI;
@@ -93,6 +95,7 @@ namespace DarkwoodMP.World
                 _goneSince = _offSince = -1f;
                 return;
             }
+
             float now = Time.unscaledTime;
             // destroyed, or cleared by a close that is on its way
             bool gone = w.npc == null;
@@ -106,6 +109,7 @@ namespace DarkwoodMP.World
             {
                 _goneSince = now;
             }
+
             if (!off)
             {
                 _offSince = -1f;
@@ -120,11 +124,13 @@ namespace DarkwoodMP.World
                 ForceClose(w, "destroyed");
                 return;
             }
+
             if (gone && now - _goneSince > StuckAfter)
             {
                 ForceClose(w, "gone for " + StuckAfter + " s");
                 return;
             }
+
             if (off && !w.tweening && now - _offSince > 1f)
             {
                 // tried; try again in a second if it didn't close
@@ -145,21 +151,25 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (NpcDestroyed(w))
             {
                 ForceClose(w, "destroyed");
                 return true;
             }
+
             if (w.npc == null)
             {
                 return false;
             }
+
             try
             {
                 if (Player.Instance != null && Player.Instance.inShop)
                 {
                     w.closeTrade();
                 }
+
                 // From the main menu close() shows the goodbye line instead of
                 // closing (see TalkLock.CloseWhenReady).
                 w.currentMenu = DialogueWindow.CurrentMenu.gossip;
@@ -170,6 +180,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
                 ForceClose(w, "close failed");
             }
+
             return true;
         }
 
@@ -184,6 +195,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             ForceClose(w, "destroyed");
             return false;
         }
@@ -198,6 +210,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"[world] the dialogue's NPC is {why}: closing the dialogue "
                     + "without them");
@@ -217,14 +230,17 @@ namespace DarkwoodMP.World
                             itemPopup.hide();
                         }
                     }
+
                     if (w.trading != null)
                     {
                         w.trading.gameObject.SetActive(false);
                     }
+
                     if (w.options != null)
                     {
                         w.options.gameObject.SetActive(true);
                     }
+
                     p.inShop = false;
                     p.talkedToNPC = null;
                     p.Hotbar.refresh();
@@ -233,6 +249,7 @@ namespace DarkwoodMP.World
                     {
                         UnityEngine.Object.Destroy(_shopUI);
                     }
+
                     // what our player put on the table
                     w.exchangePlayer.transferAllItemsToPlayer();
                     w.exchangePlayer.hide();
@@ -254,6 +271,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Closing the trade without the trader: {e.Message}");
             }
+
             _shopUI = null;
             p.inShop = false;
             w.tweening = true;
@@ -274,6 +292,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
             }
+
             // onTweenClose gives the controls back (inDialogue,
             // performingAction, the pause, the camera).
             Singleton<Controller>.Instance.Invoke(() =>
@@ -291,12 +310,14 @@ namespace DarkwoodMP.World
                     {
                         Singleton<CamMain>.Instance.gameObject.SetActive(true);
                     }
+
                     p.inDialogue = false;
                     p.performingAction = false;
                     p.talkedToNPC = null;
                     Core.unpause(1f);
                 }
             }, 0.5f, timeScaleDependent: false);
+
             TalkLock.Closed();
         }
     }

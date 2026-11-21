@@ -45,6 +45,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Pending[d] = opener;
             if (WorldActions.Debug)
             {
@@ -62,6 +63,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Pending.Remove(d);
             if (d.opened && !d.destroyed && d.body != null && !Turned(d))
             {
@@ -76,11 +78,13 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             var rb = BodyRB(d);
             if (rb == null || rb.isKinematic)
             {
                 yield break;
             }
+
             rb.AddForce(d.body.up * (Side(d, opener) * OpenForce(d)));
             if (WorldActions.Debug)
             {
@@ -105,36 +109,45 @@ namespace DarkwoodMP.World
                 {
                     return -1f;
                 }
+
                 return 1f;
             }
+
             if (y > -1f && y < 1f)
             {
                 if (zMore)
                 {
                     return 1f;
                 }
+
                 return -1f;
             }
+
             if (y > 89f && y < 91f)
             {
                 if (xMore)
                 {
                     return 1f;
                 }
+
                 return -1f;
             }
+
             if (y > 269f && y < 271f)
             {
                 if (xMore)
                 {
                     return -1f;
                 }
+
                 return 1f;
             }
+
             if (xMore)
             {
                 return -1f;
             }
+
             return 1f;
         }
 
@@ -150,6 +163,7 @@ namespace DarkwoodMP.World
             {
                 return 0f;
             }
+
             return Mathf.DeltaAngle(d.body.localRotation.eulerAngles.z, 90f);
         }
 
@@ -167,10 +181,12 @@ namespace DarkwoodMP.World
             {
                 hinge = d.body.GetComponent<HingeJoint>();
             }
+
             if (hinge == null || !hinge.useLimits)
             {
                 return 180f;
             }
+
             return Mathf.Clamp(
                 Mathf.Max(
                     Mathf.Abs(hinge.limits.min), Mathf.Abs(hinge.limits.max)),
@@ -191,12 +207,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var rb = BodyRB(d);
             var hinge = d.body.GetComponent<HingeJoint>();
             if (rb == null || hinge == null)
             {
                 return;
             }
+
             // it's where the others have it; the push it missed is no longer
             // wanted
             Pending.Remove(d);
@@ -222,10 +240,12 @@ namespace DarkwoodMP.World
             {
                 hinge = d.body.GetComponent<HingeJoint>();
             }
+
             if (hinge == null)
             {
                 return;
             }
+
             signedAngle = Mathf.Clamp(signedAngle, -MaxTurn(d), MaxTurn(d));
             float by = Mathf.DeltaAngle(
                 d.body.localRotation.eulerAngles.z, 90f - signedAngle);
@@ -277,6 +297,7 @@ namespace DarkwoodMP.World
             public float Target, Heard;
             public bool WasKinematic;
         }
+
         private static readonly Dictionary<Door, Glide> _glides =
             new Dictionary<Door, Glide>();
         // client: angles we sent, oldest first, until the host passes each back
@@ -331,24 +352,29 @@ namespace DarkwoodMP.World
                 {
                     _watched.Clear();
                 }
+
                 EndGlides();
                 return;
             }
+
             if (_glides.Count > 0)
             {
                 Glides();
             }
+
             var player = Player.Instance;
             if (player == null)
             {
                 return;
             }
+
             var at = player.transform.position;
             if (Time.unscaledTime >= _nextLook)
             {
                 _nextLook = Time.unscaledTime + 1f;
                 Look(at);
             }
+
             List<Door> gone = null;
             foreach (var w in _watched.Values)
             {
@@ -362,13 +388,16 @@ namespace DarkwoodMP.World
                     {
                         gone = new List<Door>();
                     }
+
                     gone.Add(d);
                     continue;
                 }
+
                 if (w.Rb.isKinematic || _glides.ContainsKey(d))
                 {
                     continue;
                 }
+
                 float now = DoorLeaf.Signed(d);
                 bool swinging = Mathf.Abs(w.Rb.angularVelocity.y) > 0.2f;
                 // Away from where it's shared, however slowly it got there (a
@@ -387,6 +416,7 @@ namespace DarkwoodMP.World
                         w.Touched = true;
                     }
                 }
+
                 if (swinging)
                 {
                     w.StillSince = -1f;
@@ -397,22 +427,27 @@ namespace DarkwoodMP.World
                         // swinging: shown swinging in the other games
                         Post(w.D, now);
                     }
+
                     continue;
                 }
+
                 if (!w.Moving)
                 {
                     continue;
                 }
+
                 if (w.StillSince < 0f)
                 {
                     w.StillSince = Time.unscaledTime;
                     continue;
                 }
+
                 if (Time.unscaledTime - w.StillSince < RestTime
                     || Time.unscaledTime < w.NextSend)
                 {
                     continue;
                 }
+
                 w.Moving = false;
                 if (Mathf.Abs(Mathf.DeltaAngle(now, w.Shared)) > MinChange)
                 {
@@ -433,11 +468,14 @@ namespace DarkwoodMP.World
                                 $"[world] {d.name}'s leaf turned by itself "
                                     + $"here to {now:0}: back to {w.Shared:0}");
                         }
+
                         GlideTo(d, w.Shared);
                     }
                 }
+
                 w.Touched = false;
             }
+
             if (gone != null)
             {
                 foreach (var d in gone)
@@ -462,11 +500,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var rb = DoorLeaf.BodyRB(d);
             if (rb == null)
             {
                 return;
             }
+
             _watched[d] = new Watched
             {
                 D = d,
@@ -488,6 +528,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var d = Door.getDoorScript(rb.transform);
                 if (d == null || _watched.ContainsKey(d) || !d.opened
                     || d.destroyed || d.body == null
@@ -495,6 +536,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 _watched[d] =
                     new Watched { D = d, Rb = rb, Shared = DoorLeaf.Signed(d) };
             }
@@ -513,6 +555,7 @@ namespace DarkwoodMP.World
             {
                 return (q - c).magnitude;
             }
+
             Vector2 h = new Vector2(
                 hinge.connectedAnchor.x, hinge.connectedAnchor.z),
                 e = h + 2f * (c - h);
@@ -526,6 +569,7 @@ namespace DarkwoodMP.World
             {
                 t = Mathf.Clamp01(Vector2.Dot(q - h, he) / he.sqrMagnitude);
             }
+
             return (q - (h + t * he)).magnitude;
         }
 
@@ -536,6 +580,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             w.Shared = angle;
             w.NextSend = Time.unscaledTime + MinInterval;
             Post(w.D, angle);
@@ -554,17 +599,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var pw = Write(r, angle);
             if (_s.IsHost)
             {
                 _s.Broadcast(pw, Channel.Control, reliable: true);
                 return;
             }
+
             _s.SendToHost(pw, Channel.Control, reliable: true);
             if (!_unechoed.TryGetValue(d, out var sent))
             {
                 _unechoed[d] = sent = new List<float>();
             }
+
             if (sent.Count < 64)
             {
                 sent.Add(angle);
@@ -581,17 +629,20 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             int i = sent.FindIndex(a => Mathf.Abs(a - angle) < 0.01f);
             if (i < 0)
             {
                 _unechoed.Remove(d);
                 return false;
             }
+
             sent.RemoveRange(0, i + 1);
             if (sent.Count == 0)
             {
                 _unechoed.Remove(d);
             }
+
             return true;
         }
 
@@ -606,11 +657,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!_glides.TryGetValue(d, out var g))
             {
                 _glides[d] = g = new Glide { WasKinematic = rb.isKinematic };
                 rb.isKinematic = true; // the physics doesn't fight the turn
             }
+
             g.Target = angle;
             g.Heard = Time.unscaledTime;
         }
@@ -630,9 +683,11 @@ namespace DarkwoodMP.World
                     {
                         done = new List<Door>();
                     }
+
                     done.Add(d);
                     continue;
                 }
+
                 float now = DoorLeaf.Signed(d),
                     off = Mathf.DeltaAngle(now, g.Target);
                 float since = Time.unscaledTime - g.Heard;
@@ -643,6 +698,7 @@ namespace DarkwoodMP.World
                     {
                         rb.isKinematic = g.WasKinematic;
                     }
+
                     DoorLeaf.SetLeaf(d, g.Target);
                     if (_watched.TryGetValue(d, out var w))
                     {
@@ -651,15 +707,19 @@ namespace DarkwoodMP.World
                         w.Touched = false;
                         w.StillSince = -1f;
                     }
+
                     if (done == null)
                     {
                         done = new List<Door>();
                     }
+
                     done.Add(d);
                     continue;
                 }
+
                 DoorLeaf.Turn(d, now + off * k);
             }
+
             if (done != null)
             {
                 foreach (var d in done)
@@ -678,11 +738,13 @@ namespace DarkwoodMP.World
                 {
                     rb = DoorLeaf.BodyRB(kv.Key);
                 }
+
                 if (rb != null && kv.Key.opened && !kv.Key.destroyed)
                 {
                     rb.isKinematic = kv.Value.WasKinematic;
                 }
             }
+
             _glides.Clear();
         }
 
@@ -700,16 +762,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_s.IsClient && from != _s.HostId)
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             float angle = r.R.ReadSingle();
             if (float.IsNaN(angle) || float.IsInfinity(angle))
             {
                 return;
             }
+
             var d = ObjRef.Resolve<Door>(obj);
             if (d == null || d.body == null)
             {
@@ -718,8 +783,10 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo(
                         $"[world] got DoorLeaf {obj}: not found here");
                 }
+
                 return;
             }
+
             // Open and close are WorldActions on the same ordered channel; a
             // leaf for a door that's shut (or broken, or barricaded) here is
             // late or wrong, and is left alone.
@@ -731,8 +798,10 @@ namespace DarkwoodMP.World
                         $"[world] got DoorLeaf {d.name}: not open here, left "
                             + "as it is");
                 }
+
                 return;
             }
+
             if (_s.IsHost)
             {
                 if (!Authority.Near(from, d.body.position, WorldActions.Reach)
@@ -746,14 +815,17 @@ namespace DarkwoodMP.World
                         reliable: true);
                     return;
                 }
+
                 // the pusher too: the host's last word
                 _s.Broadcast(
                     Write(obj, angle), Channel.Control, reliable: true);
             }
+
             if (_s.IsClient && OurEcho(d, angle))
             {
                 return;
             }
+
             GlideTo(d, angle);
             if (_watched.TryGetValue(d, out var w))
             {
@@ -808,6 +880,7 @@ namespace DarkwoodMP.World
             {
                 opener = openerPosition;
             }
+
             DoorLeaf.Opened(__instance, opener);
             DoorPush.Opened(__instance);
         }

@@ -62,6 +62,7 @@ namespace DarkwoodMP.Combat
                 {
                     return;
                 }
+
                 LastDecay = Time.time;
                 float k = Mathf.Pow(0.5f, dt / HalfLife);
                 var keys = new List<CharBase>(Values.Keys);
@@ -72,6 +73,7 @@ namespace DarkwoodMP.Combat
                         Values.Remove(c);
                         continue;
                     }
+
                     float v = Values[c] * k;
                     if (v < 0.05f)
                     {
@@ -90,6 +92,7 @@ namespace DarkwoodMP.Combat
                 {
                     return;
                 }
+
                 Decay();
                 Values.TryGetValue(who, out float v);
                 Values[who] = v + amount;
@@ -101,6 +104,7 @@ namespace DarkwoodMP.Combat
                 {
                     return v;
                 }
+
                 return 0f;
             }
         }
@@ -130,6 +134,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Of(victim).Add(attacker, damage);
         }
 
@@ -140,6 +145,7 @@ namespace DarkwoodMP.Combat
             {
                 return; // only noise a player made is theirs
             }
+
             Of(listener).Add(
                 NoiseSource, Mathf.Max(0.1f, volume) * NoiseWeight);
             if (Debug)
@@ -166,6 +172,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var list = c.charactersInViewRange;
             // A friendly NPC is each player's own: it doesn't see the joiners'
             // stand-ins. One the host runs as an enemy (Combat.HostileNpcs)
@@ -178,15 +185,18 @@ namespace DarkwoodMP.Combat
                 {
                     return;
                 }
+
                 list.RemoveAll(
                     col => col != null
                         && col.GetComponent<NetPlayerProxy>() != null);
                 return;
             }
+
             if (list.Count < 2)
             {
                 return;
             }
+
             // Leave it be while it's after something other than a player: a
             // door, a lure, another faction.
             if (c.target != null
@@ -208,6 +218,7 @@ namespace DarkwoodMP.Combat
                 {
                     cb = col.GetComponent<CharBase>();
                 }
+
                 if (Proxies.IsPlayer(cb) && cb.alive)
                 {
                     players.Add((col, cb, Score(table, c, cb, sight)));
@@ -217,6 +228,7 @@ namespace DarkwoodMP.Combat
                     others.Add(col);
                 }
             }
+
             if (players.Count < 2)
             {
                 return;
@@ -234,6 +246,7 @@ namespace DarkwoodMP.Combat
                 players.RemoveAt(cur);
                 players.Add(keep);
             }
+
             var chosen = players[players.Count - 1];
             if (Debug && (c.target == null || c.target != chosen.Who.transform))
             {
@@ -275,6 +288,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var table = Of(c);
             float dt = Mathf.Min(Time.time - table.LastSeenTick, 2f);
             table.LastSeenTick = Time.time;
@@ -302,6 +316,7 @@ namespace DarkwoodMP.Combat
             {
                 return host;
             }
+
             var table = Of(c);
             table.Decay();
             // Closeness counts within three times its sight, and at least
@@ -318,6 +333,7 @@ namespace DarkwoodMP.Combat
             {
                 candidates.Add(host);
             }
+
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 // invisible: as attackCharacter, nobody goes for them
@@ -326,6 +342,7 @@ namespace DarkwoodMP.Combat
                     candidates.Add(p);
                 }
             }
+
             foreach (var p in candidates)
             {
                 float dist = Vector3.Distance(
@@ -341,11 +358,13 @@ namespace DarkwoodMP.Combat
                     best = p;
                 }
             }
+
             CharBase chosen = best;
             if (chosen == null)
             {
                 chosen = host;
             }
+
             return chosen;
         }
 
@@ -360,6 +379,7 @@ namespace DarkwoodMP.Combat
             {
                 return best.transform;
             }
+
             return Player.Instance.transform;
         }
 
@@ -379,13 +399,16 @@ namespace DarkwoodMP.Combat
                 {
                     return c.transform.position;
                 }
+
                 return Vector3.zero;
             }
+
             Vector3 best = host.transform.position;
             if (!Enabled || c == null)
             {
                 return best;
             }
+
             Vector3 me = c.transform.position;
             float bestDist = Core.trueDistance(best, me);
             foreach (var p in NetPlayerProxy.All.Values)
@@ -394,6 +417,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 float d = Core.trueDistance(p.transform.position, me);
                 if (d < bestDist)
                 {
@@ -401,6 +425,7 @@ namespace DarkwoodMP.Combat
                     best = p.transform.position;
                 }
             }
+
             return best;
         }
 
@@ -416,6 +441,7 @@ namespace DarkwoodMP.Combat
             {
                 return c.target.position;
             }
+
             return NearestPlayerPos(c);
         }
 
@@ -425,10 +451,12 @@ namespace DarkwoodMP.Combat
             {
                 return p.OwnerName;
             }
+
             if (c is Player)
             {
                 return "host player";
             }
+
             return c.name;
         }
     }

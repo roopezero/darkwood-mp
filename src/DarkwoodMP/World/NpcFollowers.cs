@@ -42,6 +42,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _hooked = true;
             Session.Instance.OnSessionEnded += () => Recruiter.Clear();
             Session.Instance.OnPeerDisconnected += id =>
@@ -54,6 +55,7 @@ namespace DarkwoodMP.World
                         gone.Add(kv.Key);
                     }
                 }
+
                 foreach (var c in gone)
                 {
                     Recruiter.Remove(c);
@@ -72,10 +74,12 @@ namespace DarkwoodMP.World
             {
                 c = go.GetComponent<Character>();
             }
+
             if (c == null || c.npc == null)
             {
                 return;
             }
+
             Hook();
             Recruiter[c] = by;
             if (WorldActions.Debug)
@@ -91,6 +95,7 @@ namespace DarkwoodMP.World
             {
                 return p.OwnerName;
             }
+
             return id.ToString();
         }
 
@@ -105,16 +110,19 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (c.aggressiveness != Aggressiveness.follower
                 && c.behaviour != Character.Behaviour.following)
             {
                 return null;
             }
+
             if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null
                 && p.alive)
             {
                 return p;
             }
+
             return null;
         }
 
@@ -130,6 +138,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             c.charactersInViewRange.RemoveAll(col =>
             {
                 CharBase cb = null;
@@ -137,14 +146,17 @@ namespace DarkwoodMP.World
                 {
                     cb = col.GetComponent<CharBase>();
                 }
+
                 return cb != null && cb != leader && Proxies.IsPlayer(cb);
             });
+
             if (c.target == null
                 || c.target != leader.transform
                     && Proxies.IsPlayer(c.target.GetComponent<CharBase>()))
             {
                 c.target = leader.transform;
             }
+
             return true;
         }
 
@@ -163,6 +175,7 @@ namespace DarkwoodMP.World
                         && ge.destCharacterBehaviour
                             == Character.Behaviour.following;
             }
+
             return ge.type == GameEvent.Type.gameObject;
         }
 
@@ -175,11 +188,13 @@ namespace DarkwoodMP.World
                     yield return go;
                 }
             }
+
             var uo = Singleton<UniqueObjects>.Instance;
             if (uo == null)
             {
                 yield break;
             }
+
             foreach (var name in ge.targetUniqueObjects)
             {
                 var go = uo.getObject(name);
@@ -206,10 +221,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!NpcFollowers.MakesFollowers(__instance))
             {
                 return;
             }
+
             bool gameObjectStep = __instance.type == GameEvent.Type.gameObject;
             foreach (var go in NpcFollowers.Targets(__instance))
             {
@@ -218,6 +235,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 // A gameObject step counts only for a character that is a
                 // follower already (switched on to follow).
                 if (gameObjectStep
@@ -225,6 +243,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 NpcFollowers.Recruited(go, by);
             }
         }

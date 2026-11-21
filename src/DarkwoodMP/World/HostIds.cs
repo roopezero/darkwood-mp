@@ -116,6 +116,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (Hosting || Joined)
             {
                 _started.Add((go, Time.unscaledTime));
@@ -128,12 +129,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             float now = Time.unscaledTime;
             if (now >= _nextPrune)
             {
                 _nextPrune = now + 10f;
                 ObjRef.PruneShared();
             }
+
             if (_started.Count == 0 && _pending.Count == 0)
             {
                 return;
@@ -148,11 +151,13 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     _started.RemoveAt(i--);
                     if (go == null || !ObjRef.Unnamed(go))
                     {
                         continue;
                     }
+
                     long id = NewId();
                     ObjRef.BindShared(id, go);
                     // where it settles from here on is sent (as announced: it
@@ -162,17 +167,21 @@ namespace DarkwoodMP.World
                     {
                         instance.Watch(go);
                     }
+
                     _outgoing.Add(
                         (id, go.name, go.transform.position, PlaceOf(go)));
                     Given++;
                 }
+
                 if (_outgoing.Count > 0)
                 {
                     Send(_outgoing, 0, 0);
                     _outgoing.Clear();
                 }
+
                 return;
             }
+
             if (!Joined)
             {
                 _started.Clear();
@@ -194,6 +203,7 @@ namespace DarkwoodMP.World
                     _pending.RemoveAt(i--);
                 }
             }
+
             // What started a while ago and is still unnamed: maybe the copy of
             // an id the host gave out long before.
             if (_late.Count > 0)
@@ -207,6 +217,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             // Forget what started too long ago to be anyone's copy.
             _started.RemoveAll(s => s.go == null || now - s.at > Window);
             if (_started.Count == 0)
@@ -223,6 +234,7 @@ namespace DarkwoodMP.World
             {
                 _late[name] = list = new List<(long, Vector3, int)>();
             }
+
             list.Add((id, pos, place));
         }
 
@@ -247,8 +259,10 @@ namespace DarkwoodMP.World
                 {
                     sb.Append(':').Append(t.GetSiblingIndex());
                 }
+
                 sb.Append('/');
             }
+
             return StableHash.Of(sb.ToString());
         }
 
@@ -265,6 +279,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var q = go.transform.position;
             float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack + 2f;
             bool bestSame = false;
@@ -276,12 +291,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 float d = (q.x - pos.x) * (q.x - pos.x)
                     + (q.z - pos.z) * (q.z - pos.z);
                 if (d > ObjRef.PlacedSlack * ObjRef.PlacedSlack)
                 {
                     continue;
                 }
+
                 if (best < 0 || Better(d, p == place, bestD, bestSame))
                 {
                     bestD = d;
@@ -289,10 +306,12 @@ namespace DarkwoodMP.World
                     bestSame = p == place;
                 }
             }
+
             if (best < 0 || !ObjRef.BindShared(list[best].id, go))
             {
                 return;
             }
+
             _lateTied.Add(go);
             Tied++;
             Place(list[best].id, go);
@@ -318,10 +337,12 @@ namespace DarkwoodMP.World
                 {
                     continue; // a moment for our own replays to be named
                 }
+
                 if (!ObjRef.Unnamed(go) && !_lateTied.Contains(go))
                 {
                     continue;
                 }
+
                 var q = go.transform.position;
                 float d = (q.x - pos.x) * (q.x - pos.x)
                     + (q.z - pos.z) * (q.z - pos.z);
@@ -329,6 +350,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 bool same = PlaceOf(go) == place;
                 if (best == null || Better(d, same, bestD, bestSame))
                 {
@@ -337,20 +359,24 @@ namespace DarkwoodMP.World
                     bestSame = same;
                 }
             }
+
             if (best == null)
             {
                 return false;
             }
+
             // Tied a moment ago to an id from long before: the id the host
             // gives out now is the one for it.
             if (_lateTied.Remove(best))
             {
                 ObjRef.Unbind(best);
             }
+
             if (!ObjRef.BindShared(id, best))
             {
                 return false;
             }
+
             Tied++;
             Place(id, best);
             if (WorldActions.Debug)
@@ -359,6 +385,7 @@ namespace DarkwoodMP.World
                     $"[ids] tied {name} at {best.transform.position} to the "
                         + $"host's #{id}");
             }
+
             return true;
         }
 
@@ -377,6 +404,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             DragSync instance = DragSync.Instance;
             if (instance != null)
             {
@@ -413,6 +441,7 @@ namespace DarkwoodMP.World
                     w.Write(list[i].pos);
                     w.W.Write(list[i].place);
                 }
+
                 if (to == 0)
                 {
                     _session.Broadcast(w, Channel.Control, reliable: true);
@@ -422,6 +451,7 @@ namespace DarkwoodMP.World
                     _session.SendTo(to, w, Channel.Control, reliable: true);
                 }
             }
+
             if (WorldActions.Debug)
             {
                 string text;
@@ -433,6 +463,7 @@ namespace DarkwoodMP.World
                 {
                     text = $" to #{to} (made before it joined)";
                 }
+
                 Plugin.Log.LogInfo($"[ids] gave out {list.Count} ids{text}");
             }
         }
@@ -447,12 +478,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var all = new List<(long, string, Vector3, int)>();
             foreach (var kv in ObjRef.SharedObjects)
             {
                 all.Add((kv.Key, kv.Value.name, kv.Value.transform.position,
                     PlaceOf(kv.Value)));
             }
+
             if (all.Count > 0)
             {
                 Send(all, MadeBefore, peer);
@@ -465,6 +498,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             byte flags = r.R.ReadByte();
             int n = r.R.ReadUInt16();
             float until = Time.unscaledTime + Window;
@@ -483,6 +517,7 @@ namespace DarkwoodMP.World
                     AddLate(id, name, pos, place);
                     continue;
                 }
+
                 if (!Joined || !TryBind(id, name, pos, place))
                 {
                     _pending.Add((id, name, pos, place, until));

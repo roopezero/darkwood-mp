@@ -54,6 +54,7 @@ namespace DarkwoodMP.World
                 {
                     return _hostSize;
                 }
+
                 return Mathf.Max(0, Plugin.Cfg.StackSize.Value);
             }
         }
@@ -69,24 +70,28 @@ namespace DarkwoodMP.World
                     SendTo(id);
                 }
             };
+
             s.OnSessionEnded += () =>
             {
                 if (_hostSize < 0)
                 {
                     return;
                 }
+
                 _hostSize = -1;
                 Plugin.Log.LogInfo(
                     "[stacks] session over: our own setting again "
                         + $"({Current})");
                 Apply(Current);
             };
+
             Plugin.Cfg.StackSize.SettingChanged += (_, __) =>
             {
                 if (_hostSize >= 0)
                 {
                     return; // a client keeps the host's until it leaves
                 }
+
                 Apply(Current);
                 if (s.IsHost)
                 {
@@ -95,6 +100,7 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogInfo($"[stacks] sent {Current} to everyone");
                 }
             };
+
             // a database made before the mod loaded (if none yet, this does
             // nothing)
             Apply(Current);
@@ -116,6 +122,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int size = r.R.ReadUInt16();
             _hostSize = size;
             Plugin.Log.LogInfo($"[stacks] the host's stack size: {size}");
@@ -132,11 +139,13 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var b = it.baseClass;
             if (!Eligible(b, b.maxAmount))
             {
                 return true;
             }
+
             return it.amount <= b.maxAmount;
         }
 
@@ -153,6 +162,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int changed = 0, eligible = 0;
             foreach (var k in new List<string>(db.itemsDict.Keys))
             {
@@ -164,19 +174,23 @@ namespace DarkwoodMP.World
                 catch
                 {
                 }
+
                 if (it == null)
                 {
                     continue;
                 }
+
                 if (!Original.TryGetValue(it, out int orig))
                 {
                     orig = it.maxAmount;
                     Original[it] = orig;
                 }
+
                 if (!Eligible(it, orig))
                 {
                     continue;
                 }
+
                 eligible++;
                 int max;
                 if (size > 0)
@@ -187,20 +201,24 @@ namespace DarkwoodMP.World
                 {
                     max = orig;
                 }
+
                 if (max != orig)
                 {
                     changed++;
                 }
+
                 if (it.maxAmount == max)
                 {
                     continue;
                 }
+
                 it.maxAmount = max;
                 if (!Kept.Contains(it))
                 {
                     Kept.Add(it);
                 }
             }
+
             string data;
             if (size > 0)
             {
@@ -214,6 +232,7 @@ namespace DarkwoodMP.World
                     $"[stacks] {eligible} stackable items stack to the game's "
                         + "own sizes";
             }
+
             Plugin.Log.LogInfo(data);
         }
 
@@ -229,14 +248,17 @@ namespace DarkwoodMP.World
             {
                 it = instance.getItem(type, instantiate: false);
             }
+
             if (it == null)
             {
                 return 0;
             }
+
             if (Original.TryGetValue(it, out int o))
             {
                 return o;
             }
+
             return it.maxAmount;
         }
 

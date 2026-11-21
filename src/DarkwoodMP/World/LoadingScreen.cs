@@ -67,15 +67,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (ui.loadingScreen.activeInHierarchy && ui == _shownUi)
             {
                 return;
             }
+
             _shownUi = ui;
             if (!ui.loadingScreen.activeSelf)
             {
                 ui.loadingScreen.SetActive(true);
             }
+
             // A screen the game has shown and hidden before faded every part to
             // clear white (tweenColorInChildren).
             foreach (var s in ui.loadingScreen
@@ -85,6 +88,7 @@ namespace DarkwoodMP.World
                 {
                     s.color = new Color(s.color.r, s.color.g, s.color.b, 1f);
                 }
+
                 var r = s.GetComponent<Renderer>();
                 if (r != null && r.sharedMaterial != null
                     && s.CollectionInst != null && s.spriteId >= 0
@@ -94,6 +98,7 @@ namespace DarkwoodMP.World
                         .spriteDefinitions[s.spriteId].materialInst.mainTexture;
                 }
             }
+
             foreach (var t in ui.loadingScreen
                 .GetComponentsInChildren<tk2dTextMesh>(true))
             {
@@ -102,6 +107,7 @@ namespace DarkwoodMP.World
                     t.color = new Color(t.color.r, t.color.g, t.color.b, 1f);
                 }
             }
+
             _barFrame = -1;
             Plugin.Log.LogInfo("[loading] showing the game's loading screen");
         }
@@ -118,6 +124,7 @@ namespace DarkwoodMP.World
             {
                 ui.loadingScreen.SetActive(false);
             }
+
             _shownUi = null;
         }
 
@@ -136,12 +143,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int pct = Mathf.Clamp(Mathf.FloorToInt(fraction * 100f), 0, 100);
             int frame = pct / 2;
             if (!force && frame == _barFrame && ui == _barUi)
             {
                 return;
             }
+
             _barFrame = frame;
             _barUi = ui;
             try
@@ -151,6 +160,7 @@ namespace DarkwoodMP.World
             catch
             {
             }
+
             if (ui.percentLoadedText != null)
             {
                 ui.percentLoadedText.text = pct + "%";
@@ -168,15 +178,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (ui != _ui || _line == null || _hint == null)
             {
                 _ui = ui;
                 Make(ui);
             }
+
             if (_line == null)
             {
                 return;
             }
+
             Set(_line, text);
             Set(_hint, hint);
             Shot(text);
@@ -188,6 +201,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int cut = text.IndexOfAny(new[] { '(', ':' });
             string key;
             if (cut > 0)
@@ -198,10 +212,12 @@ namespace DarkwoodMP.World
             {
                 key = text;
             }
+
             if (key == _shotKey)
             {
                 return;
             }
+
             _shotKey = key;
             try
             {
@@ -228,11 +244,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             bool on = !string.IsNullOrEmpty(text);
             if (t.gameObject.activeSelf != on)
             {
                 t.gameObject.SetActive(on);
             }
+
             if (on && t.text != text)
             {
                 t.text = text;
@@ -260,6 +278,7 @@ namespace DarkwoodMP.World
                 _loggedTree = true;
                 LogTree(ui.loadingScreen.transform, 0);
             }
+
             var screen = ui.loadingScreen.transform;
             var barR = ui.loadingBar.GetComponent<Renderer>();
             Transform transform = screen.Find("Tip");
@@ -268,10 +287,12 @@ namespace DarkwoodMP.World
             {
                 tip = transform.GetComponent<tk2dTextMesh>();
             }
+
             if (tip == null)
             {
                 tip = ui.percentLoadedText;
             }
+
             if (barR == null || tip == null)
             {
                 return;
@@ -287,12 +308,14 @@ namespace DarkwoodMP.World
             {
                 up = Vector3.forward;
             }
+
             var b = barR.bounds;
             float height = Mathf.Abs(Vector3.Dot(b.size, up));
             if (height < 1f)
             {
                 height = 256f;
             }
+
             _line = MakeText(
                 screen, LineName, tip, b.center - up * (height * 0.28f), 1f,
                 new Color(0.85f, 0.82f, 0.74f, 1f));
@@ -324,6 +347,7 @@ namespace DarkwoodMP.World
                     return c;
                 }
             }
+
             return null;
         }
 
@@ -336,6 +360,7 @@ namespace DarkwoodMP.World
             {
                 Object.DestroyImmediate(old.gameObject);
             }
+
             var go = new GameObject(name);
             go.layer = like.gameObject.layer;
             go.transform.SetParent(screen, false);
@@ -363,6 +388,7 @@ namespace DarkwoodMP.World
                 r.sortingLayerID = lr.sortingLayerID;
                 r.sortingOrder = lr.sortingOrder;
             }
+
             go.SetActive(false);
             return t;
         }
@@ -373,6 +399,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var tm = t.GetComponent<tk2dTextMesh>();
             var sp = t.GetComponent<tk2dBaseSprite>();
             var r = t.GetComponent<Renderer>();
@@ -390,8 +417,10 @@ namespace DarkwoodMP.World
                 {
                     fontName = fontData.name;
                 }
+
                 mesh = $" text=\"{words}\" font={fontName} tscale={tm.scale}";
             }
+
             string sprite = "";
             if (sp != null)
             {
@@ -401,14 +430,17 @@ namespace DarkwoodMP.World
                 {
                     spriteName = current.name;
                 }
+
                 sprite = $" sprite={spriteName}";
             }
+
             string box = "";
             if (r != null)
             {
                 box = $" bounds={r.bounds.center}/{r.bounds.size} "
                     + $"order={r.sortingOrder}";
             }
+
             Plugin.Log.LogInfo(line + mesh + sprite + box);
             foreach (Transform c in t)
             {
@@ -429,78 +461,95 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (wg.finished)
             {
                 // done: the screen is fading out (or is up for a location,
                 // OutsideLocations)
                 return null;
             }
+
             float p = wg.percentLoaded;
             if (wg != _stageWg)
             {
                 _stageWg = wg;
                 _stageLoading = false;
             }
+
             if (Core.loadingGame)
             {
                 // it goes false again just before Load's last step
                 _stageLoading = true;
             }
+
             if (_stageLoading) // SaveManager.Load
             {
                 if (p <= 0f)
                 {
                     return "Reading the save...";
                 }
+
                 if (p < 50f)
                 {
                     return "Placing the saved objects "
                         + $"({Mathf.FloorToInt(p * 2f)}%)...";
                 }
+
                 if (p < 70f)
                 {
                     return "Fitting the objects together...";
                 }
+
                 if (p < 75f)
                 {
                     return "Restoring dreams, the map and events...";
                 }
+
                 if (p < 80f)
                 {
                     return "Restoring the state of the world...";
                 }
+
                 if (p < 85f)
                 {
                     return "Setting up places and characters...";
                 }
+
                 return "Showing the area around you...";
             }
+
             // WorldGenerator.generateWorld: a new game, or a chapter made from
             // its chapter save
             if (p < 20f)
             {
                 return "Laying out the forest...";
             }
+
             if (p < 30f)
             {
                 return "Filling the forest with places...";
             }
+
             if (p < 40f)
             {
                 return "Building the roads...";
             }
+
             if (p < 70f)
             {
                 return "Growing trees and placing objects...";
             }
+
             if (p < 72f)
             {
                 return "Placing you in the world...";
             }
+
             if (p < 92f)
             {
                 return "Working out paths through the forest...";
             }
+
             return "Bringing in characters and items...";
         }
 
@@ -518,6 +567,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (ui != _tipUi)
             {
                 _tipUi = ui;
@@ -531,6 +581,7 @@ namespace DarkwoodMP.World
                     _tip = null;
                 }
             }
+
             if (_tip != null && _tip.enabled)
             {
                 _tip.enabled = false;
@@ -548,6 +599,7 @@ namespace DarkwoodMP.World
             {
                 return; // JoinScreen writes its own line
             }
+
             var wg = Singleton<WorldGenerator>.Instance;
             if (wg == null || !Up)
             {
@@ -556,8 +608,10 @@ namespace DarkwoodMP.World
                 {
                     SetLine(null, null);
                 }
+
                 return;
             }
+
             SetLine(GameStage(), null);
         }
     }

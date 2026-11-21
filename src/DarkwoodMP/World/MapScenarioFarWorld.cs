@@ -50,11 +50,13 @@ namespace DarkwoodMP.World
             {
                 return Centre;
             }
+
             if (s.StartsWith("off:"))
             {
                 var p = s.Substring(4).Split(',');
                 return Centre + new Vector3(F(p[0]), 0f, F(p[1]));
             }
+
             throw new ArgumentException(
                 $"not a spot: {s} (off:DX,DZ or centre)");
         }
@@ -77,11 +79,13 @@ namespace DarkwoodMP.World
                             + "centre)");
                 }
             }
+
             string s = "centre";
             if (a.Length > 0)
             {
                 s = a[0];
             }
+
             var to = Spot(s);
             yield return Walk(to, 60f);
             r.Info = $"at {Fmt(P.transform.position)}";
@@ -105,6 +109,7 @@ namespace DarkwoodMP.World
                 r.Fail("no door");
                 yield break;
             }
+
             yield return Walk(door.transform.position);
             bool open = a.Length < 2 || a[1] == "open";
             if (open != door.opened)
@@ -121,6 +126,7 @@ namespace DarkwoodMP.World
                     }
                 });
             }
+
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"{door.name} "
@@ -132,6 +138,7 @@ namespace DarkwoodMP.World
                 {
                     text = "open";
                 }
+
                 r.Fail($"{r.Info}: not {text}");
             }
         }
@@ -149,6 +156,7 @@ namespace DarkwoodMP.World
                 r.Fail("no door");
                 yield break;
             }
+
             bool open = a.Length < 2 || a[1] == "open";
             yield return Walk(door.transform.position);
             for (float t = 0f; t < 5f
@@ -157,6 +165,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.25f);
             }
+
             yield return new WaitForSeconds(1f); // let the swing end
             r.Info =
                 $"{door.name} "
@@ -168,6 +177,7 @@ namespace DarkwoodMP.World
                 {
                     text = "open and drawn open";
                 }
+
                 r.Fail($"{r.Info}: should be {text}");
             }
         }
@@ -183,6 +193,7 @@ namespace DarkwoodMP.World
             {
                 s = a[0];
             }
+
             var at = Spot(s);
             r.Info = string.Join("; ",
                 Object.FindObjectsOfType<Door>(true).Where(
@@ -199,8 +210,10 @@ namespace DarkwoodMP.World
                         {
                             turn = body.localEulerAngles.z;
                         }
+
                         return $"{id} at {spot} open={opened} leaf {angle:0} (z {turn:0}) on={d.gameObject.activeInHierarchy}";
                     }));
+
             yield break;
         }
 
@@ -227,13 +240,16 @@ namespace DarkwoodMP.World
                                 < 2500f;
                     }
                 }
+
                 return false;
             }), from);
+
             if (it == null)
             {
                 r.Fail($"nothing draggable within 2500 of {Fmt(from)}");
                 yield break;
             }
+
             yield return Walk(it.transform.position, 80f);
             var start = it.transform.position;
             var by = new Vector3(to.x - start.x, 0f, to.z - start.z);
@@ -249,22 +265,26 @@ namespace DarkwoodMP.World
                             + "has it)");
                     yield break;
                 }
+
                 var at = start + by * (t / secs);
                 it.transform.position = at;
                 if (rb != null)
                 {
                     rb.position = at;
                 }
+
                 P.transform.position = new Vector3(
                     at.x, P.transform.position.y, at.z) - by.normalized * 70f;
                 yield return null;
             }
+
             it.transform.position = start + by;
             if (rb != null)
             {
                 rb.position = start + by;
                 rb.velocity = Vector3.zero;
             }
+
             yield return new WaitForSeconds(0.3f);
             P.itemBeingDragged = null;
             // where it came to rest goes out once settled
@@ -297,12 +317,14 @@ namespace DarkwoodMP.World
                 r.Fail("nothing draggable");
                 yield break;
             }
+
             var co = it.GetComponent<CullableObject>();
             WorldGrid.Node node = null;
             if (co != null)
             {
                 node = co.node;
             }
+
             string state =
                 $"{it.name} "
                     + $"{ObjRef.Of(it.gameObject)} at {Fmt(it.transform.position)} on={it.gameObject.activeInHierarchy}";
@@ -313,6 +335,7 @@ namespace DarkwoodMP.World
                     $" node {node.position.x:0},{node.position.y:0} "
                         + $"entered={node.entered}";
             }
+
             r.Info = state + culling;
             if (StateDump.Flat(it.transform.position - at) > 300f)
             {
@@ -342,6 +365,7 @@ namespace DarkwoodMP.World
             {
                 s = a[0];
             }
+
             var spot = Spot(s);
             // Run again at the far steps: the dog made before the join may have
             // wandered off or died in the meantime, so a living one is put back
@@ -355,6 +379,7 @@ namespace DarkwoodMP.World
                 {
                     body.position = spot;
                 }
+
                 yield return new WaitForSeconds(1.5f);
                 string name = _dog.name;
                 string at = Fmt(_dog.transform.position);
@@ -364,9 +389,11 @@ namespace DarkwoodMP.World
                 {
                     id = save.uniqueId;
                 }
+
                 r.Info = $"{name} back at {at}, save id {id}";
                 yield break;
             }
+
             var c = Singleton<CharacterSpawner>.Instance.spawnCharacterAround(
                 P.gameObject, spot, 1f, "Dog", nocturnal: false,
                 attackPlayer: false);
@@ -375,6 +402,7 @@ namespace DarkwoodMP.World
                 r.Fail("couldn't spawn a dog");
                 yield break;
             }
+
             c.transform.position = spot;
             _dog = c;
             yield return new WaitForSeconds(1.5f);
@@ -386,6 +414,7 @@ namespace DarkwoodMP.World
             {
                 spawnedId = spawnedSave.uniqueId;
             }
+
             r.Info = $"{spawnedName} at {spawnedAt}, save id {spawnedId}";
         }
 
@@ -396,6 +425,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return Object.FindObjectsOfType<Character>(true).Where(
                 c => c != null && c.alive && ne.IsPuppet(c, out _)
                     && StateDump.Flat(c.transform.position - at) < within)
@@ -420,6 +450,7 @@ namespace DarkwoodMP.World
             {
                 origin = "made from its prefab";
             }
+
             return state + $" {origin}";
         }
 
@@ -438,6 +469,7 @@ namespace DarkwoodMP.World
                 var d = c.transform.position - P.transform.position;
                 return Mathf.Abs(d.z) > 1700f || Mathf.Abs(d.x) > 2500f;
             }
+
             Character[] far = new Character[0];
             for (float t = 0f; t < 15f; t += 0.5f)
             {
@@ -449,14 +481,17 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.5f);
             }
+
             if (far.Length == 0)
             {
                 r.Fail(
                     "no copy of the host's enemies outside our culling's rect");
                 yield break;
             }
+
             var hidden = far.Where(c => !Shown(c)).ToArray();
             int total = far.Length;
             int unseen = hidden.Length;
@@ -465,6 +500,7 @@ namespace DarkwoodMP.World
             {
                 example = far[0];
             }
+
             r.Info =
                 $"{total} outside our rect, {unseen} not shown; e.g. "
                     + $"{Describe(example)}";
@@ -485,6 +521,7 @@ namespace DarkwoodMP.World
                 r.Fail("no dog (far-dog first)");
                 yield break;
             }
+
             var other =
                 NetPlayerProxy.All.Values.FirstOrDefault(p => p != null);
             if (other == null)
@@ -492,6 +529,7 @@ namespace DarkwoodMP.World
                 r.Fail("no other player here");
                 yield break;
             }
+
             // It goes for a player by itself, and the test world has bear traps
             // on the way (Saved:21368, 21369). A bear trap kills a character
             // outright (Trigger.checkCollision calls die()), so health doesn't
@@ -508,6 +546,7 @@ namespace DarkwoodMP.World
             {
                 rb.position = to;
             }
+
             Plugin.Instance.StartCoroutine(HoldDog(_dog, to));
             yield return new WaitForSeconds(2f);
             r.Info =
@@ -531,6 +570,7 @@ namespace DarkwoodMP.World
                     rb.position = at;
                     rb.velocity = Vector3.zero;
                 }
+
                 yield return null;
             }
         }
@@ -546,11 +586,13 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             if (c == null)
             {
                 r.Fail("no copy of the host's enemy within 500");
                 yield break;
             }
+
             _copy = c;
             r.Info = Describe(c);
             if (!Shown(c))
@@ -570,6 +612,7 @@ namespace DarkwoodMP.World
                 r.Fail("no dog");
                 yield break;
             }
+
             r.Info = $"{_dog.name} removed";
             var go = _dog.gameObject;
             try
@@ -580,10 +623,12 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogWarning($"[map] removeMe: {e.Message}");
             }
+
             if (go != null)
             {
                 Object.Destroy(go);
             }
+
             _dog = null;
             yield return new WaitForSeconds(1.5f);
         }
@@ -599,6 +644,7 @@ namespace DarkwoodMP.World
                 r.Info = "the copy was made from its prefab and is gone";
                 yield break;
             }
+
             for (float t = 0f; t < 10f
                 && (Shown(_copy)
                     || NetEnemies.Instance.IsPuppet(_copy, out _)); t += 0.5f)
@@ -610,6 +656,7 @@ namespace DarkwoodMP.World
                     yield break;
                 }
             }
+
             r.Info = Describe(_copy);
             if (Shown(_copy) || NetEnemies.Instance.IsPuppet(_copy, out _))
             {

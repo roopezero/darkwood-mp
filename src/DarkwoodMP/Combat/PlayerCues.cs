@@ -28,6 +28,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var w = s.Begin(Net.MsgType.PlayerCue);
             w.W.Write(kind);
             s.SendToHost(w, Net.Channel.Control, reliable: true);
@@ -44,12 +45,14 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             byte kind = r.R.ReadByte();
             if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
                 || proxy == null || !proxy.alive)
             {
                 return;
             }
+
             Vector3 pos = proxy.transform.position;
             int n = 0;
             if (kind == Dodge)
@@ -63,10 +66,12 @@ namespace DarkwoodMP.Combat
                     {
                         c = _near[i].GetComponent<Character>();
                     }
+
                     if (c == null)
                     {
                         continue;
                     }
+
                     c.doIWantToDodge(pos);
                     n++;
                 }
@@ -77,12 +82,14 @@ namespace DarkwoodMP.Combat
                 {
                     n = CountCharacters(pos, 350f);
                 }
+
                 Character.scareInArea(pos, 350f);
             }
             else
             {
                 return;
             }
+
             if (Threat.Debug)
             {
                 string text = "aims";
@@ -90,11 +97,13 @@ namespace DarkwoodMP.Combat
                 {
                     text = "swings";
                 }
+
                 string effect = "within 350 told to be scared";
                 if (kind == Dodge)
                 {
                     effect = "within 150 may dodge";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[threat] {proxy.OwnerName} {text}: {n} characters " +
                                    effect);
@@ -114,6 +123,7 @@ namespace DarkwoodMP.Combat
                     n++;
                 }
             }
+
             return n;
         }
     }

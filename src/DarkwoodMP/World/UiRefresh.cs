@@ -48,6 +48,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             return inv.open || p.openedItemInventory == inv
                 || p.openedItemInventory2 == inv;
         }
@@ -62,6 +63,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Run(() =>
             {
                 Player.Instance.refreshRecipes();
@@ -82,12 +84,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var saw = c as Saw;
             Inventory inv = null;
             if (saw != null)
             {
                 inv = c.GetComponent<Inventory>();
             }
+
             bool sawOpen = inv != null && inv.open;
             var ui = Singleton<UI>.Instance;
             EnemyHealthBar bar = null;
@@ -95,18 +99,21 @@ namespace DarkwoodMP.World
             {
                 bar = ui.enemyHealthBar;
             }
+
             bool barShown = bar != null && bar.currentObj == c.gameObject
                 && bar.gameObject.activeInHierarchy;
             if (!sawOpen && !barShown)
             {
                 return;
             }
+
             Run(() =>
             {
                 if (sawOpen)
                 {
                     saw.refresh();
                 }
+
                 if (barShown)
                 {
                     bar.show(c.gameObject, onlyRefresh: true);

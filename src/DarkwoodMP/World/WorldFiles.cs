@@ -51,6 +51,7 @@ namespace DarkwoodMP.World
                     sha.TransformBlock(head, 0, head.Length, null, 0);
                     sha.TransformBlock(f.Data, 0, f.Data.Length, null, 0);
                 }
+
                 sha.TransformFinalBlock(new byte[0], 0, 0);
                 return sha.Hash;
             }
@@ -74,6 +75,7 @@ namespace DarkwoodMP.World
                     });
                 }
             }
+
             return list;
         }
 
@@ -93,6 +95,7 @@ namespace DarkwoodMP.World
                         .Append(fi.LastWriteTimeUtc.Ticks).Append(';');
                 }
             }
+
             return b.ToString();
         }
 
@@ -108,6 +111,7 @@ namespace DarkwoodMP.World
                 {
                     z.Write(data, 0, data.Length);
                 }
+
                 return ms.ToArray();
             }
         }
@@ -126,12 +130,14 @@ namespace DarkwoodMP.World
                 {
                     at += n;
                 }
+
                 if (at != size || z.Read(new byte[1], 0, 1) != 0)
                 {
                     throw new InvalidDataException(
                         "the packed world unpacks to the wrong size");
                 }
             }
+
             return raw;
         }
 
@@ -144,6 +150,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             for (int i = 0; i < a.Length; i++)
             {
                 if (a[i] != b[i])
@@ -151,6 +158,7 @@ namespace DarkwoodMP.World
                     return false;
                 }
             }
+
             return true;
         }
 
@@ -169,6 +177,7 @@ namespace DarkwoodMP.World
             {
                 return StringComparison.OrdinalIgnoreCase;
             }
+
             return StringComparison.Ordinal;
         }
 
@@ -186,6 +195,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             try
             {
                 return string.Equals(Full(a), Full(b), PathCase);
@@ -203,6 +213,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             try
             {
                 string p = Full(path), d = Full(dir);
@@ -231,10 +242,12 @@ namespace DarkwoodMP.World
             {
                 return "the path is empty";
             }
+
             if (!Path.IsPathRooted(path))
             {
                 return "the path isn't absolute";
             }
+
             try
             {
                 full = Full(path);
@@ -243,11 +256,13 @@ namespace DarkwoodMP.World
             {
                 return $"the path isn't valid ({e.Message})";
             }
+
             if (full.Length == 0 || Path.GetDirectoryName(full) == null
                 || string.IsNullOrEmpty(Path.GetFileName(full)))
             {
                 return "it's a filesystem root";
             }
+
             foreach (var home in new[]
             {
                 Environment.GetEnvironmentVariable("HOME"),
@@ -260,6 +275,7 @@ namespace DarkwoodMP.World
                     return "it's your home folder or holds it";
                 }
             }
+
             return null;
         }
 
@@ -294,6 +310,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             DeleteEntry(full);
             return true;
         }
@@ -312,15 +329,18 @@ namespace DarkwoodMP.World
             {
                 why = "it isn't inside the mod's cache or save-redirect folder";
             }
+
             if (why == null)
             {
                 return true;
             }
+
             string shownPath = path;
             if (shownPath == null)
             {
                 shownPath = "(null)";
             }
+
             Plugin.Log.LogWarning($"Not deleting {shownPath}: {why}");
             return false;
         }
@@ -344,6 +364,7 @@ namespace DarkwoodMP.World
             {
                 why = NeverDelete(baseDir, out _);
             }
+
             string dir = null, full = null;
             if (why == null)
             {
@@ -359,6 +380,7 @@ namespace DarkwoodMP.World
                         + "folder";
                 }
             }
+
             if (why != null)
             {
                 string shownDir = dir;
@@ -366,17 +388,21 @@ namespace DarkwoodMP.World
                 {
                     shownDir = baseDir;
                 }
+
                 if (shownDir == null)
                 {
                     shownDir = "(null)";
                 }
+
                 Plugin.Log.LogWarning($"Not deleting {shownDir}: {why}");
                 return false;
             }
+
             if (!Exists(full))
             {
                 return false;
             }
+
             DeleteEntry(full);
             return true;
         }
@@ -416,8 +442,10 @@ namespace DarkwoodMP.World
                 {
                     System.IO.File.Delete(p);
                 }
+
                 return;
             }
+
             if (!Directory.Exists(p))
             {
                 if (System.IO.File.Exists(p))
@@ -425,12 +453,15 @@ namespace DarkwoodMP.World
                     System.IO.File.SetAttributes(p, FileAttributes.Normal);
                     System.IO.File.Delete(p);
                 }
+
                 return;
             }
+
             foreach (var e in Directory.GetFileSystemEntries(p))
             {
                 DeleteEntry(e);
             }
+
             Directory.Delete(p, false);
         }
     }

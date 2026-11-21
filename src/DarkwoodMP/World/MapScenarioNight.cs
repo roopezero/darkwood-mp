@@ -55,6 +55,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 foreach (var t in StateDump.All<Transform>())
                 {
                     if (t != null && names.Contains(Name(t.gameObject))
@@ -99,12 +100,14 @@ namespace DarkwoodMP.World
             {
                 return _names;
             }
+
             var names = new HashSet<string>();
             var ns = Singleton<NightScenarios>.Instance;
             if (ns == null)
             {
                 return names;
             }
+
             foreach (var sc in ns.scenarios.Where(x => x != null))
             {
                 foreach (var ce in NightEvents(sc).Where(
@@ -127,8 +130,10 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return _names = names;
         }
+
         private static HashSet<string> _names;
 
         // ---- what the night events do ---------------------------------------
@@ -145,6 +150,7 @@ namespace DarkwoodMP.World
                 r.Fail("no NightScenarios");
                 return None();
             }
+
             var kinds = new SortedDictionary<string, SortedSet<string>>(
                 StringComparer.Ordinal);
             var seen = new HashSet<CustomEvent>();
@@ -155,12 +161,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 foreach (var ce in NightEvents(sc))
                 {
                     if (!seen.Add(ce))
                     {
                         continue;
                     }
+
                     events++;
                     var re = ce.theEvent;
                     if (re == null)
@@ -169,6 +177,7 @@ namespace DarkwoodMP.World
                             $"[night] {sc.name} / {ce.name}: no RandomEvent");
                         continue;
                     }
+
                     var steps = new List<string>();
                     if (re.type == RandomEvent.Type.locationEvent)
                     {
@@ -178,12 +187,14 @@ namespace DarkwoodMP.World
                             {
                                 continue;
                             }
+
                             foreach (var e in ge.events)
                             {
                                 if (e == null || e.disabled)
                                 {
                                     continue;
                                 }
+
                                 string k = Kind(e);
                                 steps.Add(k);
                                 if (!WorldEvents.PresentationOnly(e))
@@ -193,6 +204,7 @@ namespace DarkwoodMP.World
                                         kinds[k] = set = new SortedSet<string>(
                                             StringComparer.Ordinal);
                                     }
+
                                     set.Add(ce.name);
                                 }
                             }
@@ -209,20 +221,24 @@ namespace DarkwoodMP.World
                         {
                             argument = " " + re.Value;
                         }
+
                         steps.Add("(" + re.type + argument + ")");
                     }
+
                     Plugin.Log.LogInfo(
                         $"[night] {sc.name} (difficulty {sc.difficulty}) / "
                             + $"{ce.name}: {re.type}: "
                             + $"{string.Join("; ", steps)}");
                 }
             }
+
             foreach (var kv in kinds)
             {
                 Plugin.Log.LogInfo(
                     $"[night] world step {kv.Key}: in "
                         + $"{string.Join(", ", kv.Value)}");
             }
+
             r.Info =
                 $"{events} night events; world steps: "
                     + $"{string.Join(" | ", kinds.Select(kv => $"{kv.Key} x{kv.Value.Count}"))}";
@@ -242,6 +258,7 @@ namespace DarkwoodMP.World
                     {
                         spawned = " " + e.targetTransform.name;
                     }
+
                     k += " " + e.gameObjectModifyType + spawned;
                     break;
                 case GameEvent.Type.item:
@@ -250,6 +267,7 @@ namespace DarkwoodMP.World
                     {
                         lightNote = " " + e.lightModify;
                     }
+
                     k += " " + e.itemModifyType + lightNote;
                     break;
                 case GameEvent.Type.runFunction:
@@ -276,11 +294,13 @@ namespace DarkwoodMP.World
                     {
                         k += " off";
                     }
+
                     break;
                 case GameEvent.Type.setSprite:
                     k += " " + e.Value;
                     break;
             }
+
             var targets = e.locationObjects.Where(o => o != null).Select(
                 o => o.type.ToString())
                 .Concat(e.targetGameObjects.Where(g => g != null)
@@ -292,8 +312,10 @@ namespace DarkwoodMP.World
                 {
                     fromLocation = "location ";
                 }
+
                 k += " [" + fromLocation + string.Join(",", targets) + "]";
             }
+
             return k;
         }
 
@@ -314,6 +336,7 @@ namespace DarkwoodMP.World
                 r.Fail("usage: nl-event NAME (host, in a world)");
                 yield break;
             }
+
             CustomEvent ev = null;
             foreach (var sc in ns.scenarios)
             {
@@ -325,16 +348,19 @@ namespace DarkwoodMP.World
                 {
                     ev = null;
                 }
+
                 if (ev != null)
                 {
                     break;
                 }
             }
+
             if (ev == null)
             {
                 r.Fail($"no night event {a[0]}");
                 yield break;
             }
+
             var loc = StateDump.All<Location>().Where(
                 l => l.playerBase && !l.isSubLocation)
                 .OrderBy(
@@ -346,6 +372,7 @@ namespace DarkwoodMP.World
                 r.Fail("no hideout");
                 yield break;
             }
+
             int sent = NightObjects.SentCount;
             var was = p.whereAmI.location;
             p.whereAmI.location = loc;
@@ -357,12 +384,14 @@ namespace DarkwoodMP.World
             {
                 p.whereAmI.location = was;
             }
+
             float until = Time.realtimeSinceStartup + 8f;
             while (Time.realtimeSinceStartup < until
                 && NightObjects.SentCount == sent)
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(2f);
             var names = NightObjectNames();
             var made = ObjRef.Spawned.Values.Where(
@@ -373,6 +402,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"{ev.name} at {loc.name} made nothing");
             }
+
             r.Info =
                 $"{ev.name} at {loc.name}: {NightObjects.SentCount - sent} "
                     + $"objects; night objects now: {string.Join(", ", made)}";
@@ -398,17 +428,20 @@ namespace DarkwoodMP.World
             {
                 n = int.Parse(a[0]);
             }
+
             string kind = "DogMutated";
             if (a.Length > 1)
             {
                 kind = a[1];
             }
+
             var proxy = ClientProxy();
             if (proxy == null)
             {
                 r.Fail("no client player");
                 yield break;
             }
+
             for (int i = 0; i < n; i++)
             {
                 float ang = i * Mathf.PI * 2f / n;
@@ -423,15 +456,18 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 c.transform.position = spot;
                 _herd.Add(c);
             }
+
             yield return new WaitForSeconds(1f);
             if (_herd.Count == 0)
             {
                 r.Fail($"couldn't spawn {kind}");
                 yield break;
             }
+
             r.Info = $"{_herd.Count} {kind} by the client";
         }
 
@@ -446,6 +482,7 @@ namespace DarkwoodMP.World
                     n++;
                 }
             }
+
             _herd.Clear();
             yield return new WaitForSeconds(1.5f);
             r.Info = $"removed {n}";
@@ -462,12 +499,14 @@ namespace DarkwoodMP.World
             {
                 secs = F(a[0]);
             }
+
             var p = P;
             if (p == null)
             {
                 r.Fail("no player");
                 yield break;
             }
+
             EnemyMotion.Stats.Reset();
             EnemyMotion.Stats.On = true;
             var centre = p.transform.position;
@@ -488,6 +527,7 @@ namespace DarkwoodMP.World
                     {
                         yield return walk.Current;
                     }
+
                     if (p.health < p.maxHealth * 0.5f)
                     {
                         p.health = p.maxHealth;
@@ -498,6 +538,7 @@ namespace DarkwoodMP.World
             {
                 EnemyMotion.Stats.On = false;
             }
+
             p.health = p.maxHealth;
             string s = EnemyMotion.Stats.Summary();
             Plugin.Log.LogInfo($"[enemy motion] {s}");
@@ -511,6 +552,7 @@ namespace DarkwoodMP.World
                     "enemies stood still in over 10% of the frames they "
                         + "moved: " + s);
             }
+
             r.Info = s;
         }
     }

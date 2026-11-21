@@ -88,17 +88,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var key = (c, delta < 0f);
             if (!_pending.TryGetValue(key, out var p))
             {
                 _pending[key] = p = new Pour();
             }
+
             p.Amount += delta;
             InvItemClass can = null;
             if (Player.Instance != null)
             {
                 can = Player.Instance.currentItem;
             }
+
             if (delta > 0f && !InvItemClass.isNull(can)
                 && can.type == "gasoline")
             {
@@ -114,10 +117,12 @@ namespace DarkwoodMP.World
                 _pending.Clear();
                 return;
             }
+
             if (_pending.Count > 0 && Time.unscaledTime >= _nextSend)
             {
                 Flush();
             }
+
             if (_session.IsHost && Time.unscaledTime >= _nextHost)
             {
                 _nextHost = Time.unscaledTime + HostInterval;
@@ -130,6 +135,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     Send(g, except: 0);
                 }
             }
@@ -148,6 +154,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (_session.IsHost)
                 {
                     Send(c, except: 0);
@@ -157,6 +164,7 @@ namespace DarkwoodMP.World
                     Request(c, kv.Value);
                 }
             }
+
             _pending.Clear();
         }
 
@@ -166,14 +174,17 @@ namespace DarkwoodMP.World
             {
                 return g.fuel;
             }
+
             return ((Saw)c).fuel;
         }
+
         private static float MaxOf(Component c)
         {
             if (c is Generator g)
             {
                 return g.maxFuel;
             }
+
             return ((Saw)c).maxFuel;
         }
 
@@ -190,6 +201,7 @@ namespace DarkwoodMP.World
                 {
                     it = instance.getItem("gasoline", instantiate: false);
                 }
+
                 if (it != null && it.maxDurability > 0f)
                 {
                     return it.maxDurability;
@@ -198,6 +210,7 @@ namespace DarkwoodMP.World
             catch (System.Exception)
             {
             }
+
             return FallbackCan;
         }
 
@@ -212,6 +225,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
             byte kind;
@@ -223,6 +237,7 @@ namespace DarkwoodMP.World
             {
                 kind = IsSaw;
             }
+
             w.W.Write(kind);
             w.W.Write(p.Amount);
             w.W.Write((byte)0);
@@ -245,11 +260,13 @@ namespace DarkwoodMP.World
                 {
                     back = p.Drained * (1f - Mathf.Clamp01(took / p.Amount));
                 }
+
                 if (back > 0.001f)
                 {
                     Refund(p.Can, back, name);
                 }
             }, inventory: false);
+
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -269,6 +286,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (can == null)
             {
                 Plugin.Log.LogInfo(
@@ -276,6 +294,7 @@ namespace DarkwoodMP.World
                         + "can: nothing to give back");
                 return;
             }
+
             try
             {
                 if (can.amount <= 0)
@@ -289,6 +308,7 @@ namespace DarkwoodMP.World
                             + $"{to} didn't take");
                     return;
                 }
+
                 float max;
                 if (can.baseClass != null)
                 {
@@ -298,6 +318,7 @@ namespace DarkwoodMP.World
                 {
                     max = float.MaxValue;
                 }
+
                 can.durability = Mathf.Min(max, can.durability + amount);
                 can.refresh();
                 Plugin.Log.LogInfo(
@@ -318,6 +339,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var g = c as Generator;
             var w = _session.Begin(MsgType.Fuel);
             r.Write(w);
@@ -330,6 +352,7 @@ namespace DarkwoodMP.World
             {
                 kind = IsSaw;
             }
+
             w.W.Write(kind);
             w.W.Write(FuelOf(c));
             int onFlag = 0;
@@ -337,6 +360,7 @@ namespace DarkwoodMP.World
             {
                 onFlag = 1;
             }
+
             w.W.Write((byte)onFlag);
             if (to != 0)
             {
@@ -347,10 +371,12 @@ namespace DarkwoodMP.World
                 _session.Broadcast(
                     w, Channel.Control, reliable: true, except: except);
             }
+
             if (g != null && to == 0)
             {
                 _sent[g] = (g.fuel, g.isOn);
             }
+
             if (WorldActions.Debug)
             {
                 string name = c.name;
@@ -367,6 +393,7 @@ namespace DarkwoodMP.World
                         state = ", off";
                     }
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] sent fuel {name} ({r}): {fuel:0.0}{state}");
             }
@@ -378,10 +405,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient && from != _session.HostId)
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             byte what = r.R.ReadByte();
             // from a client: the amount it added; from the host: the level
@@ -396,6 +425,7 @@ namespace DarkwoodMP.World
             {
                 c = ObjRef.Resolve<Saw>(obj);
             }
+
             if (c == null)
             {
                 if (_session.IsHost)
@@ -405,15 +435,19 @@ namespace DarkwoodMP.World
                     {
                         text = "generator";
                     }
+
                     Authority.Refuse($"no {text} {obj} here");
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] got fuel for {obj}: not found here");
                 }
+
                 return;
             }
+
             var g = c as Generator;
             float max = MaxOf(c);
             float have = FuelOf(c);
@@ -463,6 +497,7 @@ namespace DarkwoodMP.World
                     {
                         logs = used / Mathf.Max(1, saw.fuelToConvert);
                     }
+
                     if (saw == null)
                     {
                         refused = "a generator's fuel only goes down by itself";
@@ -479,6 +514,7 @@ namespace DarkwoodMP.World
                         refused = $"the saw has only {have:0.0}";
                     }
                 }
+
                 if (refused != null)
                 {
                     Plugin.Log.LogInfo(
@@ -490,6 +526,7 @@ namespace DarkwoodMP.World
                     Authority.Refuse(refused);
                     return;
                 }
+
                 fuel = Mathf.Clamp(have + took, 0f, max);
                 Authority.Result(
                     took.ToString("0.###", CultureInfo.InvariantCulture));
@@ -506,6 +543,7 @@ namespace DarkwoodMP.World
                         fuel += kv.Value.Amount;
                     }
                 }
+
                 fuel = Mathf.Clamp(fuel, 0f, max);
             }
 
@@ -544,6 +582,7 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             // an open saw's "Fuel" label, the fuel bar under the cursor
             UiRefresh.FuelChanged(c);
             if (WorldActions.Debug)
@@ -554,6 +593,7 @@ namespace DarkwoodMP.World
                 {
                     change = $"{have:0.0} {value:+0.0;-0.0} -> ";
                 }
+
                 string state = "";
                 if (g != null)
                 {
@@ -566,6 +606,7 @@ namespace DarkwoodMP.World
                         state = ", off";
                     }
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] got fuel {name} ({obj}): "
                         + $"{change}{fuel:0.0}{state}");
@@ -631,6 +672,7 @@ namespace DarkwoodMP.World
             {
                 instance.Poured(__instance, __instance.fuel - __state);
             }
+
             return __exception;
         }
     }
@@ -695,11 +737,13 @@ namespace DarkwoodMP.World
                 p.electricityModifier = 0f;
                 return;
             }
+
             if (s == null || !s.IsHost || p == null || !Proxies.Any
                 || Characters.Instance == null)
             {
                 return;
             }
+
             var at = __instance.transform.position;
             float best;
             if (SharedCullingPatch.HostAway)
@@ -710,6 +754,7 @@ namespace DarkwoodMP.World
             {
                 best = StateDump.Flat(p.transform.position - at);
             }
+
             NetPlayerProxy nearest = null;
             foreach (var x in NetPlayerProxy.All.Values)
             {
@@ -718,6 +763,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 float d = StateDump.Flat(x.transform.position - at);
                 if (d < best)
                 {
@@ -725,16 +771,19 @@ namespace DarkwoodMP.World
                     nearest = x;
                 }
             }
+
             bool? has = null;
             if (nearest != null)
             {
                 has = Characters.Instance.Electrician(nearest.Owner);
             }
+
             string ownerName = "ours";
             if (nearest != null)
             {
                 ownerName = nearest.OwnerName;
             }
+
             float modifier;
             if (has.HasValue)
             {
@@ -751,11 +800,13 @@ namespace DarkwoodMP.World
             {
                 modifier = p.electricityModifier;
             }
+
             Last = $"{__instance.name}: {ownerName}'s skill, {modifier}";
             if (has == null)
             {
                 return;
             }
+
             __state = p.electricityModifier;
             if (has.Value)
             {
@@ -774,6 +825,7 @@ namespace DarkwoodMP.World
             {
                 Player.Instance.electricityModifier = __state.Value;
             }
+
             return __exception;
         }
     }

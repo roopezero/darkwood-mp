@@ -42,16 +42,19 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             if (Time.unscaledTime < _nextCheck)
             {
                 return;
             }
+
             _nextCheck = Time.unscaledTime + 2f;
             SharedCullingPatch.Distances(out int dx, out int dy);
             if (dx <= 0 || dy <= 0 || (dx, dy) == _sent)
             {
                 return;
             }
+
             _sent = (dx, dy);
             var w = s.Begin(MsgType.ViewRect);
             w.W.Write((ushort)Mathf.Clamp(dx, 0, ushort.MaxValue));
@@ -66,6 +69,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             // A rect no screen gives is kept within bounds: a huge one would
             // keep the whole map running.
             int dx = Mathf.Clamp(r.R.ReadUInt16(), 600, 6000),
@@ -74,6 +78,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Rects[from] = (dx, dy);
             Plugin.Log.LogInfo(
                 $"{s.NameOf(from)}'s game keeps {dx} x {dy} round them running "

@@ -30,11 +30,13 @@ namespace DarkwoodMP.Sync
             {
                 return null;
             }
+
             var t = CurrentType(map);
             if (t != null && t.name == "World")
             {
                 return t;
             }
+
             return null;
         }
 
@@ -58,12 +60,14 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             foreach (var r in sync.Remotes.Values)
             {
                 if (r.Owner == PlayerSync.DummyId || !OnMap(r))
                 {
                     continue;
                 }
+
                 try
                 {
                     var go = Core.AddPrefab(
@@ -75,12 +79,14 @@ namespace DarkwoodMP.Sync
                         spr.SetSprite("generic_marker");
                         spr.color = Tint;
                     }
+
                     go.transform.localScale = Vector3.one;
                     var col = go.GetComponent<Collider>();
                     if (col != null)
                     {
                         col.enabled = false; // nothing to show when hovered
                     }
+
                     Markers[r.Owner] = go.transform;
                     Place(type, go.transform, r.Root.transform.position);
                 }
@@ -90,6 +96,7 @@ namespace DarkwoodMP.Sync
                         $"No map marker for {r.Name}: {e.Message}");
                 }
             }
+
             if (Markers.Count > 0)
             {
                 Plugin.Log.LogInfo(
@@ -117,6 +124,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var type = WorldType(Singleton<Map>.Instance);
             var sync = PlayerSync.Instance;
             if (type == null || sync == null)
@@ -124,18 +132,21 @@ namespace DarkwoodMP.Sync
                 Markers.Clear();
                 return;
             }
+
             foreach (var kv in Markers)
             {
                 if (kv.Value == null)
                 {
                     continue;
                 }
+
                 bool there =
                     sync.Remotes.TryGetValue(kv.Key, out var r) && OnMap(r);
                 if (kv.Value.gameObject.activeSelf != there)
                 {
                     kv.Value.gameObject.SetActive(there);
                 }
+
                 if (there)
                 {
                     Place(type, kv.Value, r.Root.transform.position);
@@ -160,22 +171,26 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var cam = Core.CamUI.GetComponent<Camera>();
             var sync = PlayerSync.Instance;
             if (cam == null || sync == null)
             {
                 return;
             }
+
             foreach (var kv in Markers)
             {
                 if (kv.Value == null || !kv.Value.gameObject.activeInHierarchy)
                 {
                     continue;
                 }
+
                 if (!sync.Remotes.TryGetValue(kv.Key, out var r))
                 {
                     continue;
                 }
+
                 var sp = cam.WorldToScreenPoint(kv.Value.position);
                 GUI.Label(
                     new Rect(sp.x - 100, Screen.height - sp.y - 34, 200, 22),

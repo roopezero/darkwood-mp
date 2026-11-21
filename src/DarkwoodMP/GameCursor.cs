@@ -31,6 +31,7 @@ namespace DarkwoodMP
             {
                 cursor = ui.cursor;
             }
+
             if (windowsOpen && cursor != null)
             {
                 foreach (var r in cursor.GetComponentsInChildren<Renderer>())
@@ -44,6 +45,7 @@ namespace DarkwoodMP
                         }
                     }
                 }
+
                 if (!_active)
                 {
                     _active = true;
@@ -53,11 +55,13 @@ namespace DarkwoodMP
                             cursor.idle, new Vector2(32f, 32f),
                             CursorMode.Auto);
                     }
+
                     string text = "none";
                     if (cursor.idle != null)
                     {
                         text = cursor.idle.width + "x" + cursor.idle.height;
                     }
+
                     Plugin.Log.LogInfo(
                         "[cursor] a window is open: the game's cursor sprite "
                             + $"hidden ({_hidden.Count} parts), the system "
@@ -75,6 +79,7 @@ namespace DarkwoodMP
                         r.enabled = true;
                     }
                 }
+
                 _hidden.Clear();
                 // With the hardware cursor setting on, the game's picture is
                 // the system cursor's anyway; otherwise the default again.
@@ -83,6 +88,7 @@ namespace DarkwoodMP
                     UnityEngine.Cursor.SetCursor(
                         null, Vector2.zero, CursorMode.Auto);
                 }
+
                 Plugin.Log.LogInfo(
                     "[cursor] the windows closed: the game's cursor sprite is "
                         + "back");

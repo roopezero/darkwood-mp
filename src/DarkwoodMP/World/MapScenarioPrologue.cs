@@ -88,12 +88,14 @@ namespace DarkwoodMP.World
                         {
                             locked = latch.locked;
                         }
+
                         latch = d.GetComponent<Locked>();
                         string key = null;
                         if (latch != null)
                         {
                             key = latch.keyType;
                         }
+
                         return $"{name} at {spot} locked {locked} key '{key}' "
                             + $"blocked {d.blocked} active "
                             + $"{d.gameObject.activeInHierarchy}";
@@ -120,11 +122,13 @@ namespace DarkwoodMP.World
                             {
                                 parent = g.transform.parent.name;
                             }
+
                             return $"{giver} ({parent}) at "
                                 + $"{Fmt(g.transform.position)} gives {i.type} "
                                 + "(key "
                                 + $"{i.GetComponent<KeyReference>().type})";
                         })));
+
             var anywhere = StateDump.All<Locked>().Where(
                 l => l.keyType != null && l.keyType.Contains("tutorial"))
                 .Select(l =>
@@ -135,10 +139,12 @@ namespace DarkwoodMP.World
                     {
                         holder = l.transform.parent.name;
                     }
+
                     return $"{lockName} ({holder}) key {l.keyType} locked "
                         + $"{l.locked} at {Fmt(l.transform.position)} active "
                         + $"{l.gameObject.activeInHierarchy}";
                 });
+
             var keyItems = StateDump.All<KeyReference>().Select(
                 k => $"{k.name} key {k.type} at {Fmt(k.transform.position)} "
                     + $"active {k.gameObject.activeInHierarchy}");
@@ -179,6 +185,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var s = i.slots.FirstOrDefault(
                     x => x != null && !InvItemClass.isNull(x.invItem)
                         && x.invItem.baseClass != null
@@ -192,11 +199,13 @@ namespace DarkwoodMP.World
                     break;
                 }
             }
+
             if (slot == null)
             {
                 r.Fail($"no container here with the key to a door: {Locks()}");
                 yield break;
             }
+
             string key =
                 slot.invItem.baseClass.GetComponent<KeyReference>().type;
             _keyItem = slot.invItem.type;
@@ -218,6 +227,7 @@ namespace DarkwoodMP.World
             {
                 inDream = k.inDream;
             }
+
             r.Info = line
                 + $"in our journal {k != null} (inDream {inDream}), left in it "
                 + $"{inv.slots.Count(x => !InvItemClass.isNull(x.invItem) && x.invItem.type == _keyItem)}";
@@ -249,12 +259,14 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             j.keysDict.TryGetValue(a[0], out var k);
             bool? inDream = null;
             if (k != null)
             {
                 inDream = k.inDream;
             }
+
             string wanted = a[0];
             bool dreaming = D.dreaming;
             string shared = DreamSync.Shared;
@@ -262,6 +274,7 @@ namespace DarkwoodMP.World
             {
                 shared = "none";
             }
+
             r.Info =
                 $"key {wanted} in our journal {k != null} (inDream {inDream}), "
                     + $"dreaming {dreaming}, shared dream {shared}";
@@ -272,6 +285,7 @@ namespace DarkwoodMP.World
                 {
                     text = "it";
                 }
+
                 r.Fail($"{r.Info}, wanted {text}");
             }
             else if (k != null && !k.inDream)
@@ -295,6 +309,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no door here for {a[0]}: {Locks()}");
                 yield break;
             }
+
             var l = d.GetComponent<Locked>();
             yield return Walk(d.transform.position);
             int refused = Authority.RolledBack;
@@ -303,16 +318,19 @@ namespace DarkwoodMP.World
                 AsPlayer(() => d.close(P.transform));
                 yield return new WaitForSeconds(1f);
             }
+
             bool unlocked = false;
             if (l.locked)
             {
                 AsPlayer(() => unlocked = l.tryToOpenWithKey());
             }
+
             yield return new WaitForSeconds(1f);
             if (!d.opened)
             {
                 AsPlayer(() => d.open(P.transform.position, P.transform, 0f));
             }
+
             // a refusal would lock or close it again
             yield return new WaitForSeconds(2.5f);
             r.Info =
@@ -344,6 +362,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no door here for {a[0]}");
                 yield break;
             }
+
             var l = d.GetComponent<Locked>();
             bool open = a.Length > 1 && a[1] == "open";
             float until = Time.realtimeSinceStartup + 8f;
@@ -358,12 +377,15 @@ namespace DarkwoodMP.World
                 {
                     waiting = !l.locked || d.opened;
                 }
+
                 if (!(waiting && Time.realtimeSinceStartup < until))
                 {
                     break;
                 }
+
                 yield return null;
             }
+
             r.Info =
                 $"{d.name} "
                     + $"{ObjRef.Of(d.gameObject)}: locked {l.locked}, open {d.opened}";
@@ -376,6 +398,7 @@ namespace DarkwoodMP.World
             {
                 condition = !l.locked || d.opened;
             }
+
             if (condition)
             {
                 string text = "locked and shut";
@@ -383,6 +406,7 @@ namespace DarkwoodMP.World
                 {
                     text = "unlocked and open";
                 }
+
                 r.Fail($"{r.Info}, wanted {text}");
             }
         }
@@ -402,6 +426,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no door for {a[0]}, or no key taken here before");
                 yield break;
             }
+
             var inv = Nearest(
                 Here<Inventory>().Where(
                     i => i.invType == Inventory.InvType.itemInv
@@ -415,6 +440,7 @@ namespace DarkwoodMP.World
                 AsPlayer(() => d.close(P.transform));
                 yield return new WaitForSeconds(1f);
             }
+
             d.lockMe(a[0]);
             Singleton<UI>.Instance.journal.keysDict.Remove(a[0]);
             FlagsSync instance = FlagsSync.Instance;
@@ -422,6 +448,7 @@ namespace DarkwoodMP.World
             {
                 instance.FlushNow();
             }
+
             var free = inv.slots.FirstOrDefault(
                 s => s != null && InvItemClass.isNull(s.invItem));
             if (free == null)
@@ -429,6 +456,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no free slot in {inv.name}");
                 yield break;
             }
+
             yield return Walk(inv.transform.position);
             P.openedItemInventory = inv;
             yield return new WaitForSeconds(0.6f);
@@ -475,10 +503,12 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (names.Count == 0)
             {
                 return "nothing";
             }
+
             return string.Join(",", names);
         }
 
@@ -493,6 +523,7 @@ namespace DarkwoodMP.World
             {
                 stage = a[0];
             }
+
             float until = Time.realtimeSinceStartup + 90f;
             while (!(Prologue.InStage && Prologue.Stage == stage
                     && DreamSync.Shared == stage && WorldShare.WorldReady
@@ -501,17 +532,20 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(1f);
             string stageName = Prologue.Stage;
             if (stageName == null)
             {
                 stageName = "none";
             }
+
             string shared = DreamSync.Shared;
             if (shared == null)
             {
                 shared = "none";
             }
+
             r.Info =
                 $"stage {stageName} (shared {shared}), first play "
                     + $"{P.firstPlay}, antagonist {P.isAntagonist}, "
@@ -547,6 +581,7 @@ namespace DarkwoodMP.World
                 r.Fail("not in a stage of the prologue");
                 yield break;
             }
+
             var outcomes = d.preset.outcomes.Where(o => o != null).ToList();
             bool last = stage == "dream_tutorial_01";
             var pick = outcomes.FirstOrDefault(o => o.name != "playerDeath"
@@ -562,9 +597,11 @@ namespace DarkwoodMP.World
                 {
                     text = "the end";
                 }
+
                 r.Fail($"no outcome to {text} in {stage} ({names})");
                 yield break;
             }
+
             d.outcome = pick.name;
             AsPlayer(() => d.initiateEndDreaming());
             float until = Time.realtimeSinceStartup + 100f;
@@ -575,6 +612,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(2f);
             string picked = pick.name;
             string now = Prologue.Stage;
@@ -582,6 +620,7 @@ namespace DarkwoodMP.World
             {
                 now = "out of the prologue";
             }
+
             r.Info =
                 $"ended {stage} ({picked} of {names}): now {now} at "
                     + $"{Locations.Current()} {Fmt(P.transform.position)}";
@@ -605,6 +644,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.5f);
             }
+
             yield return new WaitForSeconds(3f);
             int time = Singleton<Controller>.Instance.CurrentTime;
             float nearest = float.MaxValue;
@@ -627,6 +667,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             bool active = Prologue.Active;
             bool dreaming = d.dreaming;
             bool first = P.firstPlay;
@@ -635,6 +676,7 @@ namespace DarkwoodMP.World
             {
                 shared = "none";
             }
+
             string line =
                 $"in the prologue {active}, dreaming {dreaming}, first play "
                     + $"{first}, shared dream {shared}, at "
@@ -648,6 +690,7 @@ namespace DarkwoodMP.World
             {
                 other = $"{nearest:0} away";
             }
+
             r.Info = line
                 + $"time {time}, the other player {other}, carrying {Items()}";
             // The traders that came with the prologue (the wolf), where they
@@ -662,12 +705,14 @@ namespace DarkwoodMP.World
                     {
                         parent = n.transform.parent.name;
                     }
+
                     Transform above = n.transform.parent;
                     string grand = "-";
                     if (above != null && above.parent != null)
                     {
                         grand = n.transform.parent.parent.name;
                     }
+
                     bool shown = n.gameObject.activeInHierarchy;
                     ObjRef id = ObjRef.Of(n.gameObject);
                     Inventory stock = n.inventory;
@@ -676,9 +721,11 @@ namespace DarkwoodMP.World
                     {
                         count = stock.getAllItems().Count;
                     }
+
                     return $"{trader} at {spot} under {parent}/{grand} active "
                         + $"{shown} id {id} ({count} for sale)";
                 });
+
             Plugin.Log.LogInfo(
                 "[map] traders after the prologue: "
                     + $"{string.Join("; ", wolves)}");
@@ -704,6 +751,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"on top of the other player: {r.Info}");
             }
+
             // The host keeps our character from now on; send it now (in the
             // prologue it isn't sent).
             if (NetEnemies.ClientMode)

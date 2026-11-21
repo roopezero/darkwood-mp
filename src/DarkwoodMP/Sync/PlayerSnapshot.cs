@@ -121,46 +121,56 @@ namespace DarkwoodMP.Sync
             {
                 flags |= 1;
             }
+
             if (Spectating)
             {
                 flags |= 2;
             }
+
             if (Flashlight)
             {
                 flags |= 4;
             }
+
             if (Invisible)
             {
                 flags |= 8;
             }
+
             if (ShadowWard)
             {
                 flags |= 16;
             }
+
             if (ForestSpiritWard)
             {
                 flags |= 32;
             }
+
             if (FriendOfTheForest)
             {
                 flags |= 64;
             }
+
             if (EnemyOfTheForest)
             {
                 flags |= 128;
             }
+
             w.Write((byte)flags);
             string library = Library;
             if (library == null)
             {
                 library = "";
             }
+
             pw.WriteStr(library);
             string heldLight = HeldLight;
             if (heldLight == null)
             {
                 heldLight = "";
             }
+
             pw.WriteStr(heldLight);
             w.Write((byte)Sprites.Count);
             foreach (var s in Sprites)
@@ -180,15 +190,18 @@ namespace DarkwoodMP.Sync
                 w.Write(c.b);
                 w.Write(c.a);
             }
+
             int stateFlags = 0;
             if (Away)
             {
                 stateFlags |= 1;
             }
+
             if (AfterNight)
             {
                 stateFlags |= 2;
             }
+
             w.Write((byte)stateFlags);
             w.Write(Health);
             string place = Place;
@@ -196,6 +209,7 @@ namespace DarkwoodMP.Sync
             {
                 place = "";
             }
+
             pw.WriteStr(place);
             pw.Write(HeldFlames);
             w.Write(Lantern);
@@ -236,10 +250,12 @@ namespace DarkwoodMP.Sync
                     Scale = pr.ReadVector3(),
                     SpriteScale = pr.ReadVector3(),
                 };
+
                 s.Color = new Color32(
                     r.ReadByte(), r.ReadByte(), r.ReadByte(), r.ReadByte());
                 Sprites.Add(s);
             }
+
             byte more = r.ReadByte();
             Away = (more & 1) != 0;
             AfterNight = (more & 2) != 0;
@@ -258,6 +274,7 @@ namespace DarkwoodMP.Sync
             w.Write(q.z);
             w.Write(q.w);
         }
+
         private static Quaternion ReadRot(System.IO.BinaryReader r) =>
             new Quaternion(
                 r.ReadSingle(), r.ReadSingle(), r.ReadSingle(), r.ReadSingle());
@@ -320,6 +337,7 @@ namespace DarkwoodMP.Sync
             {
                 return false;
             }
+
             var root = player.transform;
 
             // Children (held items, effects) come and go; rescan periodically.
@@ -342,6 +360,7 @@ namespace DarkwoodMP.Sync
                         {
                             text = "SYNC";
                         }
+
                         var log = Plugin.Log;
                         var layer = LayerMask.LayerToName(s.gameObject.layer);
                         var active = s.gameObject.activeInHierarchy;
@@ -351,24 +370,29 @@ namespace DarkwoodMP.Sync
                         {
                             collectionName = collection.spriteCollectionName;
                         }
+
                         var definition = s.CurrentSprite;
                         string spriteName = null;
                         if (definition != null)
                         {
                             spriteName = definition.name;
                         }
+
                         log.LogInfo(
                             $"[sprite] {text} path={path} layer={layer} " +
                                     $"active={active} coll={collectionName} "
                                 + $"sprite={spriteName}");
                     }
+
                     if (!ok)
                     {
                         continue;
                     }
+
                     keep.Add(s);
                     hashes.Add(StableHash.Of(path));
                 }
+
                 _dumped |= dump;
                 _sprites = keep.ToArray();
                 _pathHashes = hashes.ToArray();
@@ -389,6 +413,7 @@ namespace DarkwoodMP.Sync
             {
                 snap.Library = "";
             }
+
             var held = player.currentItem;
             if (player.itemLightEmitter != null && !InvItemClass.isNull(held)
                 && held.baseClass != null)
@@ -398,12 +423,14 @@ namespace DarkwoodMP.Sync
                 {
                     heldLight = "";
                 }
+
                 snap.HeldLight = heldLight;
             }
             else
             {
                 snap.HeldLight = "";
             }
+
             var flames = player.itemParticleEmitter;
             if (snap.HeldLight != "" && flames != null)
             {
@@ -413,6 +440,7 @@ namespace DarkwoodMP.Sync
             {
                 snap.HeldFlames = Vector3.zero;
             }
+
             var dot = player.lightDot;
             var ctl = Singleton<Controller>.Instance;
             if (dot != null && dot.lightsPlayer && ctl != null
@@ -424,6 +452,7 @@ namespace DarkwoodMP.Sync
             {
                 snap.Lantern = 0f;
             }
+
             if (_flashlight == null || _flashlightOf != player)
             {
                 _flashlightOf = player;
@@ -437,12 +466,14 @@ namespace DarkwoodMP.Sync
                     _flashlight = null;
                 }
             }
+
             snap.Flashlight = _flashlight != null && _flashlight.activeSelf;
             Light2D beam = null;
             if (snap.Flashlight)
             {
                 beam = _flashlight.GetComponent<Light2D>();
             }
+
             if (beam != null)
             {
                 snap.BeamRadius = beam.LightRadius;
@@ -451,6 +482,7 @@ namespace DarkwoodMP.Sync
             {
                 snap.BeamRadius = 0f;
             }
+
             if (beam != null)
             {
                 snap.BeamBright = beam.LightColor.r;
@@ -459,6 +491,7 @@ namespace DarkwoodMP.Sync
             {
                 snap.BeamBright = 0f;
             }
+
             snap.Invisible = player.invisible;
             var fx = player.effects;
             snap.ShadowWard =
@@ -479,6 +512,7 @@ namespace DarkwoodMP.Sync
                     Mathf.RoundToInt(player.health / player.maxHealth * 100f),
                     0, 100);
             }
+
             snap.Health = (byte)percent;
             snap.Sprites.Clear();
             for (int i = 0; i < _sprites.Length
@@ -490,11 +524,13 @@ namespace DarkwoodMP.Sync
                 {
                     continue;
                 }
+
                 var mr = s.GetComponent<Renderer>();
                 if (mr == null || !mr.enabled)
                 {
                     continue;
                 }
+
                 var t = s.transform;
                 snap.Sprites.Add(new PlayerSnapshot.SpriteState
                 {
@@ -511,6 +547,7 @@ namespace DarkwoodMP.Sync
                     Color = s.color,
                 });
             }
+
             return true;
         }
 
@@ -531,11 +568,13 @@ namespace DarkwoodMP.Sync
             {
                 return ".";
             }
+
             string p = t.name;
             for (var c = t.parent; c != null && c != root; c = c.parent)
             {
                 p = c.name + "/" + p;
             }
+
             return p;
         }
     }

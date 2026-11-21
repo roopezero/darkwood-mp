@@ -67,10 +67,12 @@ namespace DarkwoodMP.World
             {
                 name = DefaultPrefab;
             }
+
             if (_base.TryGetValue(name, out int n))
             {
                 return n;
             }
+
             n = 0;
             foreach (string path in new[]
             {
@@ -89,17 +91,20 @@ namespace DarkwoodMP.World
                     {
                         inv = bench.normalInventory;
                     }
+
                     if (inv == null)
                     {
                         inv = go.GetComponent<Inventory>();
                     }
                 }
+
                 if (inv != null && inv.slots != null && inv.slots.Count > 0)
                 {
                     n = inv.slots.Count;
                     break;
                 }
             }
+
             if (n == 0)
             {
                 n = FallbackBase;
@@ -107,6 +112,7 @@ namespace DarkwoodMP.World
                     $"[workbench] no prefab for {wb.name} ('{name}'): its "
                         + $"storage counts {n} slots at level {BaseLevel}");
             }
+
             _base[name] = n;
             return n;
         }
@@ -125,6 +131,7 @@ namespace DarkwoodMP.World
                 {
                     return Singleton<Controller>.Instance.workbenchLevel;
                 }
+
                 return BaseLevel;
             }
         }
@@ -140,6 +147,7 @@ namespace DarkwoodMP.World
                 _appliedScene = -1;
                 return;
             }
+
             int scene =
                 UnityEngine.SceneManagement.SceneManager
                     .GetActiveScene().handle;
@@ -148,6 +156,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             bool loaded = scene != _appliedScene;
             _appliedScene = scene;
             _appliedLevel = level;
@@ -156,6 +165,7 @@ namespace DarkwoodMP.World
             {
                 why = "world loaded";
             }
+
             ApplyAll(why);
         }
 
@@ -171,6 +181,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 int before = wb.normalInventory.slots.Count;
                 if (Fit(wb.normalInventory, Wanted(wb, level)))
                 {
@@ -200,6 +211,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             bool open = inv.open;
             var player = Player.Instance;
             bool second =
@@ -208,6 +220,7 @@ namespace DarkwoodMP.World
             {
                 inv.hide();
             }
+
             while (inv.slots.Count < count)
             {
                 var slot = new InvSlot
@@ -215,13 +228,16 @@ namespace DarkwoodMP.World
                     inventory = inv,
                     name = "Slot" + (inv.slots.Count + 1)
                 };
+
                 inv.slots.Add(slot);
             }
+
             if (inv.slots.Count >= 30)
             {
                 // the game's rule for big containers (Inventory.init)
                 inv.maxColumns = RowSize;
             }
+
             if (open)
             {
                 inv.show("Storage"); // as Workbench.open shows it
@@ -230,11 +246,13 @@ namespace DarkwoodMP.World
                     player.openedItemInventory2 = inv;
                 }
             }
+
             SlotShare instance = SlotShare.Instance;
             if (instance != null)
             {
                 instance.Grew(inv);
             }
+
             UiRefresh.Changed(inv);
             return true;
         }
@@ -265,20 +283,24 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var wb = inv.GetComponent<Workbench>();
             if (wb == null || wb.normalInventory != inv)
             {
                 return;
             }
+
             Camera cam = null;
             if (Core.CamUI != null)
             {
                 cam = Core.CamUI.GetComponent<Camera>();
             }
+
             if (cam == null)
             {
                 return;
             }
+
             const float slot = 60f; // Inventory.slotSize
             int cols = Mathf.Max(1, inv.maxColumns),
                 rows = (inv.slots.Count + cols - 1) / cols;
@@ -296,6 +318,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             float scale = room / need;
             inv.thisUI.transform.localScale = Vector3.one * scale;
             Plugin.Log.LogInfo(
@@ -318,6 +341,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorkbenchStorage.Fit(
                 __instance.normalInventory,
                 WorkbenchStorage.Wanted(

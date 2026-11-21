@@ -215,6 +215,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (reset || !Exists)
             {
                 // no redirect in the main menu: your own
@@ -226,6 +227,7 @@ namespace DarkwoodMP.World
                         "No saves of yours to copy: play a world once first.";
                     yield break;
                 }
+
                 try
                 {
                     WorldShare.RemoveDir(Dir);
@@ -242,9 +244,11 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogError(Status);
                     yield break;
                 }
+
                 Plugin.Log.LogInfo(
                     $"Test world: a fresh copy of your saves in {Dir}");
             }
+
             // A living profile in the copy (the first one).
             SaveRedirect.Begin(Dir);
             var state = Singleton<SaveManager>.Instance.loadGameProfiles();
@@ -259,6 +263,7 @@ namespace DarkwoodMP.World
                         .FirstOrDefault();
                 }
             }
+
             if (profile == null)
             {
                 SaveRedirect.End();
@@ -267,6 +272,7 @@ namespace DarkwoodMP.World
                         + "playing a world.";
                 yield break;
             }
+
             Plugin.Log.LogInfo(
                 $"Test world: loading profile {profile.id} (day "
                     + $"{profile.day})");
@@ -281,6 +287,7 @@ namespace DarkwoodMP.World
                 File.Copy(
                     f, Path.Combine(to, Path.GetFileName(f)), overwrite: true);
             }
+
             foreach (var d in Directory.GetDirectories(from))
             {
                 Copy(d, Path.Combine(to, Path.GetFileName(d)));
@@ -302,6 +309,7 @@ namespace DarkwoodMP.World
                 _labels.Clear();
                 return;
             }
+
             if (!_checked && Player.Instance != null)
             {
                 // Built before, and saved since? If none of it is here (the
@@ -331,9 +339,11 @@ namespace DarkwoodMP.World
                     {
                         at = Player.Instance.transform.position;
                     }
+
                     Build(at);
                 }
             }
+
             if (Time.unscaledTime >= _nextLabelScan)
             {
                 _nextLabelScan = Time.unscaledTime + 2f;
@@ -356,6 +366,7 @@ namespace DarkwoodMP.World
                 {
                     return null;
                 }
+
                 var xz = File.ReadAllText(AreaFile).Split(' ');
                 var inv = System.Globalization.CultureInfo.InvariantCulture;
                 return new Vector3(
@@ -384,10 +395,12 @@ namespace DarkwoodMP.World
                 {
                     xz = new string[0];
                 }
+
                 if (xz.Length > 2 && int.TryParse(xz[2], out int c))
                 {
                     return c;
                 }
+
                 return 0;
             }
             catch
@@ -415,12 +428,14 @@ namespace DarkwoodMP.World
                         Plugin.Log.LogWarning($"Test world: no {st.Prefab}");
                         continue;
                     }
+
                     Core.addToSaveable(go, isDynamic: true, assignID: true);
                     built++;
                     if (go.GetComponent<Generator>() is Generator g && !g.isSaw)
                     {
                         gen = g;
                     }
+
                     if (st.Prefab.Contains("Lamps/Lamp_")
                         && go.GetComponent<Item>() is Item lamp)
                     {
@@ -433,6 +448,7 @@ namespace DarkwoodMP.World
                         $"Test world: couldn't place {st.Prefab}: {e.Message}");
                 }
             }
+
             if (gen != null)
             {
                 foreach (var l in lamps)
@@ -443,6 +459,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             try
             {
                 File.WriteAllText(
@@ -456,6 +473,7 @@ namespace DarkwoodMP.World
                     "Test world: couldn't note where the area is: "
                         + $"{e.Message}");
             }
+
             GiveKit();
             Plugin.Log.LogInfo(
                 $"Test world: built {built} of {Stations.Length} test stations "
@@ -491,11 +509,13 @@ namespace DarkwoodMP.World
                         {
                             break;
                         }
+
                         var p = around + off * step;
                         if (spots.Contains(p))
                         {
                             continue;
                         }
+
                         if (Physics.OverlapSphere(
                             p, 70f, ~0, QueryTriggerInteraction.Ignore).Any(
                                 c => c.attachedRigidbody == null
@@ -504,10 +524,12 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         spots.Add(p);
                     }
                 }
             }
+
             return spots;
         }
 
@@ -519,10 +541,12 @@ namespace DarkwoodMP.World
             {
                 inv = instance.Inventory;
             }
+
             if (inv == null)
             {
                 return;
             }
+
             foreach (var (type, amount) in Kit)
             {
                 try
@@ -535,6 +559,7 @@ namespace DarkwoodMP.World
                         $"Test world: couldn't give {type}: {e.Message}");
                 }
             }
+
             Plugin.Log.LogInfo("Test world: kit handed out");
         }
 
@@ -549,6 +574,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             // The game tries 10 random spots 400 from the player and gives up
             // if none is on outdoor ground
             // (CharacterSpawner.getFreeSpotAround); near buildings that happens
@@ -561,6 +587,7 @@ namespace DarkwoodMP.World
                     player.gameObject, Vector3.zero, 400f, type,
                     nocturnal: false, attackPlayer: false);
             }
+
             string data;
             if (c != null)
             {
@@ -569,6 +596,7 @@ namespace DarkwoodMP.World
                 {
                     text = $" (try {tries})";
                 }
+
                 data =
                     $"Test world: spawned {c.name} at "
                         + $"{c.transform.position}{text}";
@@ -578,6 +606,7 @@ namespace DarkwoodMP.World
                 data =
                     $"Test world: couldn't spawn {type} in {tries - 1} tries";
             }
+
             Plugin.Log.LogInfo(data);
             return c;
         }
@@ -590,6 +619,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             ctl.CurrentTime = (int)minute;
             ctl.refreshTime();
             Plugin.Log.LogInfo(
@@ -606,6 +636,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var center = c.Value;
             var names = new Dictionary<string, string>();
             foreach (var st in Stations)
@@ -613,6 +644,7 @@ namespace DarkwoodMP.World
                 names[st.Prefab.Substring(st.Prefab.LastIndexOf('/') + 1)] =
                     st.Label;
             }
+
             // Placed at the top of the scene (or in the game's item container,
             // when it has one by then).
             var near = new List<Transform>();
@@ -621,6 +653,7 @@ namespace DarkwoodMP.World
             {
                 near.Add(root.transform);
             }
+
             if (Core.ItemContainer != null)
             {
                 foreach (Transform t in Core.ItemContainer.transform)
@@ -628,10 +661,12 @@ namespace DarkwoodMP.World
                     near.Add(t);
                 }
             }
+
             foreach (var npc in UnityEngine.Object.FindObjectsOfType<NPC>())
             {
                 near.Add(npc.transform);
             }
+
             foreach (var t in near)
             {
                 if (t == null
@@ -639,6 +674,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 string name = t.name.Replace("(Clone)", "").Trim();
                 if (names.TryGetValue(name, out var label))
                 {
@@ -653,23 +689,27 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var cam = Camera.main;
             if (cam == null)
             {
                 return;
             }
+
             foreach (var (t, label) in _labels)
             {
                 if (t == null)
                 {
                     continue;
                 }
+
                 var sp = cam.WorldToScreenPoint(t.position);
                 if (sp.z < 0 || sp.x < 0 || sp.x > Screen.width || sp.y < 0
                     || sp.y > Screen.height)
                 {
                     continue;
                 }
+
                 GUI.Label(
                     new Rect(sp.x - 160, Screen.height - sp.y + 30, 320, 40),
                     label, Plugin.NameTagStyle);

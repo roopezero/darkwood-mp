@@ -76,17 +76,20 @@ namespace DarkwoodMP.World
             {
                 c = npc.GetComponent<Character>();
             }
+
             var proxy = MapScenarioNight.ClientProxy();
             if (c == null)
             {
                 r.Fail($"no {a[0]} here that every game has");
                 yield break;
             }
+
             if (proxy == null)
             {
                 r.Fail("no joiner");
                 yield break;
             }
+
             _follower =
                 (c, c.aggressiveness, c.behaviour, c.transform.position);
             var ge = new GameEvent
@@ -96,6 +99,7 @@ namespace DarkwoodMP.World
                 destAggressiveness = Aggressiveness.follower,
                 targetGameObjects = new List<GameObject> { npc.gameObject },
             };
+
             ScriptedEvents.RunAs(ScriptedEvents.Part.HostAndShared,
                 replaying: true, () =>
             {
@@ -110,12 +114,14 @@ namespace DarkwoodMP.World
                     ScriptedEvents.By = was;
                 }
             });
+
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until
                 && c.target != proxy.transform)
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             r.Info = FollowInfo(c, proxy);
             if (NpcFollowers.LeaderOf(c) != proxy)
             {
@@ -147,6 +153,7 @@ namespace DarkwoodMP.World
             {
                 target = c.target.name;
             }
+
             return $"{name}: {aggressiveness}, {behaviour}, target {target}, " +
                    $"{StateDump.Flat(c.transform.position - proxy.transform.position):0} from {proxy.OwnerName}, {StateDump.Flat(c.transform.position - Player.Instance.transform.position):0} from us";
         }
@@ -163,6 +170,7 @@ namespace DarkwoodMP.World
                 r.Fail("no follower or no joiner");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 20f;
             while (Time.realtimeSinceStartup < until
                 && StateDump.Flat(
@@ -170,6 +178,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             r.Info = FollowInfo(c, proxy);
             if (StateDump.Flat(c.transform.position
                     - proxy.transform.position) >= 500f
@@ -199,12 +208,15 @@ namespace DarkwoodMP.World
                 {
                     d = -1f;
                 }
+
                 if (npc != null && d < 500f)
                 {
                     break;
                 }
+
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             if (npc != null)
             {
                 r.Info =
@@ -215,6 +227,7 @@ namespace DarkwoodMP.World
             {
                 r.Info = $"no {a[0]} here";
             }
+
             if (npc == null || d >= 500f)
             {
                 r.Fail(r.Info);
@@ -232,6 +245,7 @@ namespace DarkwoodMP.World
                 r.Fail("no follower");
                 yield break;
             }
+
             c.aggressiveness = _follower.ag;
             c.target = null;
             c.setBehaviour(_follower.be, force: true);
@@ -266,8 +280,10 @@ namespace DarkwoodMP.World
                 {
                     f.setFlag(WolfFlagNames[i], _wolfWas[i]);
                 }
+
                 _wolfWas = null;
             }
+
             yield return new WaitForSeconds(0.5f);
             r.Info = string.Join(
                 ", ", WolfFlagNames.Select(n => $"{n} {f.isFlagTrue(n)}"));
@@ -280,11 +296,13 @@ namespace DarkwoodMP.World
             {
                 s = n.GetComponent<SaveableObject>();
             }
+
             if (s != null && s.uniqueId > 0
                 && s.uniqueId < SharedIds.ResolveLimit)
             {
                 return s.uniqueId;
             }
+
             return 0;
         }
 
@@ -317,6 +335,7 @@ namespace DarkwoodMP.World
                     r.Fail("not moved");
                     yield break;
                 }
+
                 _moved.Remove(a[0]);
                 var sm = Singleton<SaveManager>.Instance;
                 if (sm.uniqueIdDict.TryGetValue(m.id, out var t) && t != null)
@@ -327,6 +346,7 @@ namespace DarkwoodMP.World
                 {
                     npc = null;
                 }
+
                 to = m.was;
             }
             else
@@ -336,13 +356,16 @@ namespace DarkwoodMP.World
                 {
                     _moved[a[0]] = (SharedId(npc), npc.transform.position);
                 }
+
                 to = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             }
+
             if (npc == null)
             {
                 r.Fail($"no {a[0]} here that every game has");
                 yield break;
             }
+
             var from = npc.transform.position;
             to.y = from.y;
             npc.transform.position = to;
@@ -378,6 +401,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no {a[0]} here that every game has");
                 yield break;
             }
+
             var go = new GameObject(AnimEvent);
             go.transform.position = npc.transform.position;
             var ge = go.AddComponent<GameEvents>();
@@ -394,6 +418,7 @@ namespace DarkwoodMP.World
                     targetGameObjects = new List<GameObject> { npc.gameObject },
                 },
             };
+
             Singleton<Events>.Instance.addWorldEvent(AnimEvent, ge);
             var listener = npc.GetComponent<AnimationTriggerListener>();
             AnimationTriggerListener added = null;
@@ -401,6 +426,7 @@ namespace DarkwoodMP.World
             {
                 added = npc.gameObject.AddComponent<AnimationTriggerListener>();
             }
+
             _anim = (npc, ge, added);
             npc.disabled = true;
             yield return null;
@@ -423,6 +449,7 @@ namespace DarkwoodMP.World
                 r.Fail("no anim-setup");
                 yield break;
             }
+
             var listener = npc.GetComponent<AnimationTriggerListener>();
             listener.checkFrameTrigger(
                 AnimEvent, 0, 0f,
@@ -434,21 +461,25 @@ namespace DarkwoodMP.World
             {
                 wait = 5f;
             }
+
             float until = Time.realtimeSinceStartup + wait;
             while (Time.realtimeSinceStartup < until && npc.disabled)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
+
             string text = "can be talked to";
             if (npc.disabled)
             {
                 text = "switched off";
             }
+
             string ran = "didn't run";
             if (ge.fired)
             {
                 ran = "ran";
             }
+
             r.Info = $"{npc.name}: {text}, the event {ran} here";
             bool condition;
             if (run)
@@ -459,6 +490,7 @@ namespace DarkwoodMP.World
             {
                 condition = !npc.disabled || ge.fired;
             }
+
             if (condition)
             {
                 r.Fail(r.Info);
@@ -476,11 +508,13 @@ namespace DarkwoodMP.World
                 r.Fail("no anim-setup");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 10f;
             while (Time.realtimeSinceStartup < until && npc.disabled)
             {
                 yield return new WaitForSecondsRealtime(0.25f);
             }
+
             string name = npc.name;
             bool wants = npc.wantsToTalk;
             bool disabled = npc.disabled;
@@ -489,6 +523,7 @@ namespace DarkwoodMP.World
             {
                 ran = "ran";
             }
+
             r.Info =
                 $"{name}: wantsToTalk {wants}, disabled {disabled}, the event "
                     + $"{ran} here";
@@ -511,10 +546,12 @@ namespace DarkwoodMP.World
                 // GameEvents.OnDestroy takes it out of the world events
                 UnityEngine.Object.Destroy(ge.gameObject);
             }
+
             if (added != null)
             {
                 UnityEngine.Object.Destroy(added);
             }
+
             if (npc != null)
             {
                 npc.disabled = false;
@@ -538,13 +575,16 @@ namespace DarkwoodMP.World
                 {
                     break;
                 }
+
                 yield return new WaitForSecondsRealtime(0.25f);
             }
+
             if (npc == null)
             {
                 r.Fail($"no {a[0]} here");
                 yield break;
             }
+
             float off = StateDump.Flat(npc.transform.position - to);
             if (off >= 60f)
             {
@@ -553,6 +593,7 @@ namespace DarkwoodMP.World
                         + $"from the host's {Fmt(to)}");
                 yield break;
             }
+
             yield return Walk(npc.transform.position, 150f);
             int mark = MapScenarioIssues.LogMark();
             var win = Singleton<UI>.Instance.dialogueWindow;
@@ -567,6 +608,7 @@ namespace DarkwoodMP.World
             {
                 dialogue = "open";
             }
+
             r.Info =
                 $"{npc.name} at {Fmt(npc.transform.position)} ({off:0} from "
                     + $"the host's): dialogue {dialogue}";
@@ -574,6 +616,7 @@ namespace DarkwoodMP.World
             {
                 yield return MapScenarioGaps.Close(win, npc);
             }
+
             if (refused.Count > 0)
             {
                 r.Fail($"refused: {refused[0].Trim()}");
@@ -601,12 +644,14 @@ namespace DarkwoodMP.World
             {
                 _copyMark = MapScenarioIssues.LogMark();
             }
+
             var l = MapScenarioGaps.Hideout(Player.Instance);
             if (l == null)
             {
                 r.Fail("no hideout");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 20f;
             NPC npc = null;
             bool has = false;
@@ -620,19 +665,23 @@ namespace DarkwoodMP.World
                 {
                     npc = null;
                 }
+
                 Character ch = null;
                 if (npc != null)
                 {
                     ch = npc.GetComponent<Character>();
                 }
+
                 has = ch != null && ch.alive && npc.inventory != null
                     && npc.inventory.getAllItems().Count > 0;
                 if (has == want)
                 {
                     break;
                 }
+
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             var c = Singleton<Controller>.Instance;
             string hideout = l.name;
             string trader = "no trader";
@@ -644,8 +693,10 @@ namespace DarkwoodMP.World
                 {
                     things = npc.inventory.getAllItems().Count;
                 }
+
                 trader = $"{name} with {things} things";
             }
+
             r.Info = $"{hideout}: {trader}, our morning {c.isAfterNight}";
             if (c.isAfterNight)
             {
@@ -676,6 +727,7 @@ namespace DarkwoodMP.World
             {
                 spot = Centre;
             }
+
             var lines = MapScenarioIssues.LogLines()
                 .Skip(Math.Max(0, _copyMark)).ToList();
             var refused = lines.Where(
@@ -700,6 +752,7 @@ namespace DarkwoodMP.World
             {
                 placeName = l.name;
             }
+
             r.Info =
                 $"NpcDied came {got}, living night traders in {placeName}: "
                     + $"{alive.Count}, nightTrader_killedYesterday {flag}";

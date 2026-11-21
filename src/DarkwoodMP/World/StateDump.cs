@@ -66,6 +66,7 @@ namespace DarkwoodMP.World
                     ["name"] = Clean(go.name),
                     ["pos"] = Pos(go.transform.position),
                 };
+
                 Set(ObjRef.Of(go).ToString(), e);
                 return e;
             }
@@ -82,6 +83,7 @@ namespace DarkwoodMP.World
                 {
                     k = $"{key}#{++n}";
                 }
+
                 Entries[k] = entry;
             }
         }
@@ -91,6 +93,7 @@ namespace DarkwoodMP.World
             public string Name;
             public Action<Ctx> Fill;
         }
+
         private static readonly List<Section> _sections = new List<Section>();
         private static readonly List<Section> _local = new List<Section>();
 
@@ -129,12 +132,15 @@ namespace DarkwoodMP.World
             {
                 return centre.Value;
             }
+
             if (Player.Instance != null)
             {
                 return Player.Instance.transform.position;
             }
+
             return Vector3.zero;
         }
+
         public const float DefaultRadius = 2000f;
 
         /// <summary>
@@ -151,6 +157,7 @@ namespace DarkwoodMP.World
             {
                 c = DefaultCentre();
             }
+
             string role;
             if (Session.Instance == null)
             {
@@ -164,6 +171,7 @@ namespace DarkwoodMP.World
             {
                 role = "client";
             }
+
             var root = new SortedDictionary<string, object>(
                 StringComparer.Ordinal)
             {
@@ -171,6 +179,7 @@ namespace DarkwoodMP.World
                 ["centre"] = Pos(c),
                 ["radius"] = (double)radius,
             };
+
             root["sections"] = Run(_sections, c, radius);
             root["local"] = Run(_local, c, radius);
             Directory.CreateDirectory(
@@ -187,8 +196,10 @@ namespace DarkwoodMP.World
                 {
                     return d.Count;
                 }
+
                 return 0;
             });
+
             return $"{n} entries";
         }
 
@@ -209,8 +220,10 @@ namespace DarkwoodMP.World
                     ctx.Entries["error"] = e.GetType().Name + ": " + e.Message;
                     Plugin.Log.LogWarning($"[dump] {s.Name}: {e}");
                 }
+
                 all[s.Name] = ctx.Entries;
             }
+
             return all;
         }
 
@@ -226,6 +239,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var l = d.GetComponent<Locked>();
                     var e = ctx.Add(d.gameObject);
                     e["open"] = d.opened;
@@ -241,6 +255,7 @@ namespace DarkwoodMP.World
                     e["burning"] = d.GetComponent<Burn>() != null;
                 }
             });
+
             AddSection("windows", ctx =>
             {
                 foreach (var w in All<Window>())
@@ -249,12 +264,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(w.gameObject);
                     e["barricaded"] = w.barricaded;
                     e["barricadeHealth"] = w.barricadeHealth;
                     e["burning"] = w.GetComponent<Burn>() != null;
                 }
             });
+
             AddSection("containers", ctx =>
             {
                 foreach (var inv in WorldInventories(ctx))
@@ -263,6 +280,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(inv.gameObject);
                     e["workbench"] = inv.isWorkbench;
                     // switched off here too (far from our player)
@@ -271,9 +289,11 @@ namespace DarkwoodMP.World
                     {
                         e["locked"] = l.locked;
                     }
+
                     e["slots"] = Slots(inv);
                 }
             });
+
             AddSection("dropped", ctx =>
             {
                 foreach (var inv in WorldInventories(ctx))
@@ -282,10 +302,12 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(inv.gameObject);
                     e["slots"] = Slots(inv);
                 }
             });
+
             AddSection("items", ctx =>
             {
                 // Things with a state of their own: health, broken, switched
@@ -298,12 +320,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     if (it.GetComponentInParent<Player>() != null
                         || it.GetComponent<Inventory>() is Inventory inv
                             && IsDropped(inv))
                     {
                         continue;
                     }
+
                     // A client's own copy of a character the host runs (a
                     // searchable corpse prop in the shared dream) is frozen
                     // with its renderers and colliders off: nobody sees or
@@ -315,6 +339,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(it.gameObject);
                     e["health"] = it.health;
                     e["broken"] = it.destroyed;
@@ -322,22 +347,26 @@ namespace DarkwoodMP.World
                     {
                         e["on"] = it.isOn;
                     }
+
                     if (it.draggable)
                     {
                         e["draggable"] = true;
                     }
+
                     e["searched"] = it.searched;
                     var l = it.GetComponent<Locked>();
                     if (l != null)
                     {
                         e["locked"] = l.locked;
                     }
+
                     if (it.GetComponent<Burn>() != null)
                     {
                         e["burning"] = true;
                     }
                 }
             });
+
             AddSection("traps", ctx =>
             {
                 // Traps (a trigger with an Item; one that went off loses its
@@ -350,11 +379,13 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(t.gameObject);
                     e["armed"] = t.active;
                     e["triggered"] = t.triggered;
                 }
             });
+
             AddSection("power", ctx =>
             {
                 foreach (var g in All<Generator>())
@@ -363,12 +394,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(g.gameObject);
                     e["on"] = g.isOn;
                     e["fuel"] = R(g.fuel, 1f);
                     e["saw"] = g.isSaw;
                 }
             });
+
             AddSection("saw", ctx =>
             {
                 foreach (var w in All<Saw>())
@@ -377,10 +410,12 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(w.gameObject);
                     e["fuel"] = R(w.fuel, 1f);
                 }
             });
+
             AddSection("built", ctx =>
             {
                 // Things built or repaired (a Constructible removes itself once
@@ -392,20 +427,24 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var e = ctx.Add(c.gameObject);
                     e["constructed"] = c.constructed;
                     e["option"] = c.chosenOption;
                 }
+
                 foreach (var ii in All<InteractiveItem>())
                 {
                     if (!ctx.Near(ii.transform.position))
                     {
                         continue;
                     }
+
                     var e = ctx.Add(ii.gameObject);
                     e["switchOn"] = ii.isOn;
                 }
             });
+
             AddSection("traders", ctx =>
             {
                 // NPCs live in each game separately, so traders go by name
@@ -432,6 +471,7 @@ namespace DarkwoodMP.World
                     {
                         label += "@" + who;
                     }
+
                     ctx.Set(label, new Dictionary<string, object>
                     {
                         ["stock"] = Slots(TraderSync.Inv(n)),
@@ -440,6 +480,7 @@ namespace DarkwoodMP.World
                     });
                 }
             });
+
             AddSection("npcpos", ctx =>
             {
                 // Where the NPCs that every game has (a shared save id) stand:
@@ -451,26 +492,31 @@ namespace DarkwoodMP.World
                     {
                         ch = n.GetComponent<Character>();
                     }
+
                     SaveableObject save = null;
                     if (n != null)
                     {
                         save = n.GetComponent<SaveableObject>();
                     }
+
                     if (ch == null || !ch.alive || save == null
                         || save.uniqueId <= 0
                         || save.uniqueId >= SharedIds.ResolveLimit)
                     {
                         continue;
                     }
+
                     if (!ctx.Near(ch.transform.position)
                         || (NetEnemies.Instance != null
                             && NetEnemies.Instance.NetIdOf(ch, out _)))
                     {
                         continue;
                     }
+
                     ctx.Add(n.gameObject);
                 }
             });
+
             AddSection("journal", ctx =>
             {
                 Journal j = null;
@@ -478,10 +524,12 @@ namespace DarkwoodMP.World
                 {
                     j = Singleton<UI>.Instance.journal;
                 }
+
                 if (j == null)
                 {
                     return;
                 }
+
                 void Keys(string what, IEnumerable<string> keys)
                 {
                     var list = keys.Where(k => k != null)
@@ -492,12 +540,14 @@ namespace DarkwoodMP.World
                         ["hash"] = Hash(list)
                     });
                 }
+
                 Keys("entries", j.journalEntriesDict.Keys);
                 Keys("notes", j.notesDict.Keys);
                 Keys("keys", j.keysDict.Keys);
                 Keys("items", j.itemsDict.Keys);
                 Keys("places", j.locationsDict.Keys);
             });
+
             AddSection("enemies", ctx =>
             {
                 var ne = NetEnemies.Instance;
@@ -508,10 +558,12 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     if (ne == null || !ne.NetIdOf(c, out uint id))
                     {
                         continue; // not one of the host's shared enemies
                     }
+
                     // A living one switched off by the host's culling isn't
                     // sent (NetEnemies sends the active ones), so no client has
                     // it; a client's copy of one is hidden and forgotten.
@@ -521,6 +573,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     // A client's copy switched off by its own culling (far from
                     // its player, near another player) is still the host's,
                     // kept up to date.
@@ -532,12 +585,14 @@ namespace DarkwoodMP.World
                     {
                         e["health"] = Mathf.Round(c.health);
                     }
+
                     var snd = c.GetComponent<CharacterSounds>();
                     AudioObject loop = null;
                     if (snd != null)
                     {
                         loop = snd.idleAudioObject;
                     }
+
                     if (loop != null && loop.IsPlaying())
                     {
                         e["loopSound"] = loop.audioID;
@@ -546,6 +601,7 @@ namespace DarkwoodMP.World
                     {
                         e["loopSound"] = "";
                     }
+
                     if (!c.alive)
                     {
                         // A corpse can be searched in every game (the host's
@@ -571,6 +627,7 @@ namespace DarkwoodMP.World
                     }
                 }
             });
+
             AddSection("story", ctx =>
             {
                 var flags = Singleton<Flags>.Instance;
@@ -578,6 +635,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 var dict = FlagsDict(flags);
                 // Not the flags about this game's own player
                 // (FlagsSync.PlayersOwn: where it is, the help popups it has
@@ -593,11 +651,13 @@ namespace DarkwoodMP.World
                     ["true"] = shared.Count(f => f.isTrue),
                     ["hash"] = Hash(lines)
                 };
+
                 // A short list is given whole, so a difference names the flag.
                 if (lines.Count <= 40)
                 {
                     section["list"] = string.Join(" ", lines);
                 }
+
                 ctx.Set("flags", section);
                 var npcs = flags.npcStates.Where(n => n != null)
                     .Select(n => $"{n.name}:{n.reputation}:{n.dead}")
@@ -608,6 +668,7 @@ namespace DarkwoodMP.World
                     ["hash"] = Hash(npcs)
                 });
             });
+
             AddSection("time", ctx =>
             {
                 var ctl = Singleton<Controller>.Instance;
@@ -615,6 +676,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 ctx.Set("clock", new Dictionary<string, object>
                 {
                     ["day"] = ctl.day,
@@ -629,6 +691,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 var dict = FlagsDict(flags);
                 foreach (var f in dict.Values)
                 {
@@ -637,8 +700,10 @@ namespace DarkwoodMP.World
                         ctx.Set(f.name, f.isTrue);
                     }
                 }
+
                 ctx.Set("place", Locations.Current());
             });
+
             AddLocal("popups", ctx =>
             {
                 // The one-time help popups this game's player has seen
@@ -648,6 +713,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 foreach (var f in FlagsDict(flags).Values)
                 {
                     if (f != null && FlagsSync.PlayersPopup(f.name))
@@ -656,6 +722,7 @@ namespace DarkwoodMP.World
                     }
                 }
             });
+
             AddLocal("player", ctx =>
             {
                 var p = Player.Instance;
@@ -663,6 +730,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 string holding;
                 if (InvItemClass.isNull(p.currentItem))
                 {
@@ -672,6 +740,7 @@ namespace DarkwoodMP.World
                 {
                     holding = p.currentItem.type;
                 }
+
                 ctx.Set("player", new Dictionary<string, object>
                 {
                     ["pos"] = Pos(p.transform.position),
@@ -695,12 +764,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (p != null
                     && (inv == p.Inventory || inv == p.Hotbar
                         || inv.transform.IsChildOf(p.transform)))
                 {
                     continue;
                 }
+
                 yield return inv;
             }
         }
@@ -713,6 +784,7 @@ namespace DarkwoodMP.World
             "gasBottle_01",
             "broken_glass"
         };
+
         /// <summary>A game object's name without Unity's "(Clone)".</summary>
         internal static string Clean(string n) =>
             n.Replace("(Clone)", "").Trim();
@@ -737,6 +809,7 @@ namespace DarkwoodMP.World
                     list.Add(null);
                     continue;
                 }
+
                 var it = s.invItem;
                 // A gun's count is its ammo (InvItemClass.SaveState saves that,
                 // not its amount, which means nothing for it).
@@ -749,6 +822,7 @@ namespace DarkwoodMP.World
                 {
                     amount = it.amount;
                 }
+
                 list.Add(new Dictionary<string, object>
                 {
                     ["type"] = it.type,
@@ -756,12 +830,14 @@ namespace DarkwoodMP.World
                     ["durability"] = R(it.durability, 0.05f)
                 });
             }
+
             // Trailing empty slots don't matter (a workbench's level adds
             // some).
             while (list.Count > 0 && list[list.Count - 1] == null)
             {
                 list.RemoveAt(list.Count - 1);
             }
+
             return list;
         }
 
@@ -776,6 +852,7 @@ namespace DarkwoodMP.World
                 {
                     return "";
                 }
+
                 return s.invItem.type + "x" + s.invItem.amount;
             }));
 
@@ -805,6 +882,7 @@ namespace DarkwoodMP.World
                     {
                         literal = "true";
                     }
+
                     sb.Append(literal);
                     break;
                 case string s:
@@ -836,6 +914,7 @@ namespace DarkwoodMP.World
                             sb.Append("{}");
                             break;
                         }
+
                         bool flat = indent >= 3; // entries' fields on one line
                         sb.Append('{');
                         for (int k = 0; k < keys.Count; k++)
@@ -844,6 +923,7 @@ namespace DarkwoodMP.World
                             {
                                 sb.Append(',');
                             }
+
                             if (flat)
                             {
                                 string space = "";
@@ -851,23 +931,28 @@ namespace DarkwoodMP.World
                                 {
                                     space = " ";
                                 }
+
                                 sb.Append(space);
                             }
                             else
                             {
                                 sb.Append('\n').Append(' ', 2 * (indent + 1));
                             }
+
                             Str(sb, keys[k]);
                             sb.Append(": ");
                             Json(sb, dict[keys[k]], indent + 1);
                         }
+
                         if (!flat)
                         {
                             sb.Append('\n').Append(' ', 2 * indent);
                         }
+
                         sb.Append('}');
                         break;
                     }
+
                 case System.Collections.IEnumerable list:
                     {
                         sb.Append('[');
@@ -878,12 +963,15 @@ namespace DarkwoodMP.World
                             {
                                 sb.Append(", ");
                             }
+
                             first = false;
                             Json(sb, x, Math.Max(indent + 1, 3));
                         }
+
                         sb.Append(']');
                         break;
                     }
+
                 default:
                     Str(sb, v.ToString());
                     break;
@@ -908,6 +996,7 @@ namespace DarkwoodMP.World
                     sb.Append(ch);
                 }
             }
+
             sb.Append('"');
         }
     }

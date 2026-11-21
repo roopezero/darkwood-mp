@@ -95,6 +95,7 @@ namespace DarkwoodMP.World
                         $"[authority] after {p.What}: {e.Message}");
                 }
             }
+
             InventoryWatch.Reset();
         }
 
@@ -115,6 +116,7 @@ namespace DarkwoodMP.World
             MsgType.PorterTransport, MsgType.PorterCalled, MsgType.OvenLit,
             MsgType.Fuel, MsgType.DragClaim,
         };
+
         private static readonly HashSet<(ulong, MsgType)> _bareWarned =
             new HashSet<(ulong, MsgType)>();
 
@@ -128,6 +130,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (_bareWarned.Add((from, type)))
             {
                 Session session = S;
@@ -136,14 +139,17 @@ namespace DarkwoodMP.World
                 {
                     name = session.NameOf(from);
                 }
+
                 if (name == null)
                 {
                     name = "#" + from;
                 }
+
                 Plugin.Log.LogWarning(
                     $"[authority] dropped {type} from {name}: it's only taken "
                         + "as a request");
             }
+
             return false;
         }
 
@@ -163,12 +169,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int n = message.Length;
             if (n > _copy.Length)
             {
                 Plugin.Log.LogWarning($"Request too long: {what}");
                 return;
             }
+
             Buffer.BlockCopy(message.Buffer, 0, _copy, 0, n);
             uint seq = ++_seq;
             var pending =
@@ -177,6 +185,7 @@ namespace DarkwoodMP.World
             {
                 pending.Inventory = InventoryWatch.TakeChange();
             }
+
             pending.Done = done;
             _pending[seq] = pending;
             var w = s.Begin(MsgType.Request);
@@ -196,6 +205,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             uint seq = r.R.ReadUInt32();
             bool ok = r.R.ReadByte() != 0;
             string reason = r.ReadStr();
@@ -204,6 +214,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _pending.Remove(seq);
             if (!ok)
             {
@@ -220,10 +231,12 @@ namespace DarkwoodMP.World
                 {
                     text = " (" + result + ")";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[authority] {p.What}: ok{text} after "
                         + $"{(Time.realtimeSinceStartup - p.At) * 1000f:0} ms");
             }
+
             try
             {
                 Action<bool, string, string> handler = p.Done;
@@ -261,6 +274,7 @@ namespace DarkwoodMP.World
                 _refusal = reason;
             }
         }
+
         public static bool Refused => _refusal != null;
         /// <summary>
         /// Host, in a request's handler: what came of it, for the client
@@ -275,6 +289,7 @@ namespace DarkwoodMP.World
                 {
                     kept = "";
                 }
+
                 _result = kept;
             }
         }
@@ -286,6 +301,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             uint seq = r.R.ReadUInt32();
             byte[] inner = r.R.ReadBytes(1 << 16);
             Handling = true;
@@ -311,6 +327,7 @@ namespace DarkwoodMP.World
             {
                 Handling = false;
             }
+
             var w = s.Begin(MsgType.Verdict);
             w.W.Write(seq);
             int acceptFlag = 0;
@@ -318,18 +335,21 @@ namespace DarkwoodMP.World
             {
                 acceptFlag = 1;
             }
+
             w.W.Write((byte)acceptFlag);
             string refusal = _refusal;
             if (refusal == null)
             {
                 refusal = "";
             }
+
             w.WriteStr(refusal);
             string result = _result;
             if (result == null)
             {
                 result = "";
             }
+
             w.WriteStr(result);
             s.SendTo(from, w, Channel.Control, reliable: true);
             if (_refusal != null)
@@ -339,6 +359,7 @@ namespace DarkwoodMP.World
                 {
                     what = ((MsgType)inner[0]).ToString();
                 }
+
                 Plugin.Log.LogInfo(
                     $"[authority] refused {what} from {s.NameOf(from)}: "
                         + $"{_refusal}");
@@ -357,6 +378,7 @@ namespace DarkwoodMP.World
                 {
                     return p;
                 }
+
                 return null;
             }
         }
@@ -384,11 +406,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             string refusal = _refusal;
             if (refusal == null)
             {
                 refusal = "not here";
             }
+
             Plugin.Log.LogInfo(
                 $"[authority] {S.NameOf(From)}'s {what}: they're where the "
                     + $"host doesn't run ({refusal}), so it's theirs alone: "
@@ -399,6 +423,7 @@ namespace DarkwoodMP.World
             {
                 kept = "";
             }
+
             _result = kept;
         }
 
@@ -412,6 +437,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             return Flat(p, pos) <= reach;
         }
 
@@ -427,6 +453,7 @@ namespace DarkwoodMP.World
                 // not known yet (just joined): nothing to check against
                 return true;
             }
+
             float d = Flat(p, pos);
             // The stand-in follows the puppet, which moves on the next frame;
             // the player's newest position (a PlayerState flushed just before
@@ -439,10 +466,12 @@ namespace DarkwoodMP.World
                 d = Mathf.Min(
                     d, new Vector2(at.x - pos.x, at.z - pos.z).magnitude);
             }
+
             if (d <= reach)
             {
                 return true;
             }
+
             Refuse($"{what} is {d:0} away from them (reach {reach:0})");
             return false;
         }
@@ -475,6 +504,7 @@ namespace DarkwoodMP.World
                 _base = null;
                 return;
             }
+
             _base = Count();
         }
 
@@ -490,6 +520,7 @@ namespace DarkwoodMP.World
                 _base = now;
                 return null;
             }
+
             var change = new Dictionary<string, int>();
             foreach (var kv in now)
             {
@@ -499,6 +530,7 @@ namespace DarkwoodMP.World
                     change[kv.Key] = kv.Value - was;
                 }
             }
+
             foreach (var kv in _base)
             {
                 if (!now.ContainsKey(kv.Key))
@@ -506,11 +538,13 @@ namespace DarkwoodMP.World
                     change[kv.Key] = -kv.Value;
                 }
             }
+
             _base = now;
             if (change.Count > 0)
             {
                 return change;
             }
+
             return null;
         }
 
@@ -524,6 +558,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var kv in change)
             {
                 try
@@ -538,11 +573,13 @@ namespace DarkwoodMP.World
                         p.Inventory.removeItemAmountFromPlayer(
                             kv.Key, kv.Value);
                     }
+
                     string text = "took back";
                     if (kv.Value < 0)
                     {
                         text = "gave back";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[authority] {text} {Math.Abs(kv.Value)} {kv.Key}");
                 }
@@ -553,6 +590,7 @@ namespace DarkwoodMP.World
                             + $"{e.Message}");
                 }
             }
+
             _base = Count();
         }
 
@@ -563,6 +601,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var d = new Dictionary<string, int>();
             void Add(Inventory inv)
             {
@@ -570,6 +609,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 foreach (var slot in inv.slots)
                 {
                     InvItemClass it = null;
@@ -577,14 +617,17 @@ namespace DarkwoodMP.World
                     {
                         it = slot.invItem;
                     }
+
                     if (InvItemClass.isNull(it))
                     {
                         continue;
                     }
+
                     d.TryGetValue(it.type, out int n);
                     d[it.type] = n + Math.Max(1, it.amount);
                 }
             }
+
             Add(p.Inventory);
             Add(p.Hotbar);
             return d;

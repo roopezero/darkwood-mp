@@ -57,12 +57,14 @@ namespace DarkwoodMP.World
             {
                 offset = int.Parse(a[0]);
             }
+
             string name = names.Skip(offset).FirstOrDefault();
             if (name == null)
             {
                 r.Fail($"no such flag ({dict.Count} set)");
                 yield break;
             }
+
             bool was = Core.forbidInputs;
             Core.forbidInputs = true;
             try
@@ -75,6 +77,7 @@ namespace DarkwoodMP.World
                             + "forbidden)");
                     yield break;
                 }
+
                 f.setFlag(name, true);
                 // Longer than FlagsSync.Interval, so a flush happens while
                 // sharing is paused.
@@ -85,6 +88,7 @@ namespace DarkwoodMP.World
             {
                 Core.forbidInputs = was;
             }
+
             // WorldReady comes back 2 s after, then the next flush sends it.
             yield return new WaitForSecondsRealtime(
                 2f + FlagsSync.Interval + 1.5f);
@@ -105,10 +109,12 @@ namespace DarkwoodMP.World
             {
                 loop = c.sounds.idleAudioObject;
             }
+
             if (loop != null && loop.IsPlaying())
             {
                 return loop.audioID;
             }
+
             return "";
         }
 
@@ -124,6 +130,7 @@ namespace DarkwoodMP.World
                 r.Fail("no enemy with sounds here");
                 yield break;
             }
+
             // A loop playing first (a dog's idle one can be none): the first of
             // its loops it has.
             var snd = c.sounds;
@@ -134,11 +141,13 @@ namespace DarkwoodMP.World
                 snd.escapingLoop,
                 snd.sleeping
             }.FirstOrDefault(x => !string.IsNullOrEmpty(x));
+
             if (play == null)
             {
                 r.Fail($"{c.name} has no loop");
                 yield break;
             }
+
             // It plays one as it comes at us; its AI can replace one we start
             // at once, and can stop it again (Character.setBehaviour plays the
             // next behaviour's loop, or none): wait until one has played for a
@@ -167,14 +176,17 @@ namespace DarkwoodMP.World
                     was = now;
                     break;
                 }
+
                 seen = now;
                 yield return new WaitForSecondsRealtime(0.25f);
             }
+
             if (was == "")
             {
                 r.Fail($"{c.name}'s loop {play} didn't start");
                 yield break;
             }
+
             snd.destroySounds();
             yield return new WaitForSecondsRealtime(1.5f);
             string after = LoopOf(c);
@@ -216,22 +228,26 @@ namespace DarkwoodMP.World
             {
                 target = F(a[0]);
             }
+
             var d = DoorAtCentre();
             if (d == null)
             {
                 r.Fail("no door");
                 yield break;
             }
+
             yield return Walk(d.transform.position);
             if (!d.opened)
             {
                 AsPlayer(() => d.open(P.transform.position, P.transform, 0f));
             }
+
             float until = Time.unscaledTime + 4f;
             while (Time.unscaledTime < until && !DoorLeaf.Turned(d))
             {
                 yield return null;
             }
+
             yield return new WaitForSecondsRealtime(1f);
             if (!d.opened || !DoorLeaf.Turned(d))
             {
@@ -240,6 +256,7 @@ namespace DarkwoodMP.World
                         + $"{DoorLeaf.Angle(d):0})");
                 yield break;
             }
+
             yield return new WaitForSecondsRealtime(0.5f);
             float opened = DoorLeaf.Angle(d);
             if (Mathf.Abs(opened - target) < 8f)
@@ -249,6 +266,7 @@ namespace DarkwoodMP.World
                         + "to tell a push");
                 yield break;
             }
+
             var rb = d.body.GetComponent<Rigidbody>();
             var hinge = d.body.GetComponent<HingeJoint>();
             if (rb == null || hinge == null)
@@ -256,6 +274,7 @@ namespace DarkwoodMP.World
                 r.Fail($"{d.name}'s leaf has no rigidbody or hinge");
                 yield break;
             }
+
             // Behind the hinge, away from where the leaf points: the leaf is
             // fastened there and doesn't swing there, so our player doesn't
             // stop the turn.
@@ -265,6 +284,7 @@ namespace DarkwoodMP.World
             {
                 u = Vector3.right;
             }
+
             yield return Walk(hinge.connectedAnchor - u.normalized * 60f, 40f);
             DoorPush.TestTouch = d;
             try
@@ -280,16 +300,19 @@ namespace DarkwoodMP.World
                     {
                         break;
                     }
+
                     float now = DoorLeaf.Angle(d);
                     if (Mathf.Abs(now - target) < 1.5f)
                     {
                         break;
                     }
+
                     if (Mathf.Abs(now - last) > 0.3f
                         && (now > last) != (target > now))
                     {
                         sign = -sign; // going the wrong way
                     }
+
                     last = now;
                     rb.angularVelocity = new Vector3(
                         0f,
@@ -297,11 +320,13 @@ namespace DarkwoodMP.World
                             Mathf.Abs(now - target) * 0.05f, 0.4f, 2f),
                         0f);
                 }
+
                 if (rb != null)
                 {
                     rb.angularVelocity = Vector3.zero;
                     rb.velocity = Vector3.zero;
                 }
+
                 // DoorPush's rest time, and the send
                 yield return new WaitForSecondsRealtime(2f);
             }
@@ -309,6 +334,7 @@ namespace DarkwoodMP.World
             {
                 DoorPush.TestTouch = null;
             }
+
             r.Info =
                 $"{d.name} "
                     + $"{ObjRef.Of(d.gameObject)}: leaf {opened:0} -> {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0}, wanted {target:0}), open={d.opened}, we are {StateDump.Flat(P.transform.position - hinge.connectedAnchor):0} from the hinge";
@@ -329,18 +355,21 @@ namespace DarkwoodMP.World
             {
                 want = F(a[0]);
             }
+
             var d = DoorAtCentre();
             if (d == null)
             {
                 r.Fail("no door");
                 yield break;
             }
+
             float until = Time.unscaledTime + 10f;
             while (Time.unscaledTime < until
                 && !(d.opened && Mathf.Abs(DoorLeaf.Angle(d) - want) <= 5f))
             {
                 yield return null;
             }
+
             r.Info =
                 $"{d.name} "
                     + $"{ObjRef.Of(d.gameObject)} open={d.opened}, leaf at {DoorLeaf.Angle(d):0} (signed {DoorLeaf.Signed(d):0})";

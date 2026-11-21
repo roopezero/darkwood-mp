@@ -87,6 +87,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var light = FovLight(p);
             if (float.IsNaN(_coneLight))
             {
@@ -98,17 +99,21 @@ namespace DarkwoodMP.World
                 {
                     _coneLight = p.FOVLogic.LightConeAngle;
                 }
+
                 _coneLogic = p.FOVLogic.LightConeAngle;
                 _currentFov = CurrentFov(p);
             }
+
             if (light != null && light.LightConeAngle < 360f)
             {
                 light.LightConeAngle = 360f;
             }
+
             if (p.FOVLogic.LightConeAngle < 360f)
             {
                 p.FOVLogic.LightConeAngle = 360f;
             }
+
             CurrentFov(p) = 370f;
         }
 
@@ -118,6 +123,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var p = Player.Instance;
             if (p != null && p.FOVLogic != null)
             {
@@ -126,9 +132,11 @@ namespace DarkwoodMP.World
                 {
                     light.LightConeAngle = _coneLight;
                 }
+
                 p.FOVLogic.LightConeAngle = _coneLogic;
                 CurrentFov(p) = _currentFov;
             }
+
             _coneLight = float.NaN;
         }
 
@@ -155,12 +163,14 @@ namespace DarkwoodMP.World
             {
                 return (-1f, -1f, -1f);
             }
+
             var light = FovLight(p);
             float lightConeAngle = -1f;
             if (light != null)
             {
                 lightConeAngle = light.LightConeAngle;
             }
+
             return (lightConeAngle, p.FOVLogic.LightConeAngle, CurrentFov(p));
         }
 
@@ -177,6 +187,7 @@ namespace DarkwoodMP.World
             {
                 return list;
             }
+
             float now = Time.unscaledTime;
             foreach (var r in sync.Remotes.Values)
             {
@@ -184,14 +195,17 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (r.Alive)
                 {
                     _lastAlive[r.Owner] = now;
                 }
+
                 if (r.Spectating)
                 {
                     continue;
                 }
+
                 if (r.Alive
                     || (_lastAlive.TryGetValue(r.Owner, out float t)
                         && now - t < 10f))
@@ -199,6 +213,7 @@ namespace DarkwoodMP.World
                     list.Add(r);
                 }
             }
+
             list.Sort((a, b) => a.Owner.CompareTo(b.Owner));
             return list;
         }
@@ -215,11 +230,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var playing = Playing();
             if (playing.Count == 0)
             {
                 return false;
             }
+
             Begin(playing[0].Owner);
             return true;
         }
@@ -236,6 +253,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Plugin.Instance.StartCoroutine(WaitAndBegin());
         }
 
@@ -246,6 +264,7 @@ namespace DarkwoodMP.World
             {
                 p.alive = false;
             }
+
             float until = Time.unscaledTime + 20f;
             while (Time.unscaledTime < until)
             {
@@ -253,14 +272,17 @@ namespace DarkwoodMP.World
                 {
                     yield break;
                 }
+
                 var playing = Playing();
                 if (playing.Count > 0)
                 {
                     Begin(playing[0].Owner);
                     yield break;
                 }
+
                 yield return new WaitForSecondsRealtime(0.5f);
             }
+
             Plugin.Log.LogInfo(
                 "Dead for good, and nobody is playing: permadeath");
             Permadeath();
@@ -277,11 +299,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var playing = Playing();
             if (playing.Count == 0)
             {
                 return false;
             }
+
             Epilogue = true;
             Active = true;
             _watching = playing[0].Owner;
@@ -299,6 +323,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (player != null)
             {
                 _body = player.GetComponent<Rigidbody>();
@@ -307,6 +332,7 @@ namespace DarkwoodMP.World
             {
                 _body = null;
             }
+
             Plugin.Instance.StartCoroutine(Run());
             return true;
         }
@@ -321,6 +347,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             End();
         }
 
@@ -338,6 +365,7 @@ namespace DarkwoodMP.World
                     instance.SendDead();
                 }
             }
+
             var player = Player.Instance;
             Plugin.Log.LogInfo(
                 "Dead for good, with others still playing: watching "
@@ -369,6 +397,7 @@ namespace DarkwoodMP.World
             {
                 Singleton<Controller>.Instance.DoUpdateTime = true;
             }
+
             Core.forbidInputs = true;
 
             // The dead character follows the camera, touching nothing.
@@ -382,6 +411,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (player != null)
             {
                 _body = player.GetComponent<Rigidbody>();
@@ -390,6 +420,7 @@ namespace DarkwoodMP.World
             {
                 _body = null;
             }
+
             Plugin.Notice("You died. Watching the others: click to switch.");
             Plugin.Instance.StartCoroutine(Run());
         }
@@ -411,12 +442,14 @@ namespace DarkwoodMP.World
                 {
                     playing = new List<RemotePlayer>();
                 }
+
                 if (playing.Count == 0 && Epilogue)
                 {
                     // nobody else crawling: stay put until the pan (EndWatch)
                     yield return null;
                     continue;
                 }
+
                 if (playing.Count == 0)
                 {
                     // the world is being replaced (a reload): it decides again
@@ -425,6 +458,7 @@ namespace DarkwoodMP.World
                         End();
                         yield break;
                     }
+
                     if (!inSession)
                     {
                         Plugin.Log.LogInfo(
@@ -433,10 +467,12 @@ namespace DarkwoodMP.World
                         Permadeath();
                         yield break;
                     }
+
                     if (nobodySince < 0f)
                     {
                         nobodySince = Time.unscaledTime;
                     }
+
                     if (Time.unscaledTime - nobodySince > 3f)
                     {
                         Plugin.Log.LogInfo(
@@ -445,9 +481,11 @@ namespace DarkwoodMP.World
                         Permadeath();
                         yield break;
                     }
+
                     yield return null;
                     continue;
                 }
+
                 nobodySince = -1f;
 
                 int i = playing.FindIndex(r => r.Owner == _watching);
@@ -455,6 +493,7 @@ namespace DarkwoodMP.World
                 {
                     i = 0;
                 }
+
                 if (Input.GetMouseButtonDown(0)
                     || Input.GetKeyDown(KeyCode.Space))
                 {
@@ -464,6 +503,7 @@ namespace DarkwoodMP.World
                 {
                     i = (i + playing.Count - 1) % playing.Count;
                 }
+
                 _watching = playing[i].Owner;
 
                 var target = playing[i].Root;
@@ -480,11 +520,13 @@ namespace DarkwoodMP.World
                     {
                         _body.position = at;
                     }
+
                     if (cam != null)
                     {
                         cam.followTarget = target.transform;
                     }
                 }
+
                 AllAround(player);
                 yield return null;
             }
@@ -499,6 +541,7 @@ namespace DarkwoodMP.World
             {
                 cam.followTarget = null;
             }
+
             RestoreCone();
         }
 
@@ -531,16 +574,19 @@ namespace DarkwoodMP.World
             {
                 return; // not over the pause menu or the mod's windows
             }
+
             Session instance = Session.Instance;
             string name = null;
             if (instance != null)
             {
                 name = instance.NameOf(_watching);
             }
+
             if (name == null)
             {
                 name = "?";
             }
+
             var rect = new Rect(0, Screen.height - 70, Screen.width, 30);
             if (Epilogue)
             {
@@ -549,6 +595,7 @@ namespace DarkwoodMP.World
                     Plugin.NameTagStyle);
                 return;
             }
+
             GUI.Label(
                 rect,
                 $"You're dead. Watching {name}. Click for the next player, "
@@ -569,6 +616,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = ScriptedEvents.Nothing();
             return false;
         }

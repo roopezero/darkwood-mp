@@ -76,6 +76,7 @@ namespace DarkwoodMP.Sync
                 _sounds.Clear();
                 return;
             }
+
             float now = Time.unscaledTime;
             if (_sounds.Count > 0 && now >= _nextSounds)
             {
@@ -88,18 +89,21 @@ namespace DarkwoodMP.Sync
                     w.WriteStr(_sounds[i].Key);
                     w.W.Write(_sounds[i].Value);
                 }
+
                 Send(w, reliable: false);
                 LogOnce(
                     "sent sounds",
                     $"[fx] sending our player's sounds ({_sounds[0].Key}...)");
                 _sounds.Clear();
             }
+
             var p = Player.Instance;
             Burn burn = null;
             if (p != null && p.alive)
             {
                 burn = p.GetComponent<Burn>();
             }
+
             if ((burn != null) != _burningSent)
             {
                 _burningSent = burn != null;
@@ -116,6 +120,7 @@ namespace DarkwoodMP.Sync
                     {
                         s = p.burnPrefab.name;
                     }
+
                     w.WriteStr(s);
                     string burnSound;
                     if (burn.noSound)
@@ -130,18 +135,21 @@ namespace DarkwoodMP.Sync
                     {
                         burnSound = burn.burnSoundOverride;
                     }
+
                     w.WriteStr(burnSound);
                 }
                 else
                 {
                     w.W.Write((byte)3);
                 }
+
                 Send(w, reliable: true);
                 string text = "stopped";
                 if (burn != null)
                 {
                     text = "started";
                 }
+
                 Plugin.Log.LogInfo($"[fx] sent: our player {text} burning");
             }
         }
@@ -164,18 +172,21 @@ namespace DarkwoodMP.Sync
             {
                 s = gun.muzzlePrefab.name;
             }
+
             w.WriteStr(s);
             string particles = "";
             if (gun.muzzleParticles != null)
             {
                 particles = gun.muzzleParticles.name;
             }
+
             w.WriteStr(particles);
             int flashFlag = 1;
             if (gun.noMuzzleFlash)
             {
                 flashFlag = 0;
             }
+
             w.W.Write((byte)flashFlag);
             w.Write(gun.muzzleOffset);
             Send(w, reliable: false);
@@ -233,10 +244,12 @@ namespace DarkwoodMP.Sync
             {
                 return from;
             }
+
             if (from == _s.HostId && said != _s.LocalId)
             {
                 return said;
             }
+
             return 0;
         }
 
@@ -250,6 +263,7 @@ namespace DarkwoodMP.Sync
             {
                 return Begin(t, owner);
             }
+
             return null;
         }
 
@@ -269,6 +283,7 @@ namespace DarkwoodMP.Sync
             {
                 return null;
             }
+
             return rp.Root.transform;
         }
 
@@ -280,11 +295,13 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var relay = Relay(MsgType.PlayerSounds, owner);
             if (relay != null)
             {
                 relay.W.Write((byte)n);
             }
+
             var puppet = Puppet(owner);
             bool near = puppet != null && WorldShare.InWorld
                 && Player.Instance != null
@@ -301,11 +318,13 @@ namespace DarkwoodMP.Sync
                 {
                     ourPosition = Player.Instance.transform.position.ToString();
                 }
+
                 LogOnce(
                     key,
                     $"[fx] {name}'s sounds: too far away to hear (puppet at "
                         + $"{position}, we're at {ourPosition})");
             }
+
             for (int i = 0; i < n; i++)
             {
                 string id = r.ReadStr();
@@ -315,10 +334,12 @@ namespace DarkwoodMP.Sync
                     relay.WriteStr(id);
                     relay.W.Write(volume);
                 }
+
                 if (near)
                 {
                     AudioController.Play(id, puppet, volume);
                 }
+
                 if (near && i == 0)
                 {
                     LogOnce(
@@ -327,6 +348,7 @@ namespace DarkwoodMP.Sync
                             + $"puppet ({id})");
                 }
             }
+
             Relayed(relay, from, reliable: false);
         }
 
@@ -340,6 +362,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var relay = Relay(MsgType.PlayerShot, owner);
             if (relay != null)
             {
@@ -348,6 +371,7 @@ namespace DarkwoodMP.Sync
                 relay.W.Write(flash);
                 relay.Write(offset);
             }
+
             Relayed(relay, from, reliable: false);
 
             var t = Puppet(owner);
@@ -355,6 +379,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             ShotsSeen++;
             // As Player.fireWeapon places them on our own player.
             Vector3 at = t.position + t.up * offset.y + t.right * offset.x;
@@ -363,16 +388,19 @@ namespace DarkwoodMP.Sync
             {
                 Pooled(muzzle, at, rot);
             }
+
             if (particles != "")
             {
                 Pooled(particles, at, rot);
             }
+
             if (flash != 0)
             {
                 Core.AddPrefab(
                     "FX/Muzzle/PistolFlash", t.position + t.up, rot, null,
                     worldSpace: true);
             }
+
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[fx] {_s.NameOf(owner)} fired ({muzzle})");
@@ -406,10 +434,12 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             if (owner == 0)
             {
                 return;
             }
+
             var relay = Relay(MsgType.PlayerHurt, owner);
             if (relay != null)
             {
@@ -426,6 +456,7 @@ namespace DarkwoodMP.Sync
                     relay.WriteStr(b);
                 }
             }
+
             Relayed(relay, from, reliable: what != 1);
 
             string who = _s.NameOf(owner);
@@ -435,6 +466,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             if (what == 1)
             {
                 var t = Puppet(owner);
@@ -444,6 +476,7 @@ namespace DarkwoodMP.Sync
                 {
                     return;
                 }
+
                 Core.AddPrefab(
                     a, t.position + Vector3.up * Mathf.Clamp(dy, -50f, 50f),
                     Quaternion.Euler(90f, yaw, 0f), null);
@@ -503,10 +536,12 @@ namespace DarkwoodMP.Sync
             {
                 return false;
             }
+
             if (parent != null)
             {
                 return parent == p.transform || parent.IsChildOf(p.transform);
             }
+
             // A sound without a place, played by our player's own code (a
             // gunshot, a reload, a swing, pain). Not while a shared world
             // action runs inside it: that thing's own sounds come from its
@@ -532,6 +567,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             // A loop (tiredness, low health, fire) is stopped by our game
             // later; a copy would never stop.
             var item = __result.audioItem;
@@ -539,6 +575,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             fx.OurSound(audioID, volume);
         }
     }
@@ -573,6 +610,7 @@ namespace DarkwoodMP.Sync
                             + "won't be heard by the others");
                 }
             }
+
             // getHit has two: the one that does it.
             yield return AccessTools.DeclaredMethod(typeof(Player),
                 nameof(Player.getHit),
@@ -588,6 +626,7 @@ namespace DarkwoodMP.Sync
                     typeof(bool),
                     typeof(bool)
                 });
+
             // The coroutine that fires a gun again (bursts, and the click of an
             // empty one).
             foreach (var t in typeof(Player).GetNestedTypes(
@@ -627,12 +666,14 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             InvItemClass currentItem = __instance.currentItem;
             InvItem gun = null;
             if (currentItem != null)
             {
                 gun = currentItem.baseClass;
             }
+
             if (gun != null)
             {
                 fx.OurShot(gun);
@@ -685,6 +726,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var fx = PlayerFx.Instance;
             if (fx != null && fx.Sharing && !WorldActions.Replaying)
             {

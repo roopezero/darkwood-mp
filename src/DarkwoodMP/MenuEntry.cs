@@ -26,6 +26,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             MenuWords.Update(mm);
             // The mod's version under the game's, both in the bottom right
             // corner (MenuLayout).
@@ -36,6 +37,7 @@ namespace DarkwoodMP
                 v.text += $"\n{PluginInfo.Name} {PluginInfo.Version}";
                 v.Commit();
             }
+
             MenuLayout.Apply(mm);
         }
 
@@ -50,6 +52,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             // The world stays drawn behind the menu, playing alone too (the
             // game turns its camera off).
             var cam = Singleton<CamMain>.Instance;
@@ -57,17 +60,20 @@ namespace DarkwoodMP
             {
                 cam.gameObject.SetActive(true);
             }
+
             var backdrop = mm.transform.Find("Background");
             if (backdrop != null && backdrop.gameObject.activeSelf)
             {
                 backdrop.gameObject.SetActive(false);
                 _hiddenBackdrop = backdrop.gameObject;
             }
+
             if (mm.blackScreen != null && !mm.blackScreen.activeSelf)
             {
                 mm.blackScreen.SetActive(true);
                 _dimmed = true;
             }
+
             PauseHud.Hide(); // the HUD would show through with the world
             // In co-op the game goes on, with its own sound; alone it's paused
             // and the menu's music plays as before.
@@ -86,10 +92,12 @@ namespace DarkwoodMP
                 _hiddenBackdrop.SetActive(true);
                 _hiddenBackdrop = null;
             }
+
             if (_dimmed && mm.blackScreen != null)
             {
                 mm.blackScreen.SetActive(false);
             }
+
             _dimmed = false;
         }
     }
@@ -137,6 +145,7 @@ namespace DarkwoodMP
             public MeshRenderer PictureRenderer;
             public tk2dTextMesh Text;
         }
+
         private static readonly List<Word> _words = new List<Word>();
         private static readonly HashSet<int> _seen = new HashSet<int>();
         private static float _nextScan;
@@ -148,6 +157,7 @@ namespace DarkwoodMP
                 _nextScan = Time.unscaledTime + 1f;
                 Scan(mm);
             }
+
             for (int i = _words.Count - 1; i >= 0; i--)
             {
                 var w = _words[i];
@@ -156,10 +166,12 @@ namespace DarkwoodMP
                     _words.RemoveAt(i);
                     continue;
                 }
+
                 if (w.PictureRenderer != null && w.PictureRenderer.enabled)
                 {
                     w.PictureRenderer.enabled = false;
                 }
+
                 Color c;
                 if (w.Button.rolledOver)
                 {
@@ -169,6 +181,7 @@ namespace DarkwoodMP
                 {
                     c = Grey;
                 }
+
                 if (w.Picture != null)
                 {
                     c.a = w.Picture.color.a;
@@ -177,6 +190,7 @@ namespace DarkwoodMP
                 {
                     c.a = 1f;
                 }
+
                 if (w.Text.color != c)
                 {
                     w.Text.color = c;
@@ -192,16 +206,19 @@ namespace DarkwoodMP
             {
                 font = mm.CurrentVersion.font;
             }
+
             if (font == null)
             {
                 return;
             }
+
             foreach (var b in mm.GetComponentsInChildren<global::Button>(true))
             {
                 if (b == null || !_seen.Add(b.GetInstanceID()))
                 {
                     continue;
                 }
+
                 try
                 {
                     Redraw(b, font);
@@ -223,27 +240,32 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             tk2dSpriteDefinition currentSprite = pic.CurrentSprite;
             string sprite = null;
             if (currentSprite != null)
             {
                 sprite = currentSprite.name;
             }
+
             if (sprite == null)
             {
                 sprite = "";
             }
+
             int cut = sprite.IndexOf('_');
             if (cut <= 0
                 || !Keys.TryGetValue(sprite.Substring(0, cut), out var key))
             {
                 return;
             }
+
             string word = global::Language.Get(key, "UI");
             if (string.IsNullOrEmpty(word))
             {
                 return;
             }
+
             word = word.ToUpper();
             if (!HasLetters(font, word))
             {
@@ -268,6 +290,7 @@ namespace DarkwoodMP
                 tr.sortingOrder = pr.sortingOrder;
                 pr.enabled = false;
             }
+
             _words.Add(new Word
             {
                 Button = b,
@@ -285,6 +308,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 bool condition;
                 if (font.useDictionary)
                 {
@@ -297,11 +321,13 @@ namespace DarkwoodMP
                         || font.chars[ch] == null
                         || font.chars[ch].advance <= 0f;
                 }
+
                 if (condition)
                 {
                     return false;
                 }
             }
+
             return true;
         }
     }
@@ -328,6 +354,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             MenuLayout.Apply(mm);
         }
     }
@@ -360,15 +387,18 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             Camera cam = null;
             if (Core.CamUI != null)
             {
                 cam = Core.CamUI.GetComponent<Camera>();
             }
+
             if (cam == null)
             {
                 return;
             }
+
             _busy = true;
             try
             {
@@ -404,6 +434,7 @@ namespace DarkwoodMP
             {
                 front = (float?)null;
             }
+
             // The logo: top left, its left edge on the column's.
             var logo = mm.Menu0.transform.Find("Darkwood");
             Renderer logoR = null;
@@ -411,6 +442,7 @@ namespace DarkwoodMP
             {
                 logoR = logo.GetComponent<Renderer>();
             }
+
             if (logoR != null)
             {
                 var rect = ScreenRect(cam, logoR.bounds);
@@ -423,6 +455,7 @@ namespace DarkwoodMP
                 MoveBy(cam, logo, left - wordLeft, (H - H * LogoTop) - wordTop);
                 ToFront(logo, front);
             }
+
             // The versions: right-aligned in the bottom right corner, the
             // player ID line above them.
             float margin = H * Corner, bottom = margin;
@@ -432,6 +465,7 @@ namespace DarkwoodMP
             {
                 idText = idLine.GetComponent<tk2dTextMesh>();
             }
+
             foreach (var t in new[] { mm.CurrentVersion, idText })
             {
                 if (t == null || !t.gameObject.activeInHierarchy
@@ -439,21 +473,25 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 if (t.anchor != TextAnchor.LowerRight)
                 {
                     t.anchor = TextAnchor.LowerRight;
                     t.Commit();
                 }
+
                 var r = t.GetComponent<Renderer>();
                 if (r == null)
                 {
                     continue;
                 }
+
                 var rect = ScreenRect(cam, r.bounds);
                 if (rect.height < 1f)
                 {
                     continue;
                 }
+
                 MoveBy(
                     cam, t.transform, (W - margin) - rect.xMax,
                     bottom - rect.yMin);
@@ -467,6 +505,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var p = t.position;
             t.position = new Vector3(p.x, y.Value, p.z);
         }
@@ -481,6 +520,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var at = cam.WorldToScreenPoint(t.position);
             t.position = cam.ScreenToWorldPoint(
                 new Vector3(
@@ -539,6 +579,7 @@ namespace DarkwoodMP
             public GameObject Go;
             public Func<bool> Still;
         }
+
         private static readonly List<Off> _off = new List<Off>();
         private static readonly List<Renderer> _renderers =
             new List<Renderer>();
@@ -550,12 +591,14 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var p = Player.Instance;
             var ui = Singleton<UI>.Instance;
             if (p == null || ui == null)
             {
                 return;
             }
+
             _hidden = true;
             Window(p.Inventory, null);
             Window(p.Hotbar, null);
@@ -575,15 +618,18 @@ namespace DarkwoodMP
             {
                 Deactivate(up.gameObject, () => up.opened);
             }
+
             Deactivate(ui.bars, null);
             if (ui.clock != null)
             {
                 Renderers(ui.clock.gameObject, self: true);
             }
+
             if (p.progressBar != null)
             {
                 Renderers(p.progressBar.gameObject, self: false);
             }
+
             foreach (var go in p.attachedGameObjects)
             {
                 if (go != null)
@@ -591,6 +637,7 @@ namespace DarkwoodMP
                     Renderers(go, self: false);
                 }
             }
+
             Plugin.Log.LogInfo(
                 $"[pause hud] hidden: {_off.Count} windows, {_renderers.Count} "
                     + "renderers");
@@ -602,6 +649,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             _hidden = false;
             int back = 0;
             foreach (var o in _off)
@@ -610,6 +658,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 bool still;
                 try
                 {
@@ -619,12 +668,14 @@ namespace DarkwoodMP
                 {
                     still = false;
                 }
+
                 if (still)
                 {
                     o.Go.SetActive(true);
                     back++;
                 }
             }
+
             foreach (var r in _renderers)
             {
                 if (r != null)
@@ -632,6 +683,7 @@ namespace DarkwoodMP
                     r.enabled = true;
                 }
             }
+
             Plugin.Log.LogInfo(
                 $"[pause hud] restored: {back} of {_off.Count} windows, "
                     + $"{_renderers.Count} renderers");
@@ -653,6 +705,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             go.SetActive(false);
             _off.Add(new Off { Go = go, Still = still });
         }
@@ -668,6 +721,7 @@ namespace DarkwoodMP
             {
                 rs = go.GetComponentsInChildren<Renderer>(false);
             }
+
             foreach (var r in rs)
             {
                 if (r != null && r.enabled)
@@ -690,6 +744,7 @@ namespace DarkwoodMP
             {
                 return "no player";
             }
+
             var on = new List<string>();
             void Go(string name, GameObject go)
             {
@@ -698,54 +753,64 @@ namespace DarkwoodMP
                     on.Add(name);
                 }
             }
+
             GameObject backpack = null;
             if (p.Inventory != null)
             {
                 backpack = p.Inventory.thisUI;
             }
+
             Go("backpack", backpack);
             GameObject hotbar = null;
             if (p.Hotbar != null)
             {
                 hotbar = p.Hotbar.thisUI;
             }
+
             Go("hotbar", hotbar);
             GameObject crafting = null;
             if (p.Crafting != null)
             {
                 crafting = p.Crafting.thisUI;
             }
+
             Go("crafting", crafting);
             GameObject container = null;
             if (p.openedItemInventory != null)
             {
                 container = p.openedItemInventory.thisUI;
             }
+
             Go("container", container);
             GameObject secondContainer = null;
             if (p.openedItemInventory2 != null)
             {
                 secondContainer = p.openedItemInventory2.thisUI;
             }
+
             Go("container2", secondContainer);
             if (ui.upgradeItemMenu != null && ui.upgradeItemMenu.opened)
             {
                 Go("upgrade", ui.upgradeItemMenu.gameObject);
             }
+
             Go("bars", ui.bars);
             Renderer cr = null;
             if (ui.clock != null)
             {
                 cr = ui.clock.GetComponent<Renderer>();
             }
+
             if (cr != null && cr.enabled && cr.gameObject.activeInHierarchy)
             {
                 on.Add("clock");
             }
+
             if (on.Count == 0)
             {
                 return "none";
             }
+
             return string.Join(" ", on);
         }
     }

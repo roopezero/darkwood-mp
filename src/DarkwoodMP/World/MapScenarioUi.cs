@@ -49,6 +49,7 @@ namespace DarkwoodMP.World
                 {
                     text = "on";
                 }
+
                 r.Info = $"UiRefresh {text}";
                 return Nothing();
             });
@@ -71,6 +72,7 @@ namespace DarkwoodMP.World
             {
                 return inv.slots.Count + i;
             }
+
             return i;
         }
 
@@ -80,6 +82,7 @@ namespace DarkwoodMP.World
             {
                 return "-";
             }
+
             return $"{s.invItem.type}x{s.invItem.amount}";
         }
 
@@ -89,6 +92,7 @@ namespace DarkwoodMP.World
             {
                 return InvItemClass.isNull(s.invItem);
             }
+
             return !InvItemClass.isNull(s.invItem) && s.invItem.type == type
                 && s.invItem.amount == amount;
         }
@@ -109,6 +113,7 @@ namespace DarkwoodMP.World
                     s.createItem(type, amount);
                 }
             });
+
             // Things made or removed from nothing change what the player has to
             // craft with, as a drop or a craft does; the game redraws the
             // recipes after those (Player.refreshRecipes), so this does too.
@@ -130,10 +135,12 @@ namespace DarkwoodMP.World
             {
                 return "no inventory";
             }
+
             if (!inv.open || inv.thisUI == null)
             {
                 return $"{inv.name}'s window isn't open";
             }
+
             var bad = new List<string>();
             int filled = 0;
             for (int i = 0; i < inv.slots.Count; i++)
@@ -149,15 +156,18 @@ namespace DarkwoodMP.World
                     {
                         wrongFrame = "emptyInv";
                     }
+
                     if (frame == wrongFrame)
                     {
                         bad.Add($"slot {i} ({Slot(s)}): frame {frame}");
                     }
                 }
+
                 if (!full)
                 {
                     continue;
                 }
+
                 filled++;
                 var ui = s.invItem.UIInvItem;
                 if (ui == null || !ui.gameObject.activeInHierarchy)
@@ -165,20 +175,24 @@ namespace DarkwoodMP.World
                     bad.Add($"slot {i} ({Slot(s)}): no icon drawn");
                     continue;
                 }
+
                 string want = null;
                 if (s.invItem.baseClass != null)
                 {
                     want = s.invItem.baseClass.iconType;
                 }
+
                 string got = null;
                 if (ui.sprite != null && ui.sprite.CurrentSprite != null)
                 {
                     got = ui.sprite.CurrentSprite.name;
                 }
+
                 if (want != null && got != want)
                 {
                     bad.Add($"slot {i} ({Slot(s)}): icon {got}, not {want}");
                 }
+
                 if (ui.amount != null
                     && ui.amount.text != s.invItem.amount.ToString())
                 {
@@ -186,16 +200,19 @@ namespace DarkwoodMP.World
                         $"slot {i} ({Slot(s)}): amount drawn {ui.amount.text}");
                 }
             }
+
             int icons =
                 inv.thisUI.GetComponentsInChildren<UIInvItem>(false).Length;
             if (icons != filled)
             {
                 bad.Add($"{icons} icons drawn for {filled} filled slots");
             }
+
             if (bad.Count == 0)
             {
                 return null;
             }
+
             return string.Join("; ", bad);
         }
 
@@ -218,6 +235,7 @@ namespace DarkwoodMP.World
             {
                 return "the recipes aren't open";
             }
+
             var bad = new List<string>();
             var have = P.Inventory;
             foreach (var s in inv.slots)
@@ -227,12 +245,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var cr = s.invItem.baseClass.GetComponent<CraftingRecipes>();
                 if (cr == null || s.invItem.usedRecipe < 0
                     || s.invItem.usedRecipe >= cr.recipes.Count)
                 {
                     continue;
                 }
+
                 total++;
                 var recipe = cr.recipes[s.invItem.usedRecipe];
                 bool can = !cr.reachedMaxNumberOfTimesCrafted();
@@ -242,6 +262,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     if (q.amount > 0
                         && have.haveItemAmountInPlayer(
                             q.item.type,
@@ -249,6 +270,7 @@ namespace DarkwoodMP.World
                     {
                         can = false;
                     }
+
                     if (q.durabilityAmount > 0f
                         && have.haveItemDurabilityInPlayer(
                             q.item.type, includeAdditionalInventory: true,
@@ -257,16 +279,19 @@ namespace DarkwoodMP.World
                         can = false;
                     }
                 }
+
                 if (can)
                 {
                     met++;
                 }
+
                 var ui = s.invItem.UIInvItem;
                 if (ui == null || ui.sprite == null)
                 {
                     bad.Add($"{s.invItem.type}: not drawn");
                     continue;
                 }
+
                 var c = ui.sprite.color;
                 var red = Red(ui);
                 bool drawnRed = Mathf.Abs(c.r - red.r) < 0.02f
@@ -279,20 +304,24 @@ namespace DarkwoodMP.World
                     {
                         text = "red";
                     }
+
                     string makeable = "not";
                     if (can)
                     {
                         makeable = "makeable";
                     }
+
                     bad.Add(
                         $"{s.invItem.type} drawn {text}, is {makeable} "
                             + $"({Needs(recipe)})");
                 }
             }
+
             if (bad.Count == 0)
             {
                 return null;
             }
+
             return string.Join("; ", bad);
         }
 
@@ -305,6 +334,7 @@ namespace DarkwoodMP.World
                     return $"{q.item.type}x{q.amount} have "
                         + $"{P.Inventory.haveItemAmountInPlayer(q.item.type, includeAdditionalInventory: true):0}";
                 }
+
                 return $"{q.item.type} dur {q.durabilityAmount:0.##}";
             }));
 
@@ -323,17 +353,20 @@ namespace DarkwoodMP.World
             {
                 st = wb.normalInventory;
             }
+
             if (st == null || P.openedItemInventory2 != st)
             {
                 r.Fail("the workbench isn't open here");
                 yield break;
             }
+
             string before = PauseHud.Shown();
             if (!before.Contains("container2"))
             {
                 r.Fail($"the storage's window isn't shown before: {before}");
                 yield break;
             }
+
             Core.showHidePauseMenu();
             yield return new WaitForSecondsRealtime(1f);
             string under = PauseHud.Shown();
@@ -343,6 +376,7 @@ namespace DarkwoodMP.World
             {
                 Core.showHidePauseMenu();
             }
+
             yield return new WaitForSecondsRealtime(1f);
             string after = PauseHud.Shown();
             r.Info =
@@ -386,11 +420,13 @@ namespace DarkwoodMP.World
                 r.Fail("no workbench");
                 yield break;
             }
+
             yield return Walk(wb.transform.position);
             if (P.openedItemInventory2 != wb.normalInventory)
             {
                 AsPlayer(() => wb.open());
             }
+
             // A client asks the host for the storage as it opens it, and its
             // window takes the answer.
             float seconds = 1f;
@@ -398,6 +434,7 @@ namespace DarkwoodMP.World
             {
                 seconds = SlotShare.AskTimeout + 0.5f;
             }
+
             yield return new WaitForSeconds(seconds);
             var st = wb.normalInventory;
             if (P.openedItemInventory2 != st || !st.open)
@@ -405,6 +442,7 @@ namespace DarkwoodMP.World
                 r.Fail("the workbench's storage didn't open");
                 yield break;
             }
+
             string drawn = Drawn(st),
                 rec = Recipes(wb, out int met, out int total);
             var known = wb.workbenchInventory.slots.Where(
@@ -439,12 +477,14 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogWarning($"[map] ui-wb-close: {e.Message}");
             }
+
             yield return new WaitForSeconds(0.8f);
             var wb = Bench();
             if (wb != null && P.openedItemInventory2 == wb.normalInventory)
             {
                 r.Fail("still open");
             }
+
             r.Info = "closed";
         }
 
@@ -462,21 +502,25 @@ namespace DarkwoodMP.World
                     double.Parse(args[at + 1], CultureInfo.InvariantCulture);
                 args.RemoveRange(at, 2);
             }
+
             var wb = Bench();
             Inventory st = null;
             if (wb != null)
             {
                 st = wb.normalInventory;
             }
+
             if (st == null || P.openedItemInventory2 != st)
             {
                 r.Fail("the workbench isn't open here");
                 yield break;
             }
+
             while (epoch > 0 && MapScenarioSavage.Now < epoch)
             {
                 yield return null;
             }
+
             var did = new List<string>();
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
@@ -486,6 +530,7 @@ namespace DarkwoodMP.World
                     int.Parse(args[k + 2], CultureInfo.InvariantCulture));
                 did.Add($"{i}={Slot(st.slots[i])}");
             }
+
             // Containers looks at the open storage four times a second
             yield return new WaitForSeconds(0.8f);
             r.Info = string.Join(", ", did);
@@ -507,6 +552,7 @@ namespace DarkwoodMP.World
             {
                 args = new[] { "-8", "wire", "6" };
             }
+
             yield return WbSet(
                 args.Concat(new[] { "--at", a[0] }).ToArray(), r);
         }
@@ -523,11 +569,13 @@ namespace DarkwoodMP.World
             {
                 st = wb.normalInventory;
             }
+
             if (st == null || P.openedItemInventory2 != st)
             {
                 r.Fail("the workbench isn't open here");
                 yield break;
             }
+
             int i = Index(st, a[0]),
                 n = int.Parse(a[2], CultureInfo.InvariantCulture);
             for (int k = 1; k <= n; k++)
@@ -535,6 +583,7 @@ namespace DarkwoodMP.World
                 Put(st, i, a[1], k);
                 yield return new WaitForSecondsRealtime(0.12f);
             }
+
             yield return new WaitForSeconds(0.8f);
             r.Info = $"{i}: {a[1]} x1..x{n}";
         }
@@ -557,17 +606,20 @@ namespace DarkwoodMP.World
                     int.Parse(args[mk + 1], CultureInfo.InvariantCulture);
                 args.RemoveRange(mk, 2);
             }
+
             var wb = Bench();
             Inventory st = null;
             if (wb != null)
             {
                 st = wb.normalInventory;
             }
+
             if (st == null || P.openedItemInventory2 != st || !st.open)
             {
                 r.Fail("the workbench isn't open here");
                 yield break;
             }
+
             var want = new List<(int i, string type, int n)>();
             for (int k = 0; k + 2 < args.Count; k += 3)
             {
@@ -575,6 +627,7 @@ namespace DarkwoodMP.World
                     (Index(st, args[k]), args[k + 1], int.Parse(
                         args[k + 2], CultureInfo.InvariantCulture)));
             }
+
             int redraws0 = UiRefresh.Redraws;
             float until = Time.realtimeSinceStartup + 4f;
             while (want.Any(w => !Matches(st.slots[w.i], w.type, w.n))
@@ -582,6 +635,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             // icons removed this frame are destroyed at its end
             yield return null;
             yield return null;
@@ -599,8 +653,10 @@ namespace DarkwoodMP.World
                 {
                     expected = $"{w.type}x{w.n}";
                 }
+
                 return $"slot {w.i} is {Slot(st.slots[w.i])}, not {expected}";
             }).ToList();
+
             string drawn = Drawn(st),
                 rec = Recipes(wb, out int met, out int total);
             r.Info =
@@ -643,6 +699,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no saw {a[0]}");
                 yield break;
             }
+
             var item = saw.GetComponent<Item>();
             var inv = saw.GetComponent<Inventory>();
             if (item == null || inv == null)
@@ -650,6 +707,7 @@ namespace DarkwoodMP.World
                 r.Fail($"{saw.name} has no Item or Inventory");
                 yield break;
             }
+
             yield return Walk(saw.transform.position);
             AsPlayer(() => item.openInventory());
             yield return new WaitForSeconds(1.5f);
@@ -658,6 +716,7 @@ namespace DarkwoodMP.World
                 r.Fail($"{saw.name}'s window didn't open");
                 yield break;
             }
+
             _saw = saw;
             r.Info =
                 $"{saw.name} {MapScenarioWorld.Ref(saw)} fuel {saw.fuel:0.0}, "
@@ -670,6 +729,7 @@ namespace DarkwoodMP.World
             {
                 return inv.thisLabel.rightText.text;
             }
+
             return null;
         }
 
@@ -685,16 +745,19 @@ namespace DarkwoodMP.World
             {
                 inv = saw.GetComponent<Inventory>();
             }
+
             if (inv == null || !inv.open)
             {
                 r.Fail("the saw's window isn't open here");
                 yield break;
             }
+
             float min = 0f;
             if (a.Length > 0)
             {
                 min = F(a[0]);
             }
+
             string Want() => Language.Get("Fuel", "UI") + ": " + saw.fuel;
             float until = Time.realtimeSinceStartup + 4f;
             while ((saw.fuel < min || Label(inv) != Want())
@@ -702,11 +765,13 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             global::Button btn = null;
             if (saw.convertFuelBtn != null)
             {
                 btn = saw.convertFuelBtn.GetComponent<global::Button>();
             }
+
             bool enabled = btn != null && btn.background != null
                 && btn.background.activeSelf;
             bool can = saw.canConvert();
@@ -737,16 +802,19 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogWarning($"[map] ui-saw-close: {e.Message}");
             }
+
             yield return new WaitForSeconds(0.8f);
             Inventory inv = null;
             if (_saw != null)
             {
                 inv = _saw.GetComponent<Inventory>();
             }
+
             if (inv != null && inv.open)
             {
                 r.Fail("still open");
             }
+
             r.Info = "closed";
         }
 
@@ -766,6 +834,7 @@ namespace DarkwoodMP.World
                 r.Fail("no trader here");
                 yield break;
             }
+
             yield return Walk(npc.transform.position, 150f);
             P.inShop = true;
             P.talkedToNPC = npc;
@@ -795,6 +864,7 @@ namespace DarkwoodMP.World
                 r.Fail("no trader shown");
                 yield break;
             }
+
             float until = Time.realtimeSinceStartup + 6f;
             string line = null;
             while (line == null && Time.realtimeSinceStartup < until)
@@ -806,6 +876,7 @@ namespace DarkwoodMP.World
                     yield return new WaitForSecondsRealtime(0.5f);
                 }
             }
+
             yield return null;
             yield return null;
             string drawn = Drawn(npc.inventory);
@@ -833,6 +904,7 @@ namespace DarkwoodMP.World
             {
                 _trader.inventory.hide();
             }
+
             P.inShop = false;
             P.talkedToNPC = null;
             _trader = null;

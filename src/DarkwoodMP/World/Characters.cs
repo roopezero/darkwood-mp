@@ -84,6 +84,7 @@ namespace DarkwoodMP.World
                 _quitSent = false;
                 _carried.Clear();
             };
+
             session.OnPeerDisconnected += peer => _carried.Remove(peer);
         }
 
@@ -104,6 +105,7 @@ namespace DarkwoodMP.World
                 {
                     hashed = "";
                 }
+
                 return WorldFiles.Hex(
                     sha.ComputeHash(Encoding.UTF8.GetBytes(hashed))).Substring(
                         0, 32);
@@ -117,6 +119,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return Path.Combine(
                 Path.Combine(
                     sm.baseSaveDirectory, "prof" + Core.currentProfile.id),
@@ -137,12 +140,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_records.Count > 0)
             {
                 Plugin.Log.LogInfo(
                     "Players' characters of the last world in this folder "
                         + $"forgotten ({why})");
             }
+
             _records.Clear();
             _recordsDir = null;
         }
@@ -158,6 +163,7 @@ namespace DarkwoodMP.World
             {
                 return _records;
             }
+
             _records.Clear();
             _recordsDir = dir;
             try
@@ -174,6 +180,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 if (_records.Count > 0)
                 {
                     Plugin.Log.LogInfo(
@@ -186,6 +193,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Couldn't read players' characters in {dir}: {e.Message}");
             }
+
             return _records;
         }
 
@@ -198,11 +206,13 @@ namespace DarkwoodMP.World
             {
                 return; // a snapshot for a joiner, or a client's copy
             }
+
             var recs = Records();
             if (recs.Count == 0 || _recordsDir == null)
             {
                 return;
             }
+
             try
             {
                 Directory.CreateDirectory(_recordsDir);
@@ -227,6 +237,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Records().TryGetValue(KeyHash(key), out var rec);
             var host = Player.Instance;
             var w = _session.Begin(MsgType.CharacterLoad);
@@ -258,36 +269,43 @@ namespace DarkwoodMP.World
             {
                 answer = 2;
             }
+
             w.W.Write((byte)answer);
             string player = null;
             if (rec != null)
             {
                 player = rec.Player;
             }
+
             if (player == null)
             {
                 player = "";
             }
+
             w.WriteBigStr(player);
             string inv = null;
             if (rec != null)
             {
                 inv = rec.Inv;
             }
+
             if (inv == null)
             {
                 inv = "";
             }
+
             w.WriteBigStr(inv);
             string hotbar = null;
             if (rec != null)
             {
                 hotbar = rec.Hotbar;
             }
+
             if (hotbar == null)
             {
                 hotbar = "";
             }
+
             w.WriteBigStr(hotbar);
             // Where the host stands: the joiner's game finds a free spot beside
             // it (Sync.SpawnSpot), off the host.
@@ -300,6 +318,7 @@ namespace DarkwoodMP.World
             {
                 v = Vector3.zero;
             }
+
             w.Write(v);
             _session.SendTo(from, w, Channel.Control, reliable: true);
             // after the character: the shared essence and level
@@ -311,12 +330,14 @@ namespace DarkwoodMP.World
             {
                 instance.JoinerInWorld(from);
             }
+
             // story changes made since the snapshot it loaded
             FlagsSync flags = FlagsSync.Instance;
             if (flags != null)
             {
                 flags.JoinerInWorld(from);
             }
+
             if (dead)
             {
                 Plugin.Log.LogInfo(
@@ -324,6 +345,7 @@ namespace DarkwoodMP.World
                         + "this world: they watch the others");
                 return;
             }
+
             string name = _session.NameOf(from);
             string which;
             if (rec != null)
@@ -344,6 +366,7 @@ namespace DarkwoodMP.World
             {
                 which = "a new one";
             }
+
             Plugin.Log.LogInfo($"{name}'s character: " + which);
         }
 
@@ -354,6 +377,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var rec = new Record
             {
                 Name = _session.NameOf(from),
@@ -362,6 +386,7 @@ namespace DarkwoodMP.World
                 Hotbar = r.ReadBigStr(),
                 Saved = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
             };
+
             // The chapter of the world the joiner's game is in: what it sends
             // from the last chapter's map, while it waits for the next one or
             // reloads, is stamped with that chapter, whenever it arrives.
@@ -374,10 +399,12 @@ namespace DarkwoodMP.World
             {
                 rec.Chapter = Chapters.HostChapter;
             }
+
             if (rec.Player.Length == 0 || rec.Inv.Length == 0)
             {
                 return;
             }
+
             _carried[from] = new Carried { Inv = rec.Inv, Hotbar = rec.Hotbar };
             // A character that died for good stays dead, whatever its game
             // sends after (it goes on sending while it watches).
@@ -387,6 +414,7 @@ namespace DarkwoodMP.World
             {
                 rec.Dead = true;
             }
+
             // written with the world, next time the host's game saves
             recs[id] = rec;
         }
@@ -400,6 +428,7 @@ namespace DarkwoodMP.World
             public string Inv, Hotbar;
             public int Placed;
         }
+
         private readonly Dictionary<ulong, Carried> _carried =
             new Dictionary<ulong, Carried>();
 
@@ -417,6 +446,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             try
             {
                 return Count(c.Inv, types) + Count(c.Hotbar, types) - c.Placed;
@@ -448,6 +478,7 @@ namespace DarkwoodMP.World
             {
                 return 0;
             }
+
             var state = JsonConvert.DeserializeObject<Inventory.SaveState>(inv);
             int n = 0;
             if (state != null && state.invItems != null)
@@ -461,6 +492,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return n;
         }
 
@@ -475,6 +507,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var recs = Records();
             string id = KeyHash(key);
             if (!recs.TryGetValue(id, out var rec))
@@ -486,6 +519,7 @@ namespace DarkwoodMP.World
                     Chapter = Chapters.HostChapter
                 };
             }
+
             rec.Dead = true;
             Plugin.Log.LogInfo(
                 $"{_session.NameOf(from)}'s character died for good: kept dead "
@@ -501,6 +535,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _session.SendToHost(
                 _session.Begin(MsgType.CharacterDead), Channel.Control,
                 reliable: true);
@@ -518,16 +553,19 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (!Records().TryGetValue(KeyHash(key), out var rec)
                 || string.IsNullOrEmpty(rec.Player))
             {
                 return null;
             }
+
             if (_electrician.TryGetValue(peer, out var known)
                 && ReferenceEquals(known.Item1, rec.Player))
             {
                 return known.Item2;
             }
+
             bool? has = null;
             try
             {
@@ -542,6 +580,7 @@ namespace DarkwoodMP.World
                         skills = skillS.skillsStates;
                     }
                 }
+
                 if (skills != null)
                 {
                     has = skills.Exists(
@@ -553,9 +592,11 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Couldn't read {rec.Name}'s skills: {e.Message}");
             }
+
             _electrician[peer] = (rec.Player, has);
             return has;
         }
+
         private readonly Dictionary<ulong, (string, bool?)> _electrician =
             new Dictionary<ulong, (string, bool?)>();
 
@@ -613,6 +654,7 @@ namespace DarkwoodMP.World
                 _readyAt = -1f;
                 return;
             }
+
             if (_asked && ActiveScene != _askedScene)
             {
                 // Another world loaded in this session: what we had or asked
@@ -621,15 +663,18 @@ namespace DarkwoodMP.World
                 _have = false;
                 _readyAt = -1f;
             }
+
             if (!WorldShare.WorldReady)
             {
                 return;
             }
+
             if (_readyAt < 0f)
             {
                 // the wait starts once the world has loaded
                 _readyAt = Time.unscaledTime;
             }
+
             if (!_asked)
             {
                 if (Core.mainMenu)
@@ -638,6 +683,7 @@ namespace DarkwoodMP.World
                     // (returnToMainMenu sets it at once)
                     return;
                 }
+
                 _asked = true;
                 _askedScene = ActiveScene;
                 _session.SendToHost(
@@ -645,6 +691,7 @@ namespace DarkwoodMP.World
                     reliable: true);
                 return;
             }
+
             if (_have && Time.unscaledTime >= _nextSave)
             {
                 SaveNow();
@@ -662,12 +709,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (Prologue.Active)
             {
                 // the prologue's character isn't kept: the host keeps ours from
                 // its end on
                 return;
             }
+
             _nextSave = Time.unscaledTime + CharacterInterval;
             var p = Player.Instance;
             try
@@ -713,6 +762,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!_asked || ActiveScene != _askedScene || !WorldShare.InWorld)
             {
                 Plugin.Log.LogInfo(
@@ -721,6 +771,7 @@ namespace DarkwoodMP.World
                 _asked = false;
                 return;
             }
+
             byte kind = r.R.ReadByte();
             string ps = r.ReadBigStr(),
                 inv = r.ReadBigStr(),
@@ -731,6 +782,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (kind == 4)
             {
                 // Our character died for good here: as the game doesn't bring
@@ -743,6 +795,7 @@ namespace DarkwoodMP.World
                 Spectator.BeginDead();
                 return;
             }
+
             try
             {
                 // In the prologue, a new character is what the stage made it
@@ -752,6 +805,7 @@ namespace DarkwoodMP.World
                 {
                     ApplyRecord(p, ps, inv, hot);
                 }
+
                 // Our own kept place, but not on this world's map (a character
                 // kept with the wrong chapter, or one that was away in a
                 // separate location): beside the host, as from the last
@@ -765,6 +819,7 @@ namespace DarkwoodMP.World
                             + "on this map: your character is back, beside the "
                             + "host");
                 }
+
                 if (prologue)
                 {
                     if (spawn != Vector3.zero)
@@ -788,6 +843,7 @@ namespace DarkwoodMP.World
                 {
                     p.transform.position = spawn;
                 }
+
                 Vector3? host;
                 if (spawn == Vector3.zero)
                 {
@@ -797,6 +853,7 @@ namespace DarkwoodMP.World
                 {
                     host = spawn;
                 }
+
                 PlaceFree(p, host);
                 p.refreshRecipes();
                 Reequip(p);
@@ -820,12 +877,14 @@ namespace DarkwoodMP.World
                 {
                     data = "A new character for you in this world";
                 }
+
                 Plugin.Log.LogInfo(data);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogError($"Couldn't load your character: {e}");
             }
+
             _have = true;
             _nextSave = Time.unscaledTime + CharacterInterval;
         }
@@ -845,6 +904,7 @@ namespace DarkwoodMP.World
             {
                 size = wg.chunkSize;
             }
+
             return nearest <= 0.6f * size;
         }
 
@@ -860,6 +920,7 @@ namespace DarkwoodMP.World
             {
                 return 0f;
             }
+
             float best = float.MaxValue;
             foreach (var c in wg.worldChunks)
             {
@@ -867,14 +928,17 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var d = c.transform.position - at;
                 best =
                     Mathf.Min(best, Mathf.Max(Mathf.Abs(d.x), Mathf.Abs(d.z)));
             }
+
             if (best == float.MaxValue)
             {
                 return 0f;
             }
+
             return best;
         }
 
@@ -892,12 +956,14 @@ namespace DarkwoodMP.World
             {
                 taken = new[] { host.Value };
             }
+
             var at = Sync.SpawnSpot.Find(p, want, taken);
             if ((at - want).sqrMagnitude < 1f)
             {
                 Plugin.Log.LogInfo($"[spawn] placed at {want}: free");
                 return;
             }
+
             p.transform.position = at;
             var body = p.GetComponent<Rigidbody>();
             if (body != null)
@@ -905,6 +971,7 @@ namespace DarkwoodMP.World
                 body.position = at;
                 body.velocity = Vector3.zero;
             }
+
             Plugin.Log.LogInfo(
                 $"[spawn] placed at {at}, "
                     + $"{new Vector2(at.x - want.x, at.z - want.z).magnitude:0} from {want}, which wasn't free");
@@ -924,12 +991,14 @@ namespace DarkwoodMP.World
                 p.healthUpgrades--;
                 p.maxHealth -= 25f;
             });
+
             state.staminaUpgrades = Delta(state.staminaUpgrades,
                 p.staminaUpgrades, () =>
             {
                 p.staminaUpgrades--;
                 p.maxStamina -= 25f;
             });
+
             int hotbarUpgrades = state.hotbarUpgrades,
                 inventoryUpgrades = state.inventoryUpgrades;
             // these only add slots; the inventory and hotbar below come with
@@ -966,10 +1035,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             while (bag.slots.Count < count)
             {
                 bag.addSlot();
             }
+
             while (bag.slots.Count > count)
             {
                 bag.removeSlot();
@@ -982,6 +1053,7 @@ namespace DarkwoodMP.World
             {
                 takeOne();
             }
+
             return Math.Max(0, wanted - have);
         }
 
@@ -1003,12 +1075,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var slot = p.getCurrentlySelectedHotbarSlot();
             InvItemClass item = null;
             if (slot != null)
             {
                 item = slot.invItem;
             }
+
             try
             {
                 if (slot != null)
@@ -1021,6 +1095,7 @@ namespace DarkwoodMP.World
                     // isn't there
                     p.switchToItem(p.fists);
                 }
+
                 // An item that can't be held (food in the selected slot) leaves
                 // the hands as they were, with no switch under way; if what's
                 // held then is the stale item, it becomes bare hands at once.
@@ -1037,6 +1112,7 @@ namespace DarkwoodMP.World
                     $"Couldn't re-equip your item: {e.Message}");
                 return;
             }
+
             string type;
             if (InvItemClass.isNull(item))
             {
@@ -1046,6 +1122,7 @@ namespace DarkwoodMP.World
             {
                 type = item.type;
             }
+
             Plugin.Log.LogInfo($"[chars] re-equipped {type}");
         }
 
@@ -1064,6 +1141,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return false;
         }
 
@@ -1079,6 +1157,7 @@ namespace DarkwoodMP.World
                 empty.invItems.Clear(); // keep the slots, not what's in them
                 empty.loadValues(bag);
             }
+
             p.setHealth(p.maxHealth);
             // The host's skills are the host's: a new player takes the shared
             // levels at a stove and picks their own.

@@ -19,6 +19,7 @@ namespace DarkwoodMP
             {
                 return $"{FileName} is missing from {dir}";
             }
+
             Assembly core;
             try
             {
@@ -30,12 +31,14 @@ namespace DarkwoodMP
             {
                 return $"{FileName} can't be loaded: {e.Message}";
             }
+
             var mine = VersionOf(typeof(CoreCheck).Assembly);
             var theirs = VersionOf(core);
             if (theirs != mine)
             {
                 return $"{FileName} is {theirs}, DarkwoodMP.dll is {mine}";
             }
+
             return null;
         }
 

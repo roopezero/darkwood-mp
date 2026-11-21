@@ -33,10 +33,12 @@ namespace DarkwoodMP.World
                     r.Fail("no player");
                     return None();
                 }
+
                 MapScenario.SetCentre(p.transform.position);
                 r.Info = Fmt(p.transform.position);
                 return None();
             });
+
             MapScenario.Add("far-spot", FarSpot, timeout: 90f);
         }
 
@@ -60,16 +62,19 @@ namespace DarkwoodMP.World
                 r.Fail("no player");
                 yield break;
             }
+
             float min = 6000f;
             if (a.Length > 0)
             {
                 min = F(a[0]);
             }
+
             int index = 0;
             if (a.Length > 1)
             {
                 index = int.Parse(a[1]);
             }
+
             var from = MapScenario.Centre;
             var grid = Singleton<WorldGrid>.Instance;
             WorldGrid.Grid outside = null;
@@ -78,6 +83,7 @@ namespace DarkwoodMP.World
                 outside = grid.grids.FirstOrDefault(
                     g => g.type == WorldGrid.Grid.Type.world);
             }
+
             if (outside == null)
             {
                 if (grid != null)
@@ -89,11 +95,13 @@ namespace DarkwoodMP.World
                     outside = null;
                 }
             }
+
             if (outside == null)
             {
                 r.Fail("no world grid");
                 yield break;
             }
+
             float half = grid.distance / 2f;
             bool InOutside(Vector3 pos) => outside.nodes.Any(
                 n => Mathf.Abs(pos.x - n.position.x) <= half
@@ -135,6 +143,7 @@ namespace DarkwoodMP.World
                     spots.Add(d);
                 }
             }
+
             if (index >= spots.Count)
             {
                 r.Fail(
@@ -142,6 +151,7 @@ namespace DarkwoodMP.World
                         + $"{Fmt(from)}");
                 yield break;
             }
+
             var door = spots[index];
             var at = door.transform.position;
             MapScenario.SetCentre(at);

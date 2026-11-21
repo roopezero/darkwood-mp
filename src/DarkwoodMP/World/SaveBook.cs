@@ -65,11 +65,13 @@ namespace DarkwoodMP.World
                     return Path.Combine(
                         BepInEx.Paths.ConfigPath, "DarkwoodMP.saves.json");
                 }
+
                 WorldShare instance = WorldShare.Instance;
                 if (instance == null || instance.PlayingHostCopy)
                 {
                     return null;
                 }
+
                 return Path.Combine(SaveRedirect.Dir, "darkwoodmp-saves.json");
             }
         }
@@ -82,6 +84,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 string name = session.NameOf(id);
                 session.Keys.TryGetValue(id, out string key);
                 string stored = key;
@@ -89,6 +92,7 @@ namespace DarkwoodMP.World
                 {
                     stored = "";
                 }
+
                 AddPlayer(Core.currentProfile.id, name, stored);
             };
         }
@@ -100,6 +104,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             // Read again when the file changed or went away underneath (a
             // test's fresh copy of the saves).
             DateTime stamp;
@@ -111,10 +116,12 @@ namespace DarkwoodMP.World
             {
                 stamp = DateTime.MinValue;
             }
+
             if (_data != null && _loadedFrom == path && _stamp == stamp)
             {
                 return _data;
             }
+
             _loadedFrom = path;
             _stamp = stamp;
             _data = new FileData();
@@ -128,8 +135,10 @@ namespace DarkwoodMP.World
                     {
                         data = new FileData();
                     }
+
                     _data = data;
                 }
+
                 if (_data.Slots == null)
                 {
                     _data.Slots = new Dictionary<string, Record>();
@@ -140,6 +149,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"[saves] couldn't read {path}: {e.Message}");
             }
+
             return _data;
         }
 
@@ -150,6 +160,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
@@ -161,6 +172,7 @@ namespace DarkwoodMP.World
                 {
                     File.Delete(path);
                 }
+
                 File.Move(tmp, path);
                 _stamp = File.GetLastWriteTimeUtc(path);
             }
@@ -182,6 +194,7 @@ namespace DarkwoodMP.World
             {
                 return r;
             }
+
             return null;
         }
 
@@ -192,10 +205,12 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (!d.Slots.TryGetValue(slot.ToString(), out var r))
             {
                 d.Slots[slot.ToString()] = r = new Record { Started = Now() };
             }
+
             return r;
         }
 
@@ -214,10 +229,12 @@ namespace DarkwoodMP.World
             {
                 name = record.Name;
             }
+
             if (name == null)
             {
                 name = "";
             }
+
             return name;
         }
 
@@ -227,16 +244,19 @@ namespace DarkwoodMP.World
             {
                 name = "";
             }
+
             name = name.Trim();
             if (NameOf(slot) == name)
             {
                 return;
             }
+
             var r = GetOrAdd(slot);
             if (r == null)
             {
                 return;
             }
+
             r.Name = name;
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot} named \"{name}\"");
@@ -258,6 +278,7 @@ namespace DarkwoodMP.World
                     p => p.Last, StringComparer.Ordinal).Select(p => p.Name)
                     .ToList();
             }
+
             var names = new List<string>();
             try
             {
@@ -271,6 +292,7 @@ namespace DarkwoodMP.World
                 {
                     dir = PlayersDir(sm.baseSaveDirectory, slot);
                 }
+
                 if (FilePath != null && dir != null && Directory.Exists(dir))
                 {
                     foreach (var f in Directory.GetFiles(dir, "*.json")
@@ -293,6 +315,7 @@ namespace DarkwoodMP.World
                     $"[saves] couldn't read slot {slot}'s players' characters: "
                         + $"{e.Message}");
             }
+
             return names;
         }
 
@@ -303,18 +326,22 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var p = r.Players.FirstOrDefault(x =>
             {
                 if (key != "")
                 {
                     return x.Key == key;
                 }
+
                 return x.Name == name;
             });
+
             if (p == null)
             {
                 r.Players.Add(p = new Player { Key = key });
             }
+
             p.Name = name;
             p.Last = Now();
             Write();
@@ -364,6 +391,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot}'s record dropped ({why})");
         }
@@ -383,6 +411,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             SaveBook.Forget(p.id, "a new game");
             // The characters the host kept for the players who joined the
             // slot's last world: the game writes the new world over the old
@@ -394,6 +423,7 @@ namespace DarkwoodMP.World
             {
                 instance.Forget("a new game");
             }
+
             var sm = Singleton<SaveManager>.Instance;
             if (sm != null)
             {
@@ -425,17 +455,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorldShare share = WorldShare.Instance;
             if (share != null && share.PlayingHostCopy)
             {
                 return;
             }
+
             SaveBook.Forget(p.id, "deleted");
             Characters instance = Characters.Instance;
             if (instance != null)
             {
                 instance.Forget("the slot deleted");
             }
+
             SaveBook.DeletePlayersDir(
                 __instance.baseSaveDirectory, p.id, "with it");
         }

@@ -40,17 +40,20 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             float zoom = ZoomFor(Screen.height);
             if (Mathf.Approximately(zoom, c.cameraZoom))
             {
                 return;
             }
+
             c.cameraZoom = zoom;
             var cam = Singleton<CamMain>.Instance;
             if (cam == null)
             {
                 return;
             }
+
             SetZoom(cam.transform, zoom);
             foreach (var name in new[]
             {
@@ -63,6 +66,7 @@ namespace DarkwoodMP
             {
                 SetZoom(cam.transform.Find(name), zoom);
             }
+
             c.worldScreenSize =
                 new Vector2(Screen.width * zoom, Screen.height * zoom);
         }
@@ -74,6 +78,7 @@ namespace DarkwoodMP
             {
                 tk = t.GetComponent<tk2dCamera>();
             }
+
             if (tk != null)
             {
                 tk.ZoomFactor = zoom;
@@ -97,11 +102,13 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             if (GameSettings.GetInt("ScreenWidth") == native.width
                 && GameSettings.GetInt("ScreenHeight") == native.height)
             {
                 return;
             }
+
             GameSettings.SetInt("ScreenWidth", native.width);
             GameSettings.SetInt("ScreenHeight", native.height);
             GameSettings.SetInt("Fullscreen", 1);

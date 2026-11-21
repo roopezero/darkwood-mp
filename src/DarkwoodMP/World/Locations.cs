@@ -139,9 +139,11 @@ namespace DarkwoodMP.World
                 {
                     current = "";
                 }
+
                 return Core.getTrueLocationName(current)
                     == Core.getTrueLocationName(l.name);
             }
+
             return false;
         }
 
@@ -159,6 +161,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             Location loc = null;
             if (place.StartsWith("dream:"))
             {
@@ -177,6 +180,7 @@ namespace DarkwoodMP.World
                 {
                     return null;
                 }
+
                 foreach (var kv in o.spawnedLocations)
                 {
                     if (kv.Value != null
@@ -188,15 +192,18 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (loc == null)
             {
                 return null;
             }
+
             var d = pos - loc.transform.position;
             if (d.x * d.x + d.z * d.z < LocationReach * LocationReach)
             {
                 return loc;
             }
+
             return null;
         }
 
@@ -220,6 +227,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _nextKeep = Time.unscaledTime + 0.5f;
             var want = new HashSet<Location>();
             Dreams dreams = Singleton<Dreams>.Instance;
@@ -228,6 +236,7 @@ namespace DarkwoodMP.World
             {
                 dream = dreams.dreamLocation;
             }
+
             foreach (var p in Combat.NetPlayerProxy.All.Values)
             {
                 if (p != null && p.InLocation != null && p.InLocation != dream)
@@ -236,6 +245,7 @@ namespace DarkwoodMP.World
                     want.Add(p.InLocation);
                 }
             }
+
             foreach (var loc in want)
             {
                 if (_kept.Add(loc))
@@ -246,15 +256,18 @@ namespace DarkwoodMP.World
                     {
                         note = " (already entered)";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[locations] keeping {place} running for the "
                             + $"joiner(s) in it{note}");
                 }
+
                 if (!loc.entered || !loc.gameObject.activeInHierarchy)
                 {
                     _quietEnter.Add(loc);
                     loc.enter(force: !loc.gameObject.activeInHierarchy);
                 }
+
                 if (_noted.Add(loc))
                 {
                     DragSync instance = DragSync.Instance;
@@ -264,6 +277,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             _kept.RemoveWhere(l => l == null);
             _noted.RemoveWhere(l => l == null || !_kept.Contains(l));
             foreach (var loc in _kept.Where(l => !want.Contains(l)).ToList())
@@ -277,12 +291,14 @@ namespace DarkwoodMP.World
                 {
                     text = "; our player is, so it stays";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[locations] nobody else is in {name} any more{text}");
                 if (ours)
                 {
                     continue;
                 }
+
                 loc.leave(force: true);
                 WorldGrid worldGrid = Singleton<WorldGrid>.Instance;
                 if (worldGrid != null)
@@ -309,6 +325,7 @@ namespace DarkwoodMP.World
                 _quietEnter.Remove(loc);
                 return true;
             }
+
             var d = Singleton<Dreams>.Instance;
             if (!force && loc.entered && !Core.loadingGame
                 && !(d != null && (d.dreaming || d.wantToDream)))
@@ -320,6 +337,7 @@ namespace DarkwoodMP.World
                         + $"{Core.getTrueLocationName(loc.name)}; it keeps "
                         + "running for the joiner(s) in it");
             }
+
             return false;
         }
 
@@ -365,14 +383,17 @@ namespace DarkwoodMP.World
                 {
                     message = innerException.Message;
                 }
+
                 if (message == null)
                 {
                     message = e.Message;
                 }
+
                 Plugin.Log.LogWarning(
                     $"[locations] {l.name}'s exit events: {message}");
             }
         }
+
         private static void CheckEnterEvents(Location l)
         {
             try
@@ -391,10 +412,12 @@ namespace DarkwoodMP.World
                 {
                     message = innerException.Message;
                 }
+
                 if (message == null)
                 {
                     message = e.Message;
                 }
+
                 Plugin.Log.LogWarning(
                     $"[locations] {l.name}'s enter events: {message}");
             }
@@ -417,15 +440,18 @@ namespace DarkwoodMP.World
                 return loc != null && !_gaveUp.Contains(loc.name)
                     && !_gaveUp.Contains(Core.getTrueLocationName(loc.name));
             }
+
             if (o == null || !o.playerInOutsideLocation)
             {
                 return true;
             }
+
             string name = o.currentLocationName;
             if (name == null)
             {
                 name = "";
             }
+
             return !_gaveUp.Contains(name)
                 && !_gaveUp.Contains(Core.getTrueLocationName(name));
         }
@@ -445,10 +471,12 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (d.preset != null && d.preset.name == DreamSync.Shared)
             {
                 return d.dreamLocation;
             }
+
             return null;
         }
 
@@ -468,6 +496,7 @@ namespace DarkwoodMP.World
             {
                 return "";
             }
+
             WorldGrid instance = Singleton<WorldGrid>.Instance;
             string g = null;
             if (instance != null)
@@ -478,14 +507,17 @@ namespace DarkwoodMP.World
                     g = currentGrid.name;
                 }
             }
+
             if (g == null)
             {
                 g = "?";
             }
+
             if (dream)
             {
                 return "dream:" + g;
             }
+
             return g;
         }
 
@@ -500,14 +532,17 @@ namespace DarkwoodMP.World
             {
                 return away == meAway;
             }
+
             if (string.IsNullOrEmpty(place) || place == "?")
             {
                 return false;
             }
+
             if (place.StartsWith("dream:") && DreamSync.Shared == null)
             {
                 return false; // someone else's own dream
             }
+
             return place == Current();
         }
 
@@ -524,6 +559,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             while (list.Count < need)
             {
                 // More rows of seven, 30000 apart, past the game's own rows (z
@@ -533,6 +569,7 @@ namespace DarkwoodMP.World
                 {
                     extra = 0;
                 }
+
                 int row = extra / 7, col = extra % 7;
                 float z;
                 if (row % 2 == 0)
@@ -543,6 +580,7 @@ namespace DarkwoodMP.World
                 {
                     z = -110000f - 30000f * (row / 2);
                 }
+
                 list.Add(new Vector3(-75000f + 25000f * col, 0f, z));
             }
         }
@@ -576,9 +614,11 @@ namespace DarkwoodMP.World
                             System.IO.Path.GetFileNameWithoutExtension(path));
                     }
                 }
+
                 Plugin.Log.LogInfo(
                     $"[locations] the game has {_real.Count} locations");
             }
+
             // none found: the build lists them differently, don't judge
             return _real.Count == 0 || _real.Contains(name);
         }
@@ -590,6 +630,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             bool dream = (r.R.ReadByte() & 1) != 0;
             string name = r.ReadStr();
             var o = Singleton<OutsideLocations>.Instance;
@@ -597,6 +638,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!_slots.TryGetValue(name, out var slot))
             {
                 if (o.spawnedLocations.TryGetValue(name, out var loc)
@@ -607,6 +649,7 @@ namespace DarkwoodMP.World
                         Pos = loc.transform.position,
                         Rot = Mathf.RoundToInt(loc.transform.eulerAngles.y)
                     };
+
                     Plugin.Log.LogInfo(
                         $"[locations] {s.NameOf(from)} goes to {name}: it is "
                             + $"at {slot.Pos.x:0},{slot.Pos.z:0} here (turned "
@@ -627,11 +670,13 @@ namespace DarkwoodMP.World
                         Pos = PositionsOf(o)[o.actualSpawnedLocationsCount],
                         Rot = Core.getRandomHalfRotation()
                     };
+
                     o.actualSpawnedLocationsCount++;
                     if (!dream)
                     {
                         _toSpawn.Enqueue(name);
                     }
+
                     string line =
                         $"[locations] {s.NameOf(from)} goes to {name}, which "
                             + "we haven't loaded: it gets spot "
@@ -642,10 +687,13 @@ namespace DarkwoodMP.World
                     {
                         where = " (a dream: theirs alone)";
                     }
+
                     Plugin.Log.LogInfo(line + where);
                 }
+
                 _slots[name] = slot;
             }
+
             var w = s.Begin(MsgType.LocationSlot);
             w.WriteStr(name);
             w.Write(slot.Pos);
@@ -664,12 +712,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var o = Singleton<OutsideLocations>.Instance;
             var d = Singleton<Dreams>.Instance;
             if (o == null)
             {
                 return;
             }
+
             // The game doesn't refresh its culling while our player is taken to
             // a place: keep the others' areas entered.
             Combat.SharedCullingPatch.RefreshWhileLoading();
@@ -683,12 +733,14 @@ namespace DarkwoodMP.World
                         at = "at "
                             + $"{loc.transform.position.x:0},{loc.transform.position.z:0}, turned {Mathf.RoundToInt(loc.transform.eulerAngles.y)}";
                     }
+
                     string promised = "nothing";
                     if (_slots.TryGetValue(_spawning, out var slot))
                     {
                         promised =
                             $"{slot.Pos.x:0},{slot.Pos.z:0}, turned {slot.Rot}";
                     }
+
                     // A location that keeps its own turn (dontRotate) or takes
                     // another's (getRotationFromLocation) does so in every game
                     // alike; the promise is kept for the record.
@@ -705,8 +757,10 @@ namespace DarkwoodMP.World
                         $"[locations] {_spawning} didn't load");
                     _spawning = null;
                 }
+
                 return;
             }
+
             KeepRunning(o);
             if (_toSpawn.Count == 0 || o.loading
                 || (d != null
@@ -714,11 +768,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             string name = _toSpawn.Dequeue();
             if (o.spawnedLocations.ContainsKey(name))
             {
                 return;
             }
+
             _spawning = name;
             _spawningSince = Time.realtimeSinceStartup;
             WorldGrid instance = Singleton<WorldGrid>.Instance;
@@ -731,6 +787,7 @@ namespace DarkwoodMP.World
                     gridBefore = currentGrid.name;
                 }
             }
+
             _gridBefore = gridBefore;
             Plugin.Log.LogInfo(
                 $"[locations] loading {name} for the others (we stay where we "
@@ -755,17 +812,20 @@ namespace DarkwoodMP.World
                 {
                     graph = astar.astarData.GetGraph(name);
                 }
+
                 if (graph == null)
                 {
                     Plugin.Log.LogInfo(
                         $"[locations] {name} has no pathfinding graph to scan");
                     return;
                 }
+
                 int i = System.Array.IndexOf(astar.graphs, graph);
                 if (i >= 0)
                 {
                     astar.ScanLoop(null, 1 << i);
                 }
+
                 Plugin.Log.LogInfo(
                     $"[locations] {name}'s pathfinding graph scanned (graph "
                         + $"{i})");
@@ -791,12 +851,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var g = Singleton<WorldGrid>.Instance;
             if (g == null || g.currentGrid == null
                 || g.currentGrid.name == _gridBefore)
             {
                 return;
             }
+
             g.setGrid(_gridBefore);
             Plugin.Log.LogInfo(
                 $"[locations] {_spawning} added to its grid; the current grid "
@@ -817,6 +879,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var d = Singleton<Dreams>.Instance;
             var w = s.Begin(MsgType.LocationAsk);
             int dreamFlag = 0;
@@ -824,6 +887,7 @@ namespace DarkwoodMP.World
             {
                 dreamFlag = 1;
             }
+
             w.W.Write((byte)dreamFlag);
             w.WriteStr(name);
             s.SendToHost(w, Channel.Control, reliable: true);
@@ -838,6 +902,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             string name = r.ReadStr();
             var pos = r.ReadVector3();
             int rot = r.R.ReadInt16();
@@ -868,6 +933,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (MustWait(name))
             {
                 _gaveUp.Add(name);
@@ -876,6 +942,7 @@ namespace DarkwoodMP.World
                         + "loading it where our game puts it, so it may not "
                         + "match the host's");
             }
+
             yield return o.StartCoroutine(o.spawnLocation(name, transport));
         }
 
@@ -900,6 +967,7 @@ namespace DarkwoodMP.World
             {
                 return picked;
             }
+
             if (_slots.TryGetValue(name, out var slot))
             {
                 if (slot.Pos != picked)
@@ -909,8 +977,10 @@ namespace DarkwoodMP.World
                             + $"{slot.Pos.x:0},{slot.Pos.z:0} (the host's "
                             + $"spot), not {picked.x:0},{picked.z:0}");
                 }
+
                 return slot.Pos;
             }
+
             // Host: what our own load uses, turn included, so a joiner who asks
             // meanwhile gets the same.
             if (s.IsHost)
@@ -921,6 +991,7 @@ namespace DarkwoodMP.World
                     Rot = Core.getRandomHalfRotation()
                 };
             }
+
             return picked;
         }
 
@@ -937,14 +1008,17 @@ namespace DarkwoodMP.World
             {
                 name = m.locationName;
             }
+
             if (s == null || !s.Active || name == null)
             {
                 return rolled;
             }
+
             if (!_slots.TryGetValue(name, out var slot))
             {
                 return rolled;
             }
+
             Plugin.Log.LogInfo(
                 $"[locations] {name} turned {slot.Rot} (the host's), not "
                     + $"{rolled}");
@@ -1012,6 +1086,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             __instance.entered = false;
         }
     }
@@ -1053,6 +1128,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = Locations.WaitThenSpawn(
                 __instance, locationName, transportAfterSpawn);
             return false;
@@ -1084,6 +1160,7 @@ namespace DarkwoodMP.World
                 throw new System.Exception(
                     "no locationName in spawnLocation's body");
             }
+
             var list = code.ToList();
             int i = list.FindIndex(c => c.Calls(getItem));
             if (i < 0)
@@ -1091,6 +1168,7 @@ namespace DarkwoodMP.World
                 throw new System.Exception(
                     "locationPositions[...] not found in spawnLocation's body");
             }
+
             list.InsertRange(i + 1, new[]
             {
                 new CodeInstruction(OpCodes.Ldarg_0),
@@ -1100,6 +1178,7 @@ namespace DarkwoodMP.World
                     AccessTools.Method(
                         typeof(Locations), nameof(Locations.PositionFor))),
             });
+
             return list;
         }
     }
@@ -1129,6 +1208,7 @@ namespace DarkwoodMP.World
                 throw new System.Exception(
                     "no <>4__this in LocationMarker.spawnLocation's body");
             }
+
             var list = code.ToList();
             int done = 0;
             for (int i = 0; i < list.Count; i++)
@@ -1137,12 +1217,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var labels = list[i].labels;
                 list[i] = new CodeInstruction(OpCodes.Ldarg_0)
                 {
                     labels = labels,
                     blocks = list[i].blocks
                 };
+
                 list.InsertRange(i + 1, new[]
                 {
                     new CodeInstruction(OpCodes.Ldfld, self),
@@ -1151,14 +1233,17 @@ namespace DarkwoodMP.World
                         AccessTools.Method(
                             typeof(Locations), nameof(Locations.RotationFor))),
                 });
+
                 done++;
             }
+
             if (done == 0)
             {
                 throw new System.Exception(
                     "getRandomHalfRotation not found in "
                         + "LocationMarker.spawnLocation's body");
             }
+
             return list;
         }
     }

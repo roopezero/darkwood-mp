@@ -67,11 +67,13 @@ namespace DarkwoodMP.World
                 {
                     return null;
                 }
+
                 string name = Core.getTrueLocationName(d.preset.name);
                 if (IsStage(name))
                 {
                     return name;
                 }
+
                 return null;
             }
         }
@@ -94,12 +96,14 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var d = D;
             return $"stage {Stage}, dreaming {d.dreaming}, switching "
                 + $"{d.switchingDream}, entering {Core.EnteringDream}, world "
                 + $"ready {worldReady}, inputs forbidden {Core.forbidInputs}, "
                 + $"loading {Core.loadingGame}";
         }
+
         private static string _lastWhy;
 
         /// <summary>Host: log why joiners wait, when it changes.</summary>
@@ -109,6 +113,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _lastWhy = why;
             if (why != null)
             {
@@ -135,6 +140,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             state.wantToDream = true;
             state.dreamName = d.preset.name;
             Plugin.Log.LogInfo(
@@ -166,6 +172,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             state.playerInOutsideLocation = false;
             state.currentLocationName = "";
             for (int i = state.spawnedLocationsKeys.Count - 1; i >= 0; i--)
@@ -175,12 +182,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 state.spawnedLocationsKeys.RemoveAt(i);
                 if (i < state.spawnedLocationsValuesIDs.Count)
                 {
                     state.spawnedLocationsValuesIDs.RemoveAt(i);
                 }
             }
+
             // Made afresh, the place takes the next free slot of the far-off
             // grid (OutsideLocations.locationPositions); give it the slot it
             // has here, so the players stand in the same place in both games.
@@ -191,10 +200,12 @@ namespace DarkwoodMP.World
                 slots = Traverse.Create(o).Field("locationPositions")
                     .GetValue<System.Collections.Generic.List<Vector3>>();
             }
+
             if (slots == null || d.dreamLocation == null)
             {
                 return;
             }
+
             var at = d.dreamLocation.transform.position;
             for (int i = 0; i < slots.Count; i++)
             {
@@ -203,6 +214,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (i == state.actualSpawnedLocationsCount - 1)
                 {
                     state.actualSpawnedLocationsCount = i;
@@ -214,6 +226,7 @@ namespace DarkwoodMP.World
                             + $"{state.actualSpawnedLocationsCount}: a joiner "
                             + "makes it in another");
                 }
+
                 break;
             }
         }
@@ -229,17 +242,20 @@ namespace DarkwoodMP.World
                 _firstPlaySet = false;
                 return;
             }
+
             var d = D;
             string stage = null;
             if (InStage)
             {
                 stage = Stage;
             }
+
             // Every game in a stage dreams it together with the others.
             if (stage != null && DreamSync.Shared != stage)
             {
                 DreamSync.SharePrologue(stage);
             }
+
             // A joiner's player is a first play too, as the host's is, until
             // the prologue's end clears it (Dreams.endDreaming). Set once the
             // load has finished: it changes how the game ends a load.
@@ -256,6 +272,7 @@ namespace DarkwoodMP.World
                 {
                     _loadedAt = Time.unscaledTime;
                 }
+
                 if (Core.forbidInputs && Time.unscaledTime - _loadedAt > 4f
                     && DreamSync.InputsHeldByNothing(d))
                 {
@@ -269,6 +286,7 @@ namespace DarkwoodMP.World
             {
                 _loadedAt = -1f;
             }
+
             // Why a joiner in a stage isn't ready yet, every 10 seconds, for
             // the log.
             if (stage != null && NetEnemies.ClientMode
@@ -282,17 +300,20 @@ namespace DarkwoodMP.World
                 {
                     location = o.currentLocationName;
                 }
+
                 WorldGenerator wg = Singleton<WorldGenerator>.Instance;
                 bool? finished = null;
                 if (wg != null)
                 {
                     finished = wg.finished;
                 }
+
                 bool? firstPlay = null;
                 if (p != null)
                 {
                     firstPlay = p.firstPlay;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[prologue] in {stage}, not ready: generated "
                         + $"{Core.worldGenFinished()}, loading "
@@ -313,6 +334,7 @@ namespace DarkwoodMP.World
                         + $"generator finished {finished}, first play "
                         + $"{firstPlay}");
             }
+
             if (stage != null && NetEnemies.ClientMode && !_firstPlaySet
                 && WorldShare.WorldReady && p != null)
             {
@@ -322,6 +344,7 @@ namespace DarkwoodMP.World
                         + $"play (was {p.firstPlay})");
                 p.firstPlay = true;
             }
+
             if (stage == null && !Active)
             {
                 _firstPlaySet = false;
@@ -338,12 +361,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 "[prologue] the prologue is over: awake at the hideout");
             if (!NetEnemies.ClientMode)
             {
                 return;
             }
+
             var p = Player.Instance;
             var gen = Singleton<WorldGenerator>.Instance;
             GameObject spawn = null;
@@ -359,6 +384,7 @@ namespace DarkwoodMP.World
                     spawn = null;
                 }
             }
+
             if (p != null && spawn != null)
             {
                 Characters.PlaceFree(p, spawn.transform.position);

@@ -29,6 +29,7 @@ namespace DarkwoodMP
                     RedirectStandardOutput = true,
                     RedirectStandardError = true
                 };
+
                 psi.EnvironmentVariables["YDOTOOL_SOCKET"] =
                     "/tmp/.ydotool_socket";
                 using (var p = Process.Start(psi))
@@ -65,8 +66,10 @@ namespace DarkwoodMP
                     {
                         done(true);
                     }
+
                     yield break;
                 }
+
                 // Accelerated moves overshoot the long way: go half of it, then
                 // the rest in small steps.
                 float k = 1f;
@@ -74,6 +77,7 @@ namespace DarkwoodMP
                 {
                     k = 0.5f;
                 }
+
                 int dx = Mathf.RoundToInt(d.x * k),
                     dy = Mathf.RoundToInt(d.y * k);
                 if (dx == 0 && dy == 0)
@@ -81,6 +85,7 @@ namespace DarkwoodMP
                     dx = (int)Mathf.Sign(d.x);
                     dy = (int)Mathf.Sign(d.y);
                 }
+
                 Run($"mousemove -x {dx} -y {dy}");
                 yield return new WaitForSecondsRealtime(0.12f);
                 if (i < 3 || i % 10 == 9)
@@ -89,6 +94,7 @@ namespace DarkwoodMP
                         $"[mouse] to {target}: moved {dx} {dy}, now at {Now}");
                 }
             }
+
             var left = target - Now;
             Plugin.Log.LogInfo(
                 $"[mouse] couldn't reach {target}: at {Now} "

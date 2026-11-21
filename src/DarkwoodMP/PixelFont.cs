@@ -41,6 +41,7 @@ namespace DarkwoodMP
                 {
                     return 2;
                 }
+
                 return 1;
             }
         }
@@ -61,16 +62,19 @@ namespace DarkwoodMP
                     {
                         continue;
                     }
+
                     var d = f.inst;
                     Texture tex = null;
                     if (d != null && d.material != null)
                     {
                         tex = d.material.mainTexture;
                     }
+
                     if (tex == null)
                     {
                         continue;
                     }
+
                     var face = new Face
                     {
                         Data = d,
@@ -79,24 +83,28 @@ namespace DarkwoodMP
                         CapTop = 0f,
                         CapHeight = 8f
                     };
+
                     var h = Glyph(face, 'H');
                     if (h != null && h.p0.y > h.p1.y)
                     {
                         face.CapTop = h.p0.y;
                         face.CapHeight = h.p0.y - h.p1.y;
                     }
+
                     if (_body == null
                         && f.name.StartsWith("tahoma_11px_light_AA")
                         && !f.name.Contains("occluded"))
                     {
                         _body = face;
                     }
+
                     if (_title == null
                         && f.name.StartsWith("tahoma_11px_bevel_white"))
                     {
                         _title = face;
                     }
                 }
+
                 if (_body != null && _title != null)
                 {
                     Plugin.Log.LogInfo(
@@ -105,6 +113,7 @@ namespace DarkwoodMP
                             + $"{_body.CapTop}/{_body.CapHeight}");
                 }
             }
+
             if (kind == Kind.Title)
             {
                 Face title = _title;
@@ -112,13 +121,16 @@ namespace DarkwoodMP
                 {
                     title = _body;
                 }
+
                 return title;
             }
+
             Face body = _body;
             if (body == null)
             {
                 body = _title;
             }
+
             return body;
         }
 
@@ -131,16 +143,20 @@ namespace DarkwoodMP
                 {
                     d.InitDictionary();
                 }
+
                 if (d.charDict != null && d.charDict.TryGetValue(c, out var g))
                 {
                     return g;
                 }
+
                 return null;
             }
+
             if (d.chars != null && c < d.chars.Length)
             {
                 return d.chars[c];
             }
+
             return null;
         }
 
@@ -150,12 +166,14 @@ namespace DarkwoodMP
             {
                 return false;
             }
+
             foreach (char c in s)
             {
                 if (c == ' ')
                 {
                     continue;
                 }
+
                 var g = Glyph(f, c);
                 if (g == null || g.flipped
                     || (g.advance <= 0f && g.p1.x <= g.p0.x))
@@ -163,6 +181,7 @@ namespace DarkwoodMP
                     return false;
                 }
             }
+
             return true;
         }
 
@@ -178,6 +197,7 @@ namespace DarkwoodMP
                     clipping = TextClipping.Clip
                 };
             }
+
             _fallback.font = MenuSkin.FieldFont;
             _fallback.fontSize = 11 * scale;
             return _fallback;
@@ -200,6 +220,7 @@ namespace DarkwoodMP
             {
                 return 0f;
             }
+
             int sc;
             if (scale > 0)
             {
@@ -209,11 +230,13 @@ namespace DarkwoodMP
             {
                 sc = Scale;
             }
+
             var f = Get(kind);
             if (!CanDraw(f, s))
             {
                 return Fallback(sc).CalcSize(new GUIContent(s)).x;
             }
+
             float w = 0f;
             foreach (char c in s)
             {
@@ -227,6 +250,7 @@ namespace DarkwoodMP
                     w += 3f;
                 }
             }
+
             return w * sc;
         }
 
@@ -244,6 +268,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             int sc;
             if (scale > 0)
             {
@@ -253,6 +278,7 @@ namespace DarkwoodMP
             {
                 sc = Scale;
             }
+
             float lineH = LineAt(sc);
             float w = Width(s, kind, sc);
             float x = r.x;
@@ -268,6 +294,7 @@ namespace DarkwoodMP
             {
                 x = r.xMax - w;
             }
+
             float top = Mathf.Round(r.y + (r.height - lineH) / 2f);
             x = Mathf.Round(x);
             var f = Get(kind);
@@ -281,6 +308,7 @@ namespace DarkwoodMP
                 GUI.color = old;
                 return;
             }
+
             // tk2d gives each letter's corners from the pen (y up). A capital
             // letter is put in the middle of the line, a pixel high, so
             // descenders (g, p, y) still fit under it.
@@ -294,6 +322,7 @@ namespace DarkwoodMP
                     x += 3 * sc;
                     continue;
                 }
+
                 float gw = (g.p1.x - g.p0.x) * sc, gh = (g.p0.y - g.p1.y) * sc;
                 if (gw > 0f && gh > 0f)
                 {
@@ -309,8 +338,10 @@ namespace DarkwoodMP
                             true);
                     }
                 }
+
                 x += g.advance * sc;
             }
+
             GUI.color = old;
         }
 
@@ -321,6 +352,7 @@ namespace DarkwoodMP
             {
                 return s;
             }
+
             for (int n = s.Length - 1; n > 0; n--)
             {
                 string t = s.Substring(0, n).TrimEnd() + "...";
@@ -329,6 +361,7 @@ namespace DarkwoodMP
                     return t;
                 }
             }
+
             return "";
         }
 
@@ -345,6 +378,7 @@ namespace DarkwoodMP
             {
                 content = "";
             }
+
             foreach (var para in content.Split('\n'))
             {
                 string line = "";
@@ -359,6 +393,7 @@ namespace DarkwoodMP
                     {
                         tryLine = line + " " + word;
                     }
+
                     if (line.Length > 0 && Width(tryLine, kind) > width)
                     {
                         lines.Add(line);
@@ -369,8 +404,10 @@ namespace DarkwoodMP
                         line = tryLine;
                     }
                 }
+
                 lines.Add(line);
             }
+
             return lines;
         }
     }

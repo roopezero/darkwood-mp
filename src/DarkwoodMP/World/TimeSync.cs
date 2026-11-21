@@ -58,6 +58,7 @@ namespace DarkwoodMP.World
                 {
                     minute = ctl.CurrentTime;
                 }
+
                 w.W.Write((ushort)minute);
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
@@ -69,6 +70,7 @@ namespace DarkwoodMP.World
                     // the game turns it back on at times; keep it off
                     ctl.DoUpdateTime = false;
                 }
+
                 _clockStopped = true;
             }
             else if (_clockStopped)
@@ -87,6 +89,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int day = (int)r.R.ReadUInt32();
             int time = r.R.ReadUInt16();
             var ctl = Singleton<Controller>.Instance;
@@ -94,6 +97,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var dreams = Singleton<Dreams>.Instance;
             if (dreams != null && (dreams.dreaming || dreams.switchingDream))
             {
@@ -105,9 +109,11 @@ namespace DarkwoodMP.World
                         $"[world] dreaming: the clock waits (host at day {day} "
                             + $"{time}, world time kept {dreams.timeCopy:0})");
                 }
+
                 _dreamLogged = true;
                 return;
             }
+
             _dreamLogged = false;
 
             // Minutes the client is behind, round the clock. (Darkwood counts a
@@ -119,6 +125,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (behind <= MaxStepsPerUpdate && Mathf.Abs(day - ctl.day) <= 1)
             {
                 for (int i = 0; i < behind; i++)
@@ -127,18 +134,22 @@ namespace DarkwoodMP.World
                     // wraps at 1440; at dawn startDay() counts the new day
                     ctl.refreshTime();
                 }
+
                 if (ctl.day != day)
                 {
                     ctl.setDay(day);
                 }
+
                 if (WorldActions.Debug && behind > 1)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] clock stepped {behind} minutes to day "
                             + $"{ctl.day} {ctl.CurrentTime}");
                 }
+
                 return;
             }
+
             // Far off (joining late, the host slept): go straight there.
             ctl.setDay(day);
             ctl.CurrentTime = time;

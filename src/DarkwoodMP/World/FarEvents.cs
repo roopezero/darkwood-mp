@@ -49,6 +49,7 @@ namespace DarkwoodMP.World
             public ScriptedEvents.Part Part;
             public Vector3 Pos;
         }
+
         public static readonly List<Entry> Log = new List<Entry>();
         /// <summary>
         /// For the map test: Location.enter and leave calls (the location
@@ -76,6 +77,7 @@ namespace DarkwoodMP.World
             {
                 list.RemoveRange(0, 1000);
             }
+
             list.Add(new Entry
             {
                 At = Time.realtimeSinceStartup,
@@ -97,12 +99,14 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             SharedCullingPatch.Distances(out int dx, out int dy);
             float m = 0f;
             if (was)
             {
                 m = 600f;
             }
+
             var a = p.transform.position;
             var b = l.transform.position;
             return Mathf.Abs(a.x - b.x) <= dx + m
@@ -120,6 +124,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             // theirs isn't known here: about ours
             SharedCullingPatch.Distances(out int dx, out int dy);
             var b = l.transform.position;
@@ -130,12 +135,14 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var a = r.Root.transform.position;
                 if (Mathf.Abs(a.x - b.x) <= dx && Mathf.Abs(a.z - b.z) <= dy)
                 {
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -151,10 +158,12 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (S.IsClient)
             {
                 return ScriptedEvents.Part.PlayerAndShared;
             }
+
             bool hostIn;
             if (enter)
             {
@@ -168,12 +177,15 @@ namespace DarkwoodMP.World
                 {
                     hostIn = true;
                 }
+
                 HostIn.Remove(l);
             }
+
             if (hostIn)
             {
                 return (ScriptedEvents.Part?)null;
             }
+
             return ScriptedEvents.Part.HostAndShared;
         }
 
@@ -197,11 +209,13 @@ namespace DarkwoodMP.World
                 {
                     ran = ScriptedEvents.Part.All;
                 }
+
                 string kind = "exit";
                 if (enter)
                 {
                     kind = "enter";
                 }
+
                 Note(Log, l, kind, ran);
                 if (Debug)
                 {
@@ -210,15 +224,18 @@ namespace DarkwoodMP.World
                     {
                         text = "entered: its enter";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[farevents] {l.name} {text} events run as "
                             + $"{ran}{more}");
                 }
             }
+
             if (part == null)
             {
                 return false;
             }
+
             ScriptedEvents.Current = part.Value;
             return true;
         }
@@ -243,43 +260,51 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var d = Singleton<Dreams>.Instance;
             if (d != null && (d.dreaming || d.wantToDream))
             {
                 return;
             }
+
             if (_all == null || Time.realtimeSinceStartup - _allAt > 10f)
             {
                 _all = Object.FindObjectsOfType<Location>(true)
                     .Where(WorldLocation).ToArray();
                 _allAt = Time.realtimeSinceStartup;
             }
+
             foreach (var l in _all)
             {
                 if (l == null)
                 {
                     continue;
                 }
+
                 if (!l.entered)
                 {
                     HostIn.Remove(l);
                     continue;
                 }
+
                 if (!l.finishedLoading || l.activatingOverTime)
                 {
                     continue; // its enter events haven't run yet
                 }
+
                 bool was;
                 if (!HostIn.TryGetValue(l, out was))
                 {
                     HostIn[l] = HostNear(l, false);
                     continue;
                 }
+
                 bool now = HostNear(l, was);
                 if (now == was)
                 {
                     continue;
                 }
+
                 HostIn[l] = now;
                 global::EventTrigger.Type type;
                 if (now)
@@ -290,11 +315,13 @@ namespace DarkwoodMP.World
                 {
                     type = global::EventTrigger.Type.onExitLocation;
                 }
+
                 string kind = "exit";
                 if (now)
                 {
                     kind = "enter";
                 }
+
                 Note(Log, l, kind, ScriptedEvents.Part.PlayerOnly);
                 if (Debug)
                 {
@@ -303,16 +330,19 @@ namespace DarkwoodMP.World
                     {
                         text = "came into";
                     }
+
                     string which = "exit";
                     if (now)
                     {
                         which = "enter";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[farevents] our player {text} {l.name}, kept entered "
                             + $"for the others: its {which} events, our "
                             + "player's part only");
                 }
+
                 ScriptedEvents.RunAs(ScriptedEvents.Part.PlayerOnly,
                     replaying: false, () =>
                 {
@@ -354,6 +384,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             __state.Item1 = FarEvents.Begin(
                 __instance, enter: true,
                 FarEvents.PartFor(__instance, enter: true));
@@ -366,6 +397,7 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.Current = __state.Item2;
             }
+
             return __exception;
         }
     }
@@ -388,6 +420,7 @@ namespace DarkwoodMP.World
                     "; its trader, porter and wolf stay (another player is by "
                         + "it)";
             }
+
             __state.Item1 = FarEvents.Begin(__instance, enter: false, part,
                 more);
         }
@@ -399,6 +432,7 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.Current = __state.Item2;
             }
+
             KeepCharacters = __state.Item3;
             return __exception;
         }

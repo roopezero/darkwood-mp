@@ -47,6 +47,7 @@ namespace DarkwoodMP.Sync
                 {
                     radius = _radius;
                 }
+
                 return 2f * radius;
             }
         }
@@ -59,20 +60,24 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             if (!World.WorldShare.InWorld || sync.Remotes.Count == 0)
             {
                 return;
             }
+
             var p = Player.Instance;
             if (p == null || !p.alive || p.dying || Core.forbidInputs)
             {
                 return;
             }
+
             var rb = p.GetComponent<Rigidbody>();
             if (rb == null || rb.isKinematic)
             {
                 return;
             }
+
             if (_measured != p)
             {
                 Measure(p);
@@ -88,6 +93,7 @@ namespace DarkwoodMP.Sync
                 {
                     continue;
                 }
+
                 var other = r.Root.transform.position;
                 var d = new Vector3(me.x - other.x, 0f, me.z - other.z);
                 float dist = d.magnitude;
@@ -95,6 +101,7 @@ namespace DarkwoodMP.Sync
                 {
                     continue;
                 }
+
                 // Right on top of each other: each game goes its own way, by
                 // who has the lower id.
                 Vector3 away;
@@ -110,12 +117,15 @@ namespace DarkwoodMP.Sync
                 {
                     away = Vector3.left;
                 }
+
                 push += away * ((min - dist) / min);
             }
+
             if (push == Vector3.zero)
             {
                 return;
             }
+
             float frac = Mathf.Min(1f, push.magnitude);
             var step = push.normalized * (MaxSpeed * frac * Mathf.Min(
                 Time.deltaTime, 0.05f));
@@ -136,10 +146,12 @@ namespace DarkwoodMP.Sync
                         Mathf.Max(c.bounds.extents.x, c.bounds.extents.z));
                 }
             }
+
             if (_radius <= 1f || _radius > 60f)
             {
                 _radius = DefaultRadius;
             }
+
             Plugin.Log.LogInfo(
                 "Soft player collision: players are eased apart within "
                     + $"{Distance:0} units");

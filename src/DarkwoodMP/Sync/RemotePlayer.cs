@@ -31,6 +31,7 @@ namespace DarkwoodMP.Sync
                 {
                     return _last;
                 }
+
                 return null;
             }
         }
@@ -69,6 +70,7 @@ namespace DarkwoodMP.Sync
                     handler(this);
                 }
             }
+
             // A first position, or a jump further than anyone walks between two
             // updates (placed on joining, a teleport), is shown at once rather
             // than slid across, through whoever stands between.
@@ -86,6 +88,7 @@ namespace DarkwoodMP.Sync
             {
                 _hasPrev = false;
             }
+
             _last.CopyFrom(snap);
             _last.Time = Time.time;
             _hasLast = true;
@@ -122,9 +125,11 @@ namespace DarkwoodMP.Sync
                 {
                     return _heldLight.GetComponent<Light2D>();
                 }
+
                 return null;
             }
         }
+
         private bool _flamesLogged;
 
         private void ApplyLights()
@@ -133,6 +138,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             string want = "";
             if (_last.Alive && !_last.Spectating)
             {
@@ -142,6 +148,7 @@ namespace DarkwoodMP.Sync
                     want = "";
                 }
             }
+
             if (want != _heldShown || (want != "" && _heldLight == null))
             {
                 RemoveHeld();
@@ -157,6 +164,7 @@ namespace DarkwoodMP.Sync
                         {
                             item = instance.getItem(want, instantiate: false);
                         }
+
                         if (item != null && item.lightEmitter != null)
                         {
                             // As the game does for its own player
@@ -171,6 +179,7 @@ namespace DarkwoodMP.Sync
                                     Quaternion.Euler(90f, 0f, 0f),
                                     Root).transform;
                             }
+
                             NotSolid(_heldLight);
                             NotSolid(_heldFlames);
                         }
@@ -182,6 +191,7 @@ namespace DarkwoodMP.Sync
                     }
                 }
             }
+
             // The flames go where their game put them: on the torch in hand,
             // which moves with each animation frame and facing
             // (Player.ProcessAnims). The light itself stays at the player's
@@ -198,6 +208,7 @@ namespace DarkwoodMP.Sync
                             + "(on the item in hand)");
                 }
             }
+
             bool beam = _last.Flashlight && _last.Alive && !_last.Spectating;
             if (beam && _beam == null)
             {
@@ -206,6 +217,7 @@ namespace DarkwoodMP.Sync
                 {
                     own = Player.Instance.transform.Find("Flashlight");
                 }
+
                 if (own != null)
                 {
                     _beam =
@@ -213,10 +225,12 @@ namespace DarkwoodMP.Sync
                     NotSolid(_beam.transform);
                 }
             }
+
             if (_beam != null && _beam.activeSelf != beam)
             {
                 _beam.SetActive(beam);
             }
+
             // The copy keeps the radius and colour our own beam had when it was
             // copied (the prefab's, if we never used one); their game sets them
             // each frame from where their mouse is (Player.processFlashlight).
@@ -225,12 +239,14 @@ namespace DarkwoodMP.Sync
             {
                 beamLight = _beam.GetComponent<Light2D>();
             }
+
             if (beamLight != null && _last.BeamRadius > 0f)
             {
                 if (beamLight.LightRadius != _last.BeamRadius)
                 {
                     beamLight.LightRadius = _last.BeamRadius;
                 }
+
                 var c = new Color(
                     _last.BeamBright, _last.BeamBright, _last.BeamBright, 0f);
                 if (beamLight.LightColor != c)
@@ -238,6 +254,7 @@ namespace DarkwoodMP.Sync
                     beamLight.LightColor = c;
                 }
             }
+
             ApplyLantern();
         }
 
@@ -260,6 +277,7 @@ namespace DarkwoodMP.Sync
                 {
                     return _lantern.LightRadius;
                 }
+
                 return 0f;
             }
         }
@@ -271,11 +289,13 @@ namespace DarkwoodMP.Sync
             {
                 want = _last.Lantern;
             }
+
             if (want <= 0f)
             {
                 RemoveLantern();
                 return;
             }
+
             var ctl = Singleton<Controller>.Instance;
             if (_lantern == null)
             {
@@ -284,10 +304,12 @@ namespace DarkwoodMP.Sync
                 {
                     own = Player.Instance.lightDot;
                 }
+
                 if (own == null || ctl == null)
                 {
                     return;
                 }
+
                 var go = CopyLight(
                     own.gameObject, Root.transform, "PuppetLanternDot");
                 go.SetActive(true);
@@ -298,14 +320,17 @@ namespace DarkwoodMP.Sync
                     Object.Destroy(go);
                     return;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[fx] {Name}'s lantern: a light of radius {want:0} on "
                         + "their puppet");
             }
+
             if (_lantern.LightRadius != want)
             {
                 _lantern.LightRadius = want;
             }
+
             _lantern.lightsPlayer = true;
             _lantern.updateGraph = true;
             if (ctl != null && !ctl.logicLights.Contains(_lantern))
@@ -320,6 +345,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             Unlight(_lantern);
             Object.Destroy(_lantern.gameObject);
             _lantern = null;
@@ -334,12 +360,15 @@ namespace DarkwoodMP.Sync
                 {
                     Unlight(light);
                 }
+
                 Object.Destroy(_heldLight.gameObject);
             }
+
             if (_heldFlames != null)
             {
                 Object.Destroy(_heldFlames.gameObject);
             }
+
             _heldLight = _heldFlames = null;
             _heldShown = "";
         }
@@ -370,10 +399,12 @@ namespace DarkwoodMP.Sync
             {
                 l._mesh = null;
             }
+
             foreach (var f in go.GetComponentsInChildren<MeshFilter>(true))
             {
                 f.sharedMesh = null;
             }
+
             go.transform.SetParent(parent, false);
             Object.Destroy(holder);
             return go;
@@ -408,6 +439,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             foreach (var c in t.GetComponentsInChildren<Collider>(true))
             {
                 if (c != null && !c.isTrigger)
@@ -423,6 +455,7 @@ namespace DarkwoodMP.Sync
             {
                 return; // Unity null: also true after scene unload destroyed it
             }
+
             Root = new GameObject($"DarkwoodMP_Remote_{Owner}");
             _parts.Clear();
         }
@@ -440,6 +473,7 @@ namespace DarkwoodMP.Sync
                 {
                     continue;
                 }
+
                 if (!_parts.TryGetValue(s.PathHash, out var spr) || spr == null)
                 {
                     var go = new GameObject($"part_{s.PathHash:X8}");
@@ -449,20 +483,24 @@ namespace DarkwoodMP.Sync
                     _parts[s.PathHash] = spr;
                     NotSolid(spr.transform);
                 }
+
                 var t = spr.transform;
                 if (!spr.gameObject.activeSelf)
                 {
                     spr.gameObject.SetActive(true);
                 }
+
                 if (spr.gameObject.layer != s.Layer)
                 {
                     spr.gameObject.layer = s.Layer;
                 }
+
                 if (spr.Collection != coll || spr.spriteId != s.SpriteId)
                 {
                     spr.SetSprite(coll, s.SpriteId);
                     NotSolid(spr.transform);
                 }
+
                 t.localPosition = s.Pos;
                 t.localRotation = s.Rot;
                 t.localScale = s.Scale;
@@ -470,6 +508,7 @@ namespace DarkwoodMP.Sync
                 {
                     spr.scale = s.SpriteScale;
                 }
+
                 spr.color = s.Color;
                 var mr = spr.GetComponent<Renderer>();
                 if (mr != null)
@@ -477,6 +516,7 @@ namespace DarkwoodMP.Sync
                     mr.sortingOrder = s.SortingOrder;
                 }
             }
+
             foreach (var kv in _parts)
             {
                 if (kv.Value != null && !_seen.Contains(kv.Key)
@@ -494,6 +534,7 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             EnsureRoot();
             Vector3 pos;
             Quaternion rot;
@@ -511,6 +552,7 @@ namespace DarkwoodMP.Sync
                 pos = _last.Position;
                 rot = _last.Rotation;
             }
+
             Root.transform.SetPositionAndRotation(pos, rot);
             // A spectator isn't seen, nor a player somewhere else: in a
             // separate location or a dream while we aren't in the same location
@@ -553,6 +595,7 @@ namespace DarkwoodMP.Sync
                         $"[fx] no flames \"{flames}\" here: {e.Message}");
                 }
             }
+
             if (sound != "")
             {
                 _fireSound = AudioController.Play(sound, Root.transform);
@@ -565,10 +608,12 @@ namespace DarkwoodMP.Sync
             {
                 Core.stopAllParticlesInChildren(_flames, includeInactive: true);
             }
+
             if (_fireSound != null)
             {
                 _fireSound.Stop();
             }
+
             _fireSound = null;
         }
 
@@ -581,6 +626,7 @@ namespace DarkwoodMP.Sync
             {
                 _flames.SetParent(null, true);
             }
+
             _flames = null;
             RemoveHeld();
             RemoveLantern();
@@ -588,6 +634,7 @@ namespace DarkwoodMP.Sync
             {
                 Object.Destroy(Root);
             }
+
             Root = null;
             _parts.Clear();
         }
@@ -618,6 +665,7 @@ namespace DarkwoodMP.Sync
             {
                 return c;
             }
+
             var lib =
                 Resources.Load(library, typeof(tk2dSpriteAnimation))
                     as tk2dSpriteAnimation;
@@ -632,11 +680,13 @@ namespace DarkwoodMP.Sync
             {
                 data = $"No animation library {library} here";
             }
+
             Plugin.Log.LogInfo(data);
             if (lib == null)
             {
                 return null;
             }
+
             Keep.Add(lib); // held, so its sprites stay loaded while it's in use
             _lastRescan = -999f;
             return Get(hash);
@@ -650,6 +700,7 @@ namespace DarkwoodMP.Sync
             {
                 return c;
             }
+
             // Collections load with scenes; rescan at most twice a second on a
             // miss.
             if (Time.unscaledTime - _lastRescan > 0.5f)
@@ -663,6 +714,7 @@ namespace DarkwoodMP.Sync
                     {
                         continue;
                     }
+
                     // A collection prefab may have a platform-specific inst;
                     // prefer the inst.
                     tk2dSpriteCollectionData inst;
@@ -674,13 +726,16 @@ namespace DarkwoodMP.Sync
                     {
                         inst = col;
                     }
+
                     _byHash[StableHash.Of(col.spriteCollectionName)] = inst;
                 }
+
                 if (_byHash.TryGetValue(hash, out c))
                 {
                     return c;
                 }
             }
+
             return null;
         }
     }

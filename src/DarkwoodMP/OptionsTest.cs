@@ -44,11 +44,13 @@ namespace DarkwoodMP
             {
                 _fails++;
             }
+
             string text = "FAIL";
             if (ok)
             {
                 text = "PASS";
             }
+
             Log($"{text} {what}");
         }
 
@@ -61,6 +63,7 @@ namespace DarkwoodMP
             {
                 where = "pause";
             }
+
             if (!File.Exists(PrefsPath))
             {
                 Log(
@@ -69,12 +72,14 @@ namespace DarkwoodMP
                 Log("done");
                 yield break;
             }
+
             if (!inWorld)
             {
                 while (!WorldShare.MainMenuReady())
                 {
                     yield return null;
                 }
+
                 yield return new WaitForSecondsRealtime(3f);
             }
             else
@@ -83,10 +88,12 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 yield return new WaitForSecondsRealtime(4f);
                 Core.showHidePauseMenu();
                 yield return new WaitForSecondsRealtime(2f);
             }
+
             var before = ReadPrefs();
             string beforeText = File.ReadAllText(PrefsPath);
             File.WriteAllText(
@@ -126,6 +133,7 @@ namespace DarkwoodMP
             {
                 m1 = m0 + 0.3f;
             }
+
             OptionsWindow.SetVolume(music: true, m1);
             bool pending = OptionsWindow.Pending;
             var slider = Singleton<MainMenu>.Instance.AudioMenu.musicSlider;
@@ -142,6 +150,7 @@ namespace DarkwoodMP
             {
                 onDisk = d;
             }
+
             Check(
                 pending && heard && applied
                     && Mathf.Abs(GameSettings.GetFloat("MusicVolume") - m1)
@@ -173,6 +182,7 @@ namespace DarkwoodMP
                     label = r.label;
                 }
             }
+
             if (label == null)
             {
                 foreach (var r in rows)
@@ -184,6 +194,7 @@ namespace DarkwoodMP
                     }
                 }
             }
+
             KeyCode free = KeyCode.None;
             foreach (var k in new[]
             {
@@ -201,6 +212,7 @@ namespace DarkwoodMP
                     break;
                 }
             }
+
             Log($"{rows.Count} keyboard rows; trying {label} with {free}");
             if (label != null && free != KeyCode.None)
             {
@@ -212,6 +224,7 @@ namespace DarkwoodMP
                 {
                     yield return null;
                 }
+
                 bool listened = OptionsWindow.TestMapperStatus == "Listening";
                 bool gameHeld =
                     Singleton<MainMenu>.Instance.ControlsMenu.assigningMapping;
@@ -225,6 +238,7 @@ namespace DarkwoodMP
                 {
                     mapper = "listening";
                 }
+
                 Check(ok,
                     $"click on {label}'s key listens (Rewired's mapper "
                         + $"{mapper}, the game's keys held {gameHeld}); Escape "
@@ -243,6 +257,7 @@ namespace DarkwoodMP
                         keyStored = true;
                     }
                 }
+
                 OptionsWindow.TestReloadControls();
                 KeyCode loaded = OptionsWindow.TestKeyOf(label);
                 Check(
@@ -281,6 +296,7 @@ namespace DarkwoodMP
                     yield return Shot(
                         P($"{t + 1}-{names[t].ToLowerInvariant()}"));
                 }
+
                 OptionsWindow.TestTab(0);
                 OptionsWindow.TestOpenDrop("res");
                 yield return Shot(P("video-resolution-list"));
@@ -295,6 +311,7 @@ namespace DarkwoodMP
                     yield return Shot(P("controls-listening"));
                     OptionsWindow.TestEscape();
                 }
+
                 OptionsWindow.TestTab(0);
                 OptionsWindow
                     .AskKeep("The screen is now "
@@ -303,6 +320,7 @@ namespace DarkwoodMP
                 }, () =>
                 {
                 });
+
                 yield return Shot(P("video-keep"));
                 ConfirmDialog.Cancel();
                 OptionsWindow.TestTab(1);
@@ -311,6 +329,7 @@ namespace DarkwoodMP
                 {
                     v = 0.3f;
                 }
+
                 OptionsWindow.SetVolume(music: false, v);
                 OptionsWindow.RequestClose();
                 yield return Shot(P("audio-apply-question"));
@@ -346,11 +365,13 @@ namespace DarkwoodMP
                     "the prefs file differs from before: "
                         + $"{string.Join("; ", diffs)}";
             }
+
             Check(diffs.Count == 0, what);
             if (inWorld)
             {
                 Core.showHidePauseMenu();
             }
+
             string text;
             if (_fails == 0)
             {
@@ -360,6 +381,7 @@ namespace DarkwoodMP
             {
                 text = _fails + " failed";
             }
+
             Log($"done: {text}");
         }
 
@@ -380,6 +402,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             _before = null;
             Log("cut short: putting the settings back");
             try
@@ -391,6 +414,7 @@ namespace DarkwoodMP
             {
                 Log($"couldn't put the screen size back: {e.Message}");
             }
+
             try
             {
                 RestorePrefs(before);
@@ -399,6 +423,7 @@ namespace DarkwoodMP
             {
                 Log($"couldn't put the prefs back: {e.Message}");
             }
+
             try
             {
                 OptionsWindow.Revert();
@@ -440,6 +465,7 @@ namespace DarkwoodMP
                 d[System.Net.WebUtility.HtmlDecode(m.Groups[1].Value)] =
                     (m.Groups[2].Value, m.Groups[3].Value);
             }
+
             return d;
         }
 
@@ -455,6 +481,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 try
                 {
                     switch (kv.Value.type)
@@ -480,6 +507,7 @@ namespace DarkwoodMP
                                     Convert.FromBase64String(kv.Value.value)));
                             break;
                     }
+
                     Log($"put back {Short(kv.Key)}");
                 }
                 catch (Exception e)
@@ -487,6 +515,7 @@ namespace DarkwoodMP
                     Log($"couldn't put back {Short(kv.Key)}: {e.Message}");
                 }
             }
+
             foreach (var kv in now)
             {
                 if (!Unity(kv.Key) && !before.ContainsKey(kv.Key))
@@ -495,6 +524,7 @@ namespace DarkwoodMP
                     Log($"deleted the test's {Short(kv.Key)}");
                 }
             }
+
             PlayerPrefs.Save();
         }
 
@@ -513,9 +543,11 @@ namespace DarkwoodMP
                     {
                         now = v.value;
                     }
+
                     diffs.Add($"{Short(kv.Key)} {kv.Value.value} -> {now}");
                 }
             }
+
             foreach (var kv in b)
             {
                 if (!Unity(kv.Key) && !a.ContainsKey(kv.Key))
@@ -523,6 +555,7 @@ namespace DarkwoodMP
                     diffs.Add($"{Short(kv.Key)} added");
                 }
             }
+
             return diffs;
         }
 
@@ -532,6 +565,7 @@ namespace DarkwoodMP
             {
                 return key.Substring(0, 70) + "...";
             }
+
             return key;
         }
     }

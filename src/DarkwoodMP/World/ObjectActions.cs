@@ -80,9 +80,11 @@ namespace DarkwoodMP.World
                 {
                     reason = "it's already gone";
                 }
+
                 Authority.Refuse(reason);
                 return false;
             }
+
             switch (a)
             {
                 case Action.VineHit:
@@ -93,21 +95,25 @@ namespace DarkwoodMP.World
                             Authority.Refuse("it isn't a vine");
                             return false;
                         }
+
                         if (!cp.attached || cp.health <= 0f)
                         {
                             Authority.Refuse("it's already cut");
                             return false;
                         }
+
                         if (x < 0f || x > VineDamageCap)
                         {
                             Authority.Refuse(
                                 $"a hit of {x:0} is more than any weapon does");
                             return false;
                         }
+
                         // a vine is long: its root may be far from the cut
                         return Authority.InReach(
                             t.position, WorldActions.ShotReach, t.name);
                     }
+
                 case Action.ShadowArmorDied:
                     Authority.Refuse("the host decides when a shadow dies");
                     return false;
@@ -119,11 +125,13 @@ namespace DarkwoodMP.World
                             Authority.Refuse("it isn't a switch");
                             return false;
                         }
+
                         if (!Authority.InReach(
                             t.position, WorldActions.Reach, t.name))
                         {
                             return false;
                         }
+
                         if (ii.isOn == on)
                         {
                             string already = "it's already off";
@@ -131,11 +139,14 @@ namespace DarkwoodMP.World
                             {
                                 already = "it's already on";
                             }
+
                             Authority.Refuse(already);
                             return false;
                         }
+
                         return true;
                     }
+
                 case Action.Removed:
                     if (t.GetComponent<Lure>() != null)
                     {
@@ -143,12 +154,14 @@ namespace DarkwoodMP.World
                             "lures are eaten by the host's animals");
                         return false;
                     }
+
                     if (t.GetComponent<JournalNoteReference>() == null
                         && t.GetComponent<DeathDrop>() == null)
                     {
                         Authority.Refuse("it can't be picked up");
                         return false;
                     }
+
                     return Authority.InReach(
                         t.position, WorldActions.Reach, t.name);
                 case Action.LiquidLit:
@@ -159,8 +172,10 @@ namespace DarkwoodMP.World
                             Authority.Refuse("it can't burn");
                             return false;
                         }
+
                         return Authority.InReach(t.position, 1500f, t.name);
                     }
+
                 case Action.FeederUsed:
                     {
                         var feeder = t.GetComponent<Feeder>();
@@ -169,20 +184,24 @@ namespace DarkwoodMP.World
                             Authority.Refuse("it isn't a feeder");
                             return false;
                         }
+
                         if (!Authority.InReach(
                             t.position, WorldActions.Reach, t.name))
                         {
                             return false;
                         }
+
                         if (!feeder.Active)
                         {
                             Authority.Refuse(
                                 "the feeder was already used today");
                             return false;
                         }
+
                         return true;
                     }
             }
+
             return false;
         }
 
@@ -200,12 +219,15 @@ namespace DarkwoodMP.World
                 {
                     name = t.name;
                 }
+
                 Plugin.Log.LogInfo($"[world] got {a} {obj}: " + name);
             }
+
             if (t == null)
             {
                 return;
             }
+
             switch (a)
             {
                 case Action.VineHit:
@@ -215,6 +237,7 @@ namespace DarkwoodMP.World
                         {
                             break;
                         }
+
                         var s = Session.Instance;
                         // The host's own hit says the health it left, so a copy
                         // that missed a hit comes back in step.
@@ -222,15 +245,18 @@ namespace DarkwoodMP.World
                         {
                             cp.health = y + x;
                         }
+
                         Vine vine = null;
                         if (cp.lastChainSegment != null)
                         {
                             vine = cp.lastChainSegment.GetComponent<Vine>();
                         }
+
                         if (vine == null)
                         {
                             vine = cp.GetComponentInChildren<Vine>();
                         }
+
                         if (vine != null)
                         {
                             cp.getHit(x, null, vine);
@@ -243,12 +269,15 @@ namespace DarkwoodMP.World
                                 cp.detach();
                             }
                         }
+
                         if (s != null && s.IsHost)
                         {
                             y = cp.health;
                         }
+
                         break;
                     }
+
                 case Action.ShadowArmorDied:
                     {
                         var sa = t.GetComponent<ShadowArmor>();
@@ -256,8 +285,10 @@ namespace DarkwoodMP.World
                         {
                             sa.die();
                         }
+
                         break;
                     }
+
                 case Action.InteractiveSwitch:
                     {
                         var ii = t.GetComponent<InteractiveItem>();
@@ -267,8 +298,10 @@ namespace DarkwoodMP.World
                             // not ours
                             ii.isOn = on;
                         }
+
                         break;
                     }
+
                 case Action.Removed:
                     if (t.GetComponent<Item>() != null
                         || t.GetComponent<Lure>() != null)
@@ -276,6 +309,7 @@ namespace DarkwoodMP.World
                         Containers.CloseIfOpen(t.gameObject);
                         Object.Destroy(t.gameObject);
                     }
+
                     break;
                 case Action.FeederUsed:
                     Feeder feeder = t.GetComponent<Feeder>();
@@ -283,6 +317,7 @@ namespace DarkwoodMP.World
                     {
                         feeder.makeInactive();
                     }
+
                     break;
                 case Action.LiquidLit:
                     {
@@ -291,6 +326,7 @@ namespace DarkwoodMP.World
                         {
                             liquid.startBurning();
                         }
+
                         break;
                     }
             }
@@ -306,11 +342,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var ii = ObjRef.Resolve<InteractiveItem>(obj);
             if (ii == null)
             {
                 return;
             }
+
             try
             {
                 EventTriggers trigger;
@@ -322,6 +360,7 @@ namespace DarkwoodMP.World
                 {
                     trigger = ii.offTrigger;
                 }
+
                 // Tested by reference, not with Unity's null check: the
                 // game's own switch fires its trigger with no check, and
                 // fireEventTrigger doesn't touch the native object, so the
@@ -376,12 +415,14 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 if (!ok)
                 {
                     Player.Instance.displayMessage(
                         Language.Get("Playermsg_feederInactive", "UI"));
                     return;
                 }
+
                 WorldActions.Replaying = true;
                 try
                 {
@@ -407,6 +448,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorldActions.Send(
                 Action.InteractiveSwitch, __instance.gameObject,
                 f1: __instance.isOn);
@@ -430,6 +472,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var note = __instance.GetComponent<JournalNoteReference>();
             if ((note != null && !note.dontDestroy)
                 || __instance.GetComponent<DeathDrop>() != null)
@@ -448,6 +491,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorldActions.Send(Action.Removed, __instance.gameObject);
         }
 
@@ -496,11 +540,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var s = Session.Instance;
             if (s == null || !s.IsHost || !WorldActions.Sharing)
             {
                 return;
             }
+
             WorldActions.Send(
                 Action.Removed, __instance.gameObject, byPlayerKnown: true);
         }
@@ -519,11 +565,13 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var r = ObjRef.Of(__instance.gameObject);
             if (!r.Valid || WorldActions.OursAlone(__instance.gameObject))
             {
                 return true;
             }
+
             ObjectActions.RequestFeeder(__instance, r);
             return false;
         }
@@ -535,6 +583,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorldActions.Send(
                 Action.FeederUsed, __instance.gameObject, byPlayerKnown: true);
         }
@@ -567,12 +616,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var s = Session.Instance;
             if (s.IsClient && !OwnSwing)
             {
                 // the host's copy of the throw or explosion lights it there
                 return;
             }
+
             WorldActions.Send(
                 Action.LiquidLit, __instance.gameObject, byPlayerKnown: true);
         }
@@ -598,29 +649,35 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (__instance.GetComponent<ThrownItem>() == null)
             {
                 return true; // only thrown items: those the host always has
             }
+
             string path = PathOf(__instance.spawnObject);
             if (path == null || !Containers.ThrownSpawns.Contains(path))
             {
                 return true;
             }
+
             if (s.IsClient)
             {
                 if (!NetEnemies.ClientMode)
                 {
                     return true;
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] {__instance.name} went off: its {path} comes "
                             + "from the host");
                 }
+
                 return false;
             }
+
             Containers.ThrownSpawning = path;
             return true;
         }
@@ -642,6 +699,7 @@ namespace DarkwoodMP.World
                     return path;
                 }
             }
+
             return null;
         }
     }
@@ -683,6 +741,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.health;
         }
+
         static void Postfix(
             ChainParent __instance, float damage, Transform attackerTransform,
             float __state)
@@ -692,10 +751,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!BreakSync.OurPlayers(attackerTransform))
             {
                 return;
             }
+
             WorldActions.Send(
                 Action.VineHit, ObjRef.Of(__instance.gameObject),
                 __instance.name, damage, __instance.health);
@@ -729,27 +790,33 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (Session.Instance.IsClient && !WorldActions.Replaying)
             {
                 return false; // the host's word
             }
+
             if (Session.Instance.IsHost)
             {
                 __state = ObjRef.Of(__instance.gameObject);
             }
+
             return true;
         }
+
         static void Postfix(ShadowArmor __instance, ObjRef __state)
         {
             if (!__state.Valid || !WorldActions.Sharing)
             {
                 return;
             }
+
             string armorName = "shadow";
             if (__instance != null)
             {
                 armorName = __instance.name;
             }
+
             WorldActions.Send(Action.ShadowArmorDied, __state, armorName);
         }
     }

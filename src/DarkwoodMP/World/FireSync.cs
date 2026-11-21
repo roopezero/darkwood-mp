@@ -54,22 +54,27 @@ namespace DarkwoodMP.World
             {
                 return What.None;
             }
+
             if (go.GetComponent<Character>() != null)
             {
                 return What.Enemy;
             }
+
             if (go.GetComponent<Door>() != null)
             {
                 return What.Door;
             }
+
             if (go.GetComponent<Window>() != null)
             {
                 return What.Window;
             }
+
             if (go.GetComponent<Item>() != null)
             {
                 return What.Item;
             }
+
             return What.None;
         }
 
@@ -83,16 +88,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var what = Kind(b.gameObject);
             if (what == What.None)
             {
                 return;
             }
+
             var r = ObjRef.Of(b.gameObject);
             if (!r.Valid)
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.Burning);
             r.Write(w);
             w.W.Write((byte)what);
@@ -102,6 +110,7 @@ namespace DarkwoodMP.World
             {
                 onFlag = 1;
             }
+
             w.W.Write((byte)onFlag);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
@@ -111,6 +120,7 @@ namespace DarkwoodMP.World
                 {
                     text = "caught fire";
                 }
+
                 Plugin.Log.LogInfo($"[world] {b.name} {text} ({r})");
             }
         }
@@ -127,30 +137,36 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             if (col.transform.GetComponent<CharBase>() != null
                 || (t != null && t.GetComponent<CharBase>() != null))
             {
                 return null;
             }
+
             var item = col.transform.GetComponent<Item>();
             if (item == null && t != null)
             {
                 item = t.GetComponent<Item>();
             }
+
             if (item != null && item.destructible)
             {
                 return item.gameObject;
             }
+
             var door = Door.getDoorScript(col.transform);
             if (door != null)
             {
                 return door.gameObject;
             }
+
             var window = col.GetComponent<Window>();
             if (window != null)
             {
                 return window.gameObject;
             }
+
             return null;
         }
 
@@ -165,16 +181,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var what = Kind(go);
             if (what == What.None || what == What.Enemy)
             {
                 return;
             }
+
             var r = ObjRef.Of(go);
             if (!r.Valid)
             {
                 return;
             }
+
             var burn = go.GetComponent<Burn>();
             var w = _session.Begin(MsgType.Burning);
             r.Write(w);
@@ -184,6 +203,7 @@ namespace DarkwoodMP.World
             {
                 seconds = burn.burnTime;
             }
+
             w.W.Write(seconds);
             w.W.Write((byte)1);
             Authority.Request(w, $"set {go.name} alight",
@@ -193,11 +213,13 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 var b = go.GetComponent<Burn>();
                 if (b == null)
                 {
                     return;
                 }
+
                 WorldActions.Replaying = true;
                 try
                 {
@@ -219,11 +241,13 @@ namespace DarkwoodMP.World
             {
                 return; // only as a request
             }
+
             if (!on)
             {
                 Authority.Refuse("players only light things");
                 return;
             }
+
             Component c;
             if (what == What.Enemy)
             {
@@ -233,29 +257,35 @@ namespace DarkwoodMP.World
             {
                 c = Resolve(obj, what);
             }
+
             if (c == null)
             {
                 Authority.Refuse("there's no such thing here to burn");
                 return;
             }
+
             if (!Authority.InReach(c.transform.position, FlameReach, c.name))
             {
                 return;
             }
+
             if (c is Item item && (!item.destructible || item.destroyed))
             {
                 Authority.Refuse($"{c.name} can't burn");
                 return;
             }
+
             if (c is Door door && door.destroyed)
             {
                 Authority.Refuse($"{c.name} is broken");
                 return;
             }
+
             if (c.GetComponent<Burn>() != null)
             {
                 return; // burning already: nothing to do
             }
+
             c.gameObject.AddComponent<Burn>().burnTime =
                 Mathf.Clamp(time, 1f, 20f);
             if (WorldActions.Debug)
@@ -296,6 +326,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             var what = (What)r.R.ReadByte();
             float time = r.R.ReadSingle();
@@ -305,14 +336,17 @@ namespace DarkwoodMP.World
                 OnClientIgnited(obj, what, time, on);
                 return;
             }
+
             if (!s.IsClient || from != s.HostId)
             {
                 return;
             }
+
             if (what == What.None || (int)what > 4)
             {
                 return;
             }
+
             Component c = Resolve(obj, what);
             if (WorldActions.Debug)
             {
@@ -321,18 +355,22 @@ namespace DarkwoodMP.World
                 {
                     state = "on";
                 }
+
                 string line = $"[world] got Burning {obj} {state}: ";
                 string name = "not found here";
                 if (c != null)
                 {
                     name = c.name;
                 }
+
                 Plugin.Log.LogInfo(line + name);
             }
+
             if (c == null)
             {
                 return;
             }
+
             var burn = c.GetComponent<Burn>();
             WorldActions.Replaying = true;
             try
@@ -392,6 +430,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = Nothing();
             return false;
         }

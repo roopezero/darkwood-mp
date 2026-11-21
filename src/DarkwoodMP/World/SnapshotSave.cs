@@ -46,6 +46,7 @@ namespace DarkwoodMP.World
             {
                 File.Delete(file);
             }
+
             sm.assignUniqueIds(sm.dynamicObjects);
 
             var d = new SaveManager.DynamicSave
@@ -73,6 +74,7 @@ namespace DarkwoodMP.World
                 chspS = new CharacterSpawner.SaveState(
                     Singleton<CharacterSpawner>.Instance),
             };
+
             var wg = Singleton<WorldGenerator>.Instance;
             if (wg != null)
             {
@@ -80,6 +82,7 @@ namespace DarkwoodMP.World
                 d.gridS = new WorldGrid.SaveState(wg);
                 d.bbdS = new WorldGenerator.BigBiomeDynamicStates(wg);
             }
+
             d.mapS = new Map.SaveState(Singleton<Map>.Instance);
             d.nightScenS = new NightScenarios.SaveState(
                 Singleton<NightScenarios>.Instance);
@@ -107,6 +110,7 @@ namespace DarkwoodMP.World
             {
                 formatting = Formatting.None;
             }
+
             return Task.Run(() => Write(d, file, formatting));
         }
 
@@ -135,6 +139,7 @@ namespace DarkwoodMP.World
                 ("gridS", d.gridS), ("bbdS", d.bbdS), ("mapS", d.mapS),
                 ("nightScenS", d.nightScenS), ("chDC", d.chDC),
             };
+
             // a failed write never leaves a sav.dat that looks whole
             string part = file + ".part";
             try
@@ -150,16 +155,19 @@ namespace DarkwoodMP.World
                             w.WritePropertyName(name);
                             serializer.Serialize(w, value);
                         }
+
                         w.WritePropertyName("savedObjs");
                         w.WriteStartArray();
                         foreach (var o in d.savedObjs)
                         {
                             o.save(serializer, w);
                         }
+
                         w.WriteEndArray();
                         w.WriteEndObject();
                     }
                 }
+
                 File.Move(part, file);
             }
             finally
@@ -169,6 +177,7 @@ namespace DarkwoodMP.World
                     File.Delete(part);
                 }
             }
+
             return sw.ElapsedMilliseconds;
         }
     }

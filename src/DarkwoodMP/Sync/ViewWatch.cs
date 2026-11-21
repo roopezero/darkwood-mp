@@ -41,10 +41,12 @@ namespace DarkwoodMP.Sync
             {
                 l = FovLight(p);
             }
+
             if (l != null)
             {
                 return l.transform.position;
             }
+
             return (Vector3?)null;
         }
 
@@ -67,6 +69,7 @@ namespace DarkwoodMP.Sync
                 {
                     continue;
                 }
+
                 var b = c.bounds;
                 var path = Path(c.transform);
                 var layer = c.gameObject.layer;
@@ -76,10 +79,12 @@ namespace DarkwoodMP.Sync
                 {
                     trigger = ", trigger";
                 }
+
                 list.Add($"{path} [layer {layer}, {kind}{trigger}, " +
                          $"{b.size.x:0}x{b.size.z:0} at ({b.center.x:0}, "
                         + $"{b.center.z:0})]");
             }
+
             return list;
         }
 
@@ -97,6 +102,7 @@ namespace DarkwoodMP.Sync
             {
                 p = x.name + "/" + p;
             }
+
             return p;
         }
 
@@ -106,28 +112,33 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             _next = Time.unscaledTime + 0.25f;
             var p = Player.Instance;
             if (p == null || !p.gameObject.activeInHierarchy || Core.mainMenu)
             {
                 return;
             }
+
             var light = FovLight(p);
             if (light == null)
             {
                 return;
             }
+
             var pos = light.transform.position;
             if (!Hidden(pos))
             {
                 _logged = "";
                 return;
             }
+
             string set = string.Join("; ", Hiders(pos));
             if (set == _logged && Time.unscaledTime - _loggedAt < 30f)
             {
                 return;
             }
+
             _logged = set;
             _loggedAt = Time.unscaledTime;
             var r = light.GetComponent<Renderer>();

@@ -149,6 +149,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             Depth = 0;
             return true;
         }
@@ -210,6 +211,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var st = new System.Diagnostics.StackTrace(2, false);
             for (int i = 0; i < st.FrameCount && i < 24; i++)
             {
@@ -223,6 +225,7 @@ namespace DarkwoodMP.World
                         t = method.DeclaringType;
                     }
                 }
+
                 // lambdas/iterators are nested types
                 for (; t != null; t = t.DeclaringType)
                 {
@@ -232,6 +235,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             return false;
         }
 
@@ -249,12 +253,14 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var d = Singleton<Dreams>.Instance;
             if (d != null && DreamSync.Shared == null
                 && (d.dreaming || d.dreamPrepared || d.switchingDream))
             {
                 return true;
             }
+
             return !Locations.HostRunsHere();
         }
 
@@ -274,10 +280,12 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (go == null)
             {
                 return InOwnArea();
             }
+
             var d = Singleton<Dreams>.Instance;
             if (DreamSync.Shared != null && d != null
                 && d.dreamLocation != null
@@ -287,6 +295,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             return NetEnemies.LocalOnly(go) || InOwnArea();
         }
 
@@ -298,6 +307,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (OursAlone(go))
             {
                 if (Debug)
@@ -306,8 +316,10 @@ namespace DarkwoodMP.World
                         $"[world] {a} on {go.name}: ours alone (not where the "
                             + "host runs), not sent");
                 }
+
                 return;
             }
+
             // The host's player's own: the triggers it set off here are sent as
             // our player's, so the joiners leave them to that.
             bool byPlayer = S.IsHost && SetsOffTriggers(a)
@@ -339,6 +351,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (S.IsClient)
             {
                 GameObject go = null;
@@ -346,6 +359,7 @@ namespace DarkwoodMP.World
                 {
                     go = t.gameObject;
                 }
+
                 if (OursAlone(go))
                 {
                     if (Debug)
@@ -353,21 +367,25 @@ namespace DarkwoodMP.World
                         Plugin.Log.LogInfo(
                             $"[world] {a} {r} ({name}): ours alone, not sent");
                     }
+
                     return;
                 }
             }
+
             if (S.IsClient && HammerStroke.Depth > 0)
             {
                 HammerStroke.Held.Add(
                     () => Send(a, r, name, x, y, f1, f2, str));
                 return;
             }
+
             var w = S.Begin(MsgType.WorldAction);
             WriteAction(w, a, r, x, y, f1, f2, str, byPlayer && S.IsHost);
             if (Debug)
             {
                 Plugin.Log.LogInfo($"[world] sent {a} {r} ({name})");
             }
+
             if (S.IsHost)
             {
                 S.Broadcast(w, Channel.Control, reliable: true);
@@ -395,20 +413,24 @@ namespace DarkwoodMP.World
             {
                 flags |= 1;
             }
+
             if (f2)
             {
                 flags |= 2;
             }
+
             if (byPlayer)
             {
                 flags |= 4;
             }
+
             w.W.Write((byte)flags);
             string written = str;
             if (written == null)
             {
                 written = "";
             }
+
             w.WriteStr(written);
         }
 
@@ -419,10 +441,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             var a = (Action)r.R.ReadByte();
             var obj = ObjRef.Read(r);
             float x = r.R.ReadSingle(), y = r.R.ReadSingle();
@@ -446,6 +470,7 @@ namespace DarkwoodMP.World
                     Authority.AcceptAway($"{a} {obj}");
                     return;
                 }
+
                 SendState(
                     from, obj, padlock: a == Action.PadlockUnlock,
                     goneMeansGone: GoneMeansGone(a));
@@ -466,6 +491,7 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.LeftToActor = ScriptedEvents.ActionTypes;
             }
+
             // A world trigger this sets off (an NPC's or item's onDeath, an
             // item switched on) is the sender's doing.
             var wasCause = ScriptedEvents.Cause;
@@ -473,6 +499,7 @@ namespace DarkwoodMP.World
             {
                 ScriptedEvents.Cause = from;
             }
+
             try
             {
                 if (a == Action.TrapDisarm
@@ -491,6 +518,7 @@ namespace DarkwoodMP.World
                     {
                         result = "1";
                     }
+
                     Authority.Result(result);
                     if (Debug)
                     {
@@ -507,14 +535,17 @@ namespace DarkwoodMP.World
                         {
                             pick = "failed";
                         }
+
                         Plugin.Log.LogInfo(
                             $"[world] {s.NameOf(from)} picks the lock of "
                                 + $"{obj} ({crate.name}): {pick}");
                     }
+
                     if (!worked || was)
                     {
                         return;
                     }
+
                     crate.searched = true;
                     a = Action.ItemSearched;
                 }
@@ -530,6 +561,7 @@ namespace DarkwoodMP.World
                     {
                         outcome = "1";
                     }
+
                     Authority.Result(outcome);
                     if (Debug)
                     {
@@ -538,16 +570,19 @@ namespace DarkwoodMP.World
                         {
                             disarm = "worked";
                         }
+
                         Plugin.Log.LogInfo(
                             $"[world] {s.NameOf(from)} disarms {obj}: "
                                 + $"{disarm}");
                     }
+
                     if (item != null)
                     {
                         // gone (or set off) here either way; the trap goes for
                         // the others as TrapSwitched
                         item.switchTriggerState();
                     }
+
                     a = Action.TrapSwitched;
                 }
                 else if (ObjectActions.Handles(a))
@@ -561,6 +596,7 @@ namespace DarkwoodMP.World
                     {
                         return; // never an enemy's (see BreakSync)
                     }
+
                     if (!BreakSync.Activated(ex))
                     {
                         ex.onActivate(f1);
@@ -573,6 +609,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     switch (a)
                     {
                         case Action.ItemHit:
@@ -580,6 +617,7 @@ namespace DarkwoodMP.World
                             {
                                 break;
                             }
+
                             // A client's hit is applied to the host's health;
                             // the host's own says what health it left, so a
                             // copy that missed a hit (or took one more) comes
@@ -589,23 +627,27 @@ namespace DarkwoodMP.World
                                 // a shadow takes the hit, not the item
                                 item.health = (int)y + (int)x;
                             }
+
                             item.getHit((int)x, null, f1);
                             if (s.IsHost)
                             {
                                 y = item.health;
                             }
+
                             break;
                         case Action.ItemBroken:
                             if (!item.destroyed)
                             {
                                 item.die();
                             }
+
                             break;
                         case Action.ItemRepaired:
                             if (item.destroyed)
                             {
                                 item.setNormalState();
                             }
+
                             break;
                     }
                 }
@@ -637,6 +679,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     item.searched = true;
                     var corpse = item.GetComponent<Character>();
                     if (corpse != null)
@@ -651,6 +694,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     // without its window, message and events: those are the
                     // opener's
                     padlock.unlock(false);
@@ -662,6 +706,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     if (a == Action.ItemOn)
                     {
                         item.turnOn();
@@ -681,10 +726,12 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     if (trap == null)
                     {
                         return;
                     }
+
                     if (a == Action.TrapFired)
                     {
                         if (trap.active)
@@ -709,6 +756,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     switch (a)
                     {
                         case Action.DoorOpen:
@@ -756,6 +804,7 @@ namespace DarkwoodMP.World
                     {
                         return;
                     }
+
                     switch (a)
                     {
                         case Action.WindowBarricade:
@@ -813,8 +862,10 @@ namespace DarkwoodMP.World
                 {
                     name = found.name;
                 }
+
                 Plugin.Log.LogInfo($"[world] got {a} {obj}: " + name);
             }
+
             return found;
         }
 
@@ -834,10 +885,12 @@ namespace DarkwoodMP.World
             {
                 return c;
             }
+
             if (string.IsNullOrEmpty(name))
             {
                 return c;
             }
+
             Character best = null;
             float bestD = 400f * 400f;
             foreach (var n in UnityEngine.Object.FindObjectsOfType<NPC>())
@@ -846,11 +899,13 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var ch = n.GetComponent<Character>();
                 if (ch == null || !ch.alive)
                 {
                     continue;
                 }
+
                 float d = FlatSq(ch.transform.position, new Vector3(x, 0f, z));
                 if (d < bestD)
                 {
@@ -858,11 +913,13 @@ namespace DarkwoodMP.World
                     best = ch;
                 }
             }
+
             Character chosen = best;
             if (chosen == null)
             {
                 chosen = c;
             }
+
             return chosen;
         }
 
@@ -888,6 +945,7 @@ namespace DarkwoodMP.World
             {
                 return ObjectActions.Allowed(a, obj, f1, x);
             }
+
             if (a == Action.Explode)
             {
                 var ex = ObjRef.Resolve<Explodes>(obj);
@@ -897,14 +955,17 @@ namespace DarkwoodMP.World
                         "it isn't here (gone or already blown up)");
                     return false;
                 }
+
                 if (BreakSync.Activated(ex))
                 {
                     Authority.Refuse("it had already gone off");
                     return false;
                 }
+
                 return Authority.InReach(
                     ex.transform.position, ShotReach, ex.name);
             }
+
             if (a >= Action.ItemHit)
             {
                 var item = ObjRef.Resolve<Item>(obj);
@@ -913,6 +974,7 @@ namespace DarkwoodMP.World
                     Authority.Refuse("not here");
                     return false;
                 }
+
                 float reach;
                 if (a == Action.ItemHit)
                 {
@@ -922,11 +984,13 @@ namespace DarkwoodMP.World
                 {
                     reach = Reach;
                 }
+
                 if (!Authority.InReach(
                     item.transform.position, reach, item.name))
                 {
                     return false;
                 }
+
                 switch (a)
                 {
                     case Action.ItemHit when item.destroyed:
@@ -946,8 +1010,10 @@ namespace DarkwoodMP.World
                         Authority.Refuse("it isn't broken");
                         return false;
                 }
+
                 return true;
             }
+
             if (a == Action.NpcDied)
             {
                 var npc = DyingNpc(obj, str, x, y);
@@ -956,10 +1022,12 @@ namespace DarkwoodMP.World
                     Authority.Refuse("no such NPC here");
                     return false;
                 }
+
                 if (!Authority.InReach(npc.transform.position, 2500f, npc.name))
                 {
                     return false;
                 }
+
                 FlagsSync instance = FlagsSync.Instance;
                 if (instance != null)
                 {
@@ -972,10 +1040,13 @@ namespace DarkwoodMP.World
                     {
                         name = npc.name;
                     }
+
                     instance.DeathAllowed(name);
                 }
+
                 return true;
             }
+
             if (a == Action.ItemUnlock)
             {
                 var l = ObjRef.Resolve<Locked>(obj);
@@ -984,27 +1055,33 @@ namespace DarkwoodMP.World
                     Authority.Refuse("there's no lock on it here");
                     return false;
                 }
+
                 if (!Authority.InReach(l.transform.position, Reach, l.name))
                 {
                     return false;
                 }
+
                 if (!l.locked)
                 {
                     Authority.Refuse("it isn't locked");
                     return false;
                 }
+
                 if (x == 0f)
                 {
                     Authority.Refuse(StoryOnly);
                     return false;
                 }
+
                 if (x == 1f && !HasKey(l))
                 {
                     Authority.Refuse($"nobody has the key ({l.keyType})");
                     return false;
                 }
+
                 return true;
             }
+
             if (a == Action.ItemSearched)
             {
                 // A client's player opened a container. Only the host says a
@@ -1015,20 +1092,24 @@ namespace DarkwoodMP.World
                     Authority.Refuse("no such thing here");
                     return false;
                 }
+
                 if (Crate(item) != null && !item.searched)
                 {
                     Authority.Refuse(
                         "a crate is picked open by the host's roll");
                     return false;
                 }
+
                 if (item.GetComponent<Inventory>() == null)
                 {
                     Authority.Refuse("there's nothing to search in it");
                     return false;
                 }
+
                 return Authority.InReach(
                     item.transform.position, Reach, item.name);
             }
+
             if (a == Action.PadlockUnlock)
             {
                 var p = ObjRef.Resolve<Padlock>(obj);
@@ -1037,22 +1118,27 @@ namespace DarkwoodMP.World
                     Authority.Refuse("no such padlock here");
                     return false;
                 }
+
                 if (!Authority.InReach(p.transform.position, Reach, p.name))
                 {
                     return false;
                 }
+
                 if (!f1)
                 {
                     Authority.Refuse(StoryOnly);
                     return false;
                 }
+
                 if (p.locked && str != p.combination)
                 {
                     Authority.Refuse("that isn't the padlock's code");
                     return false;
                 }
+
                 return true;
             }
+
             if (a == Action.TrapDisarm
                 && ObjRef.Resolve<Item>(obj) is Item picked
                 && picked.GetComponent<Trigger>() == null)
@@ -1062,9 +1148,11 @@ namespace DarkwoodMP.World
                     Authority.Refuse("there's no lock to pick on it");
                     return false;
                 }
+
                 return Authority.InReach(
                     picked.transform.position, Reach, picked.name);
             }
+
             if (a >= Action.ItemOn)
             {
                 var item = ObjRef.Resolve<Item>(obj);
@@ -1073,9 +1161,11 @@ namespace DarkwoodMP.World
                     Authority.Refuse("not here");
                     return false;
                 }
+
                 return Authority.InReach(
                     item.transform.position, Reach, item.name);
             }
+
             if (a >= Action.TrapFired)
             {
                 var trap = ObjRef.Resolve<Trigger>(obj);
@@ -1084,11 +1174,13 @@ namespace DarkwoodMP.World
                     Authority.Refuse("the trap is gone");
                     return false;
                 }
+
                 if (!Authority.InReach(
                     trap.transform.position, Reach, trap.name))
                 {
                     return false;
                 }
+
                 if (a == Action.TrapFired && trap.active
                     && TrapFiredPatch.TestRefuse != null)
                 {
@@ -1105,26 +1197,32 @@ namespace DarkwoodMP.World
                         trap.active = false;
                         UnityEngine.Object.DestroyImmediate(trap.gameObject);
                     }
+
                     string reason = "the trap is gone (test)";
                     if (TrapFiredPatch.TestRefuse == "race")
                     {
                         reason = "the trap had already gone off (test)";
                     }
+
                     Authority.Refuse(reason);
                     return false;
                 }
+
                 if (a == Action.TrapFired && !trap.active)
                 {
                     Authority.Refuse("the trap had already gone off");
                     return false;
                 }
+
                 if (a == Action.TrapDisarm && (!trap.active || !trap.canDisarm))
                 {
                     Authority.Refuse("the trap can't be disarmed now");
                     return false;
                 }
+
                 return true;
             }
+
             if (a < Action.WindowBarricade)
             {
                 var door = ObjRef.Resolve<Door>(obj);
@@ -1133,6 +1231,7 @@ namespace DarkwoodMP.World
                     Authority.Refuse("no such door here");
                     return false;
                 }
+
                 // A hit can come from a shot or our flamethrower's flame
                 // (BreakSync.OwnFlame), which reach further than a hand.
                 float doorReach;
@@ -1144,11 +1243,13 @@ namespace DarkwoodMP.World
                 {
                     doorReach = Reach;
                 }
+
                 if (!Authority.InReach(
                     door.transform.position, doorReach, door.name))
                 {
                     return false;
                 }
+
                 var locked = door.GetComponent<Locked>();
                 bool isLocked = locked != null && locked.locked;
                 switch (a)
@@ -1199,14 +1300,17 @@ namespace DarkwoodMP.World
                             $"a hit of {x:0} is more than any weapon does");
                         return false;
                 }
+
                 return true;
             }
+
             var window = ObjRef.Resolve<Window>(obj);
             if (window == null)
             {
                 Authority.Refuse("no such window here");
                 return false;
             }
+
             float windowReach;
             if (a == Action.WindowHit)
             {
@@ -1216,27 +1320,32 @@ namespace DarkwoodMP.World
             {
                 windowReach = Reach;
             }
+
             if (!Authority.InReach(
                 window.transform.position, windowReach, window.name))
             {
                 return false;
             }
+
             if (a == Action.WindowBarricade && window.barricaded)
             {
                 Authority.Refuse("the window is already barricaded");
                 return false;
             }
+
             if (a == Action.WindowDestroyBarricade && !window.barricaded)
             {
                 Authority.Refuse("the window isn't barricaded");
                 return false;
             }
+
             if (a == Action.WindowHit && x > 1000f)
             {
                 Authority.Refuse(
                     $"a hit of {x:0} is more than any weapon does");
                 return false;
             }
+
             return true;
         }
 
@@ -1260,6 +1369,7 @@ namespace DarkwoodMP.World
                     keys = journal.keysDict;
                 }
             }
+
             return l != null && keys != null
                 && !string.IsNullOrEmpty(l.keyType)
                 && keys.ContainsKey(l.keyType);
@@ -1284,6 +1394,7 @@ namespace DarkwoodMP.World
             {
                 return item;
             }
+
             return null;
         }
 
@@ -1330,6 +1441,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = S.Begin(MsgType.ObjState);
             obj.Write(w);
             Door door = null;
@@ -1337,26 +1449,31 @@ namespace DarkwoodMP.World
             {
                 door = go.GetComponent<Door>();
             }
+
             Window window = null;
             if (go != null)
             {
                 window = go.GetComponent<Window>();
             }
+
             Trigger trap = null;
             if (go != null)
             {
                 trap = go.GetComponent<Trigger>();
             }
+
             Item item = null;
             if (go != null)
             {
                 item = go.GetComponent<Item>();
             }
+
             Padlock pad = null;
             if (padlock && go != null)
             {
                 pad = go.GetComponent<Padlock>();
             }
+
             if (pad != null)
             {
                 w.W.Write((byte)Kind.Padlock);
@@ -1365,6 +1482,7 @@ namespace DarkwoodMP.World
                 {
                     lockedFlag = 1;
                 }
+
                 w.W.Write((byte)lockedFlag);
             }
             else if (door != null)
@@ -1376,22 +1494,27 @@ namespace DarkwoodMP.World
                 {
                     flags |= 1;
                 }
+
                 if (door.barricaded)
                 {
                     flags |= 2;
                 }
+
                 if (door.destroyed)
                 {
                     flags |= 4;
                 }
+
                 if (l != null && l.locked)
                 {
                     flags |= 8;
                 }
+
                 if (door.blocked)
                 {
                     flags |= 16;
                 }
+
                 w.W.Write((byte)flags);
                 w.W.Write(door.health);
                 w.W.Write(door.barricadeHealth);
@@ -1404,6 +1527,7 @@ namespace DarkwoodMP.World
                         s = "";
                     }
                 }
+
                 w.WriteStr(s);
             }
             else if (window != null)
@@ -1414,6 +1538,7 @@ namespace DarkwoodMP.World
                 {
                     barricadedFlag = 1;
                 }
+
                 w.W.Write((byte)barricadedFlag);
                 w.W.Write(window.barricadeHealth);
             }
@@ -1425,6 +1550,7 @@ namespace DarkwoodMP.World
                 {
                     activeFlag = 1;
                 }
+
                 w.W.Write((byte)activeFlag);
             }
             else if (item != null)
@@ -1438,26 +1564,32 @@ namespace DarkwoodMP.World
                 {
                     itemFlags |= 1;
                 }
+
                 if (l != null && l.locked)
                 {
                     itemFlags |= 2;
                 }
+
                 if (item.searched)
                 {
                     itemFlags |= 4;
                 }
+
                 if (item.destroyed)
                 {
                     itemFlags |= 8;
                 }
+
                 if (ii != null && ii.isOn)
                 {
                     itemFlags |= 16;
                 }
+
                 if (feeder != null && feeder.Active)
                 {
                     itemFlags |= 32;
                 }
+
                 w.W.Write((byte)itemFlags);
                 w.W.Write(item.health);
             }
@@ -1469,12 +1601,14 @@ namespace DarkwoodMP.World
                 {
                     activated = 1;
                 }
+
                 w.W.Write((byte)activated);
             }
             else
             {
                 w.W.Write((byte)Kind.Gone);
             }
+
             S.SendTo(to, w, Channel.Control, reliable: true);
         }
 
@@ -1501,6 +1635,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             var kind = (Kind)r.R.ReadByte();
             var go = ObjRef.Resolve<Transform>(obj);
@@ -1520,6 +1655,7 @@ namespace DarkwoodMP.World
                         {
                             break;
                         }
+
                         // Ours alone (a dream of our own): the host not having
                         // it says nothing about ours.
                         if (OursAlone(go.gameObject))
@@ -1529,6 +1665,7 @@ namespace DarkwoodMP.World
                                     + "ours alone, kept");
                             break;
                         }
+
                         Plugin.Log.LogInfo(
                             $"[world] {go.name} {obj} is gone on the host: "
                                 + "removed ours");
@@ -1546,10 +1683,12 @@ namespace DarkwoodMP.World
                             {
                                 door = go.GetComponent<Door>();
                             }
+
                             if (door == null)
                             {
                                 break;
                             }
+
                             bool open = (f & 1) != 0,
                                 barricaded = (f & 2) != 0,
                                 broken = (f & 4) != 0,
@@ -1567,6 +1706,7 @@ namespace DarkwoodMP.World
                             {
                                 door.unDestroy();
                             }
+
                             var l = door.GetComponent<Locked>();
                             if (locked && (l == null || !l.locked))
                             {
@@ -1576,6 +1716,7 @@ namespace DarkwoodMP.World
                             {
                                 door.unlock();
                             }
+
                             // as in OnAction
                             if (barricaded && !door.barricaded)
                             {
@@ -1586,6 +1727,7 @@ namespace DarkwoodMP.World
                             {
                                 door.destroyBarricade(false);
                             }
+
                             if (open && !door.opened)
                             {
                                 door.open(
@@ -1597,10 +1739,12 @@ namespace DarkwoodMP.World
                             {
                                 door.close(null);
                             }
+
                             door.health = health;
                             door.barricadeHealth = barricade;
                             break;
                         }
+
                     case Kind.Window:
                         {
                             bool barricaded = (r.R.ReadByte() & 1) != 0;
@@ -1610,10 +1754,12 @@ namespace DarkwoodMP.World
                             {
                                 window = go.GetComponent<Window>();
                             }
+
                             if (window == null)
                             {
                                 break;
                             }
+
                             if (barricaded && !window.barricaded)
                             {
                                 window.barricadeState = 2;
@@ -1623,9 +1769,11 @@ namespace DarkwoodMP.World
                             {
                                 window.destroyBarricade(false);
                             }
+
                             window.barricadeHealth = barricade;
                             break;
                         }
+
                     case Kind.Trap:
                         {
                             bool armed = (r.R.ReadByte() & 1) != 0;
@@ -1634,12 +1782,15 @@ namespace DarkwoodMP.World
                             {
                                 trap = go.GetComponent<Trigger>();
                             }
+
                             if (trap != null && trap.active != armed)
                             {
                                 trap.active = armed;
                             }
+
                             break;
                         }
+
                     case Kind.Item:
                         {
                             byte f = r.R.ReadByte();
@@ -1650,10 +1801,12 @@ namespace DarkwoodMP.World
                             {
                                 item = go.GetComponent<Item>();
                             }
+
                             if (item == null)
                             {
                                 break;
                             }
+
                             if (item.isOn != on)
                             {
                                 if (on)
@@ -1665,17 +1818,20 @@ namespace DarkwoodMP.World
                                     item.turnOff();
                                 }
                             }
+
                             var l = item.GetComponent<Locked>();
                             if (l != null)
                             {
                                 l.locked = (f & 2) != 0;
                             }
+
                             item.searched = (f & 4) != 0;
                             var ii = item.GetComponent<InteractiveItem>();
                             if (ii != null)
                             {
                                 ii.isOn = (f & 16) != 0;
                             }
+
                             var feeder = item.GetComponent<Feeder>();
                             if (feeder != null
                                 && feeder.Active != ((f & 32) != 0))
@@ -1689,6 +1845,7 @@ namespace DarkwoodMP.World
                                     feeder.makeInactive();
                                 }
                             }
+
                             if (broken && !item.destroyed && item.destructible)
                             {
                                 item.die();
@@ -1697,9 +1854,11 @@ namespace DarkwoodMP.World
                             {
                                 item.setNormalState();
                             }
+
                             item.health = health;
                             break;
                         }
+
                     case Kind.Explosive:
                         {
                             // an explosion here can't be taken back; the next
@@ -1707,6 +1866,7 @@ namespace DarkwoodMP.World
                             r.R.ReadByte();
                             break;
                         }
+
                     case Kind.Padlock:
                         {
                             bool locked = (r.R.ReadByte() & 1) != 0;
@@ -1715,6 +1875,7 @@ namespace DarkwoodMP.World
                             {
                                 pad = go.GetComponent<Padlock>();
                             }
+
                             if (pad != null && pad.locked != locked)
                             {
                                 pad.locked = locked;
@@ -1723,9 +1884,11 @@ namespace DarkwoodMP.World
                                     pad.currentCombination = "0000";
                                 }
                             }
+
                             break;
                         }
                 }
+
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
@@ -1758,6 +1921,7 @@ namespace DarkwoodMP.World
                 Health = d.health,
                 BarricadeHealth = d.barricadeHealth
             };
+
             public bool Same(DoorState o) => Opened == o.Opened
                 && Barricaded == o.Barricaded && Destroyed == o.Destroyed
                 && Health == o.Health && BarricadeHealth == o.BarricadeHealth;
@@ -1772,6 +1936,7 @@ namespace DarkwoodMP.World
                 Barricaded = w.barricaded,
                 BarricadeHealth = w.barricadeHealth
             };
+
             public bool Same(WindowState o) => Barricaded == o.Barricaded
                 && BarricadeHealth == o.BarricadeHealth;
         }
@@ -1801,11 +1966,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Depth = 0;
             if (Held.Count == 0)
             {
                 return;
             }
+
             var held = Held.ToArray();
             Held.Clear();
             foreach (var send in held)
@@ -1831,6 +1998,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
+
         static void Postfix(
             Door __instance, Vector3 openerPosition, Transform openerTransform,
             WorldActions.DoorState __state)
@@ -1840,6 +2008,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Vector3 at;
             if (openerTransform != null)
             {
@@ -1849,6 +2018,7 @@ namespace DarkwoodMP.World
             {
                 at = openerPosition;
             }
+
             WorldActions.Send(
                 WorldActions.Action.DoorOpen, __instance.gameObject, at.x,
                 at.z);
@@ -1863,6 +2033,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
+
         static void Postfix(Door __instance, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing
@@ -1882,6 +2053,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
+
         static void Postfix(
             Door __instance, bool byPlayer, WorldActions.DoorState __state)
         {
@@ -1903,6 +2075,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
+
         static void Postfix(
             Door __instance, bool silent, WorldActions.DoorState __state)
         {
@@ -1924,6 +2097,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
+
         static void Postfix(
             Door __instance, bool silently, WorldActions.DoorState __state)
         {
@@ -1945,6 +2119,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
+
         static void Postfix(Door __instance, WorldActions.DoorState __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing
@@ -1977,6 +2152,7 @@ namespace DarkwoodMP.World
             __state = WorldActions.DoorState.Of(__instance);
             return !BreakSync.HostsHit();
         }
+
         static void Postfix(
             Door __instance, int damage, bool normalHit, bool canDamageMetal,
             WorldActions.DoorState __state)
@@ -1986,6 +2162,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorldActions.Send(
                 WorldActions.Action.DoorHit, __instance.gameObject, damage,
                 f1: normalHit, f2: canDamageMetal,
@@ -2071,6 +2248,7 @@ namespace DarkwoodMP.World
                         labels = ci.labels,
                         blocks = ci.blocks
                     };
+
                     swapped++;
                 }
                 else
@@ -2078,6 +2256,7 @@ namespace DarkwoodMP.World
                     yield return ci;
                 }
             }
+
             if (swapped == 0)
             {
                 Plugin.Log.LogWarning(
@@ -2111,6 +2290,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.WindowState.Of(__instance);
         }
+
         static void Postfix(
             Window __instance, int destHealth, bool byPlayer,
             WorldActions.WindowState __state)
@@ -2134,6 +2314,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = WorldActions.WindowState.Of(__instance);
         }
+
         static void Postfix(
             Window __instance, bool silent, WorldActions.WindowState __state)
         {
@@ -2163,6 +2344,7 @@ namespace DarkwoodMP.World
             __state = WorldActions.WindowState.Of(__instance);
             return !BreakSync.HostsHit();
         }
+
         static void Postfix(
             Window __instance, int damage, bool normalHit,
             WorldActions.WindowState __state)
@@ -2213,6 +2395,7 @@ namespace DarkwoodMP.World
             public GameObject Target; // a vine trap's: who its vine holds
             public bool Done;
         }
+
         private static readonly
             System.Collections.Generic.Dictionary<string, Held> _held =
                 new System.Collections.Generic.Dictionary<string, Held>();
@@ -2240,10 +2423,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (__instance.prefabToSpawn == null || !Ours(__instance, other))
             {
                 return;
             }
+
             __state = __instance.prefabToSpawn;
             // nonPooledPrefabToSpawn alone spawns
             // nothing (Trigger.OnAfterTrigger)
@@ -2259,6 +2444,7 @@ namespace DarkwoodMP.World
                 // pooled: the next one spawns again
                 __instance.prefabToSpawn = __state;
             }
+
             float healthBefore = HealthBefore;
             HealthBefore = -1f;
             if (!WorldActions.Outermost() || !WorldActions.Sharing
@@ -2266,10 +2452,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (!Ours(__instance, other))
             {
                 return;
             }
+
             var s = Net.Session.Instance;
             if (s.IsHost)
             {
@@ -2284,6 +2472,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             string key = r.ToString();
             Held held;
             if (__state == null)
@@ -2298,25 +2487,30 @@ namespace DarkwoodMP.World
                     At = __instance.transform.position + new Vector3(
                         0f, 1f, 0f),
                 };
+
                 if (__instance.isChainTrap && doConnectChain && other != null)
                 {
                     held.Target = other.gameObject;
                 }
             }
+
             if (held != null)
             {
                 _held[key] = held;
             }
+
             Player player = null;
             if (other != null)
             {
                 player = other.GetComponent<Player>();
             }
+
             float lost = 0f;
             if (player != null && healthBefore > 0f)
             {
                 lost = healthBefore - player.health;
             }
+
             bool bearHold = player != null && __instance.isBearTrap;
 
             var w = s.Begin(MsgType.WorldAction);
@@ -2329,9 +2523,11 @@ namespace DarkwoodMP.World
                 {
                     waits = ", its " + held.Prefab.name + " waits for the host";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] sent TrapFired {r} ({__instance.name}){waits}");
             }
+
             Authority.Request(w, $"TrapFired {r} ({__instance.name})",
                 (ok, reason, result) =>
             {
@@ -2340,33 +2536,40 @@ namespace DarkwoodMP.World
                 {
                     _held.Remove(key);
                 }
+
                 if (ok)
                 {
                     if (held != null)
                     {
                         Spawn(held, key);
                     }
+
                     return;
                 }
+
                 if (held != null && !held.Done)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] TrapFired {key}: refused, so its "
                             + $"{held.Prefab.name} isn't spawned");
                 }
+
                 if (player == null || player != Player.Instance)
                 {
                     return;
                 }
+
                 if (bearHold && player.inBearTrap)
                 {
                     player.stopAllPerformingActionAnims();
                 }
+
                 if (lost > 0f && player.health > 0f)
                 {
                     player.health =
                         Mathf.Min(player.maxHealth, player.health + lost);
                 }
+
                 if (bearHold || lost > 0f)
                 {
                     Plugin.Log.LogInfo(
@@ -2387,6 +2590,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             _held.Remove(key);
             // as the host's replay does: it went off there, not on our player
             held.Target = null;
@@ -2400,6 +2604,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             held.Done = true;
             var go = Core.AddPrefab(
                 held.Prefab, held.At, Quaternion.Euler(90f, 0f, 0f), null);
@@ -2407,6 +2612,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (held.Target != null)
             {
                 var cp = go.GetComponent<ChainParent>();
@@ -2415,6 +2621,7 @@ namespace DarkwoodMP.World
                     cp.target = held.Target;
                 }
             }
+
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -2432,14 +2639,17 @@ namespace DarkwoodMP.World
             {
                 return false; // a level's scripted trigger zone, not a trap
             }
+
             if (!Net.Session.Instance.IsClient)
             {
                 return true;
             }
+
             if (WorldActions.OursAlone(trap.gameObject))
             {
                 return false; // in a dream of our own: the game's own, as alone
             }
+
             return other != null
                 && (other.GetComponent<Player>() != null
                     || other.GetComponent<ThrownItem>() != null);
@@ -2462,11 +2672,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (other.GetComponent<Player>() != null)
             {
                 TrapFiredPatch.HealthBefore = Player.Instance.health;
             }
         }
+
         static void Postfix() => TrapFiredPatch.HealthBefore = -1f;
     }
 
@@ -2482,11 +2694,13 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var c = other.GetComponent<Character>();
             if (c == null)
             {
                 return true;
             }
+
             // The host's enemies (and our frozen copies) set traps off on the
             // host; ones of an area of our own do here.
             return !(Combat.NetEnemies.Frozen.Contains(c)
@@ -2564,6 +2778,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.alive;
         }
+
         static void Postfix(Character __instance, bool __state)
         {
             if (__state && __instance != null && __instance.npc != null
@@ -2571,11 +2786,13 @@ namespace DarkwoodMP.World
             {
                 Combat.HostileNpcs.Died(__instance); // a replayed death too
             }
+
             if (!WorldActions.Outermost() || !WorldActions.Sharing
                 || __instance == null || __instance.npc == null || !__state)
             {
                 return;
             }
+
             // With its name and where it stood: one each game puts in place
             // itself (the morning trader, the wolf) has its own save id in
             // each, and one that walked can be off its named spot.
@@ -2603,6 +2820,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             Plugin.Log.LogInfo(
                 "[world] the night trader was killed in another game: the "
                     + "killer's dream isn't ours");
@@ -2636,11 +2854,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var trap = Trap(__instance);
             if (trap == null)
             {
                 return;
             }
+
             var r = ObjRef.Of(trap.gameObject);
             if (!r.Valid || WorldActions.OursAlone(trap.gameObject))
             {
@@ -2648,6 +2868,7 @@ namespace DarkwoodMP.World
                 // as alone
                 return;
             }
+
             __instance.disarmingTrap = false; // the game's own roll is skipped
             // The crouch co-op adds (DisarmAnimation) ends here too: with
             // disarmingTrap already cleared, the stand-up in DisarmDonePatch
@@ -2672,6 +2893,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 WorldActions.Replaying = true;
                 try
                 {
@@ -2728,12 +2950,14 @@ namespace DarkwoodMP.World
                 {
                     instance.FlushNow();
                 }
+
                 FlagsSync flags = FlagsSync.Instance;
                 if (flags != null)
                 {
                     flags.SendKey(l.keyType);
                 }
             }
+
             var door = l.GetComponent<Door>();
             if (door != null)
             {
@@ -2756,6 +2980,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.locked;
         }
+
         static void Postfix(Locked __instance, bool __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && __state
@@ -2774,6 +2999,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.locked;
         }
+
         static void Postfix(Locked __instance, bool __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && __state
@@ -2792,6 +3018,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.locked;
         }
+
         static void Postfix(Locked __instance, bool __state)
         {
             if (WorldActions.Outermost() && WorldActions.Sharing && __state
@@ -2822,6 +3049,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (WorldActions.Depth == 0 && WorldActions.Sharing
                 && Session.Instance.IsHost)
             {
@@ -2853,6 +3081,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             WorldActions.Send(
                 WorldActions.Action.ItemSearched, __instance.gameObject);
         }
@@ -2876,6 +3105,7 @@ namespace DarkwoodMP.World
             WorldActions.Depth++;
             __state = __instance.locked;
         }
+
         static void Postfix(Padlock __instance, bool manually, bool __state)
         {
             if (!WorldActions.Outermost() || !WorldActions.Sharing || !__state
@@ -2883,11 +3113,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             string combination = "";
             if (manually)
             {
                 combination = __instance.currentCombination;
             }
+
             WorldActions.Send(
                 WorldActions.Action.PadlockUnlock, __instance.gameObject,
                 f1: manually, str: combination);

@@ -122,11 +122,13 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             if (c.behaviour == Character.Behaviour.chasingTarget
                 && IsPlayer(c.target))
             {
                 return true;
             }
+
             return c.aggressiveness == Aggressiveness.attackOnSight
                 && c.attacksFaction(Faction.player);
         }
@@ -179,6 +181,7 @@ namespace DarkwoodMP.Combat
             {
                 return false; // made from its prefab: it goes
             }
+
             NetEnemies.Thaw(c);
             Plugin.Log.LogInfo(
                 $"[npc] the host stopped sending {c.name} (#{id}): it's ours "
@@ -192,15 +195,18 @@ namespace DarkwoodMP.Combat
             {
                 return "nobody";
             }
+
             var proxy = t.GetComponent<NetPlayerProxy>();
             if (proxy != null)
             {
                 return proxy.OwnerName;
             }
+
             if (t.GetComponent<Player>() != null)
             {
                 return "the host's player";
             }
+
             return t.name;
         }
 
@@ -228,6 +234,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 float d = (c.transform.position - pos).sqrMagnitude;
                 if (d < bestD)
                 {
@@ -235,11 +242,13 @@ namespace DarkwoodMP.Combat
                     bestD = d;
                 }
             }
+
             if (best != null)
             {
                 Plugin.Log.LogInfo(
                     $"[npc] the host's {kind} is our {best.name} near it");
             }
+
             return best;
         }
 
@@ -258,6 +267,7 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             if (!c.alive || c.isNightTrader || NetEnemies.LocalOnly(c))
             {
                 Plugin.Log.LogInfo(
@@ -266,16 +276,19 @@ namespace DarkwoodMP.Combat
                         + $"{NetEnemies.LocalOnly(c)})");
                 return false;
             }
+
             // Something thrown hits the NPC in the host's copy of the throw.
             if (ThrownHits.Now())
             {
                 return Forwarded(c);
             }
+
             var flame = ThrownHits.CurrentFlame;
             if (flame != null && !EnemyAreaHits.ByLocalPlayer(flame))
             {
                 return false;
             }
+
             bool fromPlayer = byPlayer
                 || (attacker != null
                     && attacker.GetComponent<Player>() != null);
@@ -283,11 +296,13 @@ namespace DarkwoodMP.Combat
             {
                 return false; // what the world does to it happens in each game
             }
+
             var effects = NetEnemies.HitEffects;
             if (damage <= 0f && (effects == null || effects.Count == 0))
             {
                 return false;
             }
+
             var s = Session.Instance;
             var w = s.Begin(MsgType.NpcHit);
             ObjRef.Of(c.gameObject).Write(w);
@@ -297,15 +312,18 @@ namespace DarkwoodMP.Combat
             {
                 flags |= 1;
             }
+
             flags |= 2;
             if (interrupt)
             {
                 flags |= 4;
             }
+
             if (normal)
             {
                 flags |= 8;
             }
+
             w.W.Write((byte)flags);
             PlayerDamage.WriteEffects(w, effects);
             InvItemClass item = null;
@@ -313,6 +331,7 @@ namespace DarkwoodMP.Combat
             {
                 item = Player.Instance.currentItem;
             }
+
             string itemJson;
             if (InvItemClass.isNull(item))
             {
@@ -323,12 +342,14 @@ namespace DarkwoodMP.Combat
                 itemJson = Newtonsoft.Json.JsonConvert.SerializeObject(
                     new InvItemClass.SaveState(item, 0));
             }
+
             w.WriteStr(itemJson);
             List<InvItemEffect> mine = null;
             if (effects != null)
             {
                 mine = new List<InvItemEffect>(effects);
             }
+
             Plugin.Log.LogInfo(
                 $"[npc] our hit on {c.name} for {damage:0} goes to the host");
             Authority.Request(w, $"hit on {c.name} for {damage:0}",
@@ -339,11 +360,13 @@ namespace DarkwoodMP.Combat
                     ScriptedEvents.HitApplied(c, result);
                     return;
                 }
+
                 if (reason != NotHere || c == null || !c.alive
                     || Player.Instance == null)
                 {
                     return;
                 }
+
                 // Only our game has it: our hit, here.
                 _ours = true;
                 try
@@ -364,6 +387,7 @@ namespace DarkwoodMP.Combat
                     _ours = false;
                 }
             }, inventory: false);
+
             Core.AddPrefab(
                 "FX/Bloodsplats/Shotsplat_stay", c.transform.position,
                 Quaternion.Euler(90f, UnityEngine.Random.Range(0f, 360f), 0f),
@@ -382,15 +406,18 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             var ne = NetEnemies.Instance;
             if (ne != null && ne.IsPuppet(c, out _))
             {
                 return true; // the host's: it's already hostile there
             }
+
             if (NetEnemies.Frozen.Contains(c))
             {
                 return true;
             }
+
             // Another player's event, run here too: the host sent its copy
             // after them already.
             if (WorldActions.Replaying
@@ -398,6 +425,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var s = Session.Instance;
             var w = s.Begin(MsgType.NpcAttack);
             ObjRef.Of(c.gameObject).Write(w);
@@ -407,6 +435,7 @@ namespace DarkwoodMP.Combat
                 {
                     return;
                 }
+
                 _ours = true;
                 try
                 {
@@ -417,6 +446,7 @@ namespace DarkwoodMP.Combat
                     _ours = false;
                 }
             }, inventory: false);
+
             return true;
         }
 
@@ -432,6 +462,7 @@ namespace DarkwoodMP.Combat
                 Authority.Refuse(NotHere);
                 return null;
             }
+
             // Dead here (each player's NPC story is their own): there's
             // nothing for us to run, so it's the client's.
             if (!NetEnemies.InPlay(c))
@@ -439,12 +470,14 @@ namespace DarkwoodMP.Combat
                 Authority.Refuse(NotHere);
                 return null;
             }
+
             if (!NetPlayerProxy.All.TryGetValue(from, out proxy)
                 || proxy == null)
             {
                 Authority.Refuse("no stand-in for that player yet");
                 return null;
             }
+
             return c;
         }
 
@@ -455,6 +488,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             float damage = r.R.ReadSingle();
             byte f = r.R.ReadByte();
@@ -465,6 +499,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"[npc] {s.NameOf(from)} hit {c.name} for {damage:0}");
             NetEnemies instance = NetEnemies.Instance;
@@ -481,17 +516,20 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             var c = Resolve(from, obj, out var proxy);
             if (c == null)
             {
                 return;
             }
+
             if (!Authority.InReach(
                 c.transform.position, NetEnemies.RelevantRange, c.name))
             {
                 return;
             }
+
             SendAfter(c, proxy);
         }
 

@@ -76,11 +76,13 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (__instance.forestSpirit)
             {
                 Core.chasedByForestSpirit = false;
                 AudioController.Stop("my_heaven", 10f);
             }
+
             var p = Player.Instance;
             if (__instance.banshee && (object)p != null
                 && p.bansheeAgitatedSoundAO != null)
@@ -88,6 +90,7 @@ namespace DarkwoodMP.World
                 p.bansheeAgitatedSoundAO.Stop(1f);
                 p.bansheeAgitatedSoundAO = null;
             }
+
             return false;
         }
     }

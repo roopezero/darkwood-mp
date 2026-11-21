@@ -30,6 +30,7 @@ namespace DarkwoodMP.Combat
             {
                 return null;
             }
+
             return c.target.GetComponent<NetPlayerProxy>();
         }
 
@@ -45,9 +46,11 @@ namespace DarkwoodMP.Combat
                 {
                     return p.ShadowWard;
                 }
+
                 return type == CharacterEffectType.forestSpiritWard
                     && p.ForestSpiritWard;
             }
+
             var host = Player.Instance;
             return host != null && host.effects != null
                 && host.effects.hasEffectType(type);
@@ -64,6 +67,7 @@ namespace DarkwoodMP.Combat
             {
                 return p.transform;
             }
+
             return Player.Instance._transform;
         }
 
@@ -74,6 +78,7 @@ namespace DarkwoodMP.Combat
             {
                 return p.FriendOfTheForest;
             }
+
             return Player.Instance.skills.FriendOfTheForest;
         }
 
@@ -84,6 +89,7 @@ namespace DarkwoodMP.Combat
             {
                 return p.EnemyOfTheForest;
             }
+
             return Player.Instance.skills.EnemyOfTheForest;
         }
 
@@ -112,6 +118,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 // keeps the instruction's labels
                 list[i].opcode = OpCodes.Ldarg_0;
                 list[i].operand = null;
@@ -121,6 +128,7 @@ namespace DarkwoodMP.Combat
                 list[i + 3].operand = mine;
                 swapped++;
             }
+
             BepInEx.Logging.LogLevel level;
             if (swapped == 2)
             {
@@ -130,6 +138,7 @@ namespace DarkwoodMP.Combat
             {
                 level = BepInEx.Logging.LogLevel.Warning;
             }
+
             Plugin.Log.Log(level,
                 $"Wards: {swapped} ward checks in Character.canSeeEnemy read "
                     + "the enemy's target (2 expected)");
@@ -163,11 +172,13 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 bool isFriend = list[i + 2].LoadsField(friend);
                 if (!isFriend && !list[i + 2].LoadsField(enemy))
                 {
                     continue;
                 }
+
                 list[i].opcode = OpCodes.Ldarg_0;
                 list[i].operand = null;
                 list[i + 1].opcode = OpCodes.Call;
@@ -176,6 +187,7 @@ namespace DarkwoodMP.Combat
                 {
                     name = nameof(FriendOfTheForest);
                 }
+
                 list[i + 1].operand = AccessTools.Method(typeof(Wards), name);
                 list[i + 2].opcode = OpCodes.Nop;
                 list[i + 2].operand = null;
@@ -187,6 +199,7 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
+
                     list[j].opcode = OpCodes.Ldarg_0;
                     list[j].operand = null;
                     list[j + 1].opcode = OpCodes.Call;
@@ -196,6 +209,7 @@ namespace DarkwoodMP.Combat
                     break;
                 }
             }
+
             BepInEx.Logging.LogLevel level;
             if (swapped > 0 && swapped == targets)
             {
@@ -205,6 +219,7 @@ namespace DarkwoodMP.Combat
             {
                 level = BepInEx.Logging.LogLevel.Warning;
             }
+
             Plugin.Log.Log(level,
                 $"Wards: {swapped} forest skill checks ({targets} with their "
                     + $"target) in {where} read the enemy's target");
@@ -278,6 +293,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             // players are rotated Euler(90, yaw, 0): local up is ahead
             Vector3 fwd = parent.TransformDirection(Vector3.up);
             fwd.y = 0f;
@@ -285,6 +301,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             float side = Side * 1.42f; // covers the box turned any way
             _bounds = new Bounds(
                 parent.position + fwd.normalized * Ahead,

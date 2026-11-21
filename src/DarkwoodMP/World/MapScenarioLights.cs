@@ -48,6 +48,7 @@ namespace DarkwoodMP.World
             {
                 type = a[0];
             }
+
             if (type != "fists")
             {
                 yield return MapScenarioEnemies.TakeOut(p, type, r);
@@ -60,20 +61,24 @@ namespace DarkwoodMP.World
                 {
                     slot = p.Hotbar.slots.FirstOrDefault(s => !s.selected);
                 }
+
                 if (slot == null)
                 {
                     r.Fail("no hotbar slot");
                     yield break;
                 }
+
                 slot.inventory = p.Hotbar;
                 if (!InvItemClass.isNull(slot.invItem))
                 {
                     slot.removeItem();
                 }
+
                 foreach (var s in p.Hotbar.slots)
                 {
                     s.deselect();
                 }
+
                 slot.select(noiseless: true);
                 float until = Time.realtimeSinceStartup + 4f;
                 while ((!InvItemClass.isNull(p.currentItem)
@@ -84,6 +89,7 @@ namespace DarkwoodMP.World
                     yield return null;
                 }
             }
+
             yield return new WaitForSeconds(0.5f);
             var beam = OwnBeam(p);
             string heldType;
@@ -95,16 +101,19 @@ namespace DarkwoodMP.World
             {
                 heldType = p.currentItem.type;
             }
+
             string text = "off";
             if (beam != null && beam.gameObject.activeSelf)
             {
                 text = $"on, radius {beam.LightRadius:0}";
             }
+
             string emitter = "none";
             if (p.itemLightEmitter != null)
             {
                 emitter = "on";
             }
+
             r.Info = $"holding {heldType}; our beam {text}, " +
                      $"held light {emitter}";
         }
@@ -125,6 +134,7 @@ namespace DarkwoodMP.World
             {
                 what = a[0];
             }
+
             float until = Time.realtimeSinceStartup + 8f;
             string seen = "", shared = "";
             bool ok = false;
@@ -138,10 +148,12 @@ namespace DarkwoodMP.World
                         x => x.Owner != Sync.PlayerSync.DummyId
                             && x.Root != null).ToList();
                 }
+
                 if (puppets == null)
                 {
                     puppets = new List<Sync.RemotePlayer>();
                 }
+
                 seen = string.Join("; ", puppets.Select(Describe));
                 bool any(System.Func<Sync.RemotePlayer, bool> f) =>
                     puppets.Any(f);
@@ -164,11 +176,13 @@ namespace DarkwoodMP.World
                             {
                                 l = x.Beam.GetComponent<Light2D>();
                             }
+
                             return l != null && x.Last != null
                                 && x.Last.BeamRadius > 0f
                                 && Mathf.Abs(l.LightRadius
                                     - x.Last.BeamRadius) < 1f && Drawn(l);
                         });
+
                         break;
                     default:
                         ok = !any(
@@ -177,13 +191,16 @@ namespace DarkwoodMP.World
                                 || (x.Beam != null && x.Beam.activeSelf));
                         break;
                 }
+
                 shared = SharedMeshes();
                 if ((ok && shared == "") || Time.realtimeSinceStartup > until)
                 {
                     break;
                 }
+
                 yield return new WaitForSeconds(0.3f);
             }
+
             var view = ViewSource();
             string text;
             if (seen == "")
@@ -194,6 +211,7 @@ namespace DarkwoodMP.World
             {
                 text = seen;
             }
+
             r.Info = $"{what}: puppets {text}; {view}";
             if (!ok)
             {
@@ -218,6 +236,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             var f = l.GetComponent<MeshFilter>();
             return f != null && f.sharedMesh == l._mesh
                 && l._mesh.vertexCount > 2;
@@ -235,16 +254,19 @@ namespace DarkwoodMP.World
                 {
                     heldLight = snapshot.HeldLight;
                 }
+
                 parts.Add(
                     $"{heldLight} light r{held.LightRadius:0} drawn "
                         + $"{Drawn(held)}");
             }
+
             if (x.LanternLight != null)
             {
                 parts.Add(
                     $"lantern r{x.LanternLight.LightRadius:0} drawn "
                         + $"{Drawn(x.LanternLight)}");
             }
+
             if (x.Beam != null && x.Beam.activeSelf)
             {
                 var l = x.Beam.GetComponent<Light2D>();
@@ -253,21 +275,25 @@ namespace DarkwoodMP.World
                 {
                     lightRadius = l.LightRadius;
                 }
+
                 Sync.PlayerSnapshot last = x.Last;
                 float beamRadius = 0f;
                 if (last != null)
                 {
                     beamRadius = last.BeamRadius;
                 }
+
                 float grey = 0f;
                 if (l != null)
                 {
                     grey = l.LightColor.r;
                 }
+
                 parts.Add(
                     $"beam r{lightRadius:0} (sent {beamRadius:0}) grey "
                         + $"{grey:0.00} drawn {Drawn(l)}");
             }
+
             string listing;
             if (parts.Count == 0)
             {
@@ -277,6 +303,7 @@ namespace DarkwoodMP.World
             {
                 listing = string.Join(", ", parts);
             }
+
             return $"{x.Name}: {listing}";
         }
 
@@ -299,22 +326,26 @@ namespace DarkwoodMP.World
                 {
                     filterMesh = filter.sharedMesh;
                 }
+
                 foreach (var m in new[] { mesh, filterMesh })
                 {
                     if (m == null)
                     {
                         continue;
                     }
+
                     if (!byMesh.TryGetValue(m, out var list))
                     {
                         byMesh[m] = list = new List<Light2D>();
                     }
+
                     if (!list.Contains(l))
                     {
                         list.Add(l);
                     }
                 }
             }
+
             bool mine(Light2D l) => (p != null && l.transform.IsChildOf(
                 p.transform)) || HasPuppetParent(l.transform);
             var bad = byMesh.Where(
@@ -336,6 +367,7 @@ namespace DarkwoodMP.World
                     return true;
                 }
             }
+
             return false;
         }
 
@@ -350,6 +382,7 @@ namespace DarkwoodMP.World
             {
                 return "view: no player";
             }
+
             var parts = new List<string>();
             bool ours = true;
             foreach (var (name, l) in new[]
@@ -364,6 +397,7 @@ namespace DarkwoodMP.World
                     parts.Add($"{name} missing");
                     continue;
                 }
+
                 bool onUs = l.transform.IsChildOf(p.transform);
                 var f = l.GetComponent<MeshFilter>();
                 bool own =
@@ -380,18 +414,22 @@ namespace DarkwoodMP.World
                 {
                     text = "on " + Sync.ViewWatch.Path(l.transform);
                 }
+
                 string meshNote = "not its own";
                 if (own)
                 {
                     meshNote = "its own";
                 }
+
                 parts.Add($"{name} {text} {d:0} from it, mesh {meshNote}");
             }
+
             string whose = "NOT ours";
             if (ours)
             {
                 whose = "ours";
             }
+
             return $"view: {whose} ({string.Join(", ", parts)})";
         }
     }

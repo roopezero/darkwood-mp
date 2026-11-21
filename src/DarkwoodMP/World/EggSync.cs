@@ -53,11 +53,13 @@ namespace DarkwoodMP.World
             {
                 return; // in a dream of our own: nobody else has it
             }
+
             var r = ObjRef.Of(egg.gameObject);
             if (!r.Valid)
             {
                 return;
             }
+
             // The hit that broke it can leave its health below 0; the others'
             // copies are broken at 0 (Break), and so is ours, so its state is
             // the same in every game.
@@ -65,6 +67,7 @@ namespace DarkwoodMP.World
             {
                 egg.health = 0;
             }
+
             var p = egg.transform.position;
             var w = Write(r, p.x, p.z, egg.gameObject.name);
             Plugin.Log.LogInfo(
@@ -87,10 +90,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             float x = r.R.ReadSingle(), z = r.R.ReadSingle();
             string name = r.ReadStr();
@@ -106,18 +111,21 @@ namespace DarkwoodMP.World
                     WorldActions.SendState(from, obj);
                     return;
                 }
+
                 if (!IsEgg(egg))
                 {
                     WorldActions.SendState(from, obj);
                     Authority.Refuse($"{egg.gameObject.name} isn't an egg");
                     return;
                 }
+
                 if (egg.destroyed)
                 {
                     // broken here already (by the host, or another player):
                     // nothing to do or pass on
                     return;
                 }
+
                 if (!Authority.InReach(
                     egg.transform.position, WorldActions.ShotReach,
                     egg.gameObject.name))
@@ -126,6 +134,7 @@ namespace DarkwoodMP.World
                     return;
                 }
             }
+
             string line =
                 $"[world] egg {obj} destroyed (from {s.NameOf(from)})";
             string here = "";
@@ -137,6 +146,7 @@ namespace DarkwoodMP.World
             {
                 here = ": already broken here";
             }
+
             Plugin.Log.LogInfo(line + here);
             if (egg == null || egg.destroyed)
             {
@@ -184,6 +194,7 @@ namespace DarkwoodMP.World
                 egg.die();
                 return;
             }
+
             egg.destroyed = true;
             try
             {
@@ -194,6 +205,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Couldn't show {egg.gameObject.name} broken: {e.Message}");
             }
+
             Core.sendTriggerInfo(
                 egg.gameObject, global::EventTrigger.Type.onDeath);
         }
@@ -209,6 +221,7 @@ namespace DarkwoodMP.World
             {
                 return egg;
             }
+
             Item best = null;
             float bestD = ObjRef.PlacedSlack * ObjRef.PlacedSlack;
             foreach (var i in Resources.FindObjectsOfTypeAll<Item>())
@@ -218,6 +231,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var p = i.transform.position;
                 float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
                 if (d <= bestD)
@@ -226,11 +240,13 @@ namespace DarkwoodMP.World
                     best = i;
                 }
             }
+
             if (best == null && WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
                     $"[world] egg {obj} ({name}) not found here");
             }
+
             return best;
         }
     }

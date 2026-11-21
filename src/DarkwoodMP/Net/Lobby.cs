@@ -27,9 +27,11 @@ namespace DarkwoodMP.Net
                 {
                     return _hostId;
                 }
+
                 return CSteamID.Nil;
             }
         }
+
         public bool IsHost => InLobby && _iAmHost;
         private CSteamID _hostId = CSteamID.Nil;
         private bool _iAmHost;
@@ -83,6 +85,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             HostLost = false;
             Status = "Creating lobby...";
             _createResult.Set(
@@ -96,6 +99,7 @@ namespace DarkwoodMP.Net
             {
                 Leave();
             }
+
             HostLost = false;
             _refused = CSteamID.Nil;
             Status = "Joining lobby...";
@@ -108,6 +112,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             SteamMatchmaking.LeaveLobby(Id);
             Id = CSteamID.Nil;
             _hostId = CSteamID.Nil;
@@ -116,6 +121,7 @@ namespace DarkwoodMP.Net
             {
                 Status = "Not connected"; // else keep why, for the notice
             }
+
             Action handler = OnLeft;
             if (handler != null)
             {
@@ -133,6 +139,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             HostLost = true;
             Status = why;
             Leave();
@@ -153,11 +160,13 @@ namespace DarkwoodMP.Net
             {
                 return list;
             }
+
             int n = SteamMatchmaking.GetNumLobbyMembers(Id);
             for (int i = 0; i < n; i++)
             {
                 list.Add(SteamMatchmaking.GetLobbyMemberByIndex(Id, i));
             }
+
             return list;
         }
 
@@ -171,6 +180,7 @@ namespace DarkwoodMP.Net
                 Plugin.Log.LogError(Status);
                 return;
             }
+
             var id = new CSteamID(r.m_ulSteamIDLobby);
             SteamMatchmaking.SetLobbyData(id, KeyMod, PluginInfo.Version);
             SteamMatchmaking.SetLobbyData(
@@ -192,6 +202,7 @@ namespace DarkwoodMP.Net
                 Plugin.Log.LogError(Status);
                 return;
             }
+
             var id = new CSteamID(r.m_ulSteamIDLobby);
             // Told twice: as JoinLobby's result and as the callback. After a
             // refusal (below) the second one must not let us in: we've left, so
@@ -201,6 +212,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             string proto = SteamMatchmaking.GetLobbyData(id, KeyProto);
             if (!string.IsNullOrEmpty(proto)
                 && proto != Protocol.Version.ToString())
@@ -213,6 +225,7 @@ namespace DarkwoodMP.Net
                 Plugin.Log.LogError(Status);
                 return;
             }
+
             Id = id;
             _hostId = SteamMatchmaking.GetLobbyOwner(id);
             _iAmHost = _hostId == SteamUser.GetSteamID();
@@ -225,6 +238,7 @@ namespace DarkwoodMP.Net
                 Status =
                     $"Joined {SteamFriends.GetFriendPersonaName(Owner)}'s game";
             }
+
             Plugin.Log.LogInfo($"Entered lobby {id}, host={IsHost}");
             Action handler = OnEntered;
             if (handler != null)
@@ -239,6 +253,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             var who = new CSteamID(u.m_ulSteamIDUserChanged);
             var change = (EChatMemberStateChange)u.m_rgfChatMemberStateChange;
             if ((change
@@ -258,6 +273,7 @@ namespace DarkwoodMP.Net
                 {
                     handler(who);
                 }
+
                 // Host left: lobby ownership moves in Steam, but the game world
                 // can't; end the session.
                 if (!_iAmHost && who == _hostId)
@@ -268,6 +284,7 @@ namespace DarkwoodMP.Net
                     return;
                 }
             }
+
             // Steam made this joiner the owner (the host is gone and we missed
             // it): it isn't a host either.
             if (InLobby && !_iAmHost
@@ -287,21 +304,25 @@ namespace DarkwoodMP.Net
             {
                 createResult.Dispose();
             }
+
             CallResult<LobbyEnter_t> enterResult = _enterResult;
             if (enterResult != null)
             {
                 enterResult.Dispose();
             }
+
             Callback<GameLobbyJoinRequested_t> joinRequested = _joinRequested;
             if (joinRequested != null)
             {
                 joinRequested.Dispose();
             }
+
             Callback<LobbyChatUpdate_t> chatUpdate = _chatUpdate;
             if (chatUpdate != null)
             {
                 chatUpdate.Dispose();
             }
+
             Callback<LobbyEnter_t> entered = _entered;
             if (entered != null)
             {

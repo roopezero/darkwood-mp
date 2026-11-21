@@ -53,11 +53,13 @@ namespace DarkwoodMP
                     OnClose = Closed,
                 };
             }
+
             string shownTitle = title;
             if (shownTitle == null)
             {
                 shownTitle = "";
             }
+
             _win.Title = shownTitle;
             _text = text;
             if (string.IsNullOrEmpty(yes))
@@ -68,6 +70,7 @@ namespace DarkwoodMP
             {
                 _yes = yes;
             }
+
             if (string.IsNullOrEmpty(no))
             {
                 _no = "No";
@@ -76,6 +79,7 @@ namespace DarkwoodMP
             {
                 _no = no;
             }
+
             _onYes = onYes;
             _onNo = onNo;
             if (timeout > 0f)
@@ -86,6 +90,7 @@ namespace DarkwoodMP
             {
                 _deadline = 0f;
             }
+
             _win.ResetPlace();
             _win.Show();
             Plugin.Log.LogInfo($"[confirm] asked: {title}");
@@ -128,6 +133,7 @@ namespace DarkwoodMP
             {
                 act = _onNo;
             }
+
             _onYes = _onNo = null;
             _deadline = 0f;
             if (_win.Open)
@@ -136,12 +142,14 @@ namespace DarkwoodMP
                 _win.Close();
                 _win.OnClose = Closed;
             }
+
             _pending = act;
             string text = "no";
             if (yes)
             {
                 text = "yes";
             }
+
             Plugin.Log.LogInfo($"[confirm] answered {text}: {_win.Title}");
         }
 
@@ -157,10 +165,12 @@ namespace DarkwoodMP
                 _deadline = 0f;
                 Answer(false);
             }
+
             if (_pending == null)
             {
                 return;
             }
+
             var act = _pending;
             _pending = null;
             try
@@ -184,6 +194,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var e = Event.current;
             if (e.type == EventType.KeyDown)
             {
@@ -194,6 +205,7 @@ namespace DarkwoodMP
                     Answer(true);
                     return;
                 }
+
                 if (e.keyCode == KeyCode.Escape)
                 {
                     e.Use();
@@ -201,6 +213,7 @@ namespace DarkwoodMP
                     return;
                 }
             }
+
             // The screen behind it a little darker, so it reads as a question
             // that has to be answered.
             if (e.type == EventType.Repaint)
@@ -212,6 +225,7 @@ namespace DarkwoodMP
                     MenuSkin.White);
                 GUI.color = old;
             }
+
             _win.OnGUI();
         }
 
@@ -222,6 +236,7 @@ namespace DarkwoodMP
             {
                 Ui.Text(f, _text);
             }
+
             if (_deadline > 0f)
             {
                 int left = Mathf.Max(
@@ -231,6 +246,7 @@ namespace DarkwoodMP
                 {
                     text = "";
                 }
+
                 Ui.Text(f, $"{_no} in {left} second{text}.", MenuSkin.Dim);
             }
         }

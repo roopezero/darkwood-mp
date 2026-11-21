@@ -24,28 +24,33 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             var host = Player.Instance;
             float d = Core.trueDistance(p.transform.position, t.position);
             if (d >= 800f)
             {
                 return false;
             }
+
             float fov = 90f;
             if (host != null)
             {
                 fov = Fov(host);
             }
+
             float light = 0f;
             if (host != null && host.FOVDot != null)
             {
                 light = host.FOVDot.LightRadius;
             }
+
             if (Vector3.Angle(t.position
                     - p.transform.position, p.transform.up) >= fov / 2f
                 && d >= light)
             {
                 return false;
             }
+
             return Core.canSee(p.transform, t);
         }
 
@@ -59,6 +64,7 @@ namespace DarkwoodMP.Combat
                     return p;
                 }
             }
+
             return null;
         }
 
@@ -82,6 +88,7 @@ namespace DarkwoodMP.Combat
             {
                 best = float.MaxValue;
             }
+
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p != null && p.alive)
@@ -91,6 +98,7 @@ namespace DarkwoodMP.Combat
                         Core.trueDistance(p.transform.position, t.position));
                 }
             }
+
             return best;
         }
     }
@@ -111,6 +119,7 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var c = __instance;
             if (c.target != null && !JoinerSight.AnyPlayerSees(c.transform)
                 && JoinerSight.NearestPlayer(c.transform) > 200f)
@@ -121,6 +130,7 @@ namespace DarkwoodMP.Combat
                         UnityEngine.Random.Range(-100, 100)),
                     "ForestSpirit_fastSpawnEff", 4f);
             }
+
             return false;
         }
     }
@@ -152,16 +162,19 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             if (Player.Instance != null
                 && Player.Instance.isInSight(c.transform))
             {
                 return true; // the game's own
             }
+
             var proxy = JoinerSight.AnySees(c.transform);
             if (proxy == null)
             {
                 return true; // nobody sees it: the game does nothing either
             }
+
             c.target = proxy.transform;
             if (LostEnemy != null)
             {
@@ -170,29 +183,34 @@ namespace DarkwoodMP.Combat
                         typeof(Action), c, LostEnemy),
                     all: true);
             }
+
             if (Check != null)
             {
                 c.startRoutine(
                     (Action)Delegate.CreateDelegate(typeof(Action), c, Check),
                     0.5f);
             }
+
             var light = c.transform.Find("SightLight");
             if (light != null)
             {
                 light.gameObject.SetActive(true);
             }
+
             c.canSeeEnemyFar = Core.trueDistance(proxy.transform, c.transform)
                 < c.farViewDistance;
             if (c.behaviour != Character.Behaviour.defensive)
             {
                 c.goToPos(proxy.transform);
             }
+
             if (Threat.Debug)
             {
                 Plugin.Log.LogInfo(
                     $"[threat] banshee {c.name} seen by {proxy.OwnerName}: "
                         + "going for them");
             }
+
             return false;
         }
     }
@@ -207,6 +225,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var proxy = c.target.GetComponent<NetPlayerProxy>();
             if (proxy != null && proxy.alive)
             {

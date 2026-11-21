@@ -49,6 +49,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             foreach (var k in db.itemsDict.Keys.ToList())
             {
                 InvItem it = null;
@@ -59,6 +60,7 @@ namespace DarkwoodMP.World
                 catch
                 {
                 }
+
                 if (it != null)
                 {
                     yield return (k, it);
@@ -95,6 +97,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var found = DbItems().Where(x => x.it.placeOnUse).Select(x =>
             {
                 string placed = "nothing";
@@ -102,13 +105,16 @@ namespace DarkwoodMP.World
                 {
                     placed = x.it.item.name;
                 }
+
                 return $"{x.key} -> {placed}";
             }).ToList();
+
             string foundList = "";
             if (found.Count > 0)
             {
                 foundList = ": " + string.Join(", ", found);
             }
+
             Plugin.Log.LogInfo(
                 $"[world test] items placed on use: {found.Count}" + foundList);
         }
@@ -119,6 +125,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             // The test kills an NPC, burns a door, flips story flags and more:
             // only ever on a copy of the saves.
             if (!SaveRedirect.Active)
@@ -128,11 +135,13 @@ namespace DarkwoodMP.World
                         + "(add --dwmp-sandbox DIR)");
                 yield break;
             }
+
             while (Net.Session.Instance == null
                 || Net.Session.Instance.Peers.Count == 0)
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(5f);
             var player = Player.Instance;
             var at = player.transform.position;
@@ -153,6 +162,7 @@ namespace DarkwoodMP.World
                 {
                     door.open(at, player.transform);
                 }
+
                 yield return new WaitForSeconds(3f);
                 if (door.opened)
                 {
@@ -162,9 +172,11 @@ namespace DarkwoodMP.World
                 {
                     door.open(at, player.transform);
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] door toggled twice, opened={door.opened}");
             }
+
             yield return new WaitForSeconds(2f);
 
             var inv = Nearest(Object.FindObjectsOfType<Inventory>()
@@ -179,6 +191,7 @@ namespace DarkwoodMP.World
                     "[world test] no container with items found");
                 yield break;
             }
+
             var slot = inv.slots.First(s => !InvItemClass.isNull(s.invItem));
             var item = new InvItemClass(slot.invItem);
             Plugin.Log.LogInfo(
@@ -197,6 +210,7 @@ namespace DarkwoodMP.World
             {
                 droppedName = dropped.name;
             }
+
             Plugin.Log.LogInfo(
                 $"[world test] dropped {item.type} on the ground: "
                     + $"{droppedName}");
@@ -215,6 +229,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogInfo(
                     $"[world test] flag {flag.name} -> {flag.isTrue}");
             }
+
             var npc = flags.npcStates.FirstOrDefault(n => n != null);
             if (npc != null)
             {
@@ -223,6 +238,7 @@ namespace DarkwoodMP.World
                     $"[world test] {npc.name}'s reputation -> "
                         + $"{npc.reputation}");
             }
+
             // The journal: a story entry and a note the host hasn't got yet, as
             // the game adds them.
             var journal = Singleton<UI>.Instance.journal;
@@ -231,28 +247,33 @@ namespace DarkwoodMP.World
             {
                 jdb.populateDict();
             }
+
             string entry = null;
             if (jdb != null)
             {
                 entry = jdb.journalEntriesDict.Keys.FirstOrDefault(
                     k => !journal.journalEntriesDict.ContainsKey(k));
             }
+
             string note = null;
             if (jdb != null)
             {
                 note = jdb.notesDict.Keys.FirstOrDefault(
                     k => !journal.notesDict.ContainsKey(k));
             }
+
             int? count = null;
             if (jdb != null)
             {
                 count = jdb.journalEntriesDict.Count;
             }
+
             int? noteCount = null;
             if (jdb != null)
             {
                 noteCount = jdb.notesDict.Count;
             }
+
             Plugin.Log.LogInfo(
                 $"[world test] journal: {journal.journalEntriesDict.Count} "
                     + $"entries, {journal.notesDict.Count} notes; the game "
@@ -262,11 +283,13 @@ namespace DarkwoodMP.World
                 journal.addJournalEntry(entry);
                 Plugin.Log.LogInfo($"[world test] journal entry {entry}");
             }
+
             if (note != null)
             {
                 journal.addNote(new Journal.Note { type = note });
                 Plugin.Log.LogInfo($"[world test] journal note {note}");
             }
+
             yield return new WaitForSeconds(3f);
 
             // A trap going off.
@@ -287,6 +310,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo("[world test] no trap found");
             }
+
             yield return new WaitForSeconds(2f);
 
             // Something that switches (a lamp, a generator...).
@@ -305,6 +329,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo("[world test] nothing switchable found");
             }
+
             yield return new WaitForSeconds(2f);
 
             // One at a time: the looted container again (the observer holds it
@@ -328,8 +353,10 @@ namespace DarkwoodMP.World
                 {
                     mark = " (trader)";
                 }
+
                 return npcName + mark;
             }));
+
             Plugin.Log.LogInfo($"[world test] NPCs here: {names}");
             var trader = npcs.FirstOrDefault(n => n.trader);
             if (trader != null)
@@ -340,11 +367,13 @@ namespace DarkwoodMP.World
                         trader, null);
                 yield return new WaitForSeconds(2f);
             }
+
             NPC victim = npcs.FirstOrDefault(n => n != trader);
             if (victim == null)
             {
                 victim = trader;
             }
+
             if (victim != null)
             {
                 Plugin.Log.LogInfo($"[world test] killing {victim.name}");
@@ -358,9 +387,11 @@ namespace DarkwoodMP.World
                 {
                     dead = state.dead;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] {victimName} dead in the flags: {dead}");
             }
+
             // Dragging something: the player takes hold of it
             // (itemBeingDragged, as Item.startDragging sets) and it moves.
             var drag = Nearest(
@@ -396,16 +427,19 @@ namespace DarkwoodMP.World
                     {
                         text = "not started";
                     }
+
                     string ourDrag = "kept";
                     if (letGo)
                     {
                         ourDrag = "let go";
                     }
+
                     string dragVerdict = "FAIL";
                     if (stopped && letGo)
                     {
                         dragVerdict = "PASS";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[world test] {drag.name} dragged by another player: "
                             + $"the game's drag {text}, ours {ourDrag}: "
@@ -414,10 +448,12 @@ namespace DarkwoodMP.World
                     {
                         player.itemBeingDragged = null;
                     }
+
                     ds.TestOwner(drag.gameObject, 0);
                     yield return new WaitForSeconds(0.5f);
                     start = drag.transform.position;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] dragging {drag.name} from {start}");
                 player.itemBeingDragged = drag;
@@ -427,6 +463,7 @@ namespace DarkwoodMP.World
                         start + new Vector3(30f * t, 0f, 0f);
                     yield return null;
                 }
+
                 player.itemBeingDragged = null;
                 Plugin.Log.LogInfo(
                     $"[world test] let go of {drag.name} at "
@@ -447,11 +484,13 @@ namespace DarkwoodMP.World
                 molotov = db.itemsDict.Keys.FirstOrDefault(
                     k => k.ToLowerInvariant().Contains("molotov"));
             }
+
             InvItem mi = null;
             if (molotov != null)
             {
                 mi = db.getItem(molotov, instantiate: false);
             }
+
             if (mi != null && mi.item != null)
             {
                 var from = player.transform.position;
@@ -473,6 +512,7 @@ namespace DarkwoodMP.World
                     {
                         r.enabled = true;
                     }
+
                     Plugin.Log.LogInfo(
                         $"[world test] throwing {molotov} south");
                     ThrowSync.Instance.Thrown(molotov, go, from);
@@ -506,6 +546,7 @@ namespace DarkwoodMP.World
                     $"[world test] {burnDoor.name} after burning: health "
                         + $"{burnDoor.health}");
             }
+
             // Another player's look: sprites from an animation library this
             // game hasn't loaded (a weapon or torch our player never held) are
             // still found, by loading that library.
@@ -526,6 +567,7 @@ namespace DarkwoodMP.World
                         $"[world test] look: {libName} already loaded here");
                     continue;
                 }
+
                 // A sprite from a collection not loaded here, from a player
                 // whose body uses libName: that loads it.
                 Sync.SpriteCollections.Get(
@@ -546,6 +588,7 @@ namespace DarkwoodMP.World
                             {
                                 return frames;
                             }
+
                             return new tk2dSpriteAnimationFrame[0];
                         }).Select(f =>
                         {
@@ -555,14 +598,17 @@ namespace DarkwoodMP.World
                             {
                                 return collection.spriteCollectionName;
                             }
+
                             return null;
                         }).Where(n => n != null).Distinct().ToList();
                     }
                 }
+
                 if (colls == null)
                 {
                     colls = new List<string>();
                 }
+
                 int inLib = colls.Count(
                     n => Sync.SpriteCollections.Get(Net.StableHash.Of(n))
                         != null);
@@ -571,10 +617,12 @@ namespace DarkwoodMP.World
                 {
                     libState = "loaded";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] look: {libName} {libState}; {inLib} of "
                         + $"{colls.Count} of its sprite collections found");
             }
+
             // Objects named by where they stand (no save id) are still found
             // when they lie a little off that spot, as after physics settled
             // differently in another game: nudge some, look each up by its old
@@ -605,6 +653,7 @@ namespace DarkwoodMP.World
                     Id = late[0].uniqueId
                 });
             }
+
             bool lateOk = lateSaved == 0
                 && (late.Count == 0
                     || late[0].uniqueId < SharedIds.ResolveLimit
@@ -616,6 +665,7 @@ namespace DarkwoodMP.World
             {
                 verdict = "ok";
             }
+
             Plugin.Log.LogInfo(
                 $"[world test] save ids: shared below {sendLimit} (resolved "
                     + $"below {resolveLimit}); {sharedSaved} named by save id, "
@@ -634,8 +684,10 @@ namespace DarkwoodMP.World
                 {
                     found++;
                 }
+
                 pi.transform.position = was;
             }
+
             Plugin.Log.LogInfo(
                 $"[world test] placed objects nudged 15 units: {found} of "
                     + $"{placed.Count} found by their old names");
@@ -656,13 +708,16 @@ namespace DarkwoodMP.World
                     {
                         genItem.turnOff();
                     }
+
                     yield return new WaitForSeconds(1f);
                 }
+
                 for (int i = 0; i < 20; i++)
                 {
                     gen.addFuel(1f);
                     yield return new WaitForSeconds(0.05f);
                 }
+
                 if (genItem != null)
                 {
                     genItem.turnOn();
@@ -671,6 +726,7 @@ namespace DarkwoodMP.World
                 {
                     gen.turnOn();
                 }
+
                 Plugin.Log.LogInfo(
                     "[world test] generator after pouring 20 and switching "
                         + $"on: fuel {gen.fuel:0.0}, on={gen.isOn}");
@@ -680,6 +736,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo("[world test] no generator found");
             }
+
             // The workbench's storage, slot by slot: put something in and take
             // it out again, as if the window were open; the observer then
             // changes it too (one change that stands, one that comes too late).
@@ -723,6 +780,7 @@ namespace DarkwoodMP.World
                     {
                         contents = got.type + " x" + got.amount;
                     }
+
                     Plugin.Log.LogInfo(
                         $"[world test] storage slot {free} now: {contents}; "
                             + "workbench level "
@@ -745,6 +803,7 @@ namespace DarkwoodMP.World
                             frees.Add(i);
                         }
                     }
+
                     if (stackType != null && frees.Count >= 2)
                     {
                         player.openedItemInventory2 = storage;
@@ -766,6 +825,7 @@ namespace DarkwoodMP.World
                         {
                             instance.SortPressed(storage);
                         }
+
                         yield return new WaitForSeconds(0.8f);
                         var mine = storage.slots.Where(
                             sl => !InvItemClass.isNull(sl.invItem)
@@ -790,6 +850,7 @@ namespace DarkwoodMP.World
                         {
                             shownType = "none";
                         }
+
                         Plugin.Log.LogInfo(
                             "[world test] sort & stack: skipped (stackable "
                                 + $"type {shownType}, {frees.Count} free "
@@ -827,6 +888,7 @@ namespace DarkwoodMP.World
                     yield return new WaitForSeconds(1f);
                 }
             }
+
             if (lck != null)
             {
                 string lockName = lck.name;
@@ -837,6 +899,7 @@ namespace DarkwoodMP.World
                 {
                     kind = "door";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] lock on {lockName} "
                         + $"{lockRef} at {lockAt} ({kind}, key {lck.keyType})");
@@ -847,6 +910,7 @@ namespace DarkwoodMP.World
                     $"[world test] after the lockpick: locked={lck.locked}");
                 yield return new WaitForSeconds(2f);
             }
+
             // Other locks, for the authority test: where they are and how
             // they're named.
             foreach (var l in Object.FindObjectsOfType<Locked>()
@@ -882,11 +946,13 @@ namespace DarkwoodMP.World
                 {
                     numbers = new PadlockNumber[0];
                 }
+
                 for (int i = 0; i < numbers.Length
                     && i < pad.combination.Length; i++)
                 {
                     numbers[i].number = pad.combination[i] - '0';
                 }
+
                 pad.checkCombination();
                 Plugin.Log.LogInfo(
                     "[world test] after entering the code: "
@@ -911,6 +977,7 @@ namespace DarkwoodMP.World
                     $"[world test] another locked crate: {c.name} "
                         + $"{ObjRef.Of(c.gameObject)} at {c.transform.position}");
             }
+
             if (crate.Count > 0)
             {
                 var c = crate[0];
@@ -963,6 +1030,7 @@ namespace DarkwoodMP.World
                     {
                         it = made.GetComponent<Item>();
                     }
+
                     string itemState;
                     if (it == null)
                     {
@@ -974,6 +1042,7 @@ namespace DarkwoodMP.World
                             $"destructible={it.destructible}, health "
                                 + $"{it.health} of {it.maxHealth}";
                     }
+
                     Plugin.Log.LogInfo(
                         $"[world test] placed {prefab}: {itemState}");
                     if (it != null && it.destructible && !it.destroyed
@@ -984,14 +1053,17 @@ namespace DarkwoodMP.World
                             $"[world test] none in this save: placed {prefab}");
                         break;
                     }
+
                     if (made != null)
                     {
                         Object.Destroy(made);
                     }
                 }
+
                 // its ObjSpawn goes out first
                 yield return new WaitForSeconds(1f);
             }
+
             if (furniture != null)
             {
                 Plugin.Log.LogInfo(
@@ -1046,13 +1118,16 @@ namespace DarkwoodMP.World
                 {
                     barrel = null;
                 }
+
                 if (barrel != null)
                 {
                     Plugin.Log.LogInfo(
                         "[world test] none in this save: placed one");
                 }
+
                 yield return new WaitForSeconds(1f);
             }
+
             if (barrel != null)
             {
                 Plugin.Log.LogInfo(
@@ -1065,6 +1140,7 @@ namespace DarkwoodMP.World
             {
                 Plugin.Log.LogInfo("[world test] no explosive found");
             }
+
             // before ObjectsStep, which enables the feeder that Scripted builds
             yield return Scripted(at);
             yield return ObjectsStep(player, item);
@@ -1090,6 +1166,7 @@ namespace DarkwoodMP.World
             {
                 cfg.Value = 50;
             }
+
             yield return null;
             void Check(bool ok, string what)
             {
@@ -1098,8 +1175,10 @@ namespace DarkwoodMP.World
                 {
                     verdict = "PASS";
                 }
+
                 Plugin.Log.LogInfo($"[world test] stacks: {verdict} {what}");
             }
+
             var db = DbItems().ToList();
             foreach (var (k, it) in db.Where(
                 x => x.it.stacksDurability
@@ -1110,6 +1189,7 @@ namespace DarkwoodMP.World
                         + $"{it.stackable}, stacksDurability "
                         + $"{it.stacksDurability}, maxAmount {it.maxAmount})");
             }
+
             string bandage =
                 db.Select(x => x.key).FirstOrDefault(k => k == "bandage");
             if (bandage == null)
@@ -1117,6 +1197,7 @@ namespace DarkwoodMP.World
                 bandage = db.Select(x => x.key).FirstOrDefault(
                     k => k.Contains("bandage"));
             }
+
             string gas = db.Where(x => x.it.stacksDurability)
                 .Select(x => x.key).FirstOrDefault(k => k.Contains("gas"));
             if (gas == null)
@@ -1137,8 +1218,10 @@ namespace DarkwoodMP.World
                 {
                     hotbar = new List<InvSlot>();
                 }
+
                 return slots.Concat(hotbar).ToList();
             }
+
             void Clear(string type)
             {
                 foreach (var sl in Bags())
@@ -1150,6 +1233,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             List<int> Stacks(string type) => Bags()
                 .Where(
                     sl => !InvItemClass.isNull(sl.invItem)
@@ -1163,6 +1247,7 @@ namespace DarkwoodMP.World
                 {
                     player.Inventory.addItemTypeToPlayer(bandage, 1);
                 }
+
                 yield return null;
                 var st = Stacks(bandage);
                 Check(
@@ -1202,6 +1287,7 @@ namespace DarkwoodMP.World
             {
                 storage = wb.normalInventory;
             }
+
             var frees = new List<int>();
             void ClearNails()
             {
@@ -1215,6 +1301,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (storage != null)
             {
                 for (int i = 0; i < storage.slots.Count; i++)
@@ -1225,6 +1312,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (storage != null && frees.Count >= 3
                 && db.Any(x => x.key == "nail"))
             {
@@ -1245,6 +1333,7 @@ namespace DarkwoodMP.World
                         frees.Add(i);
                     }
                 }
+
                 int[] amounts = { 3, 3, 40 };
                 for (int j = 0; j < 3; j++)
                 {
@@ -1252,12 +1341,14 @@ namespace DarkwoodMP.World
                     sl.inventory = storage;
                     sl.createItem("nail", amounts[j]);
                 }
+
                 yield return new WaitForSeconds(0.8f);
                 SlotShare instance = SlotShare.Instance;
                 if (instance != null)
                 {
                     instance.SortPressed(storage);
                 }
+
                 yield return new WaitForSeconds(0.8f);
                 var nails = storage.slots.Where(
                     sl => !InvItemClass.isNull(sl.invItem)
@@ -1288,6 +1379,7 @@ namespace DarkwoodMP.World
                             }
                         }
                     }
+
                     ClearGas();
                     frees.Clear();
                     for (int i = 0; i < storage.slots.Count; i++)
@@ -1297,6 +1389,7 @@ namespace DarkwoodMP.World
                             frees.Add(i);
                         }
                     }
+
                     float[] parts = { 0.10f, 0.15f, 0.20f };
                     for (int j = 0; j < 3; j++)
                     {
@@ -1307,12 +1400,14 @@ namespace DarkwoodMP.World
                         sl.invItem.durability = max * parts[j];
                         sl.invItem.refresh();
                     }
+
                     yield return new WaitForSeconds(0.8f);
                     SlotShare share = SlotShare.Instance;
                     if (share != null)
                     {
                         share.SortPressed(storage);
                     }
+
                     yield return new WaitForSeconds(0.8f);
                     var cans = storage.slots.Where(
                         sl => !InvItemClass.isNull(sl.invItem)
@@ -1326,6 +1421,7 @@ namespace DarkwoodMP.World
                     ClearGas();
                     yield return new WaitForSeconds(0.8f);
                 }
+
                 player.openedItemInventory2 = null;
             }
             else
@@ -1347,6 +1443,7 @@ namespace DarkwoodMP.World
                     max == StackSizes.OriginalOf(bandage) && max < 30,
                     $"StackSize 0: {bandage} stacks to {max} again");
             }
+
             cfg.Value = setting;
             yield return null;
         }
@@ -1373,21 +1470,25 @@ namespace DarkwoodMP.World
                     location = l.name + " hideout " + l.hideoutId + " ward "
                         + (l.shadowWard != null && l.shadowWard.activeSelf);
                 }
+
                 string ours = "";
                 if (o == player.experienceMachine)
                 {
                     ours = " (ours)";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] oven {ovenName} {ovenRef} on {ovenOn} at "
                         + $"{location}{ours}");
             }
+
             var mine = player.experienceMachine;
             ExperienceMachine other = ovens.FirstOrDefault(o => o != mine);
             if (other == null)
             {
                 other = mine;
             }
+
             if (other != null)
             {
                 player.setExperienceMachine(other);
@@ -1402,6 +1503,7 @@ namespace DarkwoodMP.World
                 {
                     oldOne = mine.name + " on " + mine.isOn;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] lit oven {litName}: on {litOn}, ward "
                         + $"{ward}, ours {isOurs}; the old one {oldOne}");
@@ -1432,6 +1534,7 @@ namespace DarkwoodMP.World
             {
                 place = here.name;
             }
+
             Plugin.Log.LogInfo(
                 $"[world test] hideouts: {listing}; we're at {place}");
             if (here != null && hideouts.Contains(here))
@@ -1443,6 +1546,7 @@ namespace DarkwoodMP.World
                         + $"{before} items there before, {ItemsIn(here)} "
                         + "after");
             }
+
             var src = hideouts.FirstOrDefault(l => l != here);
             Location dest;
             if (here != null && here.playerBase && here.hideoutId > 0)
@@ -1453,6 +1557,7 @@ namespace DarkwoodMP.World
             {
                 dest = hideouts.FirstOrDefault(l => l != src);
             }
+
             if (src != null && dest != null
                 && dest.porterDeliveryPosition != null)
             {
@@ -1462,12 +1567,15 @@ namespace DarkwoodMP.World
                     {
                         return i.GetComponent<Inventory>();
                     }
+
                     return null;
                 }).FirstOrDefault(i => i != null && !i.transform.isLocked());
+
                 if (chest != null)
                 {
                     chest.addItemType("bottle", 1);
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] porter from {src.name} ({ItemsIn(src)} "
                         + $"items) to {dest.name}");
@@ -1491,6 +1599,7 @@ namespace DarkwoodMP.World
                 {
                     return i.GetComponent<Inventory>().getAllItems().Count;
                 }
+
                 return 0;
             });
 
@@ -1500,6 +1609,7 @@ namespace DarkwoodMP.World
             {
                 return "none";
             }
+
             return string.Join(
                 ",",
                 go.GetComponents<Component>().Select(c => c.GetType().Name));
@@ -1529,27 +1639,32 @@ namespace DarkwoodMP.World
                 {
                     pinv = pf.GetComponent<Inventory>();
                 }
+
                 Item pitem = null;
                 if (pf != null)
                 {
                     pitem = pf.GetComponent<Item>();
                 }
+
                 string components = Parts(pf);
                 string removeWhenEmpty = "-";
                 if (pinv != null)
                 {
                     removeWhenEmpty = pinv.removeWhenEmpty.ToString();
                 }
+
                 string isDroppedItem = "-";
                 if (pitem != null)
                 {
                     isDroppedItem = pitem.isDroppedItem.ToString();
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] prefab {name}: {components}; "
                         + $"removeWhenEmpty={removeWhenEmpty}, "
                         + $"isDroppedItem={isDroppedItem}");
             }
+
             InvItem lureItem = null;
             if (Singleton<ItemsDatabase>.Instance != null)
             {
@@ -1561,6 +1676,7 @@ namespace DarkwoodMP.World
                     {
                         drops.Add(k);
                     }
+
                     if (it.item is GameObject ig
                         && ig.GetComponent<Lure>() != null)
                     {
@@ -1569,6 +1685,7 @@ namespace DarkwoodMP.World
                         {
                             recoverNote = " (recoverable)";
                         }
+
                         lures.Add(k + recoverNote);
                         if (lureItem == null)
                         {
@@ -1576,6 +1693,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 Plugin.Log.LogInfo(
                     "[world test] items dropped on releasing aim: "
                         + $"{string.Join(", ", drops)}; lures: "
@@ -1591,6 +1709,7 @@ namespace DarkwoodMP.World
             {
                 di = dropped.GetComponent<Item>();
             }
+
             if (di != null)
             {
                 Plugin.Log.LogInfo(
@@ -1603,6 +1722,7 @@ namespace DarkwoodMP.World
                 {
                     text = "gone";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] dropped item after the click: {text}");
             }
@@ -1616,6 +1736,7 @@ namespace DarkwoodMP.World
             {
                 Core.addToSaveable(trail, isDynamic: true);
             }
+
             yield return new WaitForSeconds(1f);
             if (trail != null)
             {
@@ -1628,6 +1749,7 @@ namespace DarkwoodMP.World
                     // as a match, a torch or a molotov lights it
                     liquid.startBurning();
                 }
+
                 Plugin.Log.LogInfo(
                     "[world test] gasoline trail lit: "
                         + $"burning={(liquid != null && liquid.burning)}");
@@ -1674,6 +1796,7 @@ namespace DarkwoodMP.World
                 {
                     ui.gameObject.SetActive(false);
                 }
+
                 yield return new WaitForSeconds(1f);
                 Plugin.Log.LogInfo(
                     $"[world test] switched {ii.name}: on={ii.isOn}");
@@ -1696,6 +1819,7 @@ namespace DarkwoodMP.World
                     // Construct)
                     feeder.enable();
                 }
+
                 feeder.makeActive();
                 feeder.activate();
                 yield return new WaitForSeconds(1f);
@@ -1717,6 +1841,7 @@ namespace DarkwoodMP.World
                 {
                     lure = lureGo.GetComponent<Lure>();
                 }
+
                 if (lure != null)
                 {
                     yield return new WaitForSeconds(0.5f);
@@ -1738,6 +1863,7 @@ namespace DarkwoodMP.World
                 {
                     sinv.addItemType("woodLog", 1);
                 }
+
                 float before = saw.fuel;
                 if (saw.canConvert())
                 {
@@ -1751,6 +1877,7 @@ namespace DarkwoodMP.World
                         // taken before it
                     }
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] saw {saw.name} "
                         + $"{ObjRef.Of(saw.gameObject)}: fuel {before:0.0} -> {saw.fuel:0.0}");
@@ -1780,6 +1907,7 @@ namespace DarkwoodMP.World
                     $"[world test] weather rolled: rain {rain.rainToday} at "
                         + $"{rain.timeToStart:0} for {rain.duration:0}");
             }
+
             var ns = Singleton<NightScenarios>.Instance;
             if (ns != null)
             {
@@ -1787,12 +1915,14 @@ namespace DarkwoodMP.World
                 {
                     ns.setCurrentScenario();
                 }
+
                 var sc = ns.currentScenario;
                 string scenario = "none";
                 if (sc != null)
                 {
                     scenario = sc.name;
                 }
+
                 Plugin.Log.LogInfo($"[world test] night scenario {scenario}");
                 CustomEvent ev = null;
                 if (sc != null)
@@ -1803,12 +1933,14 @@ namespace DarkwoodMP.World
                         {
                             return e.customEvent;
                         }
+
                         return null;
                     }).FirstOrDefault(
                         e => e != null && e.theEvent != null
                             && e.theEvent.type
                                 == RandomEvent.Type.locationEvent);
                 }
+
                 var big = player.whereAmI.bigLocation;
                 if (ev != null && big != null)
                 {
@@ -1824,16 +1956,19 @@ namespace DarkwoodMP.World
                     {
                         eventName = ev.name;
                     }
+
                     string locationName = "none";
                     if (big != null)
                     {
                         locationName = big.name;
                     }
+
                     Plugin.Log.LogInfo(
                         "[world test] no night event fired (event "
                             + $"{eventName}, location {locationName})");
                 }
             }
+
             var gen = Singleton<WorldGenerator>.Instance;
             if (gen != null)
             {
@@ -1843,6 +1978,7 @@ namespace DarkwoodMP.World
                 {
                     instance.resetObjects();
                 }
+
                 gen.despawnRandomObjects();
                 gen.spawnRandomObjects();
                 var rwo = Singleton<RandomWorldObjects>.Instance;
@@ -1857,18 +1993,22 @@ namespace DarkwoodMP.World
                                         r => r != null && r.prefab != null
                                             && r.prefab.name == o.name));
                     }
+
                     return 0;
                 });
+
                 int count = -1;
                 if (rwo != null)
                 {
                     count = rwo.objects.Count;
                 }
+
                 Plugin.Log.LogInfo(
                     "[world test] random objects respawned in "
                         + $"{gen.worldChunks.Count} chunks: {count} kinds, "
                         + $"{made} in the chunks now");
             }
+
             bool lights = WorldEvents.Instance != null
                 && WorldEvents.Instance.HostShadowLights(player, anyTime: true);
             string text = "not here (no generator with lamps)";
@@ -1876,6 +2016,7 @@ namespace DarkwoodMP.World
             {
                 text = "sent";
             }
+
             Plugin.Log.LogInfo($"[world test] shadow lights {text}");
             // the random objects go 2 seconds after they're made; the weather
             // within a second
@@ -1932,6 +2073,7 @@ namespace DarkwoodMP.World
                         + $"{et.name} "
                         + $"{ObjRef.Of(et.gameObject)} #{i} at {et.transform.position}: {Steps(et.eventTriggers[i].gameEvents)}");
             }
+
             var cons = Object.FindObjectsOfType<Constructible>()
                 .Where(
                     c => c.options.Count > 0 && !c.constructed
@@ -1945,6 +2087,7 @@ namespace DarkwoodMP.World
                     $"[world test] buildable {c.name} "
                         + $"{ObjRef.Of(c.gameObject)} at {c.transform.position}: {c.options.Count} options");
             }
+
             foreach (var n in Object.FindObjectsOfType<NPC>().Where(
                 n => n.characterDialogue != null
                     && ObjRef.Of(n.gameObject).Valid)
@@ -1969,6 +2112,7 @@ namespace DarkwoodMP.World
                 {
                     text = ", and its object is gone (the event removed it)";
                 }
+
                 Plugin.Log.LogInfo($"[world test] #{i} fired={t.fired}{text}");
             }
             else
@@ -2046,13 +2190,16 @@ namespace DarkwoodMP.World
                     {
                         fired = " (fired)";
                     }
+
                     script = stepTypes + fired;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world test] world trigger {kind} {triggerName} "
                         + $"{triggerRef} #{x.i} active={active} "
                         + $"disabled={disabled} events: {script}");
             }
+
             var wt = worldTriggers
                 .Where(x => Unfired(x.t)
                     && x.t.gameEvents.events.All(
@@ -2079,6 +2226,7 @@ namespace DarkwoodMP.World
                 {
                     Plugin.Log.LogWarning($"[world test] {e.Message}");
                 }
+
                 yield return new WaitForSeconds(wt.t.delay + 1.5f);
                 Plugin.Log.LogInfo(
                     $"[world test] world trigger #{wt.i} fired={wt.t.fired}");
@@ -2101,6 +2249,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(3f);
             var p = Player.Instance;
             var door = Nearest(
@@ -2113,11 +2262,13 @@ namespace DarkwoodMP.World
                 best = Vector3.Distance(
                     door.transform.position, p.transform.position);
             }
+
             if (door == null || best >= 2500f)
             {
                 Plugin.Log.LogInfo("[client test] no door near");
                 yield break;
             }
+
             p.Inventory.addItemTypeToPlayer("rope", 2);
             yield return null;
             yield return null;
@@ -2131,6 +2282,7 @@ namespace DarkwoodMP.World
                         n += it.amount;
                     }
                 }
+
                 foreach (var sl in p.Hotbar.slots)
                 {
                     if (!InvItemClass.isNull(sl.invItem)
@@ -2139,8 +2291,10 @@ namespace DarkwoodMP.World
                         n += sl.invItem.amount;
                     }
                 }
+
                 return n;
             }
+
             bool wasOpen = door.opened;
             int ropesBefore = Ropes(), refusedBefore = Authority.RolledBack;
             Plugin.Log.LogInfo(
@@ -2158,6 +2312,7 @@ namespace DarkwoodMP.World
                     door.open(p.transform.position, p.transform, 0f);
                 }
             });
+
             Plugin.Log.LogInfo(
                 $"[client test] did it: open={door.opened}, ropes={Ropes()}");
             yield return new WaitForSeconds(4f);
@@ -2181,6 +2336,7 @@ namespace DarkwoodMP.World
                         + $"{Ropes()}, were {ropesBefore}; refusals "
                         + $"{Authority.RolledBack - refusedBefore})";
             }
+
             Plugin.Log.LogInfo($"[client test] rollback: {verdict}");
 
             // A trigger our player walks into: our part and the shared part run
@@ -2202,6 +2358,7 @@ namespace DarkwoodMP.World
                 {
                     text = ", and its object is gone (the event removed it)";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[client test] #{i} "
                         + $"fired={et.eventTriggers[i].fired}{text}");
@@ -2230,6 +2387,7 @@ namespace DarkwoodMP.World
                 {
                     who = win.npc.name;
                 }
+
                 Plugin.Log.LogInfo($"[client test] dialogue open with {who}");
                 yield return new WaitForSecondsRealtime(8f);
                 string dialogue = "closed";
@@ -2237,6 +2395,7 @@ namespace DarkwoodMP.World
                 {
                     dialogue = "still open with " + win.npc.name;
                 }
+
                 Plugin.Log.LogInfo(
                     "[client test] after the host's answer: dialogue "
                         + $"{dialogue}");

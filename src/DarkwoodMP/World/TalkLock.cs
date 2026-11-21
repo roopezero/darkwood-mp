@@ -63,17 +63,20 @@ namespace DarkwoodMP.World
                         gone.Add(kv.Key);
                     }
                 }
+
                 foreach (var k in gone)
                 {
                     _talkers.Remove(k);
                 }
             };
+
             s.OnSessionEnded += () =>
             {
                 _talkers.Clear();
                 _released.Clear();
                 _ours = null;
             };
+
             // The world unloaded during our dialogue (a death, a reload, a
             // dialogue that ends the chapter): the window's close never ran, so
             // let the NPC go, or every other player would be told we're still
@@ -100,6 +103,7 @@ namespace DarkwoodMP.World
             {
                 return npc.name;
             }
+
             return "";
         }
 
@@ -109,6 +113,7 @@ namespace DarkwoodMP.World
             {
                 return "npc:" + name;
             }
+
             return r.ToString();
         }
 
@@ -121,6 +126,7 @@ namespace DarkwoodMP.World
             {
                 return S.NameOf(holder);
             }
+
             return null;
         }
 
@@ -133,6 +139,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _talkers.Remove(key);
             _released[key] = new KeyValuePair<ulong, float>(
                 who, UnityEngine.Time.unscaledTime);
@@ -148,21 +155,25 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var r = ObjRef.Of(npc.gameObject);
             if (!r.Valid)
             {
                 return true;
             }
+
             string other = TalkingOther(Key(r, UniqueName(npc)), S.LocalId);
             if (other == null)
             {
                 return true;
             }
+
             Player instance = Player.Instance;
             if (instance != null)
             {
                 instance.displayMessage($"{other} is talking to them");
             }
+
             Plugin.Log.LogInfo($"{npc.name}: {other} is talking to them");
             return false;
         }
@@ -174,11 +185,13 @@ namespace DarkwoodMP.World
             {
                 return; // a dream's NPC of our own: nobody else can talk to it
             }
+
             var r = ObjRef.Of(npc.gameObject);
             if (!r.Valid)
             {
                 return;
             }
+
             _ours = npc;
             _oursRef = r;
             _oursName = UniqueName(npc);
@@ -187,6 +200,7 @@ namespace DarkwoodMP.World
                 _talkers[Key(r, _oursName)] = S.LocalId;
                 return;
             }
+
             var w = S.Begin(MsgType.TalkLock);
             r.Write(w);
             w.W.Write((byte)1);
@@ -207,6 +221,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var r = _oursRef;
             string name = _oursName;
             _ours = null;
@@ -217,6 +232,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             // What the dialogue did goes first, so it's there before the NPC is
             // free for the next player.
             FlagsSync instance = FlagsSync.Instance;
@@ -224,15 +240,18 @@ namespace DarkwoodMP.World
             {
                 instance.FlushNow();
             }
+
             if (s.IsHost)
             {
                 Release(Key(r, name), s.LocalId);
                 return;
             }
+
             if (!Combat.NetEnemies.ClientMode)
             {
                 return;
             }
+
             var w = s.Begin(MsgType.TalkLock);
             r.Write(w);
             w.W.Write((byte)0);
@@ -252,11 +271,13 @@ namespace DarkwoodMP.World
                 _oursRef = default;
                 _oursName = "";
             }
+
             Player instance = Player.Instance;
             if (instance != null)
             {
                 instance.displayMessage(reason);
             }
+
             CloseWhenReady(npc, 40);
         }
 
@@ -268,10 +289,12 @@ namespace DarkwoodMP.World
             {
                 win = instance.dialogueWindow;
             }
+
             if (win == null || win.npc != npc || npc == null)
             {
                 return;
             }
+
             // The window opens over a second or so (a portrait, then a fade:
             // inDialogue, then tweening until it's in); closing it before that
             // leaves the game's own opening steps without an NPC.
@@ -285,8 +308,10 @@ namespace DarkwoodMP.World
                         () => CloseWhenReady(npc, tries - 1), 0.25f,
                         timeScaleDependent: false);
                 }
+
                 return;
             }
+
             // From the main menu, close() shows the NPC's goodbye line instead
             // of closing. Setting the menu back to main before each try showed
             // that line again every time, so a refused dialogue never closed
@@ -308,6 +333,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             bool talking = r.R.ReadByte() != 0;
             string key = Key(obj, r.ReadStr());
@@ -316,12 +342,14 @@ namespace DarkwoodMP.World
                 Release(key, from);
                 return;
             }
+
             string other = TalkingOther(key, from);
             if (other != null)
             {
                 Authority.Refuse($"{other} is talking to them");
                 return;
             }
+
             if (_released.TryGetValue(key, out var rel) && rel.Key != from
                 && UnityEngine.Time.unscaledTime - rel.Value < Grace)
             {
@@ -330,12 +358,14 @@ namespace DarkwoodMP.World
                         + "moment");
                 return;
             }
+
             var npc = ObjRef.Resolve<NPC>(obj);
             if (npc != null
                 && !Authority.InReach(npc.transform.position, 1500f, npc.name))
             {
                 return;
             }
+
             _talkers[key] = from;
             if (WorldActions.Debug)
             {
@@ -349,6 +379,7 @@ namespace DarkwoodMP.World
                 {
                     name = obj.ToString();
                 }
+
                 Plugin.Log.LogInfo($"[world] {who} talks to {name}");
             }
         }
@@ -369,6 +400,7 @@ namespace DarkwoodMP.World
             {
                 win = instance.dialogueWindow;
             }
+
             if (win != null && win.npc == __instance)
             {
                 TalkLock.Opened(__instance);

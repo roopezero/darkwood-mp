@@ -64,17 +64,20 @@ namespace DarkwoodMP.World
                 r.Fail("usage: sv-spawn KIND[,KIND...] [N]");
                 yield break;
             }
+
             int n = 1;
             if (a.Length > 1)
             {
                 n = int.Parse(a[1], CultureInfo.InvariantCulture);
             }
+
             var proxy = MapScenarioEnemies.ClientProxy();
             if (proxy == null)
             {
                 r.Fail("no client player");
                 yield break;
             }
+
             var away = proxy.transform.position - P.transform.position;
             away.y = 0f;
             Vector3 dir;
@@ -86,6 +89,7 @@ namespace DarkwoodMP.World
             {
                 dir = Vector3.forward;
             }
+
             var made = new List<Character>();
             int k = 0;
             foreach (string kind in a[0].Split(','))
@@ -97,6 +101,7 @@ namespace DarkwoodMP.World
                         r.Fail($"no prefab Characters/{kind}");
                         yield break;
                     }
+
                     var side = Quaternion.Euler(0f, (k - 1) * 35f, 0f) * dir;
                     var spot = MapScenarioEnemies.FreeSpot(
                         proxy.transform.position + side * 400f);
@@ -115,16 +120,19 @@ namespace DarkwoodMP.World
                                 + $"{e.Message}");
                         yield break;
                     }
+
                     if (c == null)
                     {
                         r.Fail($"couldn't spawn {kind}");
                         yield break;
                     }
+
                     c.transform.position = spot;
                     made.Add(c);
                     _spawned.Add(c);
                 }
             }
+
             yield return new WaitForSeconds(1f);
             var sb = new StringBuilder();
             foreach (var c in made)
@@ -134,6 +142,7 @@ namespace DarkwoodMP.World
                     $"{c.name} #{id} at {Fmt(c.transform.position)} "
                         + $"({Core.trueDistance(c.transform.position, proxy.transform.position):0} from the client): {Anatomy(c)}; ");
             }
+
             r.Info = sb.ToString().TrimEnd(' ', ';');
         }
 
@@ -161,37 +170,45 @@ namespace DarkwoodMP.World
                         {
                             length = frames.Length;
                         }
+
                         return $"{x.name}:{x.wrapMode}:{x.fps:0}fps:{length}";
                     }));
                 }
+
                 string path = PathOf(an, c.transform);
                 string main = "";
                 if (an == c.animator)
                 {
                     main = " main";
                 }
+
                 string legs = "";
                 if (an.legs != null)
                 {
                     legs = " legs=" + PathOf(an.legs, c.transform);
                 }
+
                 string mainLegs = "";
                 if (c.animator != null && c.animator.legs == an)
                 {
                     mainLegs = " (the main's legs)";
                 }
+
                 string clipName = null;
                 if (clip != null)
                 {
                     clipName = clip.name;
                 }
+
                 if (clipName == null)
                 {
                     clipName = "none";
                 }
+
                 l.Add($"[{path}{main}{legs}" +
                       $"{mainLegs} clip {clipName} {attacks}]");
             }
+
             return string.Join(" ", l);
         }
 
@@ -201,12 +218,14 @@ namespace DarkwoodMP.World
             {
                 return ".";
             }
+
             string p = an.name;
             for (var t = an.transform.parent; t != null
                 && t != root; t = t.parent)
             {
                 p = t.name + "/" + p;
             }
+
             return p;
         }
 
@@ -224,6 +243,7 @@ namespace DarkwoodMP.World
                     n++;
                 }
             }
+
             _spawned.Clear();
             yield return new WaitForSeconds(1.5f);
             r.Info = $"removed {n}";
@@ -260,6 +280,7 @@ namespace DarkwoodMP.World
                 r.Fail("usage: sv-sample AT SECS TAG [--walk] [--provoke]");
                 yield break;
             }
+
             double at = double.Parse(a[0], CultureInfo.InvariantCulture);
             float secs = F(a[1]);
             string tag = a[2];
@@ -269,6 +290,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             var samples = new List<S>();
             var home = P.transform.position;
             IEnumerator act = null;
@@ -276,14 +298,17 @@ namespace DarkwoodMP.World
             {
                 act = WalkAway(home, secs);
             }
+
             if (host && a.Contains("--provoke"))
             {
                 act = Provoke(home, secs);
             }
+
             if (act != null)
             {
                 Plugin.Instance.StartCoroutine(act);
             }
+
             double end = at + secs;
             var ne = NetEnemies.Instance;
             NetPlayerProxy proxy = null;
@@ -291,6 +316,7 @@ namespace DarkwoodMP.World
             {
                 proxy = MapScenarioEnemies.ClientProxy();
             }
+
             // The client's copies are disabled characters (NetEnemies.Freeze),
             // which AllCharacters skips.
             var chars = new List<Character>();
@@ -303,6 +329,7 @@ namespace DarkwoodMP.World
                     chars = Object.FindObjectsOfType<Character>().ToList();
                     listed = t;
                 }
+
                 foreach (var c in chars)
                 {
                     if (c == null || ne == null || !ne.NetIdOf(c, out uint id)
@@ -310,6 +337,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     if (Core.trueDistance(
                         c.transform.position, P.transform.position) > 3000f
                         && (proxy == null || Core.trueDistance(
@@ -318,6 +346,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     string state = "";
                     if (host)
                     {
@@ -326,22 +355,26 @@ namespace DarkwoodMP.World
                         {
                             attack = "A";
                         }
+
                         string recover = "";
                         if (c.recoveringFromAttack)
                         {
                             recover = "R";
                         }
+
                         string hit = "";
                         if (c.recoveringFromHit || c.gettingHit)
                         {
                             hit = "H";
                         }
+
                         state = attack + recover + hit;
                         CharBase cb = null;
                         if (c.target != null)
                         {
                             cb = c.target.GetComponent<CharBase>();
                         }
+
                         if (cb is NetPlayerProxy)
                         {
                             state += ">c";
@@ -358,12 +391,14 @@ namespace DarkwoodMP.World
                         {
                             state += ">-";
                         }
+
                         if (c.target != null)
                         {
                             state += FormattableString.Invariant(
                                 $"{Core.trueDistance(c.transform.position, c.target.position):0}");
                         }
                     }
+
                     foreach (var an in c
                         .GetComponentsInChildren<tk2dSpriteAnimator>(false))
                     {
@@ -372,6 +407,7 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         S sample = new S
                         {
                             T = t,
@@ -381,6 +417,7 @@ namespace DarkwoodMP.World
                             Clip = clip.name,
                             Frame = an.CurrentFrame,
                         };
+
                         if (an.Sprite != null)
                         {
                             sample.Sprite = an.Sprite.spriteId;
@@ -389,14 +426,17 @@ namespace DarkwoodMP.World
                         {
                             sample.Sprite = -1;
                         }
+
                         sample.Frames = clip.frames.Length;
                         sample.Playing = an.Playing;
                         sample.State = state;
                         samples.Add(sample);
                     }
                 }
+
                 yield return null;
             }
+
             try
             {
                 Directory.CreateDirectory(Dir);
@@ -405,6 +445,7 @@ namespace DarkwoodMP.World
                 {
                     role = "host";
                 }
+
                 File.WriteAllLines(FileOf(tag, role), samples.Select(x =>
                 {
                     int playing = 0;
@@ -412,6 +453,7 @@ namespace DarkwoodMP.World
                     {
                         playing = 1;
                     }
+
                     return FormattableString.Invariant(
                         $"{x.T:0.000}\t{x.Id}\t{x.Kind}\t{x.Path}\t{x.Clip}\t{x.Frame}\t{x.Sprite}\t{x.Frames}\t{playing}\t{x.State}");
                 }));
@@ -421,6 +463,7 @@ namespace DarkwoodMP.World
                 r.Fail($"couldn't write the samples: {e.Message}");
                 yield break;
             }
+
             var (summary, stuck) = Analyse(samples);
             r.Info = $"{samples.Count} samples; {summary}";
             if (stuck.Count > 0)
@@ -450,22 +493,26 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             yield return Walk(c.transform.position, 90f, detours: 0);
             if (c != null && NetEnemies.InPlay(c))
             {
                 AsPlayer(() => c.getHit(3f, P.transform, false, true, false));
             }
+
             string targetName = "none";
             if (c != null && c.target != null)
             {
                 targetName = c.target.name;
             }
+
             Character struck = c;
             string name = null;
             if (struck != null)
             {
                 name = struck.name;
             }
+
             Plugin.Log.LogInfo(
                 $"[sv] hit {name} to draw it to the host; its target now "
                     + $"{targetName}");
@@ -501,11 +548,13 @@ namespace DarkwoodMP.World
                     {
                         text = " held";
                     }
+
                     string stateNote = "";
                     if (run[0].State != "")
                     {
                         stateNote = " " + run[0].State;
                     }
+
                     seq.Add(
                         FormattableString.Invariant(
                             $"{run[0].Clip}({dur:0.0}s {frames}/{run[0].Frames}f{text}{stateNote})"));
@@ -514,6 +563,7 @@ namespace DarkwoodMP.World
                     {
                         playDur = playing[playing.Count - 1].T - playing[0].T;
                     }
+
                     if (run[0].Frames > 2 && playDur >= 1.0 && sprites <= 2)
                     {
                         string line = FormattableString.Invariant(
@@ -522,19 +572,23 @@ namespace DarkwoodMP.World
                         {
                             line += ", AI " + run[0].State;
                         }
+
                         stuck.Add(line);
                     }
                 }
+
                 if (seq.Count > 14)
                 {
                     seq = seq.Take(6)
                         .Concat(new[] { $"... {seq.Count - 12} more ..." })
                         .Concat(seq.Skip(seq.Count - 6)).ToList();
                 }
+
                 parts.Add(
                     $"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: "
                         + $"{string.Join(" > ", seq)}");
             }
+
             return (string.Join(" | ", parts), stuck);
         }
 
@@ -548,8 +602,10 @@ namespace DarkwoodMP.World
                 {
                     runs.Add(new List<S>());
                 }
+
                 runs[runs.Count - 1].Add(x);
             }
+
             return runs;
         }
 
@@ -563,6 +619,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 l.Add(new S
                 {
                     T = double.Parse(f[0], CultureInfo.InvariantCulture),
@@ -577,6 +634,7 @@ namespace DarkwoodMP.World
                     State = f[9],
                 });
             }
+
             return l;
         }
 
@@ -596,6 +654,7 @@ namespace DarkwoodMP.World
                 r.Fail("usage: sv-compare TAG");
                 yield break;
             }
+
             string tag = a[0];
             List<S> host, ours;
             try
@@ -608,6 +667,7 @@ namespace DarkwoodMP.World
                 r.Fail($"couldn't read the samples: {e.Message}");
                 yield break;
             }
+
             var parts = new List<string>();
             foreach (var g in ours.GroupBy(x => (x.Id, x.Path)).OrderBy(
                 g => g.Key.Id))
@@ -622,6 +682,7 @@ namespace DarkwoodMP.World
                             + "it");
                     continue;
                 }
+
                 var mine = g.Where(
                     x => x.T >= h[0].T + 0.5
                         && x.T <= h[h.Count - 1].T).ToList();
@@ -629,6 +690,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 int ok = 0;
                 var bad = new Dictionary<string, int>();
                 foreach (var x in mine)
@@ -660,6 +722,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 double rate = ok / (double)mine.Count;
                 // Only what the host played while we sampled it too: our
                 // samples can stop before the host's (each game ends its own
@@ -684,22 +747,26 @@ namespace DarkwoodMP.World
                         bad.OrderByDescending(kv => kv.Value).Take(3)
                             .Select(kv => $"{kv.Key} x{kv.Value}")) + ")";
                 }
+
                 string line = FormattableString.Invariant(
                     $"{g.First().Kind} #{g.Key.Id} {g.Key.Path}: {rate:P0} of {mine.Count} match{worst}");
                 if (missing.Count > 0)
                 {
                     line += "; never shown here: " + string.Join("/", missing);
                 }
+
                 parts.Add(line);
                 if (rate < 0.85 || missing.Count > 0)
                 {
                     r.Fail(line);
                 }
             }
+
             if (parts.Count == 0)
             {
                 r.Fail("no animator with enough samples in both games");
             }
+
             r.Info = string.Join(" | ", parts);
             if (r.Failure != null)
             {

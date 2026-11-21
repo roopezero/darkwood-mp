@@ -44,6 +44,7 @@ namespace DarkwoodMP.World
             public int Group, Step;
             public byte Armed = 255;
         }
+
         private static readonly ConditionalWeakTable<GameEvent, Tag> _tags =
             new ConditionalWeakTable<GameEvent, Tag>();
         private sealed class Live
@@ -57,6 +58,7 @@ namespace DarkwoodMP.World
             public ObjRef Parent;
             public byte Armed = 255;
         }
+
         private static readonly List<Live> _live = new List<Live>();
         private static readonly List<(byte kind, long id, Tag tag,
             Vector3 pos, Quaternion rot, ObjRef parent)> _incoming =
@@ -111,6 +113,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             // RandomEvent.fire's copy of one of the firing night event's
             // GameEvents: tag its steps.
             RandomEvent re = null;
@@ -118,6 +121,7 @@ namespace DarkwoodMP.World
             {
                 re = Firing.theEvent;
             }
+
             if (re != null && re.type == RandomEvent.Type.locationEvent)
             {
                 int g = re.gameEvents.FindIndex(
@@ -127,6 +131,7 @@ namespace DarkwoodMP.World
                 {
                     ge = go.GetComponent<GameEvents>();
                 }
+
                 if (ge != null)
                 {
                     var ns = Singleton<NightScenarios>.Instance;
@@ -135,6 +140,7 @@ namespace DarkwoodMP.World
                     {
                         sc = ns.currentScenario.name;
                     }
+
                     for (int s = 0; s < ge.events.Count; s++)
                     {
                         if (ge.events[s] != null)
@@ -149,13 +155,16 @@ namespace DarkwoodMP.World
                             });
                         }
                     }
+
                     return;
                 }
             }
+
             if (Steps.Count == 0)
             {
                 return;
             }
+
             var step = Steps.Peek();
             if (step == null || step.type != GameEvent.Type.gameObject
                 || step.gameObjectModifyType
@@ -163,17 +172,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (step.targetTransform == null
                 || (Object)step.targetTransform.gameObject != prefab
                 || !_tags.TryGetValue(step, out var tag))
             {
                 return;
             }
+
             var c = go.GetComponent<Character>();
             if (c != null && c.npc == null)
             {
                 return; // an enemy: NetEnemies
             }
+
             long id = ((long)_rng.Next() << 31) | (uint)_rng.Next();
             ObjRef.RegisterSpawned(id, go);
             var live = new Live
@@ -185,15 +197,18 @@ namespace DarkwoodMP.World
                 Pos = go.transform.position,
                 Rot = go.transform.rotation
             };
+
             if (parent != null)
             {
                 live.Parent = ObjRef.Of(parent);
             }
+
             _live.Add(live);
             if (HostSharing)
             {
                 Send(Made, live, 0);
             }
+
             SentCount++;
             if (WorldActions.Debug)
             {
@@ -223,6 +238,7 @@ namespace DarkwoodMP.World
                 l.Armed = ArmedOf(l.Go);
                 w.W.Write(l.Armed);
             }
+
             if (to == 0)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
@@ -243,11 +259,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _live.RemoveAll(l => l.Go == null);
             foreach (var l in _live)
             {
                 Send(MadeBefore, l, peer);
             }
+
             if (WorldActions.Debug && _live.Count > 0)
             {
                 Plugin.Log.LogInfo(
@@ -262,12 +280,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsHost)
             {
                 if (_live.Count == 0 || Time.unscaledTime < _nextCheck)
                 {
                     return;
                 }
+
                 _nextCheck = Time.unscaledTime + 1f;
                 for (int i = _live.Count - 1; i >= 0; i--)
                 {
@@ -287,32 +307,39 @@ namespace DarkwoodMP.World
                                         + $"{_live[i].Armed == 1} now, sent");
                             }
                         }
+
                         continue;
                     }
+
                     if (HostSharing)
                     {
                         Send(Gone, _live[i], 0);
                     }
+
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
                             $"[world] night object {_live[i].Name} "
                                 + $"#{_live[i].Id} is gone");
                     }
+
                     _live.RemoveAt(i);
                 }
             }
+
             for (int i = _rearm.Count - 1; i >= 0; i--)
             {
                 if (Time.unscaledTime < _rearm[i].at)
                 {
                     continue;
                 }
+
                 Trigger trap = null;
                 if (_rearm[i].go != null)
                 {
                     trap = _rearm[i].go.GetComponent<Trigger>();
                 }
+
                 if (trap != null && trap.active != (_rearm[i].armed == 1))
                 {
                     if (WorldActions.Debug)
@@ -322,10 +349,13 @@ namespace DarkwoodMP.World
                                 + $"{_rearm[i].armed == 1} again, as the "
                                 + "host's");
                     }
+
                     trap.active = _rearm[i].armed == 1;
                 }
+
                 _rearm.RemoveAt(i);
             }
+
             if (_incoming.Count > 0 && WorldShare.WorldReady
                 && NetEnemies.ClientMode)
             {
@@ -346,6 +376,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             byte kind = r.R.ReadByte();
             long id = r.R.ReadInt64();
             Tag tag = null;
@@ -361,6 +392,7 @@ namespace DarkwoodMP.World
                     Group = r.R.ReadByte(),
                     Step = r.R.ReadByte()
                 };
+
                 pos = r.ReadVector3();
                 rot = new Quaternion(
                     r.R.ReadSingle(), r.R.ReadSingle(), r.R.ReadSingle(),
@@ -368,6 +400,7 @@ namespace DarkwoodMP.World
                 parent = ObjRef.Read(r);
                 tag.Armed = r.R.ReadByte();
             }
+
             // While our world loads (a player let in), they wait for it.
             if (WorldShare.WorldReady && NetEnemies.ClientMode)
             {
@@ -398,18 +431,22 @@ namespace DarkwoodMP.World
                         WorldActions.Replaying = false;
                     }
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] night object #{id} gone (the host's)");
                 }
+
                 return;
             }
+
             if (have != null) // made already: only its trap's state
             {
                 Arm(have, tag.Armed);
                 return;
             }
+
             var prefab = Prefab(tag);
             if (prefab == null)
             {
@@ -418,6 +455,7 @@ namespace DarkwoodMP.World
                         + $"{tag.Group}/{tag.Step} here to make its object");
                 return;
             }
+
             if (kind == MadeBefore)
             {
                 // Saved with the world we loaded: ours from the save, by name
@@ -434,6 +472,7 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         float d = (t.position - pos).sqrMagnitude;
                         if (d < bestD)
                         {
@@ -442,6 +481,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 if (best != null)
                 {
                     ObjRef.RegisterSpawned(id, best);
@@ -452,14 +492,17 @@ namespace DarkwoodMP.World
                             $"[world] night object {best.name} #{id}: ours "
                                 + "from the save");
                     }
+
                     return;
                 }
             }
+
             Transform under = null;
             if (parent.K != ObjRef.Kind.None)
             {
                 under = ObjRef.Resolve<Transform>(parent);
             }
+
             GameObject go;
             WorldActions.Replaying = true;
             try
@@ -469,6 +512,7 @@ namespace DarkwoodMP.World
                 {
                     parentGO = under.gameObject;
                 }
+
                 go = Core.AddPrefab(
                     prefab, pos, rot, parentGO, worldSpace: true);
                 if (go != null)
@@ -480,6 +524,7 @@ namespace DarkwoodMP.World
                     {
                         loc = go.transform.GetLocation();
                     }
+
                     if (loc != null)
                     {
                         loc.addToObjects(go); // as GameEvent.fire does
@@ -498,10 +543,12 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             if (go == null)
             {
                 return;
             }
+
             if (WorldActions.Debug)
             {
                 string text = "";
@@ -509,6 +556,7 @@ namespace DarkwoodMP.World
                 {
                     text = " (made before we came)";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] made the host's night object {go.name} #{id} "
                         + $"({tag.Event}) at {pos}{text}");
@@ -526,6 +574,7 @@ namespace DarkwoodMP.World
             {
                 trap = go.GetComponent<Trigger>();
             }
+
             int armed = 0;
             if (trap == null)
             {
@@ -535,6 +584,7 @@ namespace DarkwoodMP.World
             {
                 armed = 1;
             }
+
             return (byte)armed;
         }
 
@@ -545,10 +595,12 @@ namespace DarkwoodMP.World
             {
                 trap = go.GetComponent<Trigger>();
             }
+
             if (trap == null)
             {
                 return;
             }
+
             trap.active = armed == 1;
             // And again once its own Start has run. Only the newest state is
             // kept: a "made before" (not armed yet) and the host's "armed now"
@@ -565,11 +617,13 @@ namespace DarkwoodMP.World
             {
                 sc = ns.getScenario(tag.Scenario);
             }
+
             CustomEvent ev = null;
             if (sc != null)
             {
                 ev = WorldEvents.FindEvent(sc, tag.Event);
             }
+
             if (ev == null && ns != null)
             {
                 foreach (var other in ns.scenarios)
@@ -582,28 +636,33 @@ namespace DarkwoodMP.World
                     {
                         ev = null;
                     }
+
                     if (ev != null)
                     {
                         break;
                     }
                 }
             }
+
             RandomEvent re = null;
             if (ev != null)
             {
                 re = ev.theEvent;
             }
+
             if (re == null || tag.Group >= re.gameEvents.Count
                 || re.gameEvents[tag.Group] == null)
             {
                 return null;
             }
+
             var steps = re.gameEvents[tag.Group].events;
             if (tag.Step >= steps.Count || steps[tag.Step] == null
                 || steps[tag.Step].targetTransform == null)
             {
                 return null;
             }
+
             return steps[tag.Step].targetTransform.gameObject;
         }
     }
@@ -620,6 +679,7 @@ namespace DarkwoodMP.World
             __state = NightObjects.Firing;
             NightObjects.Firing = __instance;
         }
+
         static void Finalizer(CustomEvent __state) =>
             NightObjects.Firing = __state;
     }
@@ -670,6 +730,7 @@ namespace DarkwoodMP.World
             {
                 NightObjects.Steps.Pop();
             }
+
             return __exception;
         }
     }

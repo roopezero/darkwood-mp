@@ -83,11 +83,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var db = Singleton<ItemsDatabase>.Instance;
             if (db == null || db.itemsDict == null || db.itemsDict.Count == 0)
             {
                 return;
             }
+
             _placeables = new Dictionary<Object, string>();
             _placeablePaths = new HashSet<string>();
             _placeableTypes = new Dictionary<string, HashSet<string>>();
@@ -99,10 +101,12 @@ namespace DarkwoodMP.World
                 {
                     item = gameObject.GetComponent<InvItem>();
                 }
+
                 if (item == null || !item.canBePlaced || item.item == null)
                 {
                     continue;
                 }
+
                 string path = "Traps/" + item.item.name;
                 if (Resources.Load("Prefabs/" + path) != item.item)
                 {
@@ -112,14 +116,17 @@ namespace DarkwoodMP.World
                             + "shared");
                     continue;
                 }
+
                 _placeables[item.item] = path;
                 _placeablePaths.Add(path);
                 if (!_placeableTypes.TryGetValue(path, out var types))
                 {
                     _placeableTypes[path] = types = new HashSet<string>();
                 }
+
                 types.Add(kv.Key);
             }
+
             Plugin.Log.LogInfo(
                 $"Placeable things: {string.Join(", ", _placeablePaths)}");
         }
@@ -136,6 +143,7 @@ namespace DarkwoodMP.World
             {
                 return path;
             }
+
             return null;
         }
 
@@ -161,6 +169,7 @@ namespace DarkwoodMP.World
             {
                 return types;
             }
+
             return null;
         }
 
@@ -187,11 +196,13 @@ namespace DarkwoodMP.World
                         gone.Add(kv.Key);
                     }
                 }
+
                 foreach (var k in gone)
                 {
                     _locks.Remove(k);
                 }
             };
+
             session.OnSessionEnded += () =>
             {
                 _watched.Clear();
@@ -221,16 +232,19 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             SlotShare instance = SlotShare.Instance;
             if (instance != null)
             {
                 instance.Update();
             }
+
             SendPendingSpawns();
             if (Time.unscaledTime < _nextCheck)
             {
                 return;
             }
+
             Poll();
         }
 
@@ -251,12 +265,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var inv in go.GetComponentsInChildren<Inventory>(true))
             {
                 if (inv == null || !inv.open)
                 {
                     continue;
                 }
+
                 try
                 {
                     inv.hide();
@@ -288,12 +304,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (Orphaned(p.openedItemInventory))
             {
                 var inv = p.openedItemInventory;
                 p.openedItemInventory = null;
                 DropWindow(p, inv);
             }
+
             if (Orphaned(p.openedItemInventory2))
             {
                 var inv = p.openedItemInventory2;
@@ -312,6 +330,7 @@ namespace DarkwoodMP.World
             {
                 text = "";
             }
+
             Plugin.Log.LogInfo(
                 "[containers] an open container was destroyed with its window "
                     + $"still up: removed the window{text}");
@@ -333,14 +352,17 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 if (inv.thisUI != null)
                 {
                     Object.Destroy(inv.thisUI);
                 }
+
                 if (inv.traderMessage != null)
                 {
                     Object.Destroy(inv.traderMessage.gameObject);
                 }
+
                 inv.open = false;
                 UI instance = Singleton<UI>.Instance;
                 if (instance != null)
@@ -352,10 +374,12 @@ namespace DarkwoodMP.World
                         inventorySelectionPrompt.Hide();
                     }
                 }
+
                 if (inv.invType == Inventory.InvType.shop)
                 {
                     p.talkedToNPC = null;
                 }
+
                 var ic = Singleton<InventoryController>.Instance;
                 if (ic != null)
                 {
@@ -365,12 +389,14 @@ namespace DarkwoodMP.World
                         ic.UpgradeMode = false;
                         ic.inWorkbench = false;
                     }
+
                     System.Reflection.FieldInfo sawField = SawField;
                     object saw = null;
                     if (sawField != null)
                     {
                         saw = sawField.GetValue(inv);
                     }
+
                     if (!ReferenceEquals(saw, null))
                     {
                         ic.inSaw = false;
@@ -399,6 +425,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Poll();
         }
 
@@ -417,6 +444,7 @@ namespace DarkwoodMP.World
                 {
                     open.Add(player.openedItemInventory);
                 }
+
                 if (IsWorldContainer(player.openedItemInventory2)
                     && !WorldActions.OursAlone(
                         player.openedItemInventory2.gameObject))
@@ -424,6 +452,7 @@ namespace DarkwoodMP.World
                     open.Add(player.openedItemInventory2);
                 }
             }
+
             // Slot by slot (SlotShare): the workbench's storage, used by
             // everyone at once; and, on a client, every container, so each
             // change is the host's to accept (a refused one is undone for our
@@ -438,15 +467,18 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 if (!storage && !_slotOpen.Contains(inv))
                 {
                     _refs[inv] = ObjRef.Of(inv.gameObject);
                     Opened(inv);
                 }
+
                 slots.Check(inv);
                 _slotOpen.Add(inv);
                 open.RemoveAt(i);
             }
+
             _slotGone.Clear();
             foreach (var inv in _slotOpen)
             {
@@ -457,6 +489,7 @@ namespace DarkwoodMP.World
                     _slotGone.Add(inv);
                 }
             }
+
             foreach (var inv in _slotGone)
             {
                 bool storage = slots != null && slots.Is(inv);
@@ -464,11 +497,13 @@ namespace DarkwoodMP.World
                 {
                     slots.Closed(inv);
                 }
+
                 if (!storage)
                 {
                     Closed(inv);
                     _refs.Remove(inv);
                 }
+
                 _slotOpen.Remove(inv);
             }
 
@@ -485,6 +520,7 @@ namespace DarkwoodMP.World
                     Check(inv);
                 }
             }
+
             // Closed since the last check: one last look (it may be gone:
             // emptied and removed).
             var closed = new List<Inventory>();
@@ -495,6 +531,7 @@ namespace DarkwoodMP.World
                     closed.Add(inv);
                 }
             }
+
             foreach (var inv in closed)
             {
                 if (inv != null)
@@ -505,9 +542,11 @@ namespace DarkwoodMP.World
                 {
                     SendGone(inv);
                 }
+
                 Closed(inv);
                 _watched.Remove(inv);
             }
+
             if (_session.IsHost)
             {
                 SendCorpseLoot();
@@ -540,6 +579,7 @@ namespace DarkwoodMP.World
                     $"[world] sent contents of {inv.name} "
                         + $"{ObjRef.Of(inv.gameObject)}");
             }
+
             Send(ObjRef.Of(inv.gameObject), contents, except: 0);
         }
 
@@ -554,10 +594,12 @@ namespace DarkwoodMP.World
             {
                 r = ObjRef.Of(inv.gameObject);
             }
+
             if (!r.Valid || !_session.IsHost)
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.ContainerState);
             r.Write(w);
             w.WriteBigStr(Serialize(inv)); // bigstr, as OnContainer reads it
@@ -581,11 +623,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient)
             {
                 SendLock(r, open: true);
                 return;
             }
+
             // Host: our own player opening it.
             if (_locks.TryGetValue(LockKey(r), out var holder)
                 && holder != _session.LocalId)
@@ -604,6 +648,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient)
             {
                 SendLock(r, open: false);
@@ -626,6 +671,7 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             holderName = _session.NameOf(holder);
             return true;
         }
@@ -639,6 +685,7 @@ namespace DarkwoodMP.World
             {
                 openFlag = 1;
             }
+
             w.W.Write((byte)openFlag);
             _session.SendToHost(w, Channel.Control, reliable: true);
         }
@@ -649,6 +696,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             bool open = r.R.ReadByte() != 0;
             string key = LockKey(obj);
@@ -659,8 +707,10 @@ namespace DarkwoodMP.World
                 {
                     _locks.Remove(key);
                 }
+
                 return;
             }
+
             if (held && holder != from)
             {
                 var w = _session.Begin(MsgType.ContainerBusy);
@@ -669,6 +719,7 @@ namespace DarkwoodMP.World
                 _session.SendTo(from, w, Channel.Control, reliable: true);
                 return;
             }
+
             _locks[key] = from;
         }
 
@@ -678,6 +729,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             string who = r.ReadStr();
             var inv = ObjRef.Resolve<Inventory>(obj);
@@ -694,11 +746,13 @@ namespace DarkwoodMP.World
             {
                 inv.hide();
             }
+
             Player instance = Player.Instance;
             if (instance != null)
             {
                 instance.displayMessage($"{who} is using this");
             }
+
             Plugin.Log.LogInfo($"{inv.name} is in use by {who}");
         }
 
@@ -709,6 +763,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _watched[inv] = now;
             SendNow(inv, now);
         }
@@ -765,6 +820,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = _session.Begin(MsgType.ContainerState);
             r.Write(w);
             w.WriteBigStr(contents);
@@ -784,21 +840,25 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var item = inv.GetComponent<Item>();
             if (WorldActions.Crate(item) != null && !item.searched)
             {
                 return "locked";
             }
+
             var l = inv.GetComponent<Locked>();
             if (l != null && l.locked)
             {
                 return "locked";
             }
+
             if (item != null && item.destroyToAccessInventory
                 && !item.destroyed)
             {
                 return "locked (not broken open)";
             }
+
             return null;
         }
 
@@ -817,6 +877,7 @@ namespace DarkwoodMP.World
                     return "too far from it";
                 }
             }
+
             return LockedReason(inv);
         }
 
@@ -826,10 +887,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient && from != _session.HostId)
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             string contents = r.ReadBigStr();
             var inv = ObjRef.Resolve<Inventory>(obj);
@@ -840,8 +903,10 @@ namespace DarkwoodMP.World
                 {
                     name = inv.name;
                 }
+
                 Plugin.Log.LogInfo($"[world] got contents for {obj}: " + name);
             }
+
             // A client's whole contents (it sends an emptied container that
             // went this way): refused if it couldn't have changed it, and the
             // host's contents go back to it to roll back to.
@@ -857,10 +922,12 @@ namespace DarkwoodMP.World
                 _session.SendTo(from, w, Channel.Control, reliable: true);
                 return;
             }
+
             if (inv != null)
             {
                 Apply(inv, contents);
             }
+
             if (_session.IsHost)
             {
                 Send(obj, contents, except: from); // pass it on
@@ -880,27 +947,32 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning($"Bad container contents: {e.Message}");
                 return;
             }
+
             if (state == null)
             {
                 return;
             }
+
             if (inv.open && state.slotCount == inv.slots.Count
                 && UiRefresh.Enabled)
             {
                 ApplyOpen(inv, state);
                 return;
             }
+
             if (inv.open)
             {
                 // a different number of slots than its window has drawn: close
                 // it rather than show stale slots
                 inv.hide();
             }
+
             if (inv == null)
             {
                 // hide() removed it (it was empty and goes when emptied)
                 return;
             }
+
             WorldActions.Replaying = true;
             try
             {
@@ -910,6 +982,7 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             _watched.Remove(inv);
             if (inv.removeWhenEmpty && inv.getAllItems().Count == 0)
             {
@@ -939,14 +1012,17 @@ namespace DarkwoodMP.World
                         + "here");
                 return;
             }
+
             if (slots != null)
             {
                 slots.FlushBeforeLoad(inv);
             }
+
             if (_watched.ContainsKey(inv))
             {
                 Check(inv);
             }
+
             WorldActions.Replaying = true;
             try
             {
@@ -956,14 +1032,17 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             if (slots != null)
             {
                 slots.Loaded(inv);
             }
+
             if (_watched.ContainsKey(inv))
             {
                 _watched[inv] = Contents(inv);
             }
+
             Plugin.Log.LogInfo(
                 $"[ui] {inv.name} "
                     + $"{ObjRef.Of(inv.gameObject)}: contents loaded into its open window ({inv.getAllItems().Count} items)");
@@ -980,6 +1059,7 @@ namespace DarkwoodMP.World
             public bool Placed;
             public float SendAt;
         }
+
         private readonly List<Pending> _pending = new List<Pending>();
 
         /// <summary>
@@ -999,10 +1079,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (WorldActions.OursAlone(go))
             {
                 return; // dropped in a dream of our own: nobody else is there
             }
+
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
             float delay = 1.5f; // dropped: once it has come to rest
@@ -1010,6 +1092,7 @@ namespace DarkwoodMP.World
             {
                 delay = 0.2f;
             }
+
             _pending.Add(new Pending
             {
                 Id = id,
@@ -1031,10 +1114,12 @@ namespace DarkwoodMP.World
                 ShareThrownSpawn(ThrownSpawning, go);
                 return;
             }
+
             if (!Placing || go == null || WorldActions.Replaying || !Sharing)
             {
                 return;
             }
+
             string path = PlaceablePath(prefab);
             if (path == null)
             {
@@ -1043,6 +1128,7 @@ namespace DarkwoodMP.World
                         + "not shared");
                 return;
             }
+
             Made(path, go);
         }
 
@@ -1074,6 +1160,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
             if (WorldActions.Debug)
@@ -1082,6 +1169,7 @@ namespace DarkwoodMP.World
                     $"[world] sent {prefab} #{id} at {go.transform.position} "
                         + "(left by a thrown item)");
             }
+
             SendSpawn(
                 id, prefab, go.transform.position, go.transform.rotation, "",
                 false, 0, except: 0);
@@ -1105,6 +1193,7 @@ namespace DarkwoodMP.World
                     _pending.RemoveAt(i);
                     continue;
                 }
+
                 bool condition;
                 if (placedNow)
                 {
@@ -1114,10 +1203,12 @@ namespace DarkwoodMP.World
                 {
                     condition = Time.time < p.SendAt;
                 }
+
                 if (condition)
                 {
                     continue;
                 }
+
                 _pending.RemoveAt(i);
                 var inv = p.Go.GetComponent<Inventory>();
                 string contents = "";
@@ -1125,12 +1216,14 @@ namespace DarkwoodMP.World
                 {
                     contents = Serialize(inv);
                 }
+
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] sent {p.Prefab} #{p.Id} at "
                             + $"{p.Go.transform.position}");
                 }
+
                 var drop = p.Go.GetComponent<DeathDrop>();
                 if (p.Placed && _session.IsClient)
                 {
@@ -1150,6 +1243,7 @@ namespace DarkwoodMP.World
                         {
                             return;
                         }
+
                         ObjRef.Spawned.Remove(id);
                         CloseIfOpen(go);
                         Object.Destroy(go);
@@ -1157,13 +1251,16 @@ namespace DarkwoodMP.World
                             $"[world] our {prefab} #{id} was refused: removed "
                                 + "it");
                     });
+
                     continue;
                 }
+
                 int exp = 0;
                 if (drop != null)
                 {
                     exp = drop.expAmount;
                 }
+
                 SendSpawn(
                     p.Id, p.Prefab, p.Go.transform.position,
                     p.Go.transform.rotation, contents, p.Placed, exp,
@@ -1203,10 +1300,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient && from != _session.HostId)
             {
                 return;
             }
+
             long id = r.R.ReadInt64();
             Vector3 pos = r.ReadVector3();
             DeathDrop drop = null;
@@ -1214,6 +1313,7 @@ namespace DarkwoodMP.World
             {
                 drop = go.GetComponent<DeathDrop>();
             }
+
             if (WorldActions.Debug)
             {
                 string bagName = "no such bag here";
@@ -1221,14 +1321,17 @@ namespace DarkwoodMP.World
                 {
                     bagName = drop.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] got the map marker of death bag #{id}: "
                         + bagName);
             }
+
             if (drop == null || drop.additionalMapMarker != null)
             {
                 return;
             }
+
             WorldActions.Replaying = true;
             try
             {
@@ -1240,6 +1343,7 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             if (_session.IsHost)
             {
                 SendBagMarker(id, pos, except: from);
@@ -1265,6 +1369,7 @@ namespace DarkwoodMP.World
             {
                 placedFlag = 1;
             }
+
             w.W.Write((byte)placedFlag);
             w.WriteStr(prefab);
             w.Write(pos);
@@ -1283,10 +1388,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsClient && from != _session.HostId)
             {
                 return;
             }
+
             long id = r.R.ReadInt64();
             bool placed = (r.R.ReadByte() & 1) != 0;
             string prefab = r.ReadStr();
@@ -1303,6 +1410,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_session.IsHost && placed)
             {
                 // A client's player placed it: only as a request, within reach,
@@ -1314,16 +1422,19 @@ namespace DarkwoodMP.World
                             + "without asking: ignored");
                     return;
                 }
+
                 if (!IsPlaceable(prefab))
                 {
                     Authority.Refuse(
                         $"{prefab} isn't something a player can place");
                     return;
                 }
+
                 if (!Authority.InReach(pos, WorldActions.Reach, prefab))
                 {
                     return;
                 }
+
                 // And only with the item in their bags: the character the
                 // client sent as its player began placing (PlacingPatch), less
                 // what it has placed since. Not known yet (no character from it
@@ -1334,17 +1445,20 @@ namespace DarkwoodMP.World
                 {
                     carried = instance.Carries(from, PlacedWith(prefab));
                 }
+
                 if (carried.HasValue && carried.Value < 1)
                 {
                     Authority.Refuse(
                         $"they don't carry anything that places {prefab}");
                     return;
                 }
+
                 if (carried.HasValue)
                 {
                     Characters.Instance.Placed(from);
                 }
             }
+
             if (Resources.Load("Prefabs/" + prefab) == null)
             {
                 Authority.Refuse($"there's no {prefab} here");
@@ -1362,6 +1476,7 @@ namespace DarkwoodMP.World
                 {
                     return;
                 }
+
                 if (placed)
                 {
                     var trap = go.GetComponent<Trigger>();
@@ -1371,16 +1486,19 @@ namespace DarkwoodMP.World
                         trap.setByPlayer = true;
                     }
                 }
+
                 if (!thrownSpawn)
                 {
                     // (the host's isn't saved either)
                     Core.addToSaveable(go, isDynamic: true, assignID: placed);
                 }
+
                 WorldGrid grid = Singleton<WorldGrid>.Instance;
                 if (grid != null)
                 {
                     grid.registerToNode(go);
                 }
+
                 var rb = go.GetComponent<Rigidbody>();
                 if (rb != null)
                 {
@@ -1391,23 +1509,27 @@ namespace DarkwoodMP.World
             {
                 WorldActions.Replaying = false;
             }
+
             ObjRef.RegisterSpawned(id, go);
             if (thrownSpawn)
             {
                 // its flames count as thrown here, as our own copy's did
                 ThrownHits.Spawned.Add(go);
             }
+
             var drop = go.GetComponent<DeathDrop>();
             if (drop != null)
             {
                 // the experience its player lost, for whoever takes it
                 drop.expAmount = exp;
             }
+
             var inv = go.GetComponent<Inventory>();
             if (inv != null && contents.Length > 0)
             {
                 Apply(inv, contents);
             }
+
             if (WorldActions.Debug)
             {
                 int count = 0;
@@ -1415,9 +1537,11 @@ namespace DarkwoodMP.World
                 {
                     count = inv.getAllItems().Count;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] made {prefab} #{id} at {pos}: {count} items");
             }
+
             if (_session.IsHost)
             {
                 // pass it on
@@ -1442,17 +1566,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var c in ne.HostDeadSince(2f))
             {
                 if (c == null || !_corpsesSent.Add(c))
                 {
                     continue;
                 }
+
                 var inv = c.GetComponent<Inventory>();
                 if (inv == null)
                 {
                     continue;
                 }
+
                 Send(ObjRef.Of(c.gameObject), Serialize(inv), except: 0);
             }
         }
@@ -1482,6 +1609,7 @@ namespace DarkwoodMP.World
                 }
             }
         }
+
         static void Postfix()
         {
             bool placed = Containers.Placing;
@@ -1495,6 +1623,7 @@ namespace DarkwoodMP.World
                 }
             }
         }
+
         static System.Exception Finalizer(System.Exception __exception)
         {
             Containers.Placing = false;
@@ -1530,6 +1659,7 @@ namespace DarkwoodMP.World
                 instance.Made(prefab, __result);
             }
         }
+
         static System.Exception Finalizer(System.Exception __exception)
         {
             Depth--;
@@ -1537,6 +1667,7 @@ namespace DarkwoodMP.World
             {
                 Depth = 0;
             }
+
             return __exception;
         }
     }
@@ -1580,6 +1711,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             try
             {
                 Containers.Instance.OpenedNow();

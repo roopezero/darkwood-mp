@@ -33,16 +33,19 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var s = Net.Session.Instance;
             if (s == null || !s.IsHost)
             {
                 return;
             }
+
             var proxy = BeamOn(a.transform.position);
             if (proxy == null)
             {
                 return;
             }
+
             // The game's own check already hurt it if the spot is lit (the
             // puppet's beam lights the graph too); a beam the graph doesn't
             // show as lit still counts, as the host's flashlight's box does.
@@ -54,6 +57,7 @@ namespace DarkwoodMP.Combat
                 Particles(a, true);
                 a.damageMe(a.lightDamage * a.normalDamageMod * RefreshRate(a));
             }
+
             var c = a.GetComponent<Character>();
             if (c != null && c.alive && !c.dummy)
             {
@@ -61,10 +65,12 @@ namespace DarkwoodMP.Combat
                 {
                     c.aggressiveness = Aggressiveness.attackOnSight;
                 }
+
                 if (c.target != proxy.transform)
                 {
                     c.attackCharacter(proxy.transform);
                 }
+
                 if (Threat.Debug)
                 {
                     Plugin.Log.LogInfo(
@@ -90,28 +96,33 @@ namespace DarkwoodMP.Combat
             {
                 return null;
             }
+
             foreach (var proxy in NetPlayerProxy.All.Values)
             {
                 if (proxy == null || !proxy.alive)
                 {
                     continue;
                 }
+
                 if (!ps.Remotes.TryGetValue(proxy.Owner, out var rp)
                     || rp.Root == null)
                 {
                     continue;
                 }
+
                 var last = rp.Last;
                 if (last == null || !last.Flashlight || !last.Alive
                     || last.Spectating)
                 {
                     continue;
                 }
+
                 if (InBeam(rp.Root.transform, pos, out _, out _))
                 {
                     return proxy;
                 }
             }
+
             return null;
         }
 
@@ -138,6 +149,7 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             fwd.Normalize();
             ahead = Vector3.Dot(rel, fwd);
             aside = Vector3.Cross(fwd, rel).magnitude;

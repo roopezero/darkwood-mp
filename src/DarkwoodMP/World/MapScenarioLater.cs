@@ -46,6 +46,7 @@ namespace DarkwoodMP.World
             public LaterTestCounter C;
             public Transform Marker;
         }
+
         private static readonly Dictionary<string, Made> _made =
             new Dictionary<string, Made>();
 
@@ -73,6 +74,7 @@ namespace DarkwoodMP.World
             {
                 Object.Destroy(old);
             }
+
             var go = new GameObject(name);
             go.transform.position = pos;
             return go;
@@ -93,6 +95,7 @@ namespace DarkwoodMP.World
                 r.Fail("later-setup ID DX DZ [trip DX2 DZ2] [item] [count]");
                 yield break;
             }
+
             string id = a[0];
             var pos = At(a[1], a[2]);
             var m = new Made();
@@ -116,6 +119,7 @@ namespace DarkwoodMP.World
                         },
                         eventAmount = 1
                     });
+
                     parts.Add("count");
                 }
                 else if (a[i] == "item")
@@ -127,16 +131,19 @@ namespace DarkwoodMP.World
                     {
                         prefab = Resources.Load(path) as GameObject;
                     }
+
                     InvItem inv = null;
                     if (prefab != null)
                     {
                         inv = prefab.GetComponent<InvItem>();
                     }
+
                     if (inv == null)
                     {
                         r.Fail($"no item prefab {Item}");
                         yield break;
                     }
+
                     if (inv.isImportantItem)
                     {
                         r.Fail(
@@ -144,6 +151,7 @@ namespace DarkwoodMP.World
                                 + "wouldn't get it");
                         yield break;
                     }
+
                     ge.events.Add(new GameEvent
                     {
                         type = GameEvent.Type.addOrRemoveInvItem,
@@ -152,6 +160,7 @@ namespace DarkwoodMP.World
                         amount = 1,
                         eventAmount = 1
                     });
+
                     parts.Add("item");
                 }
                 else if (a[i] == "trip" && i + 2 < a.Length)
@@ -170,10 +179,12 @@ namespace DarkwoodMP.World
                         magnitude = 0.1f,
                         eventAmount = 1
                     });
+
                     parts.Add($"trip to {Fmt(m.Marker.position)}");
                     i += 2;
                 }
             }
+
             m.Et = go.AddComponent<EventTriggers>();
             m.T = new global::EventTrigger
             {
@@ -181,6 +192,7 @@ namespace DarkwoodMP.World
                 multipleFire = false,
                 gameEvents = ge
             };
+
             m.Et.eventTriggers.Add(m.T);
             // EventTriggers.Awake ran before the trigger was in its list
             m.T.thisEventTriggers = m.Et;
@@ -215,6 +227,7 @@ namespace DarkwoodMP.World
                 r.Fail("no such trigger (later-setup first)");
                 yield break;
             }
+
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             // Room for the item in the bags (a full inventory drops it on the
@@ -236,6 +249,7 @@ namespace DarkwoodMP.World
                         last.invItem.type, last.invItem.amount);
                 }
             }
+
             int had = MapScenarioWorld.CarriedOf(Item);
             bool owed = ScriptedEvents.IsOwed(m.T);
             bool wasFired = m.T.fired;
@@ -249,6 +263,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.1f);
             }
+
             yield return new WaitForSeconds(0.5f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
             string text = "first";
@@ -256,6 +271,7 @@ namespace DarkwoodMP.World
             {
                 text = "already fired here";
             }
+
             string state =
                 $"{text}, owed {owed}: got {got} {Item}, at the marker "
                     + $"{Arrived(m)}, ";
@@ -265,11 +281,13 @@ namespace DarkwoodMP.World
             {
                 count = counter.N;
             }
+
             int runs = -1;
             if (count.HasValue)
             {
                 runs = count.Value;
             }
+
             r.Info = state
                 + $"shared part ran {runs} time(s) here, still owed "
                 + $"{ScriptedEvents.IsOwed(m.T)}{made}; bags "
@@ -283,6 +301,7 @@ namespace DarkwoodMP.World
             {
                 r.Fail($"our player wasn't taken to the marker: {r.Info}");
             }
+
             Core.forbidInputs = false;
             // back for the next steps (a jump MoveCheck takes as a teleport)
             MapScenario.Place(Centre);
@@ -307,6 +326,7 @@ namespace DarkwoodMP.World
                 r.Fail("no such trigger (later-setup first)");
                 yield break;
             }
+
             yield return Walk(m.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             int had = MapScenarioWorld.CarriedOf(Item);
@@ -316,11 +336,13 @@ namespace DarkwoodMP.World
             {
                 n = c.N;
             }
+
             int ran = 0;
             if (n.HasValue)
             {
                 ran = n.Value;
             }
+
             SetOff(m);
             yield return new WaitForSeconds(3f);
             int got = MapScenarioWorld.CarriedOf(Item) - had;
@@ -331,11 +353,13 @@ namespace DarkwoodMP.World
             {
                 count = counter.N;
             }
+
             int runs = 0;
             if (count.HasValue)
             {
                 runs = count.Value;
             }
+
             r.Info =
                 $"got {got} {Item}, at the marker {there}, shared part ran "
                     + $"{runs - ran} more time(s)";
@@ -348,17 +372,21 @@ namespace DarkwoodMP.World
                 {
                     recount = latest.N;
                 }
+
                 int total = 0;
                 if (recount.HasValue)
                 {
                     total = recount.Value;
                 }
+
                 again = total != ran;
             }
+
             if (again)
             {
                 r.Fail($"it ran again for us: {r.Info}");
             }
+
             Core.forbidInputs = false;
             MapScenario.Place(Centre);
         }
@@ -375,12 +403,14 @@ namespace DarkwoodMP.World
                 r.Fail("no such trigger with a counter (later-setup first)");
                 yield break;
             }
+
             int want = int.Parse(a[1]);
             float until = Time.realtimeSinceStartup + 5f;
             while (m.C.N < want && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.2f);
             }
+
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"the shared part of {a[0]} ran {m.C.N} time(s) here (want "
@@ -410,6 +440,7 @@ namespace DarkwoodMP.World
                         + "trip, AT with a counter)");
                 yield break;
             }
+
             yield return Walk(trip.Et.transform.position, 100f);
             yield return new WaitForSeconds(0.5f);
             int refusedBefore = Authority.RolledBack;
@@ -420,6 +451,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (!Arrived(trip))
             {
                 r.Fail(
@@ -427,6 +459,7 @@ namespace DarkwoodMP.World
                         + $"(at {Fmt(p.transform.position)})");
                 yield break;
             }
+
             float from = StateDump.Flat(
                 trip.Et.transform.position - at.Et.transform.position);
             SetOff(at); // the same frame we arrived
@@ -435,6 +468,7 @@ namespace DarkwoodMP.World
             {
                 yield return new WaitForSeconds(0.1f);
             }
+
             r.Info =
                 $"arrived {from:0} from where we left, set off {a[1]} at once: "
                     + $"its shared part ran {at.C.N} time(s) here, requests "
@@ -445,6 +479,7 @@ namespace DarkwoodMP.World
                     "the host didn't take the trigger we arrived at: "
                         + $"{r.Info}");
             }
+
             Core.forbidInputs = false;
             // the trip's own fade-in ends
             yield return new WaitForSeconds(2.5f);

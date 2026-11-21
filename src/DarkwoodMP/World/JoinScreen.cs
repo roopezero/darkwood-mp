@@ -78,11 +78,13 @@ namespace DarkwoodMP.World
                     instance.SetPanel(false);
                 }
             }
+
             if (_stage == Stage.Game)
             {
                 _stage = Stage.None;
                 _inGame = false;
             }
+
             LoadingScreen.Show();
         }
 
@@ -96,6 +98,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _menuScene =
                 UnityEngine.SceneManagement.SceneManager
                     .GetActiveScene().handle;
@@ -109,10 +112,12 @@ namespace DarkwoodMP.World
             {
                 line = instance.LoadStatus;
             }
+
             if (line == null)
             {
                 line = "Loading the host's world...";
             }
+
             SetStage(Stage.Game, line);
         }
 
@@ -126,11 +131,13 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (_buttonsOffOn != null
                 && _buttonsOffOn == Singleton<Controller>.Instance)
             {
                 _buttonsOffOn.buttonsDisabled = false;
             }
+
             _buttonsOffOn = null;
             Plugin.Log.LogInfo($"[join] loading screen hidden: {why}");
             Clear();
@@ -174,6 +181,7 @@ namespace DarkwoodMP.World
                         "[join] loading screen: the game's loading has it now"
                             + At);
                 }
+
                 if (_inGame && !LoadingScreen.Up)
                 {
                     Plugin.Log.LogInfo(
@@ -181,6 +189,7 @@ namespace DarkwoodMP.World
                     Clear();
                     return;
                 }
+
                 if (!_inGame && Time.realtimeSinceStartup > _handOverUntil)
                 {
                     Plugin.Log.LogInfo(
@@ -190,15 +199,18 @@ namespace DarkwoodMP.World
                     LoadingScreen.Hide();
                     return;
                 }
+
                 if (!_inGame)
                 {
                     // the menu's scene, until the chapter's loads
                     LoadingScreen.Show();
                 }
+
                 if (_inGame)
                 {
                     RaiseByGame(wg);
                 }
+
                 if (_inGame)
                 {
                     string line = LoadingScreen.GameStage();
@@ -206,6 +218,7 @@ namespace DarkwoodMP.World
                     {
                         line = _line;
                     }
+
                     _line = line;
                 }
                 else
@@ -215,8 +228,10 @@ namespace DarkwoodMP.World
                     {
                         latest = _line;
                     }
+
                     _line = latest;
                 }
+
                 Draw();
                 return;
             }
@@ -228,6 +243,7 @@ namespace DarkwoodMP.World
                 {
                     why = session.Status;
                 }
+
                 Fail(why);
                 return;
             }
@@ -253,6 +269,7 @@ namespace DarkwoodMP.World
                 {
                     backend.Leave();
                 }
+
                 Fail("stopped with Esc");
                 return;
             }
@@ -264,6 +281,7 @@ namespace DarkwoodMP.World
                 {
                     fraction = (float)p.Value.Got / p.Value.Total;
                 }
+
                 Raise(DownloadShare * fraction);
                 string progress =
                     "Downloading the host's world: "
@@ -275,6 +293,7 @@ namespace DarkwoodMP.World
                     unpacked =
                         $" ({world.UnpackedSize / 1048576f:0.0} MB unpacked)";
                 }
+
                 SetStage(Stage.Downloading, progress + unpacked);
             }
             else if (session.Connected)
@@ -285,6 +304,7 @@ namespace DarkwoodMP.World
                 {
                     loadLine = "Loading the host's world...";
                 }
+
                 SetStage(Stage.Loading, loadLine);
             }
             else if (world.LoadStatus != null)
@@ -302,6 +322,7 @@ namespace DarkwoodMP.World
             {
                 SetStage(Stage.Connecting, "Connecting to the host...");
             }
+
             Draw();
         }
 
@@ -315,17 +336,20 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var wg = Singleton<WorldGenerator>.Instance;
             if (wg != null && wg.finished)
             {
                 return;
             }
+
             var ui = Singleton<UI>.Instance;
             if (ui == null || ui.blackScreenTop == null
                 || !ui.blackScreenTop.activeInHierarchy)
             {
                 return;
             }
+
             var s = ui.blackScreenTop.GetComponent<tk2dSprite>();
             if (s != null && s.color.a > 0f)
             {
@@ -343,6 +367,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             RaiseByGame(Singleton<WorldGenerator>.Instance);
             LoadingScreen.SetBar(_fraction, force: true);
         }
@@ -376,6 +401,7 @@ namespace DarkwoodMP.World
             {
                 hint = "Esc: stop joining";
             }
+
             LoadingScreen.SetLine(_line, hint);
         }
 
@@ -386,6 +412,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _stage = s;
             Plugin.Log.LogInfo(
                 $"[join] loading screen: {s.ToString().ToLowerInvariant()} "

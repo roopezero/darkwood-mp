@@ -65,11 +65,13 @@ namespace DarkwoodMP.Combat
             {
                 go.layer = 0;
             }
+
             Collider src = null;
             if (player != null)
             {
                 src = player.GetComponent<Collider>();
             }
+
             CopyCollider(src, go);
             var rb = go.AddComponent<Rigidbody>();
             // moved by the network, not physics; still gets trigger hits
@@ -98,6 +100,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var theirs = thing.GetComponentsInChildren<Collider>(true);
             foreach (var p in All.Values)
             {
@@ -105,6 +108,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 foreach (var c in theirs)
                 {
                     p.Ignore(c);
@@ -125,9 +129,11 @@ namespace DarkwoodMP.Combat
                 {
                     return _body;
                 }
+
                 return _body = GetComponent<Collider>();
             }
         }
+
         private static readonly Collider[] Near = new Collider[128];
         // more than a stand-in moves in a frame, and its own size
         private const float LooseRadius = 150f;
@@ -139,6 +145,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Physics.IgnoreCollision(Body, c, true);
         }
 
@@ -163,16 +170,19 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 var b = c.attachedRigidbody;
                 if (b == null || b.gameObject == gameObject)
                 {
                     continue;
                 }
+
                 if (b.GetComponent<Item>() == null
                     || b.GetComponent<CharBase>() != null)
                 {
                     continue;
                 }
+
                 Ignore(c);
             }
         }
@@ -207,6 +217,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             foreach (var c in player.GetComponentsInChildren<Collider>(true))
             {
                 if (c != null && !c.isTrigger)
@@ -214,6 +225,7 @@ namespace DarkwoodMP.Combat
                     Physics.IgnoreCollision(body, c, true);
                 }
             }
+
             _ignoredPlayer = player;
         }
 
@@ -259,6 +271,7 @@ namespace DarkwoodMP.Combat
         public override void getHit(float damage)
         {
         }
+
         public override void getHit(
             float damage, Transform attackerTransform, bool CanCutInHalf,
             bool byPlayer, bool canInterrupt,
@@ -269,6 +282,7 @@ namespace DarkwoodMP.Combat
             {
                 return; // no friendly fire
             }
+
             PlayerDamage.Send(
                 Owner, damage, attackerTransform, shadow: false, effects: null);
         }
@@ -276,6 +290,7 @@ namespace DarkwoodMP.Combat
         public override void updateHealthBar()
         {
         }
+
         public override CharacterMessage displayMessage(
             string message, bool verticallyCentered = false,
             bool isEpilogueMessage = false) => null;
@@ -308,14 +323,17 @@ namespace DarkwoodMP.Combat
                     gone.Add(kv.Key);
                 }
             }
+
             foreach (var id in gone)
             {
                 if (NetPlayerProxy.All.TryGetValue(id, out var p) && p != null)
                 {
                     Object.Destroy(p.gameObject);
                 }
+
                 NetPlayerProxy.All.Remove(id);
             }
+
             if (!wanted || Player.Instance == null)
             {
                 return;
@@ -327,15 +345,18 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 if (!hosting && r.Owner != PlayerSync.DummyId)
                 {
                     continue;
                 }
+
                 if (!NetPlayerProxy.All.TryGetValue(r.Owner, out var proxy)
                     || proxy == null)
                 {
                     proxy = NetPlayerProxy.Create(r.Owner, r.Name);
                 }
+
                 var t = proxy.transform;
                 t.SetPositionAndRotation(
                     r.Root.transform.position, r.Root.transform.rotation);
@@ -354,6 +375,7 @@ namespace DarkwoodMP.Combat
                 {
                     loc = World.Locations.HostRunsAt(snap.Place, t.position);
                 }
+
                 bool away = r.Away && loc == null;
                 bool here = r.Alive && !away;
                 if (proxy.Away != away || proxy.InLocation != loc)
@@ -366,6 +388,7 @@ namespace DarkwoodMP.Combat
                         {
                             text = "a dream";
                         }
+
                         data =
                             $"{proxy.OwnerName} is away ({text}): the host's "
                                 + "enemies leave them be";
@@ -381,15 +404,18 @@ namespace DarkwoodMP.Combat
                     {
                         data = $"{proxy.OwnerName} is back in the world";
                     }
+
                     Plugin.Log.LogInfo(data);
                     proxy.Away = away;
                     proxy.InLocation = loc;
                 }
+
                 proxy.alive = here;
                 if (snap != null)
                 {
                     Apply(proxy, snap);
                 }
+
                 var col = proxy.GetComponent<Collider>();
                 if (col != null && col.enabled != here)
                 {
@@ -432,6 +458,7 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
+
                     try
                     {
                         c.stopAttacking(t);
@@ -445,6 +472,7 @@ namespace DarkwoodMP.Combat
                     }
                 }
             }
+
             if (changed && Threat.Debug)
             {
                 string stopNote = "";
@@ -452,6 +480,7 @@ namespace DarkwoodMP.Combat
                 {
                     stopNote = $"; {stopped} enemies stop attacking them";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[threat] {proxy.OwnerName}: invisible {proxy.invisible}, "
                         + $"shadow ward {proxy.ShadowWard}, forest spirit ward "

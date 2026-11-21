@@ -64,6 +64,7 @@ namespace DarkwoodMP
                     {
                         return;
                     }
+
                     new Thread(() => Serve(c))
                     {
                         IsBackground = true,
@@ -128,6 +129,7 @@ namespace DarkwoodMP
                 _to = to;
                 _done = done;
             }
+
             public override void WriteLine(string value)
             {
                 Sent = true;
@@ -138,6 +140,7 @@ namespace DarkwoodMP
                 catch
                 {
                 }
+
                 _done.Set();
             }
         }
@@ -152,6 +155,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             var words = cmd.line.Split('\t');
             Plugin.Log.LogInfo($"[test control] {cmd.line.Replace('\t', ' ')}");
             try
@@ -186,6 +190,7 @@ namespace DarkwoodMP
                     {
                         Title = null;
                     }
+
                     reply.WriteLine("ok");
                     break;
                 case "reset":
@@ -202,6 +207,7 @@ namespace DarkwoodMP
                         reply.WriteLine("fail usage: do STEP ARG...");
                         break;
                     }
+
                     _busy = true;
                     var doReply = reply;
                     _plugin.StartCoroutine(MapScenario.Run(words[1],
@@ -210,6 +216,7 @@ namespace DarkwoodMP
                         _busy = false;
                         doReply.WriteLine(line);
                     }));
+
                     break;
                 case "dump":
                     try
@@ -219,6 +226,7 @@ namespace DarkwoodMP
                             throw new ArgumentException(
                                 "usage: dump PATH [X Z R]");
                         }
+
                         Vector3? at = null;
                         float radius = StateDump.DefaultRadius;
                         if (words.Length >= 4)
@@ -227,10 +235,12 @@ namespace DarkwoodMP
                                 MapScenario.F(words[2]), 0f,
                                 MapScenario.F(words[3]));
                         }
+
                         if (words.Length >= 5)
                         {
                             radius = MapScenario.F(words[4]);
                         }
+
                         reply.WriteLine(
                             "ok " + StateDump.Write(words[1], at, radius));
                     }
@@ -240,6 +250,7 @@ namespace DarkwoodMP
                         reply.WriteLine(
                             $"fail {e.GetType().Name}: {e.Message}");
                     }
+
                     break;
                 case "wait":
                     _busy = true;
@@ -248,16 +259,19 @@ namespace DarkwoodMP
                     {
                         what = words[1];
                     }
+
                     float secs = 60f;
                     if (words.Length > 2)
                     {
                         secs = MapScenario.F(words[2]);
                     }
+
                     int count = 1;
                     if (words.Length > 3 && int.TryParse(words[3], out int n))
                     {
                         count = n;
                     }
+
                     _plugin.StartCoroutine(Wait(what, secs, count, reply));
                     break;
                 case "quit":
@@ -292,17 +306,20 @@ namespace DarkwoodMP
                             + "player-joined)");
                     yield break;
             }
+
             float until = Time.realtimeSinceStartup + secs;
             while (!done() && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
+
             _busy = false;
             string answer = "fail timeout";
             if (done())
             {
                 answer = "ok";
             }
+
             reply.WriteLine(answer);
         }
 
@@ -317,11 +334,13 @@ namespace DarkwoodMP
             {
                 return 0;
             }
+
             var ps = Sync.PlayerSync.Instance;
             if (ps == null)
             {
                 return 0;
             }
+
             int n = 0;
             foreach (var kv in ps.Remotes)
             {
@@ -330,6 +349,7 @@ namespace DarkwoodMP
                 {
                     continue;
                 }
+
                 var last = kv.Value.Last;
                 // In the world, or with us in the prologue's stage (a place on
                 // the far-off grid, World.Prologue).
@@ -340,6 +360,7 @@ namespace DarkwoodMP
                     n++;
                 }
             }
+
             return n;
         }
 
@@ -357,6 +378,7 @@ namespace DarkwoodMP
             {
                 Plugin.Log.LogWarning($"[test control] reset: {e}");
             }
+
             // The next test's area is the test world's again, not one a step of
             // the last test moved it to (a game kept between map items, e.g.
             // map:prologue's "centre-me").
@@ -369,6 +391,7 @@ namespace DarkwoodMP
             {
                 yield return null;
             }
+
             if (WorldShare.InWorld)
             {
                 try
@@ -377,20 +400,24 @@ namespace DarkwoodMP
                     {
                         Singleton<MainMenu>.Instance.close(); // the pause menu
                     }
+
                     Core.returnToMainMenu();
                 }
                 catch (Exception e)
                 {
                     Plugin.Log.LogWarning($"[test control] reset: {e}");
                 }
+
                 yield return null;
             }
+
             until = Time.realtimeSinceStartup + 90f;
             while ((!WorldShare.MainMenuReady() || SaveRedirect.Active)
                 && Time.realtimeSinceStartup < until)
             {
                 yield return null;
             }
+
             Plugin.Instance.SetPanel(false);
             // the next test's log scans start here
             MapScenarioIssues.MarkLogStart();
@@ -400,6 +427,7 @@ namespace DarkwoodMP
             {
                 answer = "ready";
             }
+
             reply.WriteLine(answer);
         }
 
@@ -413,6 +441,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             if (_style == null)
             {
                 _style = new GUIStyle(GUI.skin.label)
@@ -421,11 +450,13 @@ namespace DarkwoodMP
                     alignment = TextAnchor.MiddleCenter,
                     wordWrap = true
                 };
+
                 _style.normal.textColor = Color.white;
                 _back = new Texture2D(1, 1);
                 _back.SetPixel(0, 0, new Color(0f, 0f, 0f, 0.75f));
                 _back.Apply();
             }
+
             var r = new Rect(0, 0, Screen.width, 44);
             GUI.DrawTexture(r, _back);
             GUI.Label(r, Title, _style);

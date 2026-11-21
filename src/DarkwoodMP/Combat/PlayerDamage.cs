@@ -29,6 +29,7 @@ namespace DarkwoodMP.Combat
             {
                 from = attacker.name;
             }
+
             // A friendly NPC is each player's own: one the host doesn't run as
             // an enemy (Combat.HostileNpcs) hits the joiner with the joiner's
             // own copy, so the host's copy's hit on the proxy would be a second
@@ -38,6 +39,7 @@ namespace DarkwoodMP.Combat
             {
                 npc = attacker.GetComponentInParent<Character>();
             }
+
             if (npc != null && npc.npc != null && !NetEnemies.Eligible(npc))
             {
                 if (Threat.Debug)
@@ -46,8 +48,10 @@ namespace DarkwoodMP.Combat
                         $"[threat] {from} (an NPC) hit a remote player's "
                             + "stand-in: left to that player's own copy of it");
                 }
+
                 return;
             }
+
             if (owner == PlayerSync.DummyId)
             {
                 string effectNote = "";
@@ -55,6 +59,7 @@ namespace DarkwoodMP.Combat
                 {
                     effectNote = $" (+{effects.Count} effects)";
                 }
+
                 Plugin.Log.LogInfo(
                     $"[dummy] hit for {damage:0} by {from}" + effectNote);
                 PlayerSync instance = PlayerSync.Instance;
@@ -62,13 +67,16 @@ namespace DarkwoodMP.Combat
                 {
                     instance.FlashDummy(damage);
                 }
+
                 return;
             }
+
             var session = Session.Instance;
             if (session == null || !session.IsHost)
             {
                 return;
             }
+
             var w = session.Begin(MsgType.PlayerDamage);
             w.W.Write(damage);
             int shadowFlag = 0;
@@ -76,6 +84,7 @@ namespace DarkwoodMP.Combat
             {
                 shadowFlag = 1;
             }
+
             w.W.Write((byte)shadowFlag);
             w.WriteStr(from);
             WriteEffects(w, effects);
@@ -95,6 +104,7 @@ namespace DarkwoodMP.Combat
             {
                 n = Mathf.Min(effects.Count, 16);
             }
+
             w.W.Write((byte)n);
             for (int i = 0; i < n; i++)
             {
@@ -109,20 +119,24 @@ namespace DarkwoodMP.Combat
                 {
                     flags |= 1;
                 }
+
                 if (e.stopsPoison)
                 {
                     flags |= 2;
                 }
+
                 if (e.hasPoisonOverlay)
                 {
                     flags |= 4;
                 }
+
                 w.W.Write((byte)flags);
                 string activateSound = e.activateSound;
                 if (activateSound == null)
                 {
                     activateSound = "";
                 }
+
                 w.WriteStr(activateSound);
             }
         }
@@ -141,6 +155,7 @@ namespace DarkwoodMP.Combat
                     modifier = r.R.ReadSingle(),
                     interval = r.R.ReadSingle(),
                 };
+
                 byte f = r.R.ReadByte();
                 e.stopsBleeding = (f & 1) != 0;
                 e.stopsPoison = (f & 2) != 0;
@@ -154,8 +169,10 @@ namespace DarkwoodMP.Combat
                 {
                     e.activateSound = null;
                 }
+
                 effects.Add(e);
             }
+
             return effects;
         }
 
@@ -166,6 +183,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             float damage = r.R.ReadSingle();
             bool shadow = (r.R.ReadByte() & 1) != 0;
             string attacker = r.ReadStr();
@@ -176,6 +194,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Plugin.Log.LogInfo($"Hit for {damage:0} by {attacker} on the host");
             if (shadow)
             {
@@ -185,6 +204,7 @@ namespace DarkwoodMP.Combat
             {
                 player.getHit(damage);
             }
+
             foreach (var e in effects)
             {
                 player.effects.activate(e);

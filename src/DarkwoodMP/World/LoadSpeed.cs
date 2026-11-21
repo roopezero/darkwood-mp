@@ -52,11 +52,13 @@ namespace DarkwoodMP.World
             {
                 return Enumerable.ElementAt(source, index);
             }
+
             if (!_copies.TryGetValue(source, out var e) || e.count != c.Count
                 || !(e.copy is T[]))
             {
                 _copies[source] = e = (c.Count, source.ToArray());
             }
+
             return ((T[])e.copy)[index];
         }
 
@@ -69,6 +71,7 @@ namespace DarkwoodMP.World
             public T Result;
             public System.Threading.Thread Thread;
         }
+
         private static Ahead<SaveManager.DynamicSave> _dynamic;
         private static Ahead<SaveManager.StaticSave> _static;
         private static int AheadUsed, AheadMissed;
@@ -84,6 +87,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _dynamic = Start<SaveManager.DynamicSave>(sm.dynamicFile);
             _static = Start<SaveManager.StaticSave>(sm.staticFile);
         }
@@ -94,6 +98,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var a = new Ahead<T> { Path = path };
             a.Thread = new System.Threading.Thread(() =>
             {
@@ -116,6 +121,7 @@ namespace DarkwoodMP.World
                             a.Text = sr.ReadToEnd();
                         }
                     }
+
                     a.Result =
                         Newtonsoft.Json.JsonConvert.DeserializeObject<T>(
                             a.Text);
@@ -131,6 +137,7 @@ namespace DarkwoodMP.World
                 IsBackground = true,
                 Name = "DarkwoodMP save parse"
             };
+
             a.Thread.Start();
             return a;
         }
@@ -155,8 +162,10 @@ namespace DarkwoodMP.World
                     AheadUsed++;
                     return a.Result;
                 }
+
                 AheadMissed++;
             }
+
             return Newtonsoft.Json.JsonConvert.DeserializeObject<T>(text);
         }
 
@@ -175,6 +184,7 @@ namespace DarkwoodMP.World
                 _prefabs[path] = o = Resources.Load("Prefabs/" + path);
                 PrefabLoads++;
             }
+
             return o;
         }
 
@@ -218,6 +228,7 @@ namespace DarkwoodMP.World
             Batch = true;
             _grid = null;
         }
+
         internal static void EndBatch()
         {
             Batch = false;
@@ -233,6 +244,7 @@ namespace DarkwoodMP.World
             {
                 return co;
             }
+
             return go.AddComponent<CullableObject>();
         }
 
@@ -249,6 +261,7 @@ namespace DarkwoodMP.World
                     _listed.Add(co);
                 }
             }
+
             _cell = Mathf.Max(1, w.distance);
             _cells = new Dictionary<long, List<int>>();
             for (int i = 0; i < _grid.nodes.Count; i++)
@@ -261,6 +274,7 @@ namespace DarkwoodMP.World
                 {
                     _cells[k] = list = new List<int>();
                 }
+
                 list.Add(i);
             }
         }
@@ -280,6 +294,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (!ReferenceEquals(w.currentGrid, _grid))
             {
                 Index(w);
@@ -292,10 +307,12 @@ namespace DarkwoodMP.World
             {
                 cullable.isLocation = true;
             }
+
             if (GO.GetComponent<MapElement>() != null)
             {
                 cullable.isMapElement = true;
             }
+
             if (_listed.Add(co) && !_grid.cullables.Contains(co))
             {
                 _grid.cullables.Add(co);
@@ -313,6 +330,7 @@ namespace DarkwoodMP.World
                     box.bounds.center.x - box.bounds.size.x / 2f, 0f,
                     box.bounds.center.z - box.bounds.size.z / 2f);
             }
+
             float half = d / 2;
             var hit = new SortedSet<int>();
             for (int i = 0; i < across * down; i++)
@@ -331,6 +349,7 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         foreach (int n in list)
                         {
                             var np = _grid.nodes[n].position;
@@ -343,6 +362,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (Verify)
             {
                 var expected = new List<int>();
@@ -361,6 +381,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 Checked++;
                 if (!expected.SequenceEqual(hit))
                 {
@@ -374,6 +395,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             foreach (int n in hit)
             {
                 var node = _grid.nodes[n];
@@ -384,6 +406,7 @@ namespace DarkwoodMP.World
                     co.nodes.Add(node);
                 }
             }
+
             return false;
         }
 
@@ -400,10 +423,12 @@ namespace DarkwoodMP.World
             {
                 nodes = currentGrid.nodes;
             }
+
             if (nodes == null || nodes.Count == 0)
             {
                 return true;
             }
+
             Vector3 pos = GO.transform.position;
             var at = new Vector2(pos.x, pos.z);
             int index = 0;
@@ -417,6 +442,7 @@ namespace DarkwoodMP.World
                     index = i;
                 }
             }
+
             nodes[index].cullables.Add(new WorldGrid.Cullable(GO));
             return false;
         }
@@ -432,6 +458,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (!ReferenceEquals(w.currentGrid, _grid))
             {
                 Index(w);
@@ -442,16 +469,19 @@ namespace DarkwoodMP.World
             {
                 co.node.removeCullable(GO);
             }
+
             co.registered = true;
             if (GO.GetComponent<Location>() != null)
             {
                 return false;
             }
+
             var cullable = new WorldGrid.Cullable(GO, type);
             if (GO.GetComponent<MapElement>() != null)
             {
                 cullable.isMapElement = true;
             }
+
             if (_listed.Add(co) && !_grid.cullables.Contains(co))
             {
                 _grid.cullables.Add(co);
@@ -474,12 +504,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     foreach (int i in list)
                     {
                         if (i >= best)
                         {
                             continue;
                         }
+
                         var np = _grid.nodes[i].position;
                         if (Mathf.Abs(pos.x - np.x) <= half
                             && Mathf.Abs(pos.z - np.y) <= half)
@@ -489,6 +521,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (Verify)
             {
                 int expected = int.MaxValue;
@@ -502,6 +535,7 @@ namespace DarkwoodMP.World
                         break;
                     }
                 }
+
                 Checked++;
                 if (expected != best)
                 {
@@ -514,6 +548,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             if (best != int.MaxValue)
             {
                 var node = _grid.nodes[best];
@@ -523,6 +558,7 @@ namespace DarkwoodMP.World
                 co.node = node;
                 return false;
             }
+
             w.registerToClosestNode(GO);
             return false;
         }
@@ -544,6 +580,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             return AccessTools.Method(t, "MoveNext");
         }
 
@@ -594,14 +631,17 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 yield return ins;
             }
+
             if (n == 0)
             {
                 Plugin.Log.LogWarning(
                     "LoadSpeed: SaveManager.Load has no ElementAt calls to "
                         + "speed up (game changed?)");
             }
+
             if (parses == 0)
             {
                 Plugin.Log.LogWarning(
@@ -665,6 +705,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             __result = Core.AddPrefab(
                 LoadSpeed.Prefab(prefab), position, quaternion, parentGO,
                 worldSpace);
@@ -700,6 +741,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             try
             {
                 return LoadSpeed.RegisterToNodes(__instance, GO, size, type);
@@ -734,6 +776,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             try
             {
                 return LoadSpeed.RegisterToNode(__instance, GO, type);

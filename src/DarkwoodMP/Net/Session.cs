@@ -38,9 +38,11 @@ namespace DarkwoodMP.Net
                 {
                     return backend.HostId;
                 }
+
                 return 0;
             }
         }
+
         public string Status
         {
             get
@@ -51,13 +53,16 @@ namespace DarkwoodMP.Net
                 {
                     status = backend.Status;
                 }
+
                 if (status == null)
                 {
                     return "Not connected";
                 }
+
                 return status;
             }
         }
+
         public string LocalName = "Player";
         public string LocalKey = "";
         /// <summary>Why the host turned us down last, for the panel.</summary>
@@ -156,6 +161,7 @@ namespace DarkwoodMP.Net
                 {
                     return;
                 }
+
                 ulong id = r.R.ReadUInt64();
                 string name = r.ReadStr();
                 bool isNew = !Names.ContainsKey(id);
@@ -172,12 +178,14 @@ namespace DarkwoodMP.Net
                     }
                 }
             });
+
             Register(MsgType.JoinNotice, (from, r) =>
             {
                 if (from != HostId || IsHost)
                 {
                     return;
                 }
+
                 string name = r.ReadStr();
                 byte what = r.R.ReadByte();
                 if (what == 0)
@@ -197,12 +205,14 @@ namespace DarkwoodMP.Net
                     }
                 }
             });
+
             Register(MsgType.PlayerLeft, (from, r) =>
             {
                 if (from != HostId)
                 {
                     return;
                 }
+
                 ulong who = r.R.ReadUInt64();
                 if (Names.TryGetValue(who, out var gone))
                 {
@@ -212,6 +222,7 @@ namespace DarkwoodMP.Net
                         left(gone);
                     }
                 }
+
                 Names.Remove(who);
                 Action<ulong> disconnected = OnPeerDisconnected;
                 if (disconnected != null)
@@ -240,14 +251,17 @@ namespace DarkwoodMP.Net
                         old.Leave();
                     }
                 }
+
                 OnEntered();
             };
+
             b.OnLeft += () =>
             {
                 if (Backend != b)
                 {
                     return;
                 }
+
                 EndSession();
                 if (b.HostLost)
                 {
@@ -258,6 +272,7 @@ namespace DarkwoodMP.Net
                     }
                 }
             };
+
             b.OnPeerLost += id =>
             {
                 if (Backend == b)
@@ -265,6 +280,7 @@ namespace DarkwoodMP.Net
                     OnPeerLost(id);
                 }
             };
+
             b.OnMessage += (from, data, len) =>
             {
                 if (Backend == b)
@@ -289,6 +305,7 @@ namespace DarkwoodMP.Net
             {
                 return ms / 1000f;
             }
+
             return 0f;
         }
 
@@ -299,6 +316,7 @@ namespace DarkwoodMP.Net
                 Dispatch(from, data, length);
                 return;
             }
+
             var copy = new byte[length];
             Buffer.BlockCopy(data, 0, copy, 0, length);
             _late.Enqueue(
@@ -325,6 +343,7 @@ namespace DarkwoodMP.Net
             {
                 return n;
             }
+
             return $"Player {id}";
         }
 
@@ -339,6 +358,7 @@ namespace DarkwoodMP.Net
                 {
                     return 1 + Peers.Count;
                 }
+
                 return Names.Count;
             }
         }
@@ -374,6 +394,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             foreach (var p in Peers)
             {
                 if (p != except)
@@ -399,6 +420,7 @@ namespace DarkwoodMP.Net
                 Connected = true;
                 return;
             }
+
             Connected = false;
             SendHello();
         }
@@ -412,6 +434,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             var w = Begin(MsgType.Hello);
             w.W.Write(Protocol.Version);
             w.WriteStr(Protocol.Game);
@@ -425,6 +448,7 @@ namespace DarkwoodMP.Net
             {
                 hash = handler();
             }
+
             byte[] b;
             if (hash != null && hash.Length == 32)
             {
@@ -434,6 +458,7 @@ namespace DarkwoodMP.Net
             {
                 b = new byte[32];
             }
+
             w.WriteBytes(b); // the world we have; zeros: none
             SendToHost(w, Channel.Control, reliable: true);
             _helloAt = Now;
@@ -442,6 +467,7 @@ namespace DarkwoodMP.Net
                 // the silence counts from the first Hello
                 _heardHostAt = _helloAt;
             }
+
             Plugin.Log.LogInfo("Sent Hello to host");
         }
 
@@ -451,6 +477,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             // Hello from someone already playing: over Steam a peer's id stays
             // the same when it leaves and joins again (Rejoin), and its new
             // Hello can come before the lobby says it left. Treat it as a new
@@ -461,6 +488,7 @@ namespace DarkwoodMP.Net
                     $"{NameOf(from)} sent Hello again: joining them anew");
                 OnPeerLost(from);
             }
+
             ushort version;
             string game, key, password, modVersion, name;
             byte[] worldHash;
@@ -514,11 +542,13 @@ namespace DarkwoodMP.Net
             {
                 why = "You're already playing on this server.";
             }
+
             if (why != null)
             {
                 Refuse(from, why);
                 return;
             }
+
             // The same player on a new connection: their old one broke without
             // closing (Wi-Fi dropped, a crash). The new one wins, so they don't
             // wait for the old one to time out.
@@ -531,6 +561,7 @@ namespace DarkwoodMP.Net
                     break;
                 }
             }
+
             if (old != 0)
             {
                 Plugin.Log.LogInfo(
@@ -539,11 +570,13 @@ namespace DarkwoodMP.Net
                 Backend.Kick(old);
                 OnPeerLost(old);
             }
+
             if (PlayerCount >= Backend.MaxPlayers)
             {
                 Refuse(from, "The server is full.");
                 return;
             }
+
             // Tell everyone at once that someone is on the way in: getting the
             // world to them can take a while.
             if (!_joining.ContainsKey(from))
@@ -555,12 +588,15 @@ namespace DarkwoodMP.Net
                 {
                     handler(name);
                 }
+
                 BroadcastJoinNotice(name, 0, except: from);
             }
+
             if (BeforeWelcome != null && !BeforeWelcome(from, worldHash))
             {
                 return;
             }
+
             _joining.Remove(from);
 
             var w = Begin(MsgType.Welcome);
@@ -575,6 +611,7 @@ namespace DarkwoodMP.Net
                     from, WritePlayerInfo(kv.Key, kv.Value), Channel.Control,
                     reliable: true);
             }
+
             Names[from] = name;
             Keys[from] = key;
             Broadcast(
@@ -588,6 +625,7 @@ namespace DarkwoodMP.Net
             {
                 joined(name);
             }
+
             Action<ulong> connected = OnPeerConnected;
             if (connected != null)
             {
@@ -637,6 +675,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             LocalId = r.R.ReadUInt64();
             Names[LocalId] = LocalName;
             Connected = true;
@@ -647,6 +686,7 @@ namespace DarkwoodMP.Net
             {
                 handler(HostId);
             }
+
             Action welcomed = OnWelcomed;
             if (welcomed != null)
             {
@@ -660,6 +700,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             string reason = r.ReadStr();
             LastRefusal = reason;
             Plugin.Log.LogWarning($"Host refused us: {reason}");
@@ -668,6 +709,7 @@ namespace DarkwoodMP.Net
             {
                 handler(reason);
             }
+
             if (Backend is TcpBackend tcp)
             {
                 tcp.Refused(reason);
@@ -690,6 +732,7 @@ namespace DarkwoodMP.Net
                 {
                     handler(NameOf(who));
                 }
+
                 var w = Begin(MsgType.PlayerLeft);
                 w.W.Write(who);
                 Broadcast(w, Channel.Control, reliable: true);
@@ -702,8 +745,10 @@ namespace DarkwoodMP.Net
                 {
                     stopped(was);
                 }
+
                 BroadcastJoinNotice(was, 1);
             }
+
             _joining.Remove(who);
             Names.Remove(who);
             Keys.Remove(who);
@@ -749,6 +794,7 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             // Only the handshake (and fetching the world it offers) may come
             // from someone not yet admitted.
             if (IsHost && r.Type != MsgType.Hello
@@ -756,16 +802,19 @@ namespace DarkwoodMP.Net
             {
                 return;
             }
+
             if (IsHost && AllowBare != null && !AllowBare(from, r.Type))
             {
                 return;
             }
+
             // anything from the host answers our Hello
             if (!IsHost && from == HostId)
             {
                 _helloAt = -1f;
                 _heardHostAt = Now;
             }
+
             if (_handlers.TryGetValue(r.Type, out var h))
             {
                 try
@@ -791,15 +840,18 @@ namespace DarkwoodMP.Net
             {
                 name = "";
             }
+
             name = name.Trim();
             if (name.Length > 32)
             {
                 name = name.Substring(0, 32);
             }
+
             if (name.Length == 0)
             {
                 return "Player";
             }
+
             return name;
         }
 
@@ -809,10 +861,12 @@ namespace DarkwoodMP.Net
             {
                 b.Poll();
             }
+
             if (_late.Count > 0)
             {
                 DeliverLate();
             }
+
             // A Hello the host never answered (lost, or turned away by a race
             // over Steam): send it again.
             if (IsClient && !Connected && _helloAt >= 0f
@@ -823,6 +877,7 @@ namespace DarkwoodMP.Net
                         + "again");
                 SendHello();
             }
+
             if (IsClient && !Connected && _heardHostAt >= 0f
                 && Now - _heardHostAt > JoinSilence)
             {
@@ -836,6 +891,7 @@ namespace DarkwoodMP.Net
                 {
                     handler(why);
                 }
+
                 Backend.Leave();
             }
         }
@@ -846,6 +902,7 @@ namespace DarkwoodMP.Net
             {
                 b.Dispose();
             }
+
             _backends.Clear();
             Instance = null;
         }

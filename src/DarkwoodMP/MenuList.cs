@@ -51,6 +51,7 @@ namespace DarkwoodMP
                 {
                     return true;
                 }
+
                 foreach (var f in _open)
                 {
                     try
@@ -64,6 +65,7 @@ namespace DarkwoodMP
                     {
                     }
                 }
+
                 return false;
             }
         }
@@ -74,6 +76,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             foreach (Action d in Draw.GetInvocationList())
             {
                 try
@@ -159,12 +162,14 @@ namespace DarkwoodMP
             {
                 HideGameButtons(mm);
             }
+
             if (!_shown)
             {
                 _selected = -1;
                 _pending = null;
                 return;
             }
+
             bool pause = InWorldMenu();
             if (pause != _pause || _entries.Count == 0)
             {
@@ -177,6 +182,7 @@ namespace DarkwoodMP
             {
                 Keys();
             }
+
             if (_pending != null)
             {
                 var act = _pending;
@@ -274,6 +280,7 @@ namespace DarkwoodMP
             {
                 b = go.GetComponent<global::Button>();
             }
+
             if (b == null)
             {
                 string name = null;
@@ -281,13 +288,16 @@ namespace DarkwoodMP
                 {
                     name = go.name;
                 }
+
                 if (name == null)
                 {
                     name = "entry";
                 }
+
                 Plugin.Log.LogWarning($"[menu] the game's {name} isn't there");
                 return;
             }
+
             b.getClicked(force: true);
         }
 
@@ -323,6 +333,7 @@ namespace DarkwoodMP
                     {
                         ago = $"{Math.Max(0, since.Seconds)} s";
                     }
+
                     s = $"What you did since the last save ({ago} ago) will be "
                         + "lost.";
                 }
@@ -331,12 +342,14 @@ namespace DarkwoodMP
                     s = "What you did since the last save will be lost.";
                 }
             }
+
             Plugin plugin = Plugin.Instance;
             Net.Session session = null;
             if (plugin != null)
             {
                 session = plugin.Session;
             }
+
             if (session != null && session.IsHost && session.Peers.Count > 0)
             {
                 s += " The players in your game go back to their menus.";
@@ -345,6 +358,7 @@ namespace DarkwoodMP
             {
                 s += " You leave the host's game.";
             }
+
             return s;
         }
 
@@ -372,6 +386,7 @@ namespace DarkwoodMP
             catch
             {
             }
+
             Core.quitGame();
         }
 
@@ -387,10 +402,12 @@ namespace DarkwoodMP
             {
                 return false;
             }
+
             if (Core.forbidInputs || LoadingScreen.Up)
             {
                 return false; // credits starting, a world loading
             }
+
             foreach (var box in new[]
                 {
                     mm.confirmBox, mm.applySettingsBox, mm.newGameBox,
@@ -405,6 +422,7 @@ namespace DarkwoodMP
                     return false;
                 }
             }
+
             alpha = 1f;
             Transform transform = mm.Menu0.transform.Find("Darkwood");
             tk2dBaseSprite logo = null;
@@ -412,10 +430,12 @@ namespace DarkwoodMP
             {
                 logo = transform.GetComponent<tk2dBaseSprite>();
             }
+
             if (logo != null)
             {
                 alpha = Mathf.Min(alpha, logo.color.a);
             }
+
             var ui = Singleton<UI>.Instance;
             tk2dSprite black = null;
             if (ui != null && ui.blackScreenTop != null
@@ -423,10 +443,12 @@ namespace DarkwoodMP
             {
                 black = ui.blackScreenTop.GetComponent<tk2dSprite>();
             }
+
             if (black != null)
             {
                 alpha = Mathf.Min(alpha, 1f - black.color.a);
             }
+
             return alpha > 0.02f;
         }
 
@@ -440,6 +462,7 @@ namespace DarkwoodMP
             {
                 Hide(go);
             }
+
             // With a controller, the game's A would click the hidden entries
             // (MainMenu.controllerButtons).
             if (mm.controllerButtons != null && mm.controllerButtons.Count > 0
@@ -470,6 +493,7 @@ namespace DarkwoodMP
             {
                 return c.gameObject;
             }
+
             return null;
         }
 
@@ -482,6 +506,7 @@ namespace DarkwoodMP
                     return false;
                 }
             }
+
             return true;
         }
 
@@ -496,6 +521,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             go.GetComponentsInChildren(true, _renderers);
             foreach (var r in _renderers)
             {
@@ -504,6 +530,7 @@ namespace DarkwoodMP
                     r.enabled = false;
                 }
             }
+
             go.GetComponentsInChildren(true, _colliders);
             foreach (var c in _colliders)
             {
@@ -512,6 +539,7 @@ namespace DarkwoodMP
                     c.enabled = false;
                 }
             }
+
             var b = go.GetComponent<global::Button>();
             if (b != null && b.rolledOver)
             {
@@ -529,11 +557,13 @@ namespace DarkwoodMP
             {
                 dir = -1;
             }
+
             if (Input.GetKeyDown(KeyCode.DownArrow)
                 || Input.GetKeyDown(KeyCode.S))
             {
                 dir = 1;
             }
+
             bool run = Input.GetKeyDown(KeyCode.Return)
                 || Input.GetKeyDown(KeyCode.KeypadEnter);
             try
@@ -544,6 +574,7 @@ namespace DarkwoodMP
                 {
                     pad = instance.rewiredPlayer;
                 }
+
                 if (pad != null)
                 {
                     float v = pad.GetAxisRaw("Dpad Vertical");
@@ -557,12 +588,14 @@ namespace DarkwoodMP
                         {
                             dir = 1;
                         }
+
                         _nextPad = Time.unscaledTime + 0.25f;
                     }
                     else if (Mathf.Abs(v) <= 0.5f)
                     {
                         _nextPad = 0f;
                     }
+
                     if (pad.GetButtonDown("A"))
                     {
                         run = true;
@@ -572,6 +605,7 @@ namespace DarkwoodMP
             catch
             {
             }
+
             if (dir != 0 && _entries.Count > 0)
             {
                 if (_selected < 0)
@@ -591,6 +625,7 @@ namespace DarkwoodMP
                         (_selected + dir + _entries.Count) % _entries.Count;
                 }
             }
+
             if (run && _selected >= 0 && _selected < _entries.Count)
             {
                 Fire(_entries[_selected]);
@@ -615,6 +650,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             int sc = TextScale;
             float line = PixelFont.LineAt(sc),
                 step = Mathf.Round(line * RowLines);
@@ -631,8 +667,10 @@ namespace DarkwoodMP
                 {
                     _selected = -1; // the mouse took over from the keys
                 }
+
                 _lastMouse = e.mousePosition;
             }
+
             for (int i = 0; i < _entries.Count; i++)
             {
                 var en = _entries[i];
@@ -652,11 +690,13 @@ namespace DarkwoodMP
                         hover = en.Rect.Contains(e.mousePosition);
                     }
                 }
+
                 if (active
                     && GUI.Button(en.Rect, GUIContent.none, MenuSkin.Plain))
                 {
                     Fire(en);
                 }
+
                 Color c;
                 if (hover)
                 {
@@ -670,6 +710,7 @@ namespace DarkwoodMP
                 {
                     c = MenuSkin.Dim;
                 }
+
                 c.a *= _alpha;
                 PixelFont.Draw(
                     new Rect(x, y, w + 2 * sc, line), en.Label, c,
@@ -694,11 +735,13 @@ namespace DarkwoodMP
                     $"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} "
                         + $"{en.Rect.width:0}x{en.Rect.height:0}");
             }
+
             string text = "main menu";
             if (_pause)
             {
                 text = "pause menu";
             }
+
             return $"list shown {_shown} (alpha {_alpha:0.00}), {text}: "
                 + $"{string.Join("; ", parts)}; takes clicks "
                 + $"{!MenuWindows.AnyOpen}; " +
@@ -712,12 +755,14 @@ namespace DarkwoodMP
             {
                 return false;
             }
+
             foreach (var go in GameEntries(mm))
             {
                 if (go == null || !go.activeInHierarchy)
                 {
                     continue;
                 }
+
                 foreach (var r in go.GetComponentsInChildren<Renderer>())
                 {
                     if (r.enabled)
@@ -725,6 +770,7 @@ namespace DarkwoodMP
                         return false;
                     }
                 }
+
                 foreach (var c in go.GetComponentsInChildren<Collider>())
                 {
                     if (c.enabled)
@@ -733,6 +779,7 @@ namespace DarkwoodMP
                     }
                 }
             }
+
             return true;
         }
 
@@ -746,6 +793,7 @@ namespace DarkwoodMP
             {
                 return false;
             }
+
             foreach (var en in _entries)
             {
                 if (string.Equals(
@@ -755,6 +803,7 @@ namespace DarkwoodMP
                     return true;
                 }
             }
+
             return false;
         }
     }

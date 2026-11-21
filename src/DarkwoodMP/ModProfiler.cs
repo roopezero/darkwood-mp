@@ -40,6 +40,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             double ms = _sw.Elapsed.TotalMilliseconds;
             _sw.Restart();
             _ms.TryGetValue(part, out double t);
@@ -49,6 +50,7 @@ namespace DarkwoodMP
             {
                 _worst[part] = ms;
             }
+
             _frameMod += ms;
         }
 
@@ -58,17 +60,20 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             _frames++;
             _frameTime += Time.unscaledDeltaTime;
             if (_frameMod > _worstMod)
             {
                 _worstMod = _frameMod;
             }
+
             _frameMod = 0;
             if (Time.unscaledTime - _since < 10f)
             {
                 return;
             }
+
             _since = Time.unscaledTime;
             double total = _ms.Values.Sum();
             string parts = string.Join(

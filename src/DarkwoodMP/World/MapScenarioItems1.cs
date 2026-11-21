@@ -62,12 +62,14 @@ namespace DarkwoodMP.World
                 {
                     item = gameObject.GetComponent<InvItem>();
                 }
+
                 if (item != null && item.canBePlaced && item.item != null
                     && item.item.name == prefab)
                 {
                     return kv.Key;
                 }
             }
+
             return null;
         }
 
@@ -89,9 +91,11 @@ namespace DarkwoodMP.World
                     slot = 0;
                     p.Hotbar.slots[0].removeItem();
                 }
+
                 p.Hotbar.slots[slot].inventory = p.Hotbar;
                 p.Hotbar.slots[slot].createItem(type, 1);
             }
+
             if (p.Hotbar.slots[slot].selected)
             {
                 p.selectCurrentHotbarSlot();
@@ -100,6 +104,7 @@ namespace DarkwoodMP.World
             {
                 p.Hotbar.selectSlot(slot, noiseless: true, force: true);
             }
+
             float giveUp = Time.realtimeSinceStartup + 8f;
             while ((p.switchingItem || InvItemClass.isNull(p.currentItem)
                     || p.currentItem.type != type)
@@ -107,6 +112,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (InvItemClass.isNull(p.currentItem)
                 || p.currentItem.type != type)
             {
@@ -119,6 +125,7 @@ namespace DarkwoodMP.World
                 {
                     holding = p.currentItem.type;
                 }
+
                 r.Fail(
                     $"couldn't take {type} in our hands (holding {holding})");
             }
@@ -140,11 +147,13 @@ namespace DarkwoodMP.World
                 r.Fail($"no item places {prefab}");
                 yield break;
             }
+
             yield return HoldItem(type, r);
             if (r.Failure != null)
             {
                 yield break;
             }
+
             var p = P;
             var before = new HashSet<long>(ObjRef.Spawned.Keys);
             AsPlayer(() =>
@@ -162,6 +171,7 @@ namespace DarkwoodMP.World
                     p.placingItem = false;
                 }
             });
+
             var id =
                 ObjRef.Spawned.Keys.FirstOrDefault(k => !before.Contains(k));
             GameObject obj = null;
@@ -169,6 +179,7 @@ namespace DarkwoodMP.World
             {
                 obj = go;
             }
+
             made(obj);
         }
 
@@ -184,17 +195,20 @@ namespace DarkwoodMP.World
             {
                 prefab = a[0];
             }
+
             string type = PlaceableType(prefab);
             if (type == null)
             {
                 r.Fail($"no item places {prefab}");
                 yield break;
             }
+
             yield return HoldItem(type, r);
             if (r.Failure != null)
             {
                 yield break;
             }
+
             int had = MapScenarioWorld.CarriedOf(type),
                 refused = Authority.RolledBack;
             var at = P.transform.position + new Vector3(1500f, 0f, 0f);
@@ -204,11 +218,13 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             if (go == null)
             {
                 r.Fail("placed, but it isn't shared (no ObjRef.Spawned entry)");
                 yield break;
             }
+
             int after = MapScenarioWorld.CarriedOf(type);
             float giveUp = Time.realtimeSinceStartup + 8f;
             while (Authority.RolledBack == refused
@@ -216,6 +232,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             yield return new WaitForSeconds(0.5f);
             int back = MapScenarioWorld.CarriedOf(type);
             string spot = Fmt(at);
@@ -224,6 +241,7 @@ namespace DarkwoodMP.World
             {
                 ours = "removed";
             }
+
             r.Info =
                 $"{prefab} at {spot}: carried {had} -> {after} -> {back}, ours "
                     + $"{ours}";
@@ -255,6 +273,7 @@ namespace DarkwoodMP.World
                 r.Fail("a client's step");
                 yield break;
             }
+
             if (a.Contains("--none"))
             {
                 string path = a[0];
@@ -264,6 +283,7 @@ namespace DarkwoodMP.World
                     r.Fail($"no item places {path}");
                     yield break;
                 }
+
                 foreach (var type in types)
                 {
                     int n = MapScenarioWorld.CarriedOf(type);
@@ -271,6 +291,7 @@ namespace DarkwoodMP.World
                     {
                         P.Inventory.removeItemAmountFromPlayer(type, n);
                     }
+
                     for (int i = 0; i < P.Hotbar.slots.Count; i++)
                     {
                         if (!InvItemClass.isNull(P.Hotbar.slots[i].invItem)
@@ -280,6 +301,7 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 yield return null;
                 int left = types.Sum(t => MapScenarioWorld.CarriedOf(t));
                 if (left > 0)
@@ -287,12 +309,14 @@ namespace DarkwoodMP.World
                     r.Fail($"still carrying {left} that place {path}");
                     yield break;
                 }
+
                 Characters instance = Characters.Instance;
                 if (instance != null)
                 {
                     instance.SaveNow();
                 }
             }
+
             var at = Centre + new Vector3(F(a[1]), 0f, F(a[2]));
             at.y = P.transform.position.y;
             var w = S.Begin(MsgType.ObjSpawn);
@@ -316,11 +340,13 @@ namespace DarkwoodMP.World
                 ok = o;
                 why = reason;
             }, inventory: false);
+
             float giveUp = Time.realtimeSinceStartup + 8f;
             while (ok == null && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
+
             string prefix = $"{a[0]} at {Fmt(at)}: ";
             string answer;
             if (ok == null)
@@ -335,6 +361,7 @@ namespace DarkwoodMP.World
             {
                 answer = "refused: " + why;
             }
+
             r.Info = prefix + answer;
             if (ok != false)
             {
@@ -361,6 +388,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no door {a[0]}");
                 yield break;
             }
+
             var j = Singleton<UI>.Instance.journal;
             string key =
                 Singleton<JournalDatabase>.Instance.keysDict.Keys.Where(
@@ -371,11 +399,13 @@ namespace DarkwoodMP.World
                 r.Fail("no key our journal hasn't got");
                 yield break;
             }
+
             if (d.opened)
             {
                 d.close(P.transform);
                 yield return new WaitForSeconds(0.5f);
             }
+
             d.lockMe(key);
             yield return new WaitForSeconds(0.5f);
             var l = d.GetComponent<Locked>();
@@ -403,11 +433,13 @@ namespace DarkwoodMP.World
             {
                 l = d.GetComponent<Locked>();
             }
+
             if (l == null || !l.locked)
             {
                 r.Fail($"door {a[0]} isn't locked here");
                 yield break;
             }
+
             yield return Walk(d.transform.position);
             var j = Singleton<UI>.Instance.journal;
             int refused = Authority.RolledBack;
@@ -418,6 +450,7 @@ namespace DarkwoodMP.World
                     r.Fail($"our journal has {l.keyType} already");
                     yield break;
                 }
+
                 AsPlayer(() => LockShare.Send(l, 1f));
                 float giveUp = Time.realtimeSinceStartup + 8f;
                 while (Authority.RolledBack == refused
@@ -425,6 +458,7 @@ namespace DarkwoodMP.World
                 {
                     yield return null;
                 }
+
                 yield return new WaitForSeconds(0.5f);
                 r.Info =
                     $"{d.name} {MapScenarioWorld.Ref(d)} key {l.keyType}: "
@@ -437,8 +471,10 @@ namespace DarkwoodMP.World
                 {
                     r.Fail($"{r.Info}: refused, but unlocked here");
                 }
+
                 yield break;
             }
+
             // as KeyReference.pickup
             j.keysDict[l.keyType] = new Journal.Key { type = l.keyType };
             bool opened = false;
@@ -469,6 +505,7 @@ namespace DarkwoodMP.World
             {
                 l = d.GetComponent<Locked>();
             }
+
             bool want = a.Length > 1 && a[1] == "yes";
             float giveUp = Time.realtimeSinceStartup + 5f;
             while ((l != null && l.locked) != want
@@ -476,6 +513,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (d == null)
             {
                 r.Info = "no such door";
@@ -486,6 +524,7 @@ namespace DarkwoodMP.World
                     $"{d.name} {MapScenarioWorld.Ref(d)} "
                         + $"locked={l != null && l.locked}";
             }
+
             if ((l != null && l.locked) != want)
             {
                 string text = "open";
@@ -493,6 +532,7 @@ namespace DarkwoodMP.World
                 {
                     text = "locked";
                 }
+
                 r.Fail($"{r.Info}, not {text}");
             }
         }
@@ -512,6 +552,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no door {a[0]}");
                 yield break;
             }
+
             var l = d.GetComponent<Locked>();
             if (d.destroyed || d.barricaded || (l != null && l.locked))
             {
@@ -519,11 +560,13 @@ namespace DarkwoodMP.World
                     $"door {a[0]} ({d.name}) is broken, barricaded or locked");
                 yield break;
             }
+
             if (d.opened)
             {
                 d.close(P.transform);
                 yield return new WaitForSeconds(0.5f);
             }
+
             d.blocked = true;
             r.Info =
                 $"{d.name} {MapScenarioWorld.Ref(d)} blocked, open={d.opened}";
@@ -546,17 +589,20 @@ namespace DarkwoodMP.World
                 r.Fail($"no door {a[0]}");
                 yield break;
             }
+
             if (!d.blocked)
             {
                 r.Fail($"door {a[0]} isn't blocked here");
                 yield break;
             }
+
             var ge = new GameEvent
             {
                 type = GameEvent.Type.modifyDoor,
                 doorModifyType = GameEvent.DoorModify.unblock,
                 targetGameObjects = new List<GameObject> { d.gameObject },
             };
+
             Plugin.Instance.StartCoroutine(ge.fire(d.gameObject));
             yield return new WaitForSeconds(1f);
             r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
@@ -580,6 +626,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (d == null)
             {
                 r.Info = "no such door";
@@ -589,6 +636,7 @@ namespace DarkwoodMP.World
                 r.Info =
                     $"{d.name} {MapScenarioWorld.Ref(d)} blocked={d.blocked}";
             }
+
             if (d == null || d.blocked != want)
             {
                 string text = "clear";
@@ -596,6 +644,7 @@ namespace DarkwoodMP.World
                 {
                     text = "blocked";
                 }
+
                 r.Fail($"{r.Info}, not {text}");
             }
         }
@@ -614,6 +663,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no door {a[0]}");
                 yield break;
             }
+
             yield return Walk(d.transform.position);
             if (d.blocked)
             {
@@ -622,11 +672,13 @@ namespace DarkwoodMP.World
                         + "player can't open it");
                 yield break;
             }
+
             if (d.opened)
             {
                 r.Fail($"{d.name} is open already");
                 yield break;
             }
+
             int refused = Authority.RolledBack;
             AsPlayer(() => P.openCloseDoor(d, false));
             // a refusal would close it again
@@ -656,6 +708,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             if (d == null)
             {
                 r.Info = "no such door";
@@ -664,6 +717,7 @@ namespace DarkwoodMP.World
             {
                 r.Info = $"{d.name} {MapScenarioWorld.Ref(d)} open={d.opened}";
             }
+
             if (d == null || d.opened != want)
             {
                 string text = "closed";
@@ -671,6 +725,7 @@ namespace DarkwoodMP.World
                 {
                     text = "open";
                 }
+
                 r.Fail($"{r.Info}, not {text}");
             }
         }
@@ -712,6 +767,7 @@ namespace DarkwoodMP.World
             {
                 state = "not called";
             }
+
             return $"at {name}: porter {state}";
         }
 
@@ -727,20 +783,24 @@ namespace DarkwoodMP.World
                 r.Fail("no place for the porter near the test area");
                 yield break;
             }
+
             var flags = Singleton<Flags>.Instance;
             if (!Core.isDay())
             {
                 TestWorld.SetTime(12f * 60f);
             }
+
             if (flags.isFlagTrue("porter_inTransit"))
             {
                 flags.setFlag("porter_inTransit", activeModifier: false);
             }
+
             if (loc.porter != null)
             {
                 Object.Destroy(loc.porter);
                 loc.porter = null;
             }
+
             yield return new WaitForSeconds(1f);
             r.Info =
                 $"{loc.name} porter at "
@@ -765,6 +825,7 @@ namespace DarkwoodMP.World
                 r.Fail("no place for the porter near the test area");
                 yield break;
             }
+
             yield return Walk(loc.porterPosition.transform.position, 150f);
             P.whereAmI.checkWhereAmI();
             if (P.whereAmI.bigLocation != loc)
@@ -775,18 +836,22 @@ namespace DarkwoodMP.World
                 {
                     name = bigLocation.name;
                 }
+
                 if (name == null)
                 {
                     name = "no big location";
                 }
+
                 r.Fail($"we're in {name}, not {loc.name}");
                 yield break;
             }
+
             if (PorterThere(loc))
             {
                 r.Fail("the porter is there already");
                 yield break;
             }
+
             int refused = Authority.RolledBack;
             AsPlayer(() => new InvItemClass("porterWhistle", 1f, 1).use());
             float giveUp = Time.realtimeSinceStartup + 10f;
@@ -795,6 +860,7 @@ namespace DarkwoodMP.World
             {
                 yield return null;
             }
+
             r.Info = PorterInfo(loc);
             if (Authority.RolledBack != refused)
             {
@@ -818,11 +884,13 @@ namespace DarkwoodMP.World
                 r.Fail("no place for the porter near the test area");
                 yield break;
             }
+
             float giveUp = Time.realtimeSinceStartup + 10f;
             while (!PorterThere(loc) && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
+
             r.Info = PorterInfo(loc);
             if (!PorterThere(loc))
             {
@@ -849,6 +917,7 @@ namespace DarkwoodMP.World
                 r.Fail("only one place for the porter");
                 yield break;
             }
+
             var w = S.Begin(MsgType.PorterCalled);
             w.Write(far.porterPosition.transform.position);
             bool? ok = null;
@@ -859,11 +928,13 @@ namespace DarkwoodMP.World
                 ok = o;
                 why = reason;
             }, inventory: false);
+
             float giveUp = Time.realtimeSinceStartup + 8f;
             while (ok == null && Time.realtimeSinceStartup < giveUp)
             {
                 yield return null;
             }
+
             string answer;
             if (ok == null)
             {
@@ -877,6 +948,7 @@ namespace DarkwoodMP.World
             {
                 answer = "refused: " + why;
             }
+
             r.Info = $"at {far.name}: " + answer;
             if (ok != false)
             {

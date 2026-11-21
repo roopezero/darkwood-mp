@@ -40,6 +40,7 @@ namespace DarkwoodMP.Combat
             {
                 load = OpCodes.Ldarg_1;
             }
+
             var list = new List<CodeInstruction>(instructions);
             int swapped = 0;
             for (int i = 0; i < list.Count; i++)
@@ -49,16 +50,19 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 list[i] = new CodeInstruction(load)
                 {
                     labels = list[i].labels,
                     blocks = list[i].blocks
                 };
+
                 list[i + 1] = new CodeInstruction(OpCodes.Call, helper)
                 {
                     labels = list[i + 1].labels,
                     blocks = list[i + 1].blocks
                 };
+
                 for (int k = 2; k < n; k++)
                 {
                     list[i + k] = new CodeInstruction(OpCodes.Nop)
@@ -67,9 +71,11 @@ namespace DarkwoodMP.Combat
                         blocks = list[i + k].blocks
                     };
                 }
+
                 swapped++;
                 i += n - 1;
             }
+
             if (none != null)
             {
                 if (swapped == 0)
@@ -83,6 +89,7 @@ namespace DarkwoodMP.Combat
                     $"JoinerAi: {where}: swapped {swapped} reads of the host's "
                         + $"player, expected {expected} (game changed?)");
             }
+
             return list;
         }
 
@@ -101,6 +108,7 @@ namespace DarkwoodMP.Combat
             {
                 return 3;
             }
+
             return 0;
         }
 
@@ -114,6 +122,7 @@ namespace DarkwoodMP.Combat
                 {
                     return 2;
                 }
+
                 return 0;
             };
 
@@ -127,6 +136,7 @@ namespace DarkwoodMP.Combat
                 {
                     return 2;
                 }
+
                 return 0;
             };
 
@@ -136,6 +146,7 @@ namespace DarkwoodMP.Combat
             {
                 return t.GetComponent<NetPlayerProxy>();
             }
+
             return null;
         }
 
@@ -153,11 +164,13 @@ namespace DarkwoodMP.Combat
             {
                 return false;
             }
+
             Ground g = null;
             if (hit.collider != null)
             {
                 g = hit.collider.GetComponent<Ground>();
             }
+
             return g != null && g.isInside;
         }
 
@@ -173,18 +186,22 @@ namespace DarkwoodMP.Combat
                 Plugin.Log.LogInfo("[joiner ai test] nothing to test on");
                 return;
             }
+
             string T(Transform t)
             {
                 if (t == null)
                 {
                     return "nobody";
                 }
+
                 if (t == proxy.transform)
                 {
                     return proxy.OwnerName;
                 }
+
                 return t.name;
             }
+
             try
             {
                 foreach (var a in c.activities)
@@ -193,6 +210,7 @@ namespace DarkwoodMP.Combat
                     {
                         continue;
                     }
+
                     a.thisCharacter = c;
                     a.assignTarget();
                     Location loc = null;
@@ -201,20 +219,24 @@ namespace DarkwoodMP.Combat
                         loc = NightSpawns.BigLocationAt(
                             a.target.transform.position);
                     }
+
                     string targetName = "none";
                     if (a.target != null)
                     {
                         targetName = a.target.name;
                     }
+
                     string locationName = "no location";
                     if (loc != null)
                     {
                         locationName = loc.name;
                     }
+
                     Plugin.Log.LogInfo(
                         $"[joiner ai test] activity {a.type}: target "
                             + $"{targetName}, in {locationName}");
                 }
+
                 Plugin.Log.LogInfo(
                     $"[joiner ai test] {c.name} has {c.activities.Count} "
                         + "activities");
@@ -245,6 +267,7 @@ namespace DarkwoodMP.Combat
                 {
                     c.aggressiveness = Aggressiveness.attackOnSight;
                 }
+
                 AccessTools.Method(typeof(Character), "reactToCharacter")
                     .Invoke(c, new object[] { null, proxy.transform, true });
                 Plugin.Log.LogInfo(
@@ -270,11 +293,13 @@ namespace DarkwoodMP.Combat
             {
                 t = c.target;
             }
+
             var proxy = ProxyOf(t);
             if (proxy != null)
             {
                 return InsideAt(proxy.transform.position);
             }
+
             return Player.Instance.isInside;
         }
 
@@ -288,11 +313,13 @@ namespace DarkwoodMP.Combat
             {
                 return null;
             }
+
             var p = t.GetComponent<Player>();
             if (p != null)
             {
                 return p;
             }
+
             return ProxyOf(t);
         }
 
@@ -308,6 +335,7 @@ namespace DarkwoodMP.Combat
                 c.attackPlayer();
                 return;
             }
+
             // An NPC turns on the joiner here, and the host runs it as an enemy
             // from then on (Combat.HostileNpcs).
             GoFor(c, proxy.transform);
@@ -329,6 +357,7 @@ namespace DarkwoodMP.Combat
             {
                 c.aggressiveness = Aggressiveness.attackOnSight;
             }
+
             c.attackCharacter(player);
         }
 
@@ -339,6 +368,7 @@ namespace DarkwoodMP.Combat
             {
                 return w.bigLocation;
             }
+
             return null;
         }
 
@@ -353,11 +383,13 @@ namespace DarkwoodMP.Combat
             {
                 return hostLoc;
             }
+
             if (Threat.NearestPlayerPos(c)
                 == Player.Instance.transform.position)
             {
                 return hostLoc;
             }
+
             return null; // null: the game uses transform.GetLocation()
         }
 
@@ -374,29 +406,35 @@ namespace DarkwoodMP.Combat
             {
                 c = a.thisCharacter;
             }
+
             if (!Threat.Enabled || c == null)
             {
                 return hostLoc;
             }
+
             if (NightSpawns.SentAt(c, out var proxy, out var loc)
                 && loc != null)
             {
                 return loc;
             }
+
             if (proxy == null)
             {
                 proxy = Threat.BestPlayerFor(c) as NetPlayerProxy;
             }
+
             if (proxy == null)
             {
                 return hostLoc;
             }
+
             Location bigLocationAt =
                 NightSpawns.BigLocationAt(proxy.transform.position);
             if (bigLocationAt == null)
             {
                 bigLocationAt = hostLoc;
             }
+
             return bigLocationAt;
         }
 
@@ -411,20 +449,24 @@ namespace DarkwoodMP.Combat
             {
                 c = a.thisCharacter;
             }
+
             if (!Threat.Enabled || c == null)
             {
                 return Player.Instance.gameObject;
             }
+
             if (NightSpawns.SentAt(c, out var proxy, out _) && proxy != null
                 && proxy.alive)
             {
                 return proxy.gameObject;
             }
+
             var best = Threat.BestPlayerFor(c);
             if (best != null)
             {
                 return best.gameObject;
             }
+
             return Player.Instance.gameObject;
         }
     }
@@ -452,16 +494,19 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             var proxy = _collider.GetComponent<NetPlayerProxy>();
             if (proxy == null || !proxy.alive || proxy.Away)
             {
                 return true;
             }
+
             var c = __instance;
             if (!c.touchingColliders.Contains(_collider))
             {
                 c.touchingColliders.Add(_collider);
             }
+
             if (c.banshee)
             {
                 if (Threat.Debug)
@@ -470,9 +515,11 @@ namespace DarkwoodMP.Combat
                         $"[threat] {c.name} (banshee) touched by "
                             + $"{proxy.OwnerName}");
                 }
+
                 c.initiateBansheeAttack();
                 return false;
             }
+
             if (c.sleeping && !c.wakeUpOnlyManually)
             {
                 if (Threat.Debug)
@@ -481,13 +528,16 @@ namespace DarkwoodMP.Combat
                         $"[threat] {c.name} woken by {proxy.OwnerName} bumping "
                             + "into it");
                 }
+
                 c.wakeup();
                 return false;
             }
+
             if (!proxy.invisible && !c.dieOnContactWithTarget)
             {
                 React(c, null, proxy.transform, false);
             }
+
             return true;
         }
     }
@@ -522,6 +572,7 @@ namespace DarkwoodMP.Combat
             {
                 call = list.FindIndex(test, ci => ci.Calls(attackPlayer));
             }
+
             if (test < 0 || call < 0)
             {
                 Plugin.Log.LogWarning(
@@ -530,6 +581,7 @@ namespace DarkwoodMP.Combat
                         + "a joiner's hit still rolls cowardice");
                 return list;
             }
+
             list[test] = new CodeInstruction(
                 OpCodes.Call,
                 AccessTools.Method(
@@ -537,6 +589,7 @@ namespace DarkwoodMP.Combat
             {
                 labels = list[test].labels
             };
+
             var labels = list[call].labels;
             list[call] = new CodeInstruction(
                 OpCodes.Call,
@@ -546,6 +599,7 @@ namespace DarkwoodMP.Combat
             {
                 labels = labels
             });
+
             return list;
         }
     }
@@ -565,6 +619,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Vector3 me = __instance.transform.position;
             foreach (var p in NetPlayerProxy.All.Values)
             {
@@ -674,6 +729,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             var proxy = JoinerAi.ProxyOf(__instance.superTarget);
             if (proxy != null && proxy.alive
                 && JoinerAi.InsideAt(proxy.transform.position))
@@ -699,6 +755,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             // only the call checkOutLocation makes
             CheckOutLocationJoinerPatch.Chased = null;
             var loc = __instance.locationCheckingOut;
@@ -706,6 +763,7 @@ namespace DarkwoodMP.Combat
             {
                 return;
             }
+
             Waypoint best = null;
             float bestDist = float.MaxValue;
             Vector3 at = proxy.transform.position;
@@ -715,6 +773,7 @@ namespace DarkwoodMP.Combat
                 {
                     continue;
                 }
+
                 float d = (w.transform.position - at).sqrMagnitude;
                 if (d < bestDist)
                 {
@@ -722,6 +781,7 @@ namespace DarkwoodMP.Combat
                     best = w;
                 }
             }
+
             _waypoint = best;
         }
     }
@@ -740,11 +800,13 @@ namespace DarkwoodMP.Combat
             {
                 return true;
             }
+
             float max = 100f;
             if (Player.Instance != null)
             {
                 max = Player.Instance.maxHealth;
             }
+
             if (proxy.HealthPercent / 100f * max < 20f
                 && __instance.attacks.Count >= 3)
             {
@@ -752,6 +814,7 @@ namespace DarkwoodMP.Combat
                 __instance.attacks[1].disabled = true;
                 __instance.attacks[2].disabled = false;
             }
+
             return false;
         }
     }

@@ -43,6 +43,7 @@ namespace DarkwoodMP.World
             public double Total, Max;
             public int Calls;
         }
+
         private static readonly Dictionary<MethodBase, Stat> _stats =
             new Dictionary<MethodBase, Stat>();
         private static readonly List<(int frame, float ms, float at)>
@@ -65,6 +66,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var types = new List<Type> { type };
                 types.AddRange(
                     type.GetNestedTypes(
@@ -75,6 +77,7 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     foreach (var m in t.GetMethods(
                         BindingFlags.Instance | BindingFlags.Static
                             | BindingFlags.Public | BindingFlags.NonPublic
@@ -85,22 +88,26 @@ namespace DarkwoodMP.World
                         {
                             continue;
                         }
+
                         if (m.Name == "Update" || m.Name == "LateUpdate"
                             || m.Name == "FixedUpdate" || m.Name == "OnGUI")
                         {
                             continue;
                         }
+
                         if (m.Name.StartsWith("get_")
                             || m.Name.StartsWith("set_")
                             || Hot.Contains(m.Name))
                         {
                             continue;
                         }
+
                         if (t != type && t.Name.StartsWith("<>c")
                             && type == typeof(AstarPath))
                         {
                             continue;
                         }
+
                         try
                         {
                             harmony.Patch(m, prefix, postfix);
@@ -112,6 +119,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             Plugin.Log.LogInfo($"[profile] timing {n} methods");
         }
 
@@ -121,12 +129,14 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             float now = Time.realtimeSinceStartup;
             float ms = (now - _lastFrame) * 1000f;
             if (_lastFrame > 0f && ms > 150f)
             {
                 _longFrames.Add((Time.frameCount, ms, now));
             }
+
             _lastFrame = now;
         }
 
@@ -142,6 +152,7 @@ namespace DarkwoodMP.World
             {
                 _stats[__originalMethod] = s = new Stat();
             }
+
             s.Total += ms;
             s.Calls++;
             if (ms > s.Max)
@@ -156,6 +167,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Plugin.Log.LogInfo(
                 "[profile] slowest methods (inclusive: a method's time "
                     + "includes what it calls):");
@@ -168,17 +180,20 @@ namespace DarkwoodMP.World
                 {
                     fullName = declaringType.FullName;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[profile] {kv.Value.Total,9:0} ms total, "
                         + $"{kv.Value.Max,8:0} ms longest, {kv.Value.Calls,7} "
                         + $"calls  {fullName}.{kv.Key.Name}");
             }
+
             foreach (var f in _longFrames.OrderByDescending(f => f.ms).Take(25))
             {
                 Plugin.Log.LogInfo(
                     $"[profile] frame {f.frame} took {f.ms:0} ms (ended at "
                         + $"{f.at:0.0} s)");
             }
+
             Plugin.Log.LogInfo(
                 $"[profile] frames over 150 ms: {_longFrames.Count}, "
                     + $"{_longFrames.Sum(f => f.ms) / 1000f:0.0} s in all");

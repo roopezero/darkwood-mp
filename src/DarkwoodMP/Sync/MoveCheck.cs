@@ -38,6 +38,7 @@ namespace DarkwoodMP.Sync
             public float WindowAt;
             public float LastCorrection = -10f;
         }
+
         private readonly Dictionary<ulong, Track> _tracks =
             new Dictionary<ulong, Track>();
         /// <summary>
@@ -62,11 +63,13 @@ namespace DarkwoodMP.Sync
                 _tracks.Remove(id);
                 _trips.Remove(id);
             };
+
             session.OnSessionEnded += () =>
             {
                 _tracks.Clear();
                 _trips.Clear();
             };
+
             session.Register(MsgType.PlayerCorrection, OnCorrection);
         }
 
@@ -85,6 +88,7 @@ namespace DarkwoodMP.Sync
             {
                 pos = default;
             }
+
             return known;
         }
 
@@ -106,6 +110,7 @@ namespace DarkwoodMP.Sync
             {
                 _trips[from] = l = new List<(Vector3, float)>();
             }
+
             l.Add((to, Time.realtimeSinceStartup + seconds));
         }
 
@@ -119,21 +124,25 @@ namespace DarkwoodMP.Sync
             {
                 return false;
             }
+
             l.RemoveAll(x => x.until < now);
             int i = l.FindIndex(x => Flat(pos - x.to) < TripLanding);
             if (l.Count == 0)
             {
                 _trips.Remove(from);
             }
+
             if (i < 0)
             {
                 return false;
             }
+
             l.RemoveAt(i);
             if (l.Count == 0)
             {
                 _trips.Remove(from);
             }
+
             return true;
         }
 
@@ -154,10 +163,12 @@ namespace DarkwoodMP.Sync
                         $"[authority] {_session.NameOf(from)} was taken to "
                             + $"{pos} by an event the host agreed to");
                 }
+
                 _tracks[from] =
                     new Track { Good = pos, WindowStart = pos, WindowAt = now };
                 return pos;
             }
+
             float dt = now - t.WindowAt;
             float speed = Flat(pos - t.WindowStart) / Mathf.Max(dt, Window);
             if (speed > MaxSpeed)
@@ -174,16 +185,19 @@ namespace DarkwoodMP.Sync
                     w.Write(t.Good);
                     _session.SendTo(from, w, Channel.Control, reliable: true);
                 }
+
                 t.WindowStart = t.Good;
                 t.WindowAt = now;
                 return t.Good;
             }
+
             t.Good = pos;
             if (dt >= Window)
             {
                 t.WindowStart = pos;
                 t.WindowAt = now;
             }
+
             return pos;
         }
 
@@ -196,12 +210,14 @@ namespace DarkwoodMP.Sync
             {
                 return;
             }
+
             var pos = r.ReadVector3();
             var p = Player.Instance;
             if (p == null)
             {
                 return;
             }
+
             Corrections++;
             Plugin.Log.LogInfo(
                 $"[authority] the host put our player back at {pos}");

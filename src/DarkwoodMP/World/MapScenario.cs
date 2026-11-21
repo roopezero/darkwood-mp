@@ -62,9 +62,11 @@ namespace DarkwoodMP.World
                 {
                     return centre.Value;
                 }
+
                 return StateDump.DefaultCentre();
             }
         }
+
         private static Vector3? _centre;
         public static void SetCentre(Vector3 at) =>
             _centre = new Vector3(at.x, 0f, at.z);
@@ -73,6 +75,7 @@ namespace DarkwoodMP.World
             _centre = null;
             Home = null;
         }
+
         /// <summary>
         /// The first centre the driver gave this game (the host's test area),
         /// which mt-home returns to.
@@ -105,6 +108,7 @@ namespace DarkwoodMP.World
                         + $"{string.Join(", ", _steps.Keys.OrderBy(k => k))})");
                 yield break;
             }
+
             var r = new Result();
             float until = Time.realtimeSinceStartup + s.timeout;
             IEnumerator e;
@@ -117,6 +121,7 @@ namespace DarkwoodMP.World
                 reply($"fail {ex.GetType().Name}: {ex.Message}");
                 yield break;
             }
+
             var stack = new Stack<IEnumerator>();
             stack.Push(e);
             _running = stack;
@@ -137,10 +142,12 @@ namespace DarkwoodMP.World
                         r.Fail($"{ex.GetType().Name}: {ex.Message}");
                         break;
                     }
+
                     if (r.Failure != null)
                     {
                         break;
                     }
+
                     if (!more)
                     {
                         DisposeLevel(stack.Pop(), name);
@@ -148,18 +155,22 @@ namespace DarkwoodMP.World
                         {
                             break;
                         }
+
                         continue;
                     }
+
                     if (Time.realtimeSinceStartup > until)
                     {
                         r.Fail("timeout");
                         break;
                     }
+
                     if (top.Current is IEnumerator sub)
                     {
                         stack.Push(sub);
                         continue;
                     }
+
                     yield return top.Current;
                 }
             }
@@ -169,12 +180,14 @@ namespace DarkwoodMP.World
                 {
                     DisposeLevel(stack.Pop(), name);
                 }
+
                 if (_running == stack)
                 {
                     _running = null;
                     _runningResult = null;
                 }
             }
+
             WorldActions.TestAsPlayer = false;
             string line = "done";
             if (r.Failure != null)
@@ -185,6 +198,7 @@ namespace DarkwoodMP.World
             {
                 line = $"done {r.Info}";
             }
+
             // One line: the driver reads one reply per step, and an exception's
             // message can hold a line break (ArgumentNullException's
             // "Parameter name: ..."), which put every later reply one step
@@ -222,15 +236,18 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             Result runningResult = _runningResult;
             if (runningResult != null)
             {
                 runningResult.Fail("stopped");
             }
+
             while (stack.Count > 0)
             {
                 DisposeLevel(stack.Pop(), "stop");
             }
+
             _running = null;
             _runningResult = null;
         }
@@ -282,6 +299,7 @@ namespace DarkwoodMP.World
             {
                 yield break;
             }
+
             // Round the armed traps on the way (not one by where we're going):
             // walking through the station's chain trap caught the host, which
             // then couldn't get anywhere, and sprang a trap a later step was to
@@ -291,10 +309,12 @@ namespace DarkwoodMP.World
             {
                 detour = Detour(p.transform.position, to, within);
             }
+
             if (detour.HasValue)
             {
                 yield return Walk(detour.Value, 20f, detours - 1);
             }
+
             while (true)
             {
                 var at = p.transform.position;
@@ -303,6 +323,7 @@ namespace DarkwoodMP.World
                 {
                     yield break;
                 }
+
                 Place(
                     at + Vector3.ClampMagnitude(
                         d,
@@ -343,6 +364,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             var dir = seg / len;
             Trigger worst = null;
             float worstT = float.MaxValue;
@@ -353,23 +375,27 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var tp = t.transform.position;
                 if (StateDump.Flat(tp - to) < within + TrapClearance
                     || StateDump.Flat(tp - from) < TrapClearance)
                 {
                     continue;
                 }
+
                 var rel = new Vector3(tp.x - from.x, 0f, tp.z - from.z);
                 float along = Vector3.Dot(rel, dir);
                 if (along <= 0f || along >= len)
                 {
                     continue;
                 }
+
                 var perp = rel - dir * along;
                 if (perp.magnitude >= TrapClearance || along >= worstT)
                 {
                     continue;
                 }
+
                 worst = t;
                 worstT = along;
                 // to the side away from it
@@ -382,10 +408,12 @@ namespace DarkwoodMP.World
                     side = -perp.normalized;
                 }
             }
+
             if (worst == null)
             {
                 return null;
             }
+
             var w = worst.transform.position + side * (TrapClearance * 1.6f);
             w.y = from.y;
             return w;
@@ -423,6 +451,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             foreach (var b in p.GetComponentsInChildren<Burn>())
             {
                 if (b != null)
@@ -430,15 +459,18 @@ namespace DarkwoodMP.World
                     b.stop();
                 }
             }
+
             if (p.effects != null)
             {
                 p.effects.removeAllEffects();
             }
+
             p.bleeding = false;
             if (p.inBearTrap)
             {
                 p.stopAllPerformingActionAnims();
             }
+
             p.setHealth(p.maxHealth);
         }
 
@@ -457,13 +489,16 @@ namespace DarkwoodMP.World
                     r.Fail("usage: centre X Z");
                     return None();
                 }
+
                 _centre = new Vector3(F(a[0]), 0f, F(a[1]));
                 if (Home == null)
                 {
                     Home = _centre;
                 }
+
                 return Info(r, Fmt(_centre.Value));
             });
+
             // "wait SECS": just wait.
             Add("wait", (a, r) =>
             {
@@ -472,8 +507,10 @@ namespace DarkwoodMP.World
                 {
                     seconds = F(a[0]);
                 }
+
                 return Wait(seconds);
             }, timeout: 120f);
+
             // "goto X Z": walk there.
             Add(
                 "goto", (a, r) => Walk(new Vector3(F(a[0]), 0f, F(a[1])), 60f),
@@ -530,11 +567,13 @@ namespace DarkwoodMP.World
         {
             yield break;
         }
+
         internal static IEnumerator Info(Result r, string info)
         {
             r.Info = info;
             yield break;
         }
+
         private static IEnumerator Wait(float s)
         {
             yield return new WaitForSeconds(s);
@@ -556,6 +595,7 @@ namespace DarkwoodMP.World
                 r.Fail("no door");
                 yield break;
             }
+
             yield return Walk(door.transform.position);
             bool open;
             if (a.Length > 0)
@@ -566,6 +606,7 @@ namespace DarkwoodMP.World
             {
                 open = !door.opened;
             }
+
             if (open != door.opened)
             {
                 AsPlayer(() =>
@@ -580,6 +621,7 @@ namespace DarkwoodMP.World
                     }
                 });
             }
+
             yield return new WaitForSeconds(0.5f);
             r.Info =
                 $"{door.name} {ObjRef.Of(door.gameObject)} open={door.opened}";
@@ -603,6 +645,7 @@ namespace DarkwoodMP.World
             {
                 type = a[0];
             }
+
             bool Has(InvSlot s) => !InvItemClass.isNull(s.invItem)
                 && (type == null || s.invItem.type == type);
             var inv = Nearest(
@@ -622,9 +665,11 @@ namespace DarkwoodMP.World
                 {
                     wanted = "anything";
                 }
+
                 r.Fail($"no container with {wanted} in it");
                 yield break;
             }
+
             yield return Walk(inv.transform.position);
             var slot = inv.slots.First(Has);
             var item = new InvItemClass(slot.invItem);
@@ -639,6 +684,7 @@ namespace DarkwoodMP.World
                 p.Inventory.addItemTypeToPlayer(
                     item.type, item.amount, dropIfNoRoom: true);
             });
+
             if (Count() <= before)
             {
                 r.Fail(
@@ -646,6 +692,7 @@ namespace DarkwoodMP.World
                         + $"{ObjRef.Of(inv.gameObject)} but it isn't in our "
                         + "bags (full?)");
             }
+
             yield return new WaitForSeconds(0.6f);
             p.openedItemInventory = null;
             yield return new WaitForSeconds(0.5f);
@@ -654,6 +701,7 @@ namespace DarkwoodMP.World
                 $"{item.type} x{item.amount} from {inv.name} "
                     + $"{ObjRef.Of(inv.gameObject)}";
         }
+
         private static string _lastTaken;
 
         /// <summary>
@@ -672,32 +720,38 @@ namespace DarkwoodMP.World
             {
                 type = _lastTaken;
             }
+
             int amount = 1;
             if (a.Length > 1)
             {
                 amount = int.Parse(a[1]);
             }
+
             if (type == null)
             {
                 r.Fail("nothing to drop (take-item first, or give a type)");
                 yield break;
             }
+
             var carried = Carried(p).FirstOrDefault(i => i.type == type);
             if (carried == null)
             {
                 r.Fail($"not carrying {type}");
                 yield break;
             }
+
             var item = new InvItemClass(carried)
             {
                 amount = Math.Min(amount, carried.amount)
             };
+
             Transform dropped = null;
             AsPlayer(() =>
             {
                 p.Inventory.removeItemAmountFromPlayer(type, item.amount);
                 dropped = p.spawnDroppedInvItem(item);
             });
+
             // dropped things are shared once they've come to rest
             yield return new WaitForSeconds(2.5f);
             string spot = "?";
@@ -705,11 +759,13 @@ namespace DarkwoodMP.World
             {
                 spot = Fmt(dropped.position);
             }
+
             string id = "";
             if (dropped != null)
             {
                 id = ObjRef.Of(dropped.gameObject).ToString();
             }
+
             r.Info = $"{type} x{amount} at {spot} {id}";
         }
 
@@ -726,11 +782,13 @@ namespace DarkwoodMP.World
                 r.Fail("no player");
                 yield break;
             }
+
             if (!p.alive || p.health <= 0f)
             {
                 r.Fail($"our player is dead (health {p.health:0})");
                 yield break;
             }
+
             float was = p.health;
             HealNow();
             yield return new WaitForSeconds(0.3f);
@@ -748,6 +806,7 @@ namespace DarkwoodMP.World
             {
                 health = p.health;
             }
+
             var parts = new List<string> { $"we: health {health:0}" };
             if (p == null || !p.alive || p.health <= 0f)
             {
@@ -756,8 +815,10 @@ namespace DarkwoodMP.World
                 {
                     playerHealth = p.health;
                 }
+
                 r.Fail($"our player is dead (health {playerHealth:0})");
             }
+
             var ps = Sync.PlayerSync.Instance;
             if (ps != null)
             {
@@ -767,12 +828,14 @@ namespace DarkwoodMP.World
                     {
                         continue;
                     }
+
                     var last = rp.Last;
                     string percent = "?";
                     if (last != null)
                     {
                         percent = last.Health.ToString();
                     }
+
                     parts.Add(
                         $"{rp.Name}: alive {rp.Alive}, health {percent}%");
                     if (!rp.Alive || (last != null && last.Health <= 0))
@@ -781,6 +844,7 @@ namespace DarkwoodMP.World
                     }
                 }
             }
+
             var lines = MapScenarioIssues.LogLines();
             int from = lines.FindLastIndex(l => l.Contains("World ready"));
             // (Not our own earlier "[map] alive" failures, which quote those
@@ -797,11 +861,13 @@ namespace DarkwoodMP.World
                     "deaths in the log: "
                         + $"{string.Join(" | ", deaths.Select(l => l.Trim()))}");
             }
+
             r.Info = string.Join("; ", parts);
             if (r.Failure != null)
             {
                 r.Failure += "; " + r.Info;
             }
+
             yield break;
         }
 
@@ -816,12 +882,14 @@ namespace DarkwoodMP.World
                 r.Fail("the clock is the host's");
                 yield break;
             }
+
             var ctl = Singleton<Controller>.Instance;
             if (ctl == null || a.Length < 1)
             {
                 r.Fail("usage: time +H");
                 yield break;
             }
+
             float h = F(a[0].TrimStart('+'));
             TestWorld.SetTime(Mathf.Repeat(ctl.CurrentTime + h * 60f, 1440f));
             yield return new WaitForSeconds(1f);

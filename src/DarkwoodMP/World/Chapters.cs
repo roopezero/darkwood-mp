@@ -60,6 +60,7 @@ namespace DarkwoodMP.World
             Epilogue = 1,
             EndScreen = 2
         }
+
         internal enum StoryKind : byte
         {
             None = 0,
@@ -89,6 +90,7 @@ namespace DarkwoodMP.World
                 {
                     return Singleton<WorldGenerator>.Instance.chapterID;
                 }
+
                 return 0;
             }
         }
@@ -117,6 +119,7 @@ namespace DarkwoodMP.World
                 _chapterSent = false;
                 Plugin.Log.LogInfo($"Chapter {HostChapter} is ready");
             }
+
             UpdateHeld();
         }
 
@@ -130,19 +133,23 @@ namespace DarkwoodMP.World
             {
                 return StoryKind.None;
             }
+
             if (e.type == GameEvent.Type.transportPlayerToObject
                 && e.activeModifier)
             {
                 return StoryKind.Chapter;
             }
+
             if (e.type == GameEvent.Type.startDream && e.Value == EpilogueDream)
             {
                 return StoryKind.Epilogue;
             }
+
             if (e.type == GameEvent.Type.endGame)
             {
                 return StoryKind.EndScreen;
             }
+
             return StoryKind.None;
         }
 
@@ -162,6 +169,7 @@ namespace DarkwoodMP.World
                         intValue = chapter,
                         eventAmount = 1
                     };
+
                 case StoryKind.Epilogue:
                     return new GameEvent
                     {
@@ -169,6 +177,7 @@ namespace DarkwoodMP.World
                         Value = EpilogueDream,
                         eventAmount = 1
                     };
+
                 default:
                     return new GameEvent
                     {
@@ -190,6 +199,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             var kind = KindOf(e);
             if (s.IsClient)
             {
@@ -200,27 +210,33 @@ namespace DarkwoodMP.World
                 {
                     text = $" {e.intValue}";
                 }
+
                 string action = "not run here";
                 if (ours)
                 {
                     action = "asking the host";
                 }
+
                 Plugin.Log.LogInfo(
                     $"A story step ({kind}{text}) is the host's: " + action);
                 if (ours)
                 {
                     SendStoryRequest(e, thisGO, kind);
                 }
+
                 return false;
             }
+
             if (ScriptedEvents.Current != ScriptedEvents.Part.All)
             {
                 return false;
             }
+
             if (kind == StoryKind.Chapter)
             {
                 SendChapterStart(e.intValue);
             }
+
             return true;
         }
 
@@ -230,6 +246,7 @@ namespace DarkwoodMP.World
             {
                 return $"chapter {chapter}";
             }
+
             return $"the game's end ({kind})";
         }
 
@@ -245,17 +262,20 @@ namespace DarkwoodMP.World
             {
                 return; // one event can hold the step more than once
             }
+
             _lastRequest = Time.realtimeSinceStartup;
             GameEvents ge = null;
             if (thisGO != null)
             {
                 ge = thisGO.GetComponent<GameEvents>();
             }
+
             ObjRef r = default;
             if (ge != null)
             {
                 r = ObjRef.Of(thisGO);
             }
+
             // the host checks our reach (a stage starts as we arrive): our
             // newest position first
             Sync.PlayerSync instance = Sync.PlayerSync.Instance;
@@ -263,6 +283,7 @@ namespace DarkwoodMP.World
             {
                 instance.FlushNow();
             }
+
             var w = S.Begin(MsgType.StoryRequest);
             r.Write(w);
             int index = 0;
@@ -270,6 +291,7 @@ namespace DarkwoodMP.World
             {
                 index = Math.Max(0, ge.events.IndexOf(e));
             }
+
             w.W.Write((byte)index);
             w.W.Write((byte)kind);
             int chapter = 0;
@@ -277,6 +299,7 @@ namespace DarkwoodMP.World
             {
                 chapter = e.intValue;
             }
+
             w.W.Write(chapter);
             string what = What(kind, e.intValue);
             Authority.Request(w, what, (ok, reason, result) =>
@@ -311,6 +334,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             int index = r.R.ReadByte();
             var kind = (StoryKind)r.R.ReadByte();
@@ -319,6 +343,7 @@ namespace DarkwoodMP.World
             {
                 return; // only as a Request
             }
+
             Sync.RemotePlayer rp = null;
             if (Sync.PlayerSync.Instance != null
                 && Sync.PlayerSync.Instance.Remotes.TryGetValue(
@@ -326,6 +351,7 @@ namespace DarkwoodMP.World
             {
                 rp = remote;
             }
+
             var h = new Held
             {
                 From = from,
@@ -335,6 +361,7 @@ namespace DarkwoodMP.World
                 Chapter = chapter,
                 WasAway = rp != null && rp.Away
             };
+
             string reason;
             switch (Decide(h, out reason))
             {
@@ -357,9 +384,11 @@ namespace DarkwoodMP.World
                         _held = h;
                         _readySince = -1f;
                     }
+
                     Authority.Result("pending: " + reason);
                     return;
             }
+
             Plugin.Log.LogInfo(
                 $"{s.NameOf(from)} set off {What(kind, chapter)}: running it "
                     + "here");
@@ -382,6 +411,7 @@ namespace DarkwoodMP.World
             public bool WasAway, ReachChecked;
             public string Key => KeyOf(Kind, Chapter);
         }
+
         private static Held _held;
         private static float _readySince = -1f;
         /// <summary>
@@ -396,6 +426,7 @@ namespace DarkwoodMP.World
             {
                 return "chapter " + chapter;
             }
+
             return "end";
         }
 
@@ -435,11 +466,13 @@ namespace DarkwoodMP.World
                 reason = "no such story step";
                 return Verdict.Refuse;
             }
+
             if (_ran.Contains(h.Key))
             {
                 reason = "the host's game has already started it";
                 return Verdict.Done;
             }
+
             if (_chapterSent || Generating || _endSent)
             {
                 reason =
@@ -447,17 +480,20 @@ namespace DarkwoodMP.World
                         + "story";
                 return Verdict.Wait;
             }
+
             if (!WorldShare.InWorld || Player.Instance == null
                 || WorldShare.Loading || !WorldShare.WorldReady)
             {
                 reason = "the host isn't in its world yet";
                 return Verdict.Wait;
             }
+
             if (HostDreaming())
             {
                 reason = "the host is in a dream";
                 return Verdict.Wait;
             }
+
             int now = HostChapter;
             if (kind == StoryKind.Chapter && h.Chapter != now + 1)
             {
@@ -466,6 +502,7 @@ namespace DarkwoodMP.World
                         + $"{now})";
                 return Verdict.Refuse;
             }
+
             if (kind == StoryKind.Epilogue && now < LastChapter)
             {
                 reason =
@@ -473,11 +510,13 @@ namespace DarkwoodMP.World
                         + $"chapter {now})";
                 return Verdict.Refuse;
             }
+
             GameEvents ge = null;
             if (h.Obj.Valid)
             {
                 ge = ObjRef.Resolve<GameEvents>(h.Obj);
             }
+
             if (ge != null)
             {
                 GameEvent step = null;
@@ -485,6 +524,7 @@ namespace DarkwoodMP.World
                 {
                     step = ge.events[h.Index];
                 }
+
                 if (KindOf(step) != kind
                     || (kind == StoryKind.Chapter
                         && step.intValue != h.Chapter))
@@ -492,6 +532,7 @@ namespace DarkwoodMP.World
                     reason = $"{ge.name} doesn't do that";
                     return Verdict.Refuse;
                 }
+
                 // Checked once, from where they were then: a held request isn't
                 // refused because they moved on meanwhile.
                 if (!h.ReachChecked)
@@ -503,8 +544,10 @@ namespace DarkwoodMP.World
                         return Verdict.Refuse;
                     }
                 }
+
                 return Verdict.Run;
             }
+
             Sync.RemotePlayer rp = null;
             if (Sync.PlayerSync.Instance != null
                 && Sync.PlayerSync.Instance.Remotes.TryGetValue(
@@ -512,6 +555,7 @@ namespace DarkwoodMP.World
             {
                 rp = remote;
             }
+
             if (!h.WasAway && !(rp != null && rp.Away))
             {
                 reason =
@@ -519,6 +563,7 @@ namespace DarkwoodMP.World
                         + "a place of their own";
                 return Verdict.Refuse;
             }
+
             return Verdict.Run;
         }
 
@@ -553,6 +598,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var s = S;
             if (s == null || !s.IsHost || !s.Peers.Contains(h.From))
             {
@@ -562,23 +608,27 @@ namespace DarkwoodMP.World
                 _held = null;
                 return;
             }
+
             var v = Decide(h, out string reason);
             if (v == Verdict.Wait)
             {
                 _readySince = -1f;
                 return;
             }
+
             if (v == Verdict.Run)
             {
                 if (_readySince < 0f)
                 {
                     _readySince = Time.realtimeSinceStartup;
                 }
+
                 if (Time.realtimeSinceStartup - _readySince < 3f)
                 {
                     return;
                 }
             }
+
             _held = null;
             _readySince = -1f;
             if (v == Verdict.Done)
@@ -587,6 +637,7 @@ namespace DarkwoodMP.World
                     $"The held {What(h.Kind, h.Chapter)}: {reason}");
                 return;
             }
+
             if (v == Verdict.Refuse)
             {
                 Plugin.Log.LogWarning(
@@ -594,6 +645,7 @@ namespace DarkwoodMP.World
                         + $"all: {reason}");
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"{s.NameOf(h.From)} set off {What(h.Kind, h.Chapter)} "
                     + "earlier: running it here now");
@@ -609,6 +661,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _chapterSent = true;
             _ran.Add(KeyOf(StoryKind.Chapter, chapter));
             Plugin.Log.LogInfo(
@@ -631,6 +684,7 @@ namespace DarkwoodMP.World
                 // loading a chapter's save (also a joiner loading the host's)
                 return true;
             }
+
             if (s.IsClient)
             {
                 Plugin.Log.LogWarning(
@@ -638,6 +692,7 @@ namespace DarkwoodMP.World
                         + "starts chapters");
                 return false;
             }
+
             SendChapterStart(chapter);
             Generating = true;
             return true;
@@ -650,6 +705,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _endSent = true;
             _ran.Add(KeyOf(StoryKind.Epilogue, 0));
             if (kind == EndKind.Epilogue)
@@ -657,6 +713,7 @@ namespace DarkwoodMP.World
                 EpilogueSync.HostStarts();
                 return;
             }
+
             Plugin.Log.LogInfo(
                 $"The game's end ({kind}): the players in your world see it "
                     + "too, and the server stops");
@@ -677,6 +734,7 @@ namespace DarkwoodMP.World
                 HostEnding(EndKind.Epilogue);
             }
         }
+
         internal static void OnShowEndGame() => HostEnding(EndKind.EndScreen);
 
         // ---- joiner ---------------------------------------------------------
@@ -690,6 +748,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int chapter = r.R.ReadInt32();
             // before the host's game saves and moves on
             Characters instance = Characters.Instance;
@@ -697,6 +756,7 @@ namespace DarkwoodMP.World
             {
                 instance.SaveNow();
             }
+
             Plugin.Notice(
                 $"The host is starting chapter {chapter}. You'll follow once "
                     + "it's ready.");
@@ -704,6 +764,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             try
             {
                 Singleton<UI>.Instance.tweenBlackScreen(Color.black, 1f);
@@ -715,6 +776,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Couldn't fade out for the chapter: {e.Message}");
             }
+
             bool waiting = _chapterWaitUntil > Time.realtimeSinceStartup;
             _chapterWaitUntil = Time.realtimeSinceStartup + 300f;
             if (!waiting)
@@ -738,8 +800,10 @@ namespace DarkwoodMP.World
                     _chapterWaitUntil = 0f;
                     yield break;
                 }
+
                 yield return null;
             }
+
             Plugin.Notice("The host's next chapter didn't come");
             Core.forbidInputs = false;
             Singleton<UI>.Instance.tweenBlackScreen(
@@ -753,6 +817,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var kind = (EndKind)r.R.ReadByte();
             byte phase = r.R.ReadByte();
             Plugin.Log.LogInfo(
@@ -761,6 +826,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             SoloEnding(kind);
         }
 
@@ -779,15 +845,18 @@ namespace DarkwoodMP.World
                     backend.Leave();
                 }
             }
+
             WorldShare instance = WorldShare.Instance;
             if (instance != null)
             {
                 instance.SetLoadStatus("The host reached the end of the game.");
             }
+
             if (!WorldShare.InWorld || !SaveRedirect.Active)
             {
                 return;
             }
+
             Plugin.Notice("The host has reached the end of the game");
             Plugin.Instance.StartCoroutine(ShowEnding(kind));
         }
@@ -812,6 +881,7 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning(
                         $"Couldn't start the epilogue: {e.Message}");
                 }
+
                 if (started)
                 {
                     float until = Time.realtimeSinceStartup + 45f;
@@ -822,6 +892,7 @@ namespace DarkwoodMP.World
                         yield return null;
                     }
                 }
+
                 if (started && Player.Instance != null
                     && Player.Instance.inEpilogue)
                 {
@@ -833,6 +904,7 @@ namespace DarkwoodMP.World
                         yield return ToMenuAfterEnding();
                         yield break;
                     }
+
                     yield return new WaitForSecondsRealtime(5f);
                     Plugin.Log.LogInfo(
                         "Test: skipping the rest of the epilogue");
@@ -849,6 +921,7 @@ namespace DarkwoodMP.World
             {
                 yield return EndScreen();
             }
+
             ToCredits();
             yield return ToMenuAfterEnding();
         }
@@ -865,11 +938,13 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (Singleton<OutsideLocations>.Instance != null
                 && Singleton<OutsideLocations>.Instance.playerInOutsideLocation)
             {
                 return false;
             }
+
             Core.forbidInputs = true;
             p.halt();
             dreams.wantToDream = true;
@@ -895,12 +970,14 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Couldn't show the end screen: {e.Message}");
             }
+
             Plugin.Log.LogInfo("Showing the end screen");
             float time = 12f;
             if (TestQuick)
             {
                 time = 4f;
             }
+
             yield return new WaitForSecondsRealtime(time);
         }
 
@@ -923,6 +1000,7 @@ namespace DarkwoodMP.World
                 Plugin.Log.LogWarning(
                     $"Couldn't fade out for the credits: {e.Message}");
             }
+
             Core.forbidInputs = true;
             Core.coreStarted = false;
             Core.loadingGame = false;
@@ -951,8 +1029,10 @@ namespace DarkwoodMP.World
                         Plugin.Instance.StartCoroutine(SkipCredits());
                     }
                 }
+
                 yield return null;
             }
+
             Plugin.Log.LogInfo("Back at the main menu after the ending");
             Plugin.Instance.OpenPanel(); // it says why (LoadStatus)
         }

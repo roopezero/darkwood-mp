@@ -65,22 +65,26 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             var w = Write(r, option);
             string what = $"build {c.name} {r} option {option}";
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo($"[world] sent {what}");
             }
+
             if (S.IsHost)
             {
                 S.Broadcast(w, Channel.Control, reliable: true);
                 return;
             }
+
             string sound = null;
             if (option >= 0 && option < c.options.Count)
             {
                 sound = c.options[option].buildCompleteSound;
             }
+
             Waiting.Add(c);
             Authority.Request(w, what, (ok, reason, _) =>
             {
@@ -92,10 +96,12 @@ namespace DarkwoodMP.World
                             + $"({reason})");
                     return;
                 }
+
                 if (c == null)
                 {
                     return;
                 }
+
                 Confirming = true;
                 try
                 {
@@ -107,6 +113,7 @@ namespace DarkwoodMP.World
                     {
                         AudioController.Play(sound);
                     }
+
                     if (WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
@@ -132,10 +139,12 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (s.IsClient && from != s.HostId)
             {
                 return;
             }
+
             var obj = ObjRef.Read(r);
             int option = r.R.ReadInt32();
             var c = ObjRef.Resolve<Constructible>(obj);
@@ -143,6 +152,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             if (WorldActions.Debug)
             {
                 string name = "not found here (built already?)";
@@ -150,9 +160,11 @@ namespace DarkwoodMP.World
                 {
                     name = c.name;
                 }
+
                 Plugin.Log.LogInfo(
                     $"[world] got build {obj} option {option}: " + name);
             }
+
             if (c != null && option >= 0 && option < c.options.Count)
             {
                 try
@@ -167,6 +179,7 @@ namespace DarkwoodMP.World
                     {
                         part = ScriptedEvents.Part.SharedOnly;
                     }
+
                     ScriptedEvents.RunAs(part, replaying: true,
                         () => c.construct(manual: false, option));
                 }
@@ -175,6 +188,7 @@ namespace DarkwoodMP.World
                     Plugin.Log.LogWarning($"Couldn't build {obj}: {e.Message}");
                 }
             }
+
             if (s.IsHost)
             {
                 s.Broadcast(
@@ -194,11 +208,13 @@ namespace DarkwoodMP.World
                     "there's nothing to build there (built already?)");
                 return false;
             }
+
             if (option < 0 || option >= c.options.Count)
             {
                 Authority.Refuse($"it has no option {option}");
                 return false;
             }
+
             var item = c.GetComponent<Item>();
             bool broken = item != null && item.destroyed;
             if (c.onlyWhenDestroyed && !broken)
@@ -206,11 +222,13 @@ namespace DarkwoodMP.World
                 Authority.Refuse("it isn't broken");
                 return false;
             }
+
             if (c.constructed && !broken)
             {
                 Authority.Refuse("it's built already");
                 return false;
             }
+
             return Authority.InReach(
                 c.transform.position, WorldActions.Reach, c.name);
         }
@@ -235,6 +253,7 @@ namespace DarkwoodMP.World
             {
                 return true;
             }
+
             if (Session.Instance.IsClient)
             {
                 // A joiner asks first: the ingredients go now (to come back if
@@ -243,6 +262,7 @@ namespace DarkwoodMP.World
                 {
                     return false;
                 }
+
                 int option = forceOption;
                 if (option == -1)
                 {
@@ -251,8 +271,10 @@ namespace DarkwoodMP.World
                         // sets chosenOption from the construction menu
                         __instance.getSelectedOption();
                     }
+
                     option = __instance.chosenOption;
                 }
+
                 // Not one we can name to the host, or no such option: built
                 // here alone, as the game would.
                 if (option < 0 || option >= __instance.options.Count
@@ -260,6 +282,7 @@ namespace DarkwoodMP.World
                 {
                     return true;
                 }
+
                 if (manual)
                 {
                     var menu = Singleton<ConstructionMenu>.Instance;
@@ -268,6 +291,7 @@ namespace DarkwoodMP.World
                     {
                         icon = menu.selectedIcon;
                     }
+
                     if (icon != null)
                     {
                         foreach (var req in icon.requirements)
@@ -276,9 +300,11 @@ namespace DarkwoodMP.World
                         }
                     }
                 }
+
                 Construction.Send(__instance, option);
                 return false;
             }
+
             __state = true;
             WorldActions.Depth++;
             return true;
@@ -291,6 +317,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             int option;
             if (forceOption != -1)
             {
@@ -300,6 +327,7 @@ namespace DarkwoodMP.World
             {
                 option = __instance.chosenOption;
             }
+
             Construction.Send(__instance, option);
         }
     }

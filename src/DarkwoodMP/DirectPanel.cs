@@ -61,6 +61,7 @@ namespace DarkwoodMP
                 Footer = BrowserButtons,
                 FooterHeight = 13 + 8,
             };
+
             _addressWin = new UiWindow(0x0D3C, "Connect to address")
             {
                 MinSize = new Vector2(280, 150),
@@ -70,6 +71,7 @@ namespace DarkwoodMP
                 Footer = AddressButtons,
                 FooterHeight = 13 + 8,
             };
+
             _passwordWin = new UiWindow(0x0D3D, "Password")
             {
                 MinSize = new Vector2(260, 120),
@@ -101,6 +103,7 @@ namespace DarkwoodMP
                 _browser.Favorites.Remove(_shotRow);
                 _shotRow = null;
             }
+
             CloseWindows();
         }
 
@@ -125,6 +128,7 @@ namespace DarkwoodMP
                 _browser.Favorites.Add(_shotRow);
                 _browser.Query(_shotRow);
             }
+
             OpenServerBrowser();
             if (address)
             {
@@ -144,13 +148,16 @@ namespace DarkwoodMP
                 {
                     text = "In a Steam game.";
                 }
+
                 Ui.Text(f, text, MenuSkin.Dim);
                 if (!_session.IsHost)
                 {
                     JoinButtons(f);
                 }
+
                 return;
             }
+
             if (_tcp.InSession)
             {
                 DrawInSession(f);
@@ -173,6 +180,7 @@ namespace DarkwoodMP
             {
                 return; // said once, at the top of the window
             }
+
             var cfg = Plugin.Cfg;
             cfg.ServerName.Value =
                 Ui.Field(f, "Server name", cfg.ServerName.Value, 48);
@@ -182,6 +190,7 @@ namespace DarkwoodMP
             {
                 cfg.DirectPort.Value = p;
             }
+
             cfg.Password.Value =
                 Ui.Field(f, "Password", cfg.Password.Value, 32, password: true);
             var m = f.Row(Ui.RowH, 90, 24, 30, 24, 0);
@@ -190,6 +199,7 @@ namespace DarkwoodMP
             {
                 cfg.MaxPlayers.Value--;
             }
+
             Ui.Label(
                 m[2], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright,
                 TextAnchor.MiddleCenter);
@@ -198,6 +208,7 @@ namespace DarkwoodMP
             {
                 cfg.MaxPlayers.Value++;
             }
+
             cfg.OpenPort.Value = Ui.Check(
                 f.Next(Ui.RowH), cfg.OpenPort.Value,
                 "Open the port on my router (UPnP)");
@@ -226,6 +237,7 @@ namespace DarkwoodMP
                 {
                     AddressRow(f, $"{ip}:{_tcp.Port}", "LAN / VPN");
                 }
+
                 var map = _tcp.Mapper;
                 if (map.Mapped && map.ExternalIp != null
                     && !map.BehindAnotherNat)
@@ -241,6 +253,7 @@ namespace DarkwoodMP
                     {
                         note = "internet";
                     }
+
                     AddressRow(f, address, note);
                 }
                 else
@@ -250,11 +263,13 @@ namespace DarkwoodMP
                     {
                         label = "Looking up...";
                     }
+
                     if (Ui.Button(f, label) && !_lookingUp)
                     {
                         LookUpPublicIp();
                     }
                 }
+
                 if (map.Status.Length > 0)
                 {
                     string status = map.Status;
@@ -267,24 +282,29 @@ namespace DarkwoodMP
                     {
                         color = MenuSkin.Warn;
                     }
+
                     Ui.Text(f, status, color);
                 }
             }
+
             if (!_tcp.IsHost && _session.Connected
                 && Ui.Button(
                     f, "Reload the host's world (if things look out of sync)"))
             {
                 _tcp.Rejoin(); // sends your character first
             }
+
             string text = "Leave";
             if (_tcp.IsHost)
             {
                 text = "Stop hosting";
             }
+
             if (Ui.Button(f, text))
             {
                 _tcp.Leave();
             }
+
             // A joiner can go straight to another server (or this one again):
             // Connect leaves this game first.
             if (!_tcp.IsHost)
@@ -300,6 +320,7 @@ namespace DarkwoodMP
             {
                 OpenServerBrowser();
             }
+
             if (Ui.Button(row[1], "Connect to address..."))
             {
                 OpenAddress();
@@ -329,6 +350,7 @@ namespace DarkwoodMP
                     + "both; if it can't, the window says so: forward them by "
                     + "hand, or use a VPN (Tailscale, ZeroTier).";
             }
+
             return $"Friends connect on TCP port {port}, and the browser asks "
                 + $"on UDP {port}. Over the internet, forward both, or use a "
                 + "VPN (Tailscale, ZeroTier).";
@@ -377,6 +399,7 @@ namespace DarkwoodMP
                 _browser.Refresh(ServerBrowser.Tab.Favorites);
                 _browser.Refresh(ServerBrowser.Tab.History);
             }
+
             _browserWin.Show();
         }
 
@@ -399,6 +422,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             _tab = t;
             _selected = null;
             _scroll = Vector2.zero;
@@ -418,6 +442,7 @@ namespace DarkwoodMP
                     SwitchTab((ServerBrowser.Tab)i);
                 }
             }
+
             f.Y += Ui.RowH;
 
             // The list fills the window above the status line.
@@ -455,6 +480,7 @@ namespace DarkwoodMP
                         _sortDown = false;
                     }
                 }
+
                 string arrow = "";
                 if (_sortColumn == c && c > 0)
                 {
@@ -467,6 +493,7 @@ namespace DarkwoodMP
                         arrow = "  ^";
                     }
                 }
+
                 string name = Columns[c] + arrow;
                 Color color;
                 if (r.Contains(Event.current.mousePosition))
@@ -477,6 +504,7 @@ namespace DarkwoodMP
                 {
                     color = MenuSkin.Text;
                 }
+
                 Ui.Label(
                     new Rect(r.x + 4 * s, r.y, r.width - 6 * s, r.height), name,
                     color);
@@ -511,10 +539,12 @@ namespace DarkwoodMP
                 {
                     empty = "No favorites yet: Add server puts one here.";
                 }
+
                 Ui.Label(
                     new Rect(6 * s, 4 * s, view.width - 12 * s, rowH), empty,
                     MenuSkin.Dim);
             }
+
             var rc = Ui.Split(new Rect(0, 0, view.width, rowH), ColumnWidths);
             for (int i = 0; i < rows.Count; i++)
             {
@@ -526,6 +556,7 @@ namespace DarkwoodMP
                 {
                     GUI.Box(row, GUIContent.none, MenuSkin.Selected);
                 }
+
                 var ev = Event.current;
                 if (ev.type == EventType.MouseDown && ev.button == 0
                     && row.Contains(ev.mousePosition))
@@ -541,6 +572,7 @@ namespace DarkwoodMP
                         Connect(addr);
                     }
                 }
+
                 var info = e.Info;
                 bool ok = CanJoin(addr);
                 Color col;
@@ -556,6 +588,7 @@ namespace DarkwoodMP
                 {
                     col = MenuSkin.Text;
                 }
+
                 float y = row.y;
                 Rect C(int c) =>
                     new Rect(rc[c].x + 4 * s, y, rc[c].width - 4 * s, rowH);
@@ -563,6 +596,7 @@ namespace DarkwoodMP
                 {
                     DrawLock(C(0), col);
                 }
+
                 string name;
                 if (info != null)
                 {
@@ -572,12 +606,14 @@ namespace DarkwoodMP
                 {
                     name = addr;
                 }
+
                 Ui.Label(C(1), PixelFont.Fit(name, C(1).width), col);
                 string players = "";
                 if (info != null)
                 {
                     players = $"{info.Players}/{info.MaxPlayers}";
                 }
+
                 Ui.Label(C(2), players, col);
                 string world = "";
                 if (info == null)
@@ -599,14 +635,17 @@ namespace DarkwoodMP
                 {
                     world = wl;
                 }
+
                 Ui.Label(C(3), PixelFont.Fit(world, C(3).width), col);
                 string ping = "";
                 if (info != null)
                 {
                     ping = e.PingMs.ToString();
                 }
+
                 Ui.Label(C(4), ping, col);
             }
+
             GUI.EndScrollView();
             f.Y = panel.yMax + f.Gap;
 
@@ -629,6 +668,7 @@ namespace DarkwoodMP
                         detail = $"  -  DarkwoodMP {info.Version}";
                     }
                 }
+
                 status = _selected + detail;
             }
             else
@@ -644,9 +684,11 @@ namespace DarkwoodMP
                     {
                         text = "";
                     }
+
                     status = $"{rows.Count} server{text}";
                 }
             }
+
             // Beside it, while no name is set (the Steam or OS user name is
             // used), where to set one.
             string hint;
@@ -659,17 +701,20 @@ namespace DarkwoodMP
             {
                 hint = $"You're {_session.LocalName}: set a name in Options";
             }
+
             float hintW = 0f;
             if (hint != null)
             {
                 hintW =
                     Mathf.Min(PixelFont.Width(hint) + 8 * s, f.Width * 0.6f);
             }
+
             float gap = 0f;
             if (hint != null)
             {
                 gap = 8 * s;
             }
+
             float statusW = f.Width - hintW - gap;
             Ui.Label(
                 new Rect(f.Area.x + 2 * s, f.Y, statusW, statusH),
@@ -681,6 +726,7 @@ namespace DarkwoodMP
                     PixelFont.Fit(hint, hintW), MenuSkin.Dim,
                     TextAnchor.MiddleRight);
             }
+
             f.Y += statusH;
         }
 
@@ -693,6 +739,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             float s = PixelFont.Scale;
             float x = Mathf.Round(r.x + 1 * s),
                 y = Mathf.Round(r.y + (r.height - 9 * s) / 2f);
@@ -712,6 +759,7 @@ namespace DarkwoodMP
             {
                 return list;
             }
+
             IComparable Key(string a)
             {
                 var e = _browser.Get(a);
@@ -723,6 +771,7 @@ namespace DarkwoodMP
                         {
                             return 1;
                         }
+
                         return 0;
                     case 1:
                         string name = null;
@@ -730,10 +779,12 @@ namespace DarkwoodMP
                         {
                             name = i.Name;
                         }
+
                         if (name == null)
                         {
                             name = a;
                         }
+
                         return name.ToLowerInvariant();
                     case 2:
                         int players = -1;
@@ -741,6 +792,7 @@ namespace DarkwoodMP
                         {
                             players = i.Players;
                         }
+
                         return players;
                     case 3:
                         if (i != null
@@ -748,15 +800,18 @@ namespace DarkwoodMP
                         {
                             return w;
                         }
+
                         return "";
                     default:
                         if (i != null)
                         {
                             return e.PingMs;
                         }
+
                         return int.MaxValue;
                 }
             }
+
             var sorted = list.OrderBy(Key);
             IEnumerable<string> ordered;
             if (_sortDown)
@@ -767,6 +822,7 @@ namespace DarkwoodMP
             {
                 ordered = sorted;
             }
+
             return ordered.ToList();
         }
 
@@ -778,6 +834,7 @@ namespace DarkwoodMP
             {
                 OpenAddress();
             }
+
             if (_tab != ServerBrowser.Tab.Lan
                 && Ui.Button(b[slot++], "Remove", _selected != null))
             {
@@ -789,8 +846,10 @@ namespace DarkwoodMP
                 {
                     _browser.RemoveHistory(_selected);
                 }
+
                 _selected = null;
             }
+
             if (_tab != ServerBrowser.Tab.Favorites)
             {
                 var fav =
@@ -803,15 +862,18 @@ namespace DarkwoodMP
                     _browser.AddFavorite(_selected);
                 }
             }
+
             string text = "Refresh";
             if (_tab == ServerBrowser.Tab.Lan && _browser.SearchingLan)
             {
                 text = "Searching";
             }
+
             if (Ui.Button(b[4], text))
             {
                 _browser.Refresh(_tab);
             }
+
             if (Ui.Button(
                 b[5], "Connect", _selected != null && CanJoin(_selected)))
             {
@@ -842,6 +904,7 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             if (password == null)
             {
                 var info = _browser.Get(addr).Info;
@@ -854,22 +917,26 @@ namespace DarkwoodMP
                     return;
                 }
             }
+
             // Joining leaves the game we're in (a joiner's, Steam or direct;
             // hosts get no join buttons while hosting).
             if (_session.Active && _session.IsHost)
             {
                 return;
             }
+
             if (_session.Active)
             {
                 Plugin.Log.LogInfo(
                     $"Joining {addr}: leaving the game we're in first");
                 _session.Backend.Leave();
             }
+
             if (_tcp.InSession)
             {
                 _tcp.Leave(); // still connecting, not in yet
             }
+
             _session.LastRefusal = null;
             _browser.Joined(addr);
             Plugin.Cfg.LastAddress.Value = addr;
@@ -878,12 +945,14 @@ namespace DarkwoodMP
             {
                 sentPassword = "";
             }
+
             _tcp.Join(addr, sentPassword);
             Action handler = OnJoining;
             if (handler != null)
             {
                 handler();
             }
+
             CloseWindows();
         }
 
@@ -896,8 +965,10 @@ namespace DarkwoodMP
                 {
                     address = "";
                 }
+
                 _address = address;
             }
+
             _focusField = true;
             _addressWin.Show();
         }
@@ -918,6 +989,7 @@ namespace DarkwoodMP
                 _focusField = false;
                 GUI.FocusControl("dwmp-address");
             }
+
             if (Ui.EnterPressed())
             {
                 ConnectToAddress();
@@ -936,10 +1008,12 @@ namespace DarkwoodMP
                 _addressWin.Close();
                 OpenServerBrowser();
             }
+
             if (Ui.Button(b[2], "Connect", valid))
             {
                 ConnectToAddress();
             }
+
             if (Ui.Button(b[3], "Cancel"))
             {
                 _addressWin.Close();
@@ -953,11 +1027,13 @@ namespace DarkwoodMP
             {
                 return;
             }
+
             string password = _addressPassword;
             if (password == null)
             {
                 password = "";
             }
+
             Connect(addr, password);
         }
 
@@ -972,6 +1048,7 @@ namespace DarkwoodMP
                 _focusField = false;
                 GUI.FocusControl("dwmp-password");
             }
+
             if (Ui.EnterPressed())
             {
                 string password = _password;
@@ -979,6 +1056,7 @@ namespace DarkwoodMP
                 {
                     password = "";
                 }
+
                 Connect(_passwordFor, password);
             }
         }
@@ -993,8 +1071,10 @@ namespace DarkwoodMP
                 {
                     password = "";
                 }
+
                 Connect(_passwordFor, password);
             }
+
             if (Ui.Button(b[2], "Cancel"))
             {
                 _passwordWin.Close();
@@ -1007,16 +1087,19 @@ namespace DarkwoodMP
             {
                 return "";
             }
+
             ServerInfo info = _browser.Get(addr).Info;
             string name = null;
             if (info != null)
             {
                 name = info.Name;
             }
+
             if (name is string n && n.Length > 0)
             {
                 return n;
             }
+
             return addr;
         }
     }

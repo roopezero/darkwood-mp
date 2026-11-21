@@ -57,6 +57,7 @@ namespace DarkwoodMP.World
             w.W.Write((byte)K);
             w.W.Write(Id);
         }
+
         public static ObjRef Read(PacketReader r) =>
             new ObjRef { K = (Kind)r.R.ReadByte(), Id = r.R.ReadInt64() };
 
@@ -108,15 +109,18 @@ namespace DarkwoodMP.World
             {
                 return false;
             }
+
             if (_shared.TryGetValue(id, out var had) && had != null
                 && had != go)
             {
                 return false;
             }
+
             if (_sharedIds.TryGetValue(go, out long hadId) && hadId != id)
             {
                 return false;
             }
+
             _shared[id] = go;
             _sharedIds[go] = id;
             return true;
@@ -141,6 +145,7 @@ namespace DarkwoodMP.World
             {
                 return;
             }
+
             _sharedIds.Remove(go);
             if (_shared.TryGetValue(id, out var had) && had == go)
             {
@@ -173,17 +178,21 @@ namespace DarkwoodMP.World
                     {
                         dead = new List<long>();
                     }
+
                     dead.Add(kv.Key);
                 }
             }
+
             if (dead == null)
             {
                 return;
             }
+
             foreach (var id in dead)
             {
                 _shared.Remove(id);
             }
+
             var deadGo = new List<GameObject>();
             foreach (var kv in _sharedIds)
             {
@@ -192,6 +201,7 @@ namespace DarkwoodMP.World
                     deadGo.Add(kv.Key);
                 }
             }
+
             foreach (var go in deadGo)
             {
                 _sharedIds.Remove(go);
@@ -236,6 +246,7 @@ namespace DarkwoodMP.World
                 _pinned[r.Id] = go;
                 _pinnedIds[go] = r.Id;
             }
+
             return r;
         }
 
@@ -245,31 +256,37 @@ namespace DarkwoodMP.World
             {
                 return default;
             }
+
             if (_spawnedIds.TryGetValue(go, out long sid))
             {
                 return new ObjRef { K = Kind.Spawned, Id = sid };
             }
+
             var c = go.GetComponent<Character>();
             if (c != null && NetEnemies.Instance != null
                 && NetEnemies.Instance.NetIdOf(c, out uint eid))
             {
                 return new ObjRef { K = Kind.Enemy, Id = eid };
             }
+
             var save = go.GetComponent<SaveableObject>();
             if (save != null && save.uniqueId > 0
                 && save.uniqueId < SharedIds.SendLimit)
             {
                 return new ObjRef { K = Kind.Saved, Id = save.uniqueId };
             }
+
             if (_sharedIds.TryGetValue(go, out long hid))
             {
                 // stays as it moves
                 return new ObjRef { K = Kind.Spawned, Id = hid };
             }
+
             if (_pinnedIds.TryGetValue(go, out long pid))
             {
                 return new ObjRef { K = Kind.Placed, Id = pid };
             }
+
             return new ObjRef { K = Kind.Placed, Id = PlacedKey(go) };
         }
 
@@ -311,6 +328,7 @@ namespace DarkwoodMP.World
                 new Dictionary<int, List<GameObject>>();
             public float At = -999f;
         }
+
         private static readonly Dictionary<System.Type, PlacedScan> _placed =
             new Dictionary<System.Type, PlacedScan>();
         private const float PlacedRescan = 0.25f;
@@ -326,6 +344,7 @@ namespace DarkwoodMP.World
             {
                 return null;
             }
+
             GameObject best = null;
             float bestD = PlacedSlack * PlacedSlack;
             foreach (var go in list)
@@ -334,6 +353,7 @@ namespace DarkwoodMP.World
                 {
                     continue;
                 }
+
                 var p = go.transform.position;
                 float d = (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z);
                 if (d <= bestD)
@@ -342,6 +362,7 @@ namespace DarkwoodMP.World
                     best = go;
                 }
             }
+
             exact = best != null && bestD <= 1f;
             return best;
         }
@@ -362,10 +383,12 @@ namespace DarkwoodMP.World
                     {
                         break;
                     }
+
                     if (_shared.TryGetValue(r.Id, out go) && go != null)
                     {
                         break;
                     }
+
                     // An id the host gave out that this game hasn't tied to its
                     // copy yet: find it as Placed, and tie it.
                     if (_announced.TryGetValue(r.Id, out long key))
@@ -375,6 +398,7 @@ namespace DarkwoodMP.World
                             K = Kind.Placed,
                             Id = key
                         });
+
                         if (found != null)
                         {
                             go = found.gameObject;
@@ -383,12 +407,14 @@ namespace DarkwoodMP.World
                         {
                             go = null;
                         }
+
                         if (go != null && !_sharedIds.ContainsKey(go)
                             && BindShared(r.Id, go))
                         {
                             HostIds.Place(r.Id, go);
                         }
                     }
+
                     break;
                 case Kind.Enemy:
                     NetEnemies instance = NetEnemies.Instance;
@@ -397,6 +423,7 @@ namespace DarkwoodMP.World
                     {
                         c = instance.CharacterOf((uint)r.Id);
                     }
+
                     if (c != null)
                     {
                         go = c.gameObject;
@@ -405,6 +432,7 @@ namespace DarkwoodMP.World
                     {
                         go = null;
                     }
+
                     break;
                 case Kind.Saved:
                     if (r.Id >= SharedIds.ResolveLimit)
@@ -416,8 +444,10 @@ namespace DarkwoodMP.World
                                     + $"ids below {SharedIds.ResolveLimit} are "
                                     + "the same in every game: ignored");
                         }
+
                         break;
                     }
+
                     var sm = Singleton<SaveManager>.Instance;
                     if (sm != null
                         && sm.uniqueIdDict.TryGetValue((int)r.Id, out var t)
@@ -425,16 +455,19 @@ namespace DarkwoodMP.World
                     {
                         go = t.gameObject;
                     }
+
                     break;
                 case Kind.Placed:
                     if (_pinned.TryGetValue(r.Id, out go) && go != null)
                     {
                         break;
                     }
+
                     if (!_placed.TryGetValue(typeof(T), out var scan))
                     {
                         _placed[typeof(T)] = scan = new PlacedScan();
                     }
+
                     go = NearestPlaced(scan, r.Id, out bool exact);
                     // Scan again when it isn't on its spot too: one made since
                     // the last scan (a swamper's splats and their traps spread
@@ -455,10 +488,13 @@ namespace DarkwoodMP.World
                             {
                                 scan.ByName[h] = list = new List<GameObject>();
                             }
+
                             list.Add(comp.gameObject);
                         }
+
                         go = NearestPlaced(scan, r.Id, out exact);
                     }
+
                     if (go != null && !exact && WorldActions.Debug)
                     {
                         Plugin.Log.LogInfo(
@@ -466,12 +502,15 @@ namespace DarkwoodMP.World
                                 + $"as {go.name} at {go.transform.position}, "
                                 + "off its spot");
                     }
+
                     break;
             }
+
             if (go != null)
             {
                 return go.GetComponent<T>();
             }
+
             return null;
         }
     }
