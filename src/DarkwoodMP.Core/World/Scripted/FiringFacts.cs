@@ -26,7 +26,7 @@ namespace DarkwoodMP.World.Scripted
 
         public bool MultipleFire { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// This game is a client.

@@ -13,7 +13,7 @@ namespace DarkwoodMP.World.Building
         /// A client: find the option, then ConstructionRules.Asks.
         Client,
 
-        /// The host: one call deeper (WorldActions.Depth), the game builds,
+        /// The host: one call deeper (Coop.Guards.Depth), the game builds,
         /// and the outermost build is sent after.
         Host,
     }

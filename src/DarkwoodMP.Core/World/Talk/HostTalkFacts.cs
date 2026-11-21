@@ -10,7 +10,7 @@ namespace DarkwoodMP.World.Talk
         /// NPC.wantsToTalk.
         public bool WantsToTalk { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// Session.IsHost.

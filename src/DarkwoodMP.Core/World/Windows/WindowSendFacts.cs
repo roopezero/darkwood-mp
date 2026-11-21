@@ -5,10 +5,10 @@ namespace DarkwoodMP.World.Windows
     public readonly struct WindowSendFacts
     {
         /// This was the outermost patched world call
-        /// (WorldActions.Outermost(), which the shell calls first).
+        /// (Coop.Guards.Outermost(), which the shell calls first).
         public bool Outermost { get; init; }
 
-        /// The world is shared (WorldActions.Sharing).
+        /// The world is shared (Coop.Guards.Sharing).
         public bool Sharing { get; init; }
 
         /// The window before the call (the patch's __state).

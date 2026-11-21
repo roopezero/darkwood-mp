@@ -37,7 +37,7 @@ namespace DarkwoodMP.World.Scripted
 
         public bool Loading { get; init; }
 
-        /// WorldActions.Replaying and WorldActions.Sharing.
+        /// Coop.Guards.Replaying and Coop.Guards.Sharing.
         public bool Replaying { get; init; }
 
         public bool Sharing { get; init; }

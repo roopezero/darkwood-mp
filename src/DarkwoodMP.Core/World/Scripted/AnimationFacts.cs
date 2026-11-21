@@ -9,7 +9,7 @@ namespace DarkwoodMP.World.Scripted
 
         public bool InWorld { get; init; }
 
-        /// The part being run now, and WorldActions.Replaying.
+        /// The part being run now, and Coop.Guards.Replaying.
         public EventPart Current { get; init; }
 
         public bool Replaying { get; init; }

@@ -25,7 +25,7 @@ namespace DarkwoodMP.Combat.Hostiles
         /// NetEnemies.Frozen holds it.
         public bool Frozen { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// ScriptedEvents.Current is Part.SharedOnly: another player's

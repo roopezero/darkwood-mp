@@ -9,7 +9,7 @@ namespace DarkwoodMP.World.Objects
         /// Refused: the message Playermsg_feederInactive.
         Inactive,
 
-        /// Allowed: Feeder.activate, with WorldActions.Replaying set so it
+        /// Allowed: Feeder.activate, with Coop.Guards.Replaying set so it
         /// isn't sent again.
         Activates,
     }

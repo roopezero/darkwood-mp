@@ -15,11 +15,11 @@ namespace DarkwoodMP.World.Locks
         /// (LockRules.IsCrate). Only for the disarm.
         public bool Crate { get; init; }
 
-        /// WorldActions.Depth: 0 when no patched world call is running
+        /// Coop.Guards.Depth: 0 when no patched world call is running
         /// (disarm isn't one of them). Only for the disarm.
         public int Depth { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// This game is the host (Session.Instance.IsHost). Only for the

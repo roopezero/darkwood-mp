@@ -7,7 +7,7 @@ namespace DarkwoodMP.Sync.Players
         /// Player.Instance isn't null.
         public bool HasPlayer { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// The sound has a parent object.
@@ -20,7 +20,7 @@ namespace DarkwoodMP.Sync.Players
         /// (PlayerFx.InPlayerCode).
         public int InPlayerCode { get; init; }
 
-        /// WorldActions.Depth: a shared world action is running.
+        /// Coop.Guards.Depth: a shared world action is running.
         public int Depth { get; init; }
     }
 }

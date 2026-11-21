@@ -9,7 +9,7 @@ namespace DarkwoodMP.World.Hideout
         /// doEnable.
         public bool Enable { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// Playing together (TogetherRules.Together).

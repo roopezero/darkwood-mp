@@ -20,7 +20,7 @@ namespace DarkwoodMP.Combat.Landings
         /// How many peers are connected.
         public int Peers { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// The thrower is one of the host's tracked enemies

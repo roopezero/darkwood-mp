@@ -9,13 +9,13 @@ namespace DarkwoodMP.World.Nights
         /// It is the host (Session.IsHost).
         public bool IsHost { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// WorldShare.InWorld.
         public bool InWorld { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
     }
 }

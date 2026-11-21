@@ -10,11 +10,11 @@ namespace DarkwoodMP.World.Doors
         /// Door.blocked after it.
         public bool Blocked { get; init; }
 
-        /// How deep in patched world calls this is (WorldActions.Depth):
+        /// How deep in patched world calls this is (Coop.Guards.Depth):
         /// it's sent only outside all of them.
         public int Depth { get; init; }
 
-        /// The world is shared (WorldActions.Sharing).
+        /// The world is shared (Coop.Guards.Sharing).
         public bool Sharing { get; init; }
     }
 }

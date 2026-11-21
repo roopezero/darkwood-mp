@@ -7,7 +7,7 @@ namespace DarkwoodMP.World.Building
         /// (Construction.Confirming).
         public bool Confirming { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// The construct call's manual argument: the player built it.

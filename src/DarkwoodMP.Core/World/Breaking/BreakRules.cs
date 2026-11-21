@@ -168,7 +168,7 @@ namespace DarkwoodMP.World.Breaking
             };
         }
 
-        /// The guards after it, before WorldActions.Outermost: on the host,
+        /// The guards after it, before Coop.Guards.Outermost: on the host,
         /// the saved ones with the depth one deeper, so that Outermost
         /// takes it back; elsewhere as they are now.
         public static Guards Leave(bool host, Guards saved, Guards now)

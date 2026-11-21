@@ -4,10 +4,10 @@ namespace DarkwoodMP.World.Traps
     /// spawns (a vine trap's vine) waits for the host's yes.
     public readonly struct HoldFacts
     {
-        /// WorldActions.Depth, with this call counted.
+        /// Coop.Guards.Depth, with this call counted.
         public int Depth { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// This game is a client (Session.IsClient).

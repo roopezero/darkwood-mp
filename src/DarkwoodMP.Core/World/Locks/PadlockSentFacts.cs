@@ -6,10 +6,10 @@ namespace DarkwoodMP.World.Locks
     public readonly struct PadlockSentFacts
     {
         /// This is the outermost of the patched calls
-        /// (WorldActions.Outermost(), called first).
+        /// (Coop.Guards.Outermost(), called first).
         public bool Outermost { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// Padlock.locked before the call.

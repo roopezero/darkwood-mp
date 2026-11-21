@@ -11,7 +11,7 @@ namespace DarkwoodMP.World.Scripted
         /// Our player is owed its part of it (TriggerRules.IsOwed).
         public bool Owed { get; init; }
 
-        /// A session exists and is active, and WorldActions.Sharing.
+        /// A session exists and is active, and Coop.Guards.Sharing.
         public bool Active { get; init; }
 
         public bool Sharing { get; init; }

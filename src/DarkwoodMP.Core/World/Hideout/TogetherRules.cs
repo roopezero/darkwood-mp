@@ -5,7 +5,7 @@ namespace DarkwoodMP.World.Hideout
     public static class TogetherRules
     {
         /// In a loaded world, not loading, hosting with peers or a client.
-        /// Unlike WorldActions.Sharing it is true while replaying, and
+        /// Unlike Coop.Guards.Sharing it is true while replaying, and
         /// unlike PauseRules.InCoop it looks at Loading.
         public static bool Together(in TogetherFacts together)
         {

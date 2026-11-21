@@ -17,7 +17,7 @@ namespace DarkwoodMP.World.Hideout
         /// (ScriptedEvents.Current is Part.HostAndShared).
         public bool JoinersPart { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
     }
 }

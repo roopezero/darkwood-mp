@@ -24,7 +24,7 @@ namespace DarkwoodMP.World.Dreaming
         /// The shared dream's end was sent or replayed (DreamSync._ended).
         public bool Ended { get; init; }
 
-        /// WorldActions.Replaying: applying another game's change.
+        /// Coop.Guards.Replaying: applying another game's change.
         public bool Replaying { get; init; }
 
         /// Host: our level just started a level dream

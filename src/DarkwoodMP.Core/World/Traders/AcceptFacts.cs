@@ -5,7 +5,7 @@ namespace DarkwoodMP.World.Traders
     public readonly struct AcceptFacts
     {
         /// The prefix counted the windows (the window had an NPC, and
-        /// WorldActions.Replaying wasn't set), and the window still has
+        /// Coop.Guards.Replaying wasn't set), and the window still has
         /// its NPC after.
         public bool Counted { get; init; }
 

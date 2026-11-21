@@ -10,7 +10,7 @@ namespace DarkwoodMP.World.Fire
         /// This game is a client (NetEnemies.ClientMode).
         public bool ClientMode { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
 
         /// It is in a place of our own (WorldActions.OursAlone).

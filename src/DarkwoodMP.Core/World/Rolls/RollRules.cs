@@ -93,7 +93,7 @@ namespace DarkwoodMP.World.Rolls
 
         /// Who turns the shadows' lights off. hostSharing: there is a
         /// session, this game hosts it, the world is shared
-        /// (WorldActions.Sharing) and WorldEvents exists.
+        /// (Coop.Guards.Sharing) and WorldEvents exists.
         public static ShadowTurn ShadowLights(bool follows, bool hostSharing)
         {
             if (follows)

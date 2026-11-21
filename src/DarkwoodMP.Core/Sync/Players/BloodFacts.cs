@@ -16,7 +16,7 @@ namespace DarkwoodMP.Sync.Players
         /// PlayerFx.Instance isn't null and is sharing.
         public bool Sharing { get; init; }
 
-        /// WorldActions.Replaying.
+        /// Coop.Guards.Replaying.
         public bool Replaying { get; init; }
     }
 }

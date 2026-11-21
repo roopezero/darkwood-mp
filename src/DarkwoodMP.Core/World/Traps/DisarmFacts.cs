@@ -11,7 +11,7 @@ namespace DarkwoodMP.World.Traps
         /// NetEnemies.ClientMode.
         public bool ClientMode { get; init; }
 
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// Player.trapBeingDisarmed isn't null.

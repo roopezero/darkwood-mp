@@ -3,7 +3,7 @@ namespace DarkwoodMP.World.Talk
     /// What our player's opened dialogue looks at (TalkLock.Opened).
     public readonly struct TalkOpenFacts
     {
-        /// WorldActions.Sharing.
+        /// Coop.Guards.Sharing.
         public bool Sharing { get; init; }
 
         /// WorldActions.OursAlone of the NPC: a dream's NPC of our own.

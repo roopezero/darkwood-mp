@@ -12,7 +12,7 @@ namespace DarkwoodMP.World.Story
         /// The events' name; null with no events.
         public string Name { get; init; }
 
-        /// WorldActions.Replaying: another game's change being applied.
+        /// Coop.Guards.Replaying: another game's change being applied.
         public bool Replaying { get; init; }
 
         /// A session is set and Active.
