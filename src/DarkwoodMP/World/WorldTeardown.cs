@@ -22,11 +22,11 @@ namespace DarkwoodMP.World
     /// (UI.initBansheeOverlay), which throws when the UI has gone first. Each
     /// throw ended that banshee's OnDestroy there.
     /// </summary>
-    static class WorldTeardown
+    internal sealed class WorldTeardown
     {
-        public static bool Active { get; private set; }
-
-        public static void Init()
+        /// It lives as long as the game (ModHost.Teardown): leaving a world
+        /// happens alone too.
+        public WorldTeardown()
         {
             Application.quitting += () => Active = true;
             SceneManager.sceneLoaded += (scene, mode) =>
@@ -38,25 +38,27 @@ namespace DarkwoodMP.World
             };
         }
 
-        internal static void Begin() => Active = true;
+        public bool Active { get; private set; }
+
+        internal void Begin() => Active = true;
     }
 
     [HarmonyPatch(typeof(Core), nameof(Core.returnToMainMenu))]
     static class TeardownMenuPatch
     {
-        static void Prefix() => WorldTeardown.Begin();
+        static void Prefix() => Plugin.Instance.Host.Teardown.Begin();
     }
 
     [HarmonyPatch(typeof(Core), nameof(Core.restartGame))]
     static class TeardownRestartPatch
     {
-        static void Prefix() => WorldTeardown.Begin();
+        static void Prefix() => Plugin.Instance.Host.Teardown.Begin();
     }
 
     [HarmonyPatch(typeof(Controller), nameof(Controller.generateChapter))]
     static class TeardownChapterPatch
     {
-        static void Prefix() => WorldTeardown.Begin();
+        static void Prefix() => Plugin.Instance.Host.Teardown.Begin();
     }
 
     /// <summary>
@@ -72,7 +74,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(Character __instance)
         {
-            if (!WorldTeardown.Active)
+            if (!Plugin.Instance.Host.Teardown.Active)
             {
                 return true;
             }

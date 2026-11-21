@@ -43,16 +43,6 @@ namespace DarkwoodMP.World
             public List<Player> Players = new List<Player>();
         }
 
-        private sealed class FileData
-        {
-            public Dictionary<string, Record> Slots =
-                new Dictionary<string, Record>();
-        }
-
-        private static FileData _data;
-        private static string _loadedFrom;
-        private static DateTime _stamp;
-
         /// <summary>
         /// The file for the saves the game uses now, or null when there's none
         /// (a host's world in the cache).
@@ -75,112 +65,41 @@ namespace DarkwoodMP.World
             return share.PlayingHostCopy;
         }
 
-        public static void Register(Session session)
+        /// <summary>
+        /// For as long as the session runs, a host notes each player who
+        /// joins in the slot's record.
+        /// </summary>
+        internal static void Watch(CoopSession coop)
         {
-            session.OnPeerConnected += id =>
-            {
-                if (!session.IsHost || Core.currentProfile == null)
-                {
-                    return;
-                }
-
-                string name = session.NameOf(id);
-                session.Keys.TryGetValue(id, out string key);
-                string stored = key;
-                if (stored == null)
-                {
-                    stored = "";
-                }
-
-                AddPlayer(Core.currentProfile.id, name, stored);
-            };
+            Session session = coop.Net;
+            Action<ulong> onPeer = id => OnPeer(session, id);
+            session.OnPeerConnected += onPeer;
+            coop.Hook(() => session.OnPeerConnected -= onPeer);
         }
 
-        private static FileData Data()
+        private static void OnPeer(Session session, ulong id)
         {
-            string path = FilePath;
-            if (path == null)
-            {
-                return null;
-            }
-
-            // Read again when the file changed or went away underneath (a
-            // test's fresh copy of the saves).
-            DateTime stamp;
-            if (File.Exists(path))
-            {
-                stamp = File.GetLastWriteTimeUtc(path);
-            }
-            else
-            {
-                stamp = DateTime.MinValue;
-            }
-
-            if (_data != null && _loadedFrom == path && _stamp == stamp)
-            {
-                return _data;
-            }
-
-            _loadedFrom = path;
-            _stamp = stamp;
-            _data = new FileData();
-            try
-            {
-                if (File.Exists(path))
-                {
-                    FileData data = JsonConvert.DeserializeObject<FileData>(
-                        File.ReadAllText(path));
-                    if (data == null)
-                    {
-                        data = new FileData();
-                    }
-
-                    _data = data;
-                }
-
-                if (_data.Slots == null)
-                {
-                    _data.Slots = new Dictionary<string, Record>();
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"[saves] couldn't read {path}: {e.Message}");
-            }
-
-            return _data;
-        }
-
-        private static void Write()
-        {
-            string path = FilePath;
-            if (path == null || _data == null || _loadedFrom != path)
+            if (!session.IsHost || Core.currentProfile == null)
             {
                 return;
             }
 
-            try
+            string name = session.NameOf(id);
+            session.Keys.TryGetValue(id, out string key);
+            string stored = key;
+            if (stored == null)
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                string tmp = path + ".tmp";
-                File.WriteAllText(
-                    tmp,
-                    JsonConvert.SerializeObject(_data, Formatting.Indented));
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                }
+                stored = "";
+            }
 
-                File.Move(tmp, path);
-                _stamp = File.GetLastWriteTimeUtc(path);
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"[saves] couldn't write {path}: {e.Message}");
-            }
+            AddPlayer(Core.currentProfile.id, name, stored);
         }
+
+        private static SaveBookFile Book => Plugin.Instance.Host.Book;
+
+        private static SaveBookFile.FileData Data() => Book.Data(FilePath);
+
+        private static void Write() => Book.Write(FilePath);
 
         /// <summary>
         /// The record for slot <paramref name="slot"/>, or null if there's

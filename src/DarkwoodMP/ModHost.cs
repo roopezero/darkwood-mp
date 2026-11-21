@@ -105,6 +105,20 @@ namespace DarkwoodMP
         /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
         internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
 
+        /// Where the game's saves go (SaveRedirect), until the main menu
+        /// loads again; made before Teardown, so a scene load ends the
+        /// redirect first, as before.
+        public readonly World.SaveFolders SaveFolders =
+            new World.SaveFolders();
+
+        /// A world being left (WorldTeardown), also alone.
+        public readonly World.WorldTeardown Teardown =
+            new World.WorldTeardown();
+
+        /// The save book's file as last read (SaveBook), which the Start
+        /// Game window reads at the main menu.
+        public readonly World.SaveBookFile Book = new World.SaveBookFile();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)

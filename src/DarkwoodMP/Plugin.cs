@@ -428,7 +428,6 @@ namespace DarkwoodMP
             };
 
             new StartGameWindow();
-            SaveBook.Register(_host.Session);
             OptionsWindow.Init();
             _host.AddPlayers();
             _host.Session.OnPlayerJoined += n => Notice($"{n} joined");
@@ -438,8 +437,6 @@ namespace DarkwoodMP
                 $"{n} stopped joining");
             _host.Players.OnRemoteDied += n => Notice($"{n} died");
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
-            SaveRedirect.Init();
-            WorldTeardown.Init();
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
             ScriptedEvents.Register(_host.Session);

@@ -246,6 +246,9 @@ namespace DarkwoodMP
             WorldEvents = new World.Rolls.WorldEvents(this);
             Story = new World.Story.FlagsSync(this);
             Dreaming = new World.Dreaming.DreamSync(this);
+            // the save book's file lives as long as the game (ModHost.Book);
+            // a host notes who joins while this runs
+            DarkwoodMP.World.SaveBook.Watch(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();
