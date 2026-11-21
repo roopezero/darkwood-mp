@@ -18,6 +18,13 @@ static class JoinedStrings
         return Stages.SameCode.Of(joiner.Visit(before), joiner.Visit(after));
     }
 
+    /// The tree with every split string joined back, as SameCode compares
+    /// it.
+    public static SyntaxNode Joined(SyntaxNode root)
+    {
+        return new Joiner().Visit(root);
+    }
+
     /// The number of plain string literals in a tree. A file where it grew
     /// had a string split.
     public static int Count(SyntaxNode root)

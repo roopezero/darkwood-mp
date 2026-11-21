@@ -114,9 +114,49 @@ static class LayoutCheckCases
             "switch (a) { case true:\n// why\nG(); H(); break; }"),
     };
 
+    /// Comment moves the wrap stage's place check (WrapPlaces) must refuse.
+    static readonly (string Name, string Before, string After)[] WrongWrap =
+    {
+        ("two paragraphs joined across an empty // line",
+            "\n// one\n//\n// two\nG();",
+            "\n// one\n// two\nG();"),
+        ("two doc paragraphs joined across an empty /// line",
+            "\n}\n/// <summary>one\n///\n/// two</summary>\nvoid K() {",
+            "\n}\n/// <summary>one\n/// two</summary>\nvoid K() {"),
+        ("a paragraph split by a new empty line",
+            "\n// one two\nG();",
+            "\n// one\n//\n// two\nG();"),
+        ("a trailing comment put below its line",
+            "\nG(); // why\nH();",
+            "\nG();\n// why\nH();"),
+        ("a trailing comment put above the line before",
+            "\nG();\nH(); // why\n",
+            "\n// why\nG();\nH();"),
+        ("a comment moved behind code",
+            "\n// why\nG();",
+            "\nG(); // why\n"),
+    };
+
+    /// Comment moves the wrap stage makes, which WrapPlaces must let through.
+    static readonly (string Name, string Before, string After)[] RightWrap =
+    {
+        ("a trailing comment moved above its line",
+            "\nG(); // why\nH();",
+            "\n// why\nG();\nH();"),
+        ("a run of trailing comments moved above the run's first line",
+            "\nG(); // one sentence that\nH(); // runs on\n",
+            "\n// one sentence that runs on\nG();\nH();"),
+        ("a comment paragraph refilled",
+            "\n// one two\n// three\nG();",
+            "\n// one\n// two three\nG();"),
+        ("a split string",
+            "\nstring s = \"ab\"; // why\n",
+            "\n// why\nstring s = \"a\" + \"b\";"),
+    };
+
     public static int Count =>
         WrongWords.Length + WrongCode.Length + WrongPlaces.Length
-            + RightPlaces.Length;
+            + RightPlaces.Length + WrongWrap.Length + RightWrap.Length;
 
     /// One line for each case the checks answered wrongly.
     public static List<string> Failures()
@@ -148,6 +188,22 @@ static class LayoutCheckCases
             if (CommentPlaces.Difference(Root(before), Root(after)) != null)
             {
                 problems.Add("  the comment place check refused: " + name);
+            }
+        }
+        foreach (var (name, before, after) in WrongWrap)
+        {
+            if (WrapPlaces.Of(Root(before), Root(after), split: true) == null)
+            {
+                problems.Add("  the wrap place check accepted: " + name);
+            }
+        }
+        foreach (var (name, before, after) in RightWrap)
+        {
+            var moved = WrapPlaces.Of(Root(before), Root(after), split: true);
+            if (moved != null)
+            {
+                problems.Add(
+                    "  the wrap place check refused: " + name + ": " + moved);
             }
         }
         return problems;

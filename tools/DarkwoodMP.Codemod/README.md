@@ -30,7 +30,7 @@ not in the default place.
 | `braces` | Stage 1. Wraps every braceless statement in a block. Only the new blocks are formatted, and they line up with the code around them. |
 | `layout` | Stage 2. Puts the braces of one-line blocks, switch statements, type bodies and namespaces on their own lines, gives an object initializer behind a multi-line argument list one line per member, and runs the Roslyn `Formatter` over every file. |
 | `wrap [--report FILE \| --explain FILE LINE]` | Stage 10. Breaks every line over 80 columns that a width rule can break (see "The wrap stage" below), then lists the lines still over 80 with the reason for each, on the console or in `FILE`. `--explain` prints what one pass plans for one line of a file and writes nothing. |
-| `check [--braces] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Exits with 1 on any difference. |
+| `check [--braces \| --wrap] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Stage 10 splits strings, shortens dividers, opens summaries and moves comments above their code, so check it with `--wrap`: the same checks the stage's own gate makes (split strings joined back, comment words as the wrap gate counts them, comments where `Stages/WrapPlaces.cs` allows). Exits with 1 on any difference. |
 | `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
 | `ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. `--list` first prints each changed method with the manifest entry it was credited to. |
 | `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
@@ -82,6 +82,12 @@ nothing unless all of these hold:
   (`-----`) as the same word and splits words at `<summary>`, `</summary>`,
   `<remarks>` and `<returns>` tags, because the stage shortens dividers and
   opens one-line summaries; every other word stays the same, in order.
+  Every comment word must also stay between the same two tokens of code, and
+  on a line of its own if it was (`Stages/WrapPlaces.cs`). The one move
+  allowed is a comment behind code going to a line of its own above that
+  code, or above the first line of a run of lines that all end in a comment.
+  The empty comment lines that part paragraphs stay where they were, counted
+  by the comment words in front of each.
 
 Writing the files can still fail after every gate has passed: a read-only file
 or folder, a full disk. Each new text goes to a temp file beside its source
@@ -105,6 +111,16 @@ tools/verify-identical.sh HEAD~1 HEAD
 ```
 
 Exit code 0 means every DLL is identical to the byte.
+
+For the wrap stage, also check the sources of the two commits with the
+stage's own rules, from copies of `src/DarkwoodMP` at each commit:
+
+```bash
+codemod check --wrap BEFORE/src/DarkwoodMP AFTER/src/DarkwoodMP
+```
+
+Exit code 0 means the same code with split strings joined back, the same
+comment words, and every comment where the stage may put it.
 
 ## The wrap stage
 

@@ -89,6 +89,11 @@ static class WrapGoldenCases
             problems.Add("  wrap changed the code: "
                 + TokenDiff.First(before, after));
         }
+        var moved = WrapPlaces.Of(before, after, split: true);
+        if (moved != null)
+        {
+            problems.Add("  wrap moved a comment: " + moved);
+        }
         var first = SnippetCompiler.Emit(input, out var inputErrors);
         var second = SnippetCompiler.Emit(wrapped, out var wrapErrors);
         if (first == null || second == null)

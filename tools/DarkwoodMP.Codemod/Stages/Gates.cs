@@ -94,7 +94,8 @@ sealed class Gates
     }
 
     /// The wrap stage changes whitespace and splits plain strings, which the
-    /// compiler folds back. The Formatter must keep what it wrote, and the
+    /// compiler folds back, and moves comments only as WrapPlaces allows. The
+    /// Formatter must keep what it wrote, and the
     /// line the Python tests read the protocol version from must still match.
     void CheckWrap(
         string file, SyntaxTree tree, string after, CSharpParseOptions parse)
@@ -113,6 +114,11 @@ sealed class Gates
             throw new Stop(
                 $"{file}: wrap changed more than whitespace and string "
                     + "splits: " + TokenDiff.First(before, rootAfter));
+        }
+        var moved = WrapPlaces.Of(before, rootAfter, split);
+        if (moved != null)
+        {
+            throw new Stop($"{file}: wrap moved a comment: {moved}");
         }
         if (Format.Passes.Layout(after, parse) != after)
         {
