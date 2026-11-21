@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using DarkwoodMP.Sync.Players;
-using HarmonyLib;
 using Pathfinding;
 using UnityEngine;
 
@@ -111,21 +110,6 @@ namespace DarkwoodMP.Sync
             }
 
             return s;
-        }
-    }
-
-    /// <summary>
-    /// Runs with or without a session (LightGrid.Populates).
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Light2D), nameof(Light2D.populateAffectedNodes),
-        new[] { typeof(int) })]
-    static class LightGridPatch
-    {
-        static bool Prefix(Light2D __instance, int _nodeLightRadius)
-        {
-            return Plugin.Instance.Host.Lights.Populates(
-                __instance, _nodeLightRadius);
         }
     }
 }

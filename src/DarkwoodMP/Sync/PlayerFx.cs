@@ -1,9 +1,7 @@
 using System.Collections.Generic;
-using System.Reflection;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -128,9 +126,76 @@ namespace DarkwoodMP.Sync
             }
         }
 
-        // ---- what our player does (called from the patches below) -----------
+        // ---- what our player does (called from PlayerFxPatches) ------------
 
-        public void OurSound(string audioId, float volume)
+        /// <summary>
+        /// A sound the game played: if it's on our player (or by our player's
+        /// own code), the others hear it too.
+        /// </summary>
+        public void Played(
+            string audioId, float volume, Transform parent, AudioObject played)
+        {
+            if (played == null || !Sharing || !IsOurs(parent))
+            {
+                return;
+            }
+
+            // A loop (tiredness, low health, fire) is stopped by our game
+            // later; a copy would never stop.
+            var item = played.audioItem;
+            bool loops = item != null
+                && item.Loop != AudioItem.LoopMode.DoNotLoop;
+            if (!PlayerFxRules.SendsSound(item != null, loops))
+            {
+                return;
+            }
+
+            OurSound(audioId, volume);
+        }
+
+        /// <summary>
+        /// A player fired a gun: if it's ours, the others see the muzzle flash
+        /// on our puppet.
+        /// </summary>
+        public void Fired(Player player)
+        {
+            bool ours = player == Player.Instance;
+            InvItemClass currentItem = player.currentItem;
+            InvItem gun = null;
+            if (currentItem != null)
+            {
+                gun = currentItem.baseClass;
+            }
+
+            if (PlayerFxRules.ShotIsOurs(ours, Sharing, gun != null))
+            {
+                OurShot(gun);
+            }
+        }
+
+        /// <summary>
+        /// The game added a prefab: a blood splat of our player's getHit is
+        /// shown on our puppet too.
+        /// </summary>
+        public void Added(string prefab, GameObject made)
+        {
+            var blood = new BloodFacts
+            {
+                InGetHit = _inGetHit,
+                HasResult = made != null,
+                Prefab = prefab,
+                Sharing = Sharing,
+                Replaying = Coop.Guards.Replaying,
+            };
+
+            if (PlayerFxRules.BloodIsOurs(blood))
+            {
+                OurBlood(prefab, made);
+            }
+        }
+
+
+        private void OurSound(string audioId, float volume)
         {
             if (PlayerFxRules.Queues(_sounds.Count))
             {
@@ -138,7 +203,7 @@ namespace DarkwoodMP.Sync
             }
         }
 
-        public void OurShot(InvItem gun)
+        private void OurShot(InvItem gun)
         {
             string s = "";
             if (gun.muzzlePrefab != null)
@@ -172,7 +237,7 @@ namespace DarkwoodMP.Sync
             LogOnce("sent shot", "[fx] sending our player's shots");
         }
 
-        public void OurBlood(string prefab, GameObject splat)
+        private void OurBlood(string prefab, GameObject splat)
         {
             var p = Player.Instance;
             var w = Begin(MsgType.PlayerHurt);
@@ -493,7 +558,7 @@ namespace DarkwoodMP.Sync
                 Replaying = Coop.Guards.Replaying,
                 HasParent = parent != null,
                 ParentIsOurs = ours,
-                InPlayerCode = InPlayerCode,
+                InPlayerCode = _inPlayerCode,
                 Depth = Coop.Guards.Depth,
             };
         }
@@ -514,242 +579,41 @@ namespace DarkwoodMP.Sync
         /// Inside one of Player's own methods that play its sounds without a
         /// place (at the listener).
         /// </summary>
-        public int InPlayerCode;
+        private int _inPlayerCode;
         /// <summary>
         /// Inside Player.getHit: the blood splats it makes are ours.
         /// </summary>
-        public int InGetHit;
+        private int _inGetHit;
 
-        public bool IsOurs(Transform parent)
+        /// <summary>Player's sounding code started (PlayerSoundCode).</summary>
+        public void EnterPlayerCode()
+        {
+            _inPlayerCode++;
+        }
+
+        public void LeavePlayerCode()
+        {
+            _inPlayerCode = PlayerFxRules.Leave(_inPlayerCode);
+        }
+
+        /// <summary>Player.getHit started (PlayerGetHitBlood).</summary>
+        public void EnterGetHit()
+        {
+            _inGetHit++;
+        }
+
+        public void LeaveGetHit()
+        {
+            _inGetHit = PlayerFxRules.Leave(_inGetHit);
+        }
+
+        private bool IsOurs(Transform parent)
         {
             // A sound without a place, played by our player's own code (a
             // gunshot, a reload, a swing, pain). Not while a shared world
             // action runs inside it: that thing's own sounds come from its
             // replay elsewhere.
             return PlayerFxRules.IsOurs(SoundOf(parent));
-        }
-    }
-
-    /// <summary>
-    /// A sound the game played: if it's on our player (or by our player's own
-    /// code), the others hear it too.
-    /// </summary>
-    [HarmonyPatch(typeof(AudioController), "_PlayAsSound")]
-    public static class PlayerSoundPatch
-    {
-        private static void Postfix(
-            string audioID, float volume, Transform parentObj,
-            AudioObject __result)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            var fx = coop.PlayerFx;
-            if (__result == null || !fx.Sharing || !fx.IsOurs(parentObj))
-            {
-                return;
-            }
-
-            // A loop (tiredness, low health, fire) is stopped by our game
-            // later; a copy would never stop.
-            var item = __result.audioItem;
-            bool loops = item != null
-                && item.Loop != AudioItem.LoopMode.DoNotLoop;
-            if (!PlayerFxRules.SendsSound(item != null, loops))
-            {
-                return;
-            }
-
-            fx.OurSound(audioID, volume);
-        }
-    }
-
-    /// <summary>
-    /// Player's methods that play its sounds at the listener rather than on the
-    /// player (see PlayerFx.IsOurs).
-    /// </summary>
-    [HarmonyPatch]
-    public static class PlayerCodePatch
-    {
-        private static readonly string[] Names =
-        {
-            "onReleaseAim", "reload", "OnAniFinish", "initiateAttack",
-            "InitiateEquipmentUsage", "attack",
-            "getHitByShadow", "aim", "onActivateItem", "switchToItem",
-        };
-
-        private static IEnumerable<MethodBase> TargetMethods()
-        {
-            foreach (var n in Names)
-            {
-                var m = AccessTools.DeclaredMethod(typeof(Player), n);
-                if (m != null)
-                {
-                    yield return m;
-                }
-                else
-                {
-                    Plugin.Log.LogWarning(
-                        $"[fx] Player.{n} isn't in this build: its sounds "
-                            + "won't be heard by the others");
-                }
-            }
-
-            // getHit has two: the one that does it.
-            yield return AccessTools.DeclaredMethod(typeof(Player),
-                nameof(Player.getHit),
-                new[]
-                {
-                    typeof(float),
-                    typeof(Transform),
-                    typeof(bool),
-                    typeof(bool),
-                    typeof(bool),
-                    typeof(bool),
-                    typeof(bool),
-                    typeof(bool),
-                    typeof(bool)
-                });
-
-            // The coroutine that fires a gun again (bursts, and the click of an
-            // empty one).
-            foreach (var t in typeof(Player).GetNestedTypes(
-                BindingFlags.NonPublic))
-            {
-                if (t.Name.Contains("waitToFireWeapon"))
-                {
-                    var m = AccessTools.Method(t, "MoveNext");
-                    if (m != null)
-                    {
-                        yield return m;
-                    }
-                }
-            }
-        }
-
-        private static void Prefix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.PlayerFx.InPlayerCode++;
-            }
-        }
-
-        private static void Finalizer()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                PlayerFx fx = coop.PlayerFx;
-                fx.InPlayerCode = PlayerFxRules.Leave(fx.InPlayerCode);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Our player fired a gun: the others see the muzzle flash on our puppet.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), "fireWeapon")]
-    public static class PlayerShotPatch
-    {
-        private static void Postfix(Player __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            var fx = coop.PlayerFx;
-            bool ours = __instance == Player.Instance;
-            InvItemClass currentItem = __instance.currentItem;
-            InvItem gun = null;
-            if (currentItem != null)
-            {
-                gun = currentItem.baseClass;
-            }
-
-            if (PlayerFxRules.ShotIsOurs(ours, fx.Sharing, gun != null))
-            {
-                fx.OurShot(gun);
-            }
-        }
-    }
-
-    /// <summary>
-    /// The blood splats of our player's getHit: shown on our puppet too.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.getHit),
-        new[]
-        {
-            typeof(float),
-            typeof(Transform),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool),
-            typeof(bool)
-        })]
-    public static class PlayerGetHitFxPatch
-    {
-        private static void Prefix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.PlayerFx.InGetHit++;
-            }
-        }
-
-        private static void Finalizer()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                PlayerFx fx = coop.PlayerFx;
-                fx.InGetHit = PlayerFxRules.Leave(fx.InGetHit);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
-    {
-        typeof(string),
-        typeof(Vector3),
-        typeof(Quaternion),
-        typeof(GameObject),
-        typeof(bool)
-    })]
-    public static class PlayerBloodPatch
-    {
-        private static void Postfix(string prefab, GameObject __result)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            var fx = coop.PlayerFx;
-            var blood = new BloodFacts
-            {
-                InGetHit = fx.InGetHit,
-                HasResult = __result != null,
-                Prefab = prefab,
-                Sharing = fx.Sharing,
-                Replaying = Coop.Guards.Replaying,
-            };
-
-            if (PlayerFxRules.BloodIsOurs(blood))
-            {
-                fx.OurBlood(prefab, __result);
-            }
         }
     }
 }

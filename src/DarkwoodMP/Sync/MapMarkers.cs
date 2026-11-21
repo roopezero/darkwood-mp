@@ -81,7 +81,7 @@ namespace DarkwoodMP.Sync
         /// After the map opens: an icon for each other player in the main
         /// world.
         /// </summary>
-        public void OnOpened(Map map)
+        public void Opened(Map map)
         {
             _markers.Clear();
             var type = WorldType(map);
@@ -229,12 +229,5 @@ namespace DarkwoodMP.Sync
                     r.Name, Plugin.NameTagStyle);
             }
         }
-    }
-
-    [HarmonyPatch(typeof(Map), nameof(Map.open))]
-    public static class MapOpenPatch
-    {
-        private static void Postfix(Map __instance) =>
-            Plugin.Instance.Host.Players.Markers.OnOpened(__instance);
     }
 }
