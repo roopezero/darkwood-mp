@@ -360,25 +360,27 @@ with the baseline.
 | 5.3 | `Containers`, `SlotShare`, `SlotShare.Sort`, `WorkbenchStorage`, `UiRefresh`, `TraderSync`, `ThrowSync` | 2,828 | `world map:items1 map:items2 map:wbrows map:trade map:ui` |
 | 5.4 | `DragSync` | 858 | `host-drag map:knock map4` |
 
-- [ ] 5.1 Small subsystems, one branch each.
-      - [x] Part b: `BreakSync`, `Construction`, `SharedTank`, `StackSizes`.
-        Done: `Construction` and `StackShare` (the host's size and its
-        message) are `CoopSession` subsystems; the prefabs' sizes
-        (`StackSizes`) and the tank watcher (`SharedTank`) live on
-        `ModHost`, since a game played alone uses them, so their patches
-        still run with no session. `BreakSync` keeps no state and stays
-        static helpers. The plugin's feature folders keep the
-        `DarkwoodMP.World` namespace. `Construction` checks reach with
-        `Authority.InReach` after `MayBuild`, so `BuildFacts.Reach` is
-        left empty.
-  - [x] 5.1a `EggSync`, `InfectionSync`, `FireSync`, `FuelSync`. Done: they
-        are `World/Eggs/Eggs`, `World/Infections/Infections`,
-        `World/Fire/Fire` and `World/Fuel/Fuel`, fields of `CoopSession`.
-        The list of generators is `ModHost.Generators`, since generators
-        start before hosting from the pause menu. Their facts take the
-        requester's reach from the new `Authority.ReachOf`. The fuel
-        message's bytes are the core's `FuelMessage`, since `Fuel` is the
-        plugin's class in the same namespace.
+- [x] 5.1 Small subsystems, in three parts.
+  - [x] Part a: `EggSync`, `InfectionSync`, `FireSync`, `FuelSync`. They are
+        `World/Eggs/Eggs`, `World/Infections/Infections`, `World/Fire/Fire`
+        and `World/Fuel/Fuel`, fields of `CoopSession`. The list of
+        generators is `ModHost.Generators`, since generators start before
+        hosting from the pause menu. Their facts take the requester's reach
+        from `Authority.ReachOf`. The fuel message's bytes are the core's
+        `FuelMessage`, since `Fuel` is the plugin's class in the same
+        namespace.
+  - [x] Part b: `BreakSync`, `Construction`, `SharedTank`, `StackSizes`.
+        `Construction` and `StackShare` (the host's size and its message)
+        are `CoopSession` subsystems; the prefabs' sizes (`StackSizes`) and
+        the tank watcher (`SharedTank`) live on `ModHost`, since a game
+        played alone uses them, so their patches still run with no session.
+        `BreakSync` keeps no state and stays static helpers. `Construction`
+        checks reach with `Authority.InReach` after `MayBuild`, so
+        `BuildFacts.Reach` is left empty.
+  - [x] Part c: `TimeSync`, `NpcSync`, `NpcFollowers`, `TalkLock`,
+        `DialogueGuard`. They are `CoopSession.Time`, `.Npcs`, `.Followers`,
+        `.Talk` and `.Dialogues`, in `World/Clock`, `World/Npcs` and
+        `World/Talk`. `DialogueGuard` now runs only in a session.
 - [ ] 5.2 Doors, windows and traps. `WorldActions` holds 43 of the 120 refusals
       and splits into `Doors`, `Windows` and `Traps`.
 - [ ] 5.3 Items.
