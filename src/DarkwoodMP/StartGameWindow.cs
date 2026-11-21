@@ -396,7 +396,7 @@ namespace DarkwoodMP
             Ui.Heading(f, "Multiplayer");
             var hr = f.Next(Ui.RowH);
             bool canHost =
-                Plugin.Instance != null && !Plugin.Instance.Session.Active;
+                Plugin.Instance != null && !Plugin.Instance.Host.Session.Active;
             _host =
                 Check(hr, _host && canHost, "Host a multiplayer game", canHost);
             if (!canHost)
@@ -738,8 +738,8 @@ namespace DarkwoodMP
 
                 var n = f.Row(Ui.RowH, 90, 0);
                 Ui.Label(n[0], "Your name");
-                string name = Ui.Field(n[1], plugin.Session.LocalName, 32);
-                if (on && name != plugin.Session.LocalName)
+                string name = Ui.Field(n[1], plugin.Host.Session.LocalName, 32);
+                if (on && name != plugin.Host.Session.LocalName)
                 {
                     plugin.SetPlayerName(name);
                 }
@@ -932,7 +932,7 @@ namespace DarkwoodMP
 
             CommitName();
             var plugin = Plugin.Instance;
-            bool host = _host && !plugin.Session.Active;
+            bool host = _host && !plugin.Host.Session.Active;
             bool steam =
                 plugin.SteamAvailable && Plugin.Cfg.HostWith.Value != "direct";
             string name = _name;
