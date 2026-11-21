@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.Menus;
 using DarkwoodMP.World;
 using UnityEngine;
 
@@ -303,43 +304,31 @@ namespace DarkwoodMP
 
         /// <summary>
         /// What leaving the world loses, as the game's own box said it (the
-        /// time since the last save).
+        /// time since the last save): the core's LeaveRules.
         /// </summary>
         private static string LeaveText()
         {
-            string s;
+            return LeaveRules.Text(LeaveOf());
+        }
+
+        /// The facts for LeaveRules: whose world this is, when it was last
+        /// saved and who else is in the game.
+        private static LeaveFacts LeaveOf()
+        {
             WorldShare instance = WorldShare.Instance;
-            if (instance != null && instance.PlayingHostCopy)
-            {
-                s = "This is your copy of the host's world: your own saves are "
-                    + "untouched.";
-            }
-            else
+            bool copy = instance != null && instance.PlayingHostCopy;
+            bool known = false;
+            DateTime saved = default;
+            if (!copy)
             {
                 try
                 {
-                    var since = DateTime.Now
-                        - Singleton<SaveManager>.Instance.lastTimeSaved;
-                    string ago;
-                    if (since.TotalHours >= 1)
-                    {
-                        ago = $"{(int)since.TotalHours} h {since.Minutes} min";
-                    }
-                    else if (since.TotalMinutes >= 1)
-                    {
-                        ago = $"{(int)since.TotalMinutes} min";
-                    }
-                    else
-                    {
-                        ago = $"{Math.Max(0, since.Seconds)} s";
-                    }
-
-                    s = $"What you did since the last save ({ago} ago) will be "
-                        + "lost.";
+                    saved = Singleton<SaveManager>.Instance.lastTimeSaved;
+                    known = true;
                 }
                 catch
                 {
-                    s = "What you did since the last save will be lost.";
+                    known = false;
                 }
             }
 
@@ -350,16 +339,23 @@ namespace DarkwoodMP
                 session = plugin.Host.Session;
             }
 
-            if (session != null && session.IsHost && session.Peers.Count > 0)
+            bool host = session != null && session.IsHost;
+            int peers = 0;
+            if (host)
             {
-                s += " The players in your game go back to their menus.";
-            }
-            else if (session != null && session.IsClient)
-            {
-                s += " You leave the host's game.";
+                peers = session.Peers.Count;
             }
 
-            return s;
+            return new LeaveFacts
+            {
+                HostCopy = copy,
+                SaveKnown = known,
+                Now = DateTime.Now,
+                Saved = saved,
+                Host = host,
+                Peers = peers,
+                Client = session != null && session.IsClient
+            };
         }
 
         /// <summary>
