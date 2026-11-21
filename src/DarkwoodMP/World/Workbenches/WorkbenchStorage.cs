@@ -250,10 +250,10 @@ namespace DarkwoodMP.World.Workbenches
                 }
             }
 
-            SlotShare instance = SlotShare.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Grew(inv);
+                coop.Slots.Grew(inv);
             }
 
             UiRefresh.Changed(inv);

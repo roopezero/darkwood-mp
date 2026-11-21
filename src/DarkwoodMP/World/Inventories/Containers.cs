@@ -74,11 +74,13 @@ namespace DarkwoodMP.World.Inventories
             return Plugin.Instance.Host.Placeables.TypesOf(path);
         }
 
+        private readonly CoopSession _coop;
         private readonly Session _session;
         private readonly System.Random _rng = new System.Random();
 
         public Containers(CoopSession coop)
         {
+            _coop = coop;
             _session = coop.Net;
             coop.Handle(MsgType.ContainerState, OnContainer);
             coop.Handle(MsgType.ObjSpawn, OnSpawn);
@@ -126,11 +128,7 @@ namespace DarkwoodMP.World.Inventories
                 return;
             }
 
-            SlotShare instance = SlotShare.Instance;
-            if (instance != null)
-            {
-                instance.Update();
-            }
+            _coop.Slots.Update();
 
             SendPendingSpawns();
             if (Time.unscaledTime < _nextCheck)
@@ -185,7 +183,7 @@ namespace DarkwoodMP.World.Inventories
             // change is the host's to accept (a refused one is undone for our
             // player). Ordinary containers are still one player at a time (the
             // lock).
-            var slots = SlotShare.Instance;
+            var slots = _coop.Slots;
             for (int i = open.Count - 1; i >= 0; i--)
             {
                 var inv = open[i];
@@ -301,7 +299,7 @@ namespace DarkwoodMP.World.Inventories
                 return default;
             }
 
-            var slots = SlotShare.Instance;
+            var slots = _coop.Slots;
             return new OpenContainerFacts
             {
                 Kind = KindOf(inv),

@@ -465,7 +465,6 @@ namespace DarkwoodMP
             _events = new WorldEvents(_host.Session);
             new ThrowSync(_host.Session);
             new FireSync(_host.Session);
-            new SlotShare(_host.Session);
             Construction.Register(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);

@@ -44,6 +44,10 @@ namespace DarkwoodMP
         /// What's in the world's containers, and who has which open.
         public readonly World.Inventories.Containers Containers;
 
+        /// The containers shared slot by slot: the workbench's storage, and
+        /// every container a client changes.
+        public readonly World.SlotShare Slots;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -59,6 +63,7 @@ namespace DarkwoodMP
             HostIds = new HostIds(this);
             Joiners = new JoinerSaveIds();
             Containers = new World.Inventories.Containers(this);
+            Slots = new World.SlotShare(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

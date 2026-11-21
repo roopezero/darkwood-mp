@@ -51,7 +51,7 @@ namespace DarkwoodMP.World
     /// host's slots, and nothing is lost or doubled because only the host's
     /// copy counts.
     /// </summary>
-    public sealed partial class SlotShare
+    internal sealed partial class SlotShare
     {
         /// <summary>
         /// The local player pressed Sort &amp; Stack at this storage.
@@ -264,6 +264,26 @@ namespace DarkwoodMP.World
         /// </summary>
         private List<SlotChange> Sort(Inventory inv)
         {
+            var changes = SortSlots(inv);
+            if (_watched.TryGetValue(inv, out var keys))
+            {
+                foreach (var c in changes)
+                {
+                    if (c.Slot < keys.Length)
+                    {
+                        keys[c.Slot] = Key(inv.slots[c.Slot]);
+                    }
+                }
+            }
+
+            return changes;
+        }
+
+        /// <summary>
+        /// Sort: the slots' part, which needs no session.
+        /// </summary>
+        private static List<SlotChange> SortSlots(Inventory inv)
+        {
             var states = new Dictionary<int, InvItemClass.SaveState>();
             var stacks = new List<SortStack>();
             for (int i = 0; i < inv.slots.Count; i++)
@@ -299,7 +319,7 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                Set(inv, i, json);
+                Fill(inv, i, json);
                 changes.Add(new SlotChange
                 {
                     Slot = i,
@@ -374,6 +394,50 @@ namespace DarkwoodMP.World
         internal const string ButtonName = "DarkwoodMP_SortStack";
 
         /// <summary>
+        /// The button was pressed: the session's SortPressed, or in a game
+        /// played alone a sort of this storage here.
+        /// </summary>
+        private static void Pressed(Inventory inv)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Slots.SortPressed(inv);
+                return;
+            }
+
+            SortAlone(inv);
+        }
+
+        /// <summary>
+        /// Sort &amp; Stack with no session: what SortPressed does when it
+        /// isn't a client, without sending anything.
+        /// </summary>
+        private static void SortAlone(Inventory inv)
+        {
+            if (inv == null)
+            {
+                return;
+            }
+
+            var ctl = Singleton<Controller>.Instance;
+            var press = new SortPressFacts
+            {
+                Holding = ctl != null && !InvItemClass.isNull(ctl.pickedUpItem),
+                InWorld = WorldShare.InWorld,
+            };
+
+            if (SortRules.Pressed(press) == SortPress.Nothing)
+            {
+                return;
+            }
+
+            var done = SortSlots(inv);
+            Plugin.Log.LogInfo(
+                $"[slots] sorted {inv.name}: {done.Count} slot(s) changed");
+        }
+
+        /// <summary>
         /// The button, under the storage's slots. It's a copy of the
         /// workbench's Repair Item button (UI/Inventory/RepairBtn), the game's
         /// own text button with its frame and rollover, drawn, placed and
@@ -446,10 +510,7 @@ namespace DarkwoodMP.World
                     button.OnFire = () =>
                     {
                         AudioController.Play("UI_placeItem");
-                        if (Instance != null)
-                        {
-                            Instance.SortPressed(inv);
-                        }
+                        Pressed(inv);
                     };
                 }
 

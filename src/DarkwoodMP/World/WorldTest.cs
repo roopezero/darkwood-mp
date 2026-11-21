@@ -835,10 +835,10 @@ namespace DarkwoodMP.World
                             sl => !InvItemClass.isNull(sl.invItem)
                                 && sl.invItem.type == stackType),
                             filledBefore = Filled();
-                        SlotShare instance = SlotShare.Instance;
-                        if (instance != null)
+                        CoopSession sorting = Coop.Current;
+                        if (sorting != null)
                         {
-                            instance.SortPressed(storage);
+                            sorting.Slots.SortPressed(storage);
                         }
 
                         yield return new WaitForSeconds(0.8f);
@@ -1371,10 +1371,10 @@ namespace DarkwoodMP.World
                 }
 
                 yield return new WaitForSeconds(0.8f);
-                SlotShare instance = SlotShare.Instance;
-                if (instance != null)
+                CoopSession sorting = Coop.Current;
+                if (sorting != null)
                 {
-                    instance.SortPressed(storage);
+                    sorting.Slots.SortPressed(storage);
                 }
 
                 yield return new WaitForSeconds(0.8f);
@@ -1430,10 +1430,10 @@ namespace DarkwoodMP.World
                     }
 
                     yield return new WaitForSeconds(0.8f);
-                    SlotShare share = SlotShare.Instance;
-                    if (share != null)
+                    CoopSession pouring = Coop.Current;
+                    if (pouring != null)
                     {
-                        share.SortPressed(storage);
+                        pouring.Slots.SortPressed(storage);
                     }
 
                     yield return new WaitForSeconds(0.8f);

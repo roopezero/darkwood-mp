@@ -55,9 +55,8 @@ namespace DarkwoodMP.World
     /// The workbench's level is shared too (WorkbenchLevel): an upgrade made at
     /// anyone's workbench raises it for everyone. The highest level wins.
     /// </summary>
-    public sealed partial class SlotShare
+    internal sealed partial class SlotShare
     {
-        public static SlotShare Instance { get; private set; }
         private readonly Session _session;
 
         // what each watched storage's slots held when last compared (their
@@ -69,25 +68,15 @@ namespace DarkwoodMP.World
         private readonly Dictionary<Inventory, bool> _isStorage =
             new Dictionary<Inventory, bool>();
 
-        public SlotShare(Session session)
+        public SlotShare(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.ContainerSlots, OnSlots);
-            session.Register(MsgType.ContainerSlotRefused, OnRefused);
-            session.Register(MsgType.WorkbenchLevel, OnLevel);
-            session.Register(MsgType.ContainerSlotsAsk, OnAsk);
-            session.Register(MsgType.ContainerSlotsAll, OnContents);
-            session.Register(MsgType.StorageSort, OnSort);
-            session.OnSessionEnded += () =>
-            {
-                _watched.Clear();
-                _refs.Clear();
-                _isStorage.Clear();
-                _awaiting.Clear();
-                _askedScene = -1;
-                _sent.Clear();
-            };
+            _session = coop.Net;
+            coop.Handle(MsgType.ContainerSlots, OnSlots);
+            coop.Handle(MsgType.ContainerSlotRefused, OnRefused);
+            coop.Handle(MsgType.WorkbenchLevel, OnLevel);
+            coop.Handle(MsgType.ContainerSlotsAsk, OnAsk);
+            coop.Handle(MsgType.ContainerSlotsAll, OnContents);
+            coop.Handle(MsgType.StorageSort, OnSort);
         }
 
         /// <summary>
@@ -898,6 +887,19 @@ namespace DarkwoodMP.World
                 return;
             }
 
+            Fill(inv, i, json);
+            if (_watched.TryGetValue(inv, out var keys) && i < keys.Length)
+            {
+                keys[i] = Key(inv.slots[i]);
+            }
+        }
+
+        /// <summary>
+        /// Make slot i (in range) hold this (JSON, "" for empty). Needs no
+        /// session: Sort &amp; Stack played alone uses it too.
+        /// </summary>
+        private static void Fill(Inventory inv, int i, string json)
+        {
             var slot = inv.slots[i];
             slot.inventory = inv;
             // Our player holds an item on the cursor that came from this slot,
@@ -956,11 +958,6 @@ namespace DarkwoodMP.World
             finally
             {
                 Coop.Guards.Replaying = false;
-            }
-
-            if (_watched.TryGetValue(inv, out var keys) && i < keys.Length)
-            {
-                keys[i] = Key(slot);
             }
         }
 
@@ -1581,11 +1578,11 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Inventory __instance, out string[] __state)
         {
-            SlotShare instance = SlotShare.Instance;
+            CoopSession coop = Coop.Current;
             string[] state = null;
-            if (instance != null)
+            if (coop != null)
             {
-                state = instance.BeforeDrift(__instance);
+                state = coop.Slots.BeforeDrift(__instance);
             }
 
             __state = state;
@@ -1593,10 +1590,10 @@ namespace DarkwoodMP.World
 
         static void Postfix(Inventory __instance, string[] __state)
         {
-            SlotShare instance = SlotShare.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Drift(__instance, __state);
+                coop.Slots.Drift(__instance, __state);
             }
         }
     }
@@ -1628,10 +1625,10 @@ namespace DarkwoodMP.World
             Plugin.Instance.Host.Workbenches.ApplyAll("upgraded");
             if (!Coop.Guards.Replaying)
             {
-                SlotShare instance = SlotShare.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.LevelRaised(ctl.workbenchLevel);
+                    coop.Slots.LevelRaised(ctl.workbenchLevel);
                 }
             }
         }
@@ -1654,10 +1651,10 @@ namespace DarkwoodMP.World
         static void Prefix(Item __instance, out Inventory __state)
         {
             __state = null;
-            var share = SlotShare.Instance;
+            CoopSession coop = Coop.Current;
             var inv = Inv(__instance);
-            if (share == null || inv == null || !Coop.Guards.Sharing
-                || share.Watching(inv))
+            if (coop == null || inv == null || !Coop.Guards.Sharing
+                || coop.Slots.Watching(inv))
             {
                 return;
             }
@@ -1668,7 +1665,7 @@ namespace DarkwoodMP.World
             }
 
             // as it is now (over within this frame: no waiting for the host)
-            share.Check(inv, askHost: false);
+            coop.Slots.Check(inv, askHost: false);
             __state = inv;
         }
 
@@ -1685,10 +1682,10 @@ namespace DarkwoodMP.World
                     $"[world] picked up {__state.name} with a click");
             }
 
-            SlotShare instance = SlotShare.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Closed(__state);
+                coop.Slots.Closed(__state);
             }
         }
     }

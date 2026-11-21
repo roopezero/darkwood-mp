@@ -316,7 +316,7 @@ namespace DarkwoodMP.World.Inventories
         /// </summary>
         private void ApplyOpen(Inventory inv, Inventory.SaveState state)
         {
-            var slots = SlotShare.Instance;
+            var slots = _coop.Slots;
             if (slots != null
                 && ContainerRules.MergesInWindow(
                     _session.IsClient, slots.Watching(inv)))
