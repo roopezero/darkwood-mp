@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
+using DarkwoodMP.World.Skills;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -84,36 +85,44 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool CanOpen(Player p, out string why)
+        /// <summary>
+        /// What the panel looks at to open, or to close by itself (the only
+        /// code here that reads the game's state for the rules). HasTiers is
+        /// left false: reading the tiers loads them (Toggle).
+        /// </summary>
+        private static PanelFacts FactsOf(Player p)
         {
-            why = null;
-            if (p == null || !WorldShare.InWorld || WorldShare.Loading
-                || Core.mainMenu || Core.loadingGame)
+            if (p == null)
             {
-                why = "not in a world";
-                return false;
+                return new PanelFacts
+                {
+                    InWorld = WorldShare.InWorld,
+                    Loading = WorldShare.Loading,
+                    MainMenu = Core.mainMenu,
+                    LoadingGame = Core.loadingGame,
+                    Paused = Core.Paused,
+                    ForbidInputs = Core.forbidInputs,
+                    Watching = Spectator.Active,
+                    Open = Open,
+                };
             }
 
-            if (Core.Paused || Core.forbidInputs || p.inMenu() || p.dying
-                || p.health <= 0f)
+            return new PanelFacts
             {
-                why = "busy";
-                return false;
-            }
-
-            if (Spectator.Active)
-            {
-                why = "watching";
-                return false;
-            }
-
-            if (SkillTree.Tiers == null)
-            {
-                why = "no skills";
-                return false;
-            }
-
-            return true;
+                HasPlayer = true,
+                InWorld = WorldShare.InWorld,
+                Loading = WorldShare.Loading,
+                MainMenu = Core.mainMenu,
+                LoadingGame = Core.loadingGame,
+                Paused = Core.Paused,
+                ForbidInputs = Core.forbidInputs,
+                InMenu = p.inMenu(),
+                Dying = p.dying,
+                Health = p.health,
+                Watching = Spectator.Active,
+                HasTiers = SkillTree.Tiers != null,
+                Open = Open,
+            };
         }
 
         /// <summary>Open it (with the backpack), or close it.</summary>
@@ -126,10 +135,21 @@ namespace DarkwoodMP.World
             }
 
             var p = Player.Instance;
-            if (!CanOpen(p, out string why))
+            // The tiers are read only once the rest lets the panel open, as
+            // reading them loads them.
+            var facts = FactsOf(p);
+            var note = SkillPanelRules.CanOpen(facts with { HasTiers = true });
+            if (note == SkillNote.None)
+            {
+                note = SkillPanelRules.CanOpen(
+                    facts with { HasTiers = SkillTree.Tiers != null });
+            }
+
+            if (note != SkillNote.None)
             {
                 Plugin.Log.LogInfo(
-                    $"[skills] the panel can't open now ({why})");
+                    "[skills] the panel can't open now "
+                        + $"({SkillNotes.Text(note)})");
                 return;
             }
 
@@ -158,10 +178,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Update(bool coopPanelOpen)
         {
-            var p = Player.Instance;
-            if (Open
-                && (!WorldShare.InWorld || Core.mainMenu || p == null
-                    || p.inMenu() || Core.Paused || p.dying))
+            if (SkillPanelRules.ClosesNow(FactsOf(Player.Instance)))
             {
                 _win.Open = false;
                 Plugin.Log.LogInfo(
@@ -171,13 +188,15 @@ namespace DarkwoodMP.World
 
             // Escape is taken in SkillsPanelEscape, before the game's pause
             // menu sees it.
-            if (coopPanelOpen || GUIUtility.keyboardControl != 0)
-            {
-                return;
-            }
-
             var key = Key;
-            if (key != KeyCode.None && Input.GetKeyDown(key))
+            var facts = new KeyFacts
+            {
+                CoopMenuOpen = coopPanelOpen,
+                KeyboardTaken = GUIUtility.keyboardControl != 0,
+                Off = key == KeyCode.None,
+            };
+
+            if (SkillPanelRules.ReadsKey(facts) && Input.GetKeyDown(key))
             {
                 Toggle();
             }
@@ -200,18 +219,7 @@ namespace DarkwoodMP.World
 
         // ---- the game's input while the panel is open -----------------------
 
-        private static readonly HashSet<string> MouseActions =
-            new HashSet<string>
-        {
-            "Primary Action",
-            "Aim",
-            "Secondary Attack",
-            "Attack"
-        };
-
-        private static readonly bool[] _pressedOnPanel = new bool[3];
-        private static int _mouseFrame = -1;
-        private static bool _overPanel;
+        private static readonly PanelPress _press = new PanelPress();
         /// <summary>
         /// For tests: reads of the game's mouse actions answered "not pressed"
         /// because of the panel.
@@ -224,26 +232,36 @@ namespace DarkwoodMP.World
         /// </summary>
         private static void MouseState()
         {
-            if (_mouseFrame == Time.frameCount)
+            int frame = Time.frameCount;
+            if (!_press.Due(frame))
             {
                 return;
             }
 
-            _mouseFrame = Time.frameCount;
             var m = Input.mousePosition;
-            _overPanel =
-                Win.Rect.Contains(new Vector2(m.x, Screen.height - m.y));
-            for (int b = 0; b < 3; b++)
+            int down = 0, held = 0;
+            for (int b = 0; b < PanelPress.Buttons; b++)
             {
-                if (Input.GetMouseButtonDown(b) && _overPanel)
+                if (Input.GetMouseButtonDown(b))
                 {
-                    _pressedOnPanel[b] = true;
+                    down |= 1 << b;
                 }
-                else if (!Input.GetMouseButton(b))
+
+                if (Input.GetMouseButton(b))
                 {
-                    _pressedOnPanel[b] = false;
+                    held |= 1 << b;
                 }
             }
+
+            _press.Note(
+                new MouseFacts
+                {
+                    Frame = frame,
+                    Over = Win.Rect.Contains(
+                        new Vector2(m.x, Screen.height - m.y)),
+                    Down = down,
+                    Held = held,
+                });
         }
 
         /// <summary>
@@ -254,15 +272,13 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool EatsAction(string action, bool down)
         {
-            if (!Open || action == null || !MouseActions.Contains(action))
+            if (!SkillPanelRules.WatchesAction(Open, action))
             {
                 return false;
             }
 
             MouseState();
-            bool held =
-                _pressedOnPanel[0] || _pressedOnPanel[1] || _pressedOnPanel[2];
-            bool eat = held || (down && _overPanel);
+            bool eat = _press.Eats(down);
             if (eat)
             {
                 TestEaten++;

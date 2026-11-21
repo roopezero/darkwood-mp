@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Skills;
 using HarmonyLib;
 using RW = Rewired;
 
@@ -50,9 +51,11 @@ namespace DarkwoodMP.World
     {
         private static bool Prefix()
         {
-            if (!SkillsPanel.Open || Core.forbidInputs)
+            // a film to skip goes first
+            if (!SkillPanelRules.TakesEscape(
+                SkillsPanel.Open, Core.forbidInputs))
             {
-                return true; // a film to skip goes first
+                return true;
             }
 
             SkillsPanel.CloseFromEscape();

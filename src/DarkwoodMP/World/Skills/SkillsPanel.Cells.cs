@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.World.Skills;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -142,56 +143,32 @@ namespace DarkwoodMP.World
                 _rects[sk.name] = new[] { ToScreen(r), ToScreen(cell) };
             }
 
-            if (GUI.Button(cell, GUIContent.none, GUIStyle.none) && can
-                && !have)
+            if (GUI.Button(cell, GUIContent.none, GUIStyle.none)
+                && SkillPanelRules.TakesClick(can, have))
             {
                 _message = null;
-                if (negative)
-                {
-                    if (_negative == sk.name)
-                    {
-                        _negative = null;
-                    }
-                    else
-                    {
-                        _negative = sk.name;
-                    }
-                }
-                else
-                {
-                    if (_good == sk.name)
-                    {
-                        _good = null;
-                    }
-                    else
-                    {
-                        _good = sk.name;
-                    }
-                }
-
                 // A negative skill goes with the first skill of its own tier: a
                 // pick that doesn't fit the other drops it.
-                if (_good != null && _negative != null
-                    && SkillTree.TierOf(_good, out _) != SkillTree.TierOf(
-                        _negative, out _))
-                {
-                    if (negative)
-                    {
-                        _good = null;
-                    }
-                    else
-                    {
-                        _negative = null;
-                    }
-                }
-
                 var p = Player.Instance;
-                if (_good != null && _negative != null && p != null
-                    && !SkillTree.NeedsNegative(SkillTree.Chosen(p), _good))
+                HashSet<string> chosen = null;
+                if (p != null)
                 {
-                    _negative = null;
+                    chosen = SkillTree.Chosen(p);
                 }
 
+                var picks = SkillPanelRules.Pick(
+                    new PickFacts
+                    {
+                        Tiers = SkillTree.Facts,
+                        Chosen = chosen,
+                        Clicked = sk.name,
+                        ClickedNegative = negative,
+                        Good = _good,
+                        Negative = _negative,
+                    });
+
+                _good = picks.Good;
+                _negative = picks.Negative;
                 try
                 {
                     AudioController.Play("UI_click");
@@ -246,16 +223,6 @@ namespace DarkwoodMP.World
                         box.x + (2 + i) * u, box.y + (ys[i] - 1) * u, u, 2 * u),
                     c);
             }
-        }
-
-        private static string Capital(string s)
-        {
-            if (string.IsNullOrEmpty(s))
-            {
-                return s;
-            }
-
-            return char.ToUpperInvariant(s[0]) + s.Substring(1);
         }
 
         private static readonly Dictionary<string, string> _names =

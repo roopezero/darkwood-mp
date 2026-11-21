@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.World.Skills;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -21,11 +22,10 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var chosen = SkillTree.Chosen(p);
-            int level = p.currentLevel,
-                points = SkillTree.Points(level, chosen);
-            bool needNeg =
-                _good != null && SkillTree.NeedsNegative(chosen, _good);
+            var choice = SkillTree.ChoiceOf(p);
+            var chosen = choice.Chosen;
+            int level = choice.Level,
+                points = SkillRules.Points(choice.Tiers, level, chosen);
             if (Event.current.type == EventType.Layout)
             {
                 _hover = null;
@@ -110,8 +110,8 @@ namespace DarkwoodMP.World
                     var cell = new Rect(
                         grid.x + i * colW, grid.y + k * (icon + gap), colW,
                         icon + gap);
-                    bool can =
-                        SkillTree.CantTake(level, chosen, sk.name) == null;
+                    bool can = SkillPanelRules.GoodAllowed(
+                        choice with { Good = sk.name });
                     DrawSkill(
                         cell, icon, sk, chosen.Contains(sk.name), can,
                         sk.name == _good, false);
@@ -146,9 +146,8 @@ namespace DarkwoodMP.World
                             colW, icon + gap);
                         // With a skill chosen, the negative skills of its tier
                         // when it needs one; else any a tier still owes.
-                        bool can = (_good == null || needNeg)
-                            && SkillTree.CantTakeNegative(
-                                level, chosen, sk.name, _good) == null;
+                        bool can = SkillPanelRules.NegativeAllowed(
+                            choice with { Good = _good, Negative = sk.name });
                         DrawSkill(
                             cell, icon, sk, chosen.Contains(sk.name), can,
                             sk.name == _negative, true);
@@ -177,7 +176,7 @@ namespace DarkwoodMP.World
 
             if (show != null)
             {
-                SkillTree.TierOf(show, out bool neg);
+                bool neg = SkillRules.Find(choice.Tiers, show).Negative;
                 Rect line = f.Next(PixelFont.Line + 2 * UiWindow.S);
                 string title = SkillName(show);
                 Color nameColor;
@@ -193,47 +192,19 @@ namespace DarkwoodMP.World
                 PixelFont.Draw(
                     line, title, nameColor, TextAnchor.MiddleLeft,
                     PixelFont.Kind.Title);
-                string state;
-                if (chosen.Contains(show))
+                var detail = SkillPanelRules.Detail(choice, show);
+                string state = SkillPanelTexts.Text(detail.Note);
+                if (detail.Note == PanelNote.Refused)
                 {
-                    state = "Learned";
-                }
-                else if (neg)
-                {
-                    state = SkillTree.CantTakeNegative(level, chosen, show);
-                    if (state == null)
-                    {
-                        state = "Taken with the first skill of its tier";
-                    }
-                }
-                else
-                {
-                    state = SkillTree.CantTake(level, chosen, show);
-                    if (state == null)
-                    {
-                        if (SkillTree.NeedsNegative(chosen, show))
-                        {
-                            state = "Comes with a negative skill of its tier";
-                        }
-                        else
-                        {
-                            state = "Can be learned";
-                        }
-                    }
+                    state = Refusals.Text(detail.Verdict);
                 }
 
-                Ui.Label(f, Capital(state), MenuSkin.Dim);
+                Ui.Label(f, SkillPanelTexts.Capital(state), MenuSkin.Dim);
                 Ui.Text(f, SkillDesc(show));
             }
             else
             {
-                string text = "Take a level at a stove for a skill point.";
-                if (points > 0)
-                {
-                    text = "Choose a skill to learn.";
-                }
-
-                Ui.Text(f, text, MenuSkin.Dim);
+                Ui.Text(f, SkillPanelTexts.Hint(points), MenuSkin.Dim);
             }
 
             // Never shorter than what was drawn, so a description that takes
@@ -292,38 +263,32 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var chosen = SkillTree.Chosen(p);
-            int level = p.currentLevel;
-            bool needNeg =
-                _good != null && SkillTree.NeedsNegative(chosen, _good);
-            var c = Ui.Split(r, 0, 90);
-            string status = _message;
-            if (status == null)
+            var choice = SkillTree.ChoiceOf(p) with
             {
-                if (SkillTree.Waiting)
+                Good = _good,
+                Negative = _negative,
+            };
+
+            bool waiting = SkillTree.Waiting;
+            var c = Ui.Split(r, 0, 90);
+            var note = SkillPanelRules.Footer(
+                new FooterFacts
                 {
-                    status = "Asking the host...";
-                }
-                else if (_good == null)
-                {
-                    if (SkillTree.Points(level, chosen) > 0)
-                    {
-                        status = "";
-                    }
-                    else
-                    {
-                        status = "No skill points to spend";
-                    }
-                }
-                else if (needNeg && _negative == null)
-                {
-                    status =
-                        "Choose a negative skill of its tier to go with it";
-                }
-                else
-                {
-                    status = "";
-                }
+                    HasMessage = _message != null,
+                    Waiting = waiting,
+                    Good = _good,
+                    Negative = _negative,
+                    Points = SkillRules.Points(
+                        choice.Tiers, choice.Level, choice.Chosen),
+                    NeedsNegative = _good != null
+                        && SkillRules.NeedsNegative(
+                            choice.Tiers, choice.Chosen, _good),
+                });
+
+            string status = SkillPanelTexts.Text(note);
+            if (note == PanelNote.Message)
+            {
+                status = _message;
             }
 
             Rect cell = c[0];
@@ -339,17 +304,7 @@ namespace DarkwoodMP.World
             }
 
             Ui.Label(cell, fitted, tint);
-            bool ready = false;
-            if (_good != null && !SkillTree.Waiting)
-            {
-                string negative = null;
-                if (needNeg)
-                {
-                    negative = _negative;
-                }
-
-                ready = SkillTree.Check(level, chosen, _good, negative) == null;
-            }
+            bool ready = SkillPanelRules.Ready(choice, waiting);
 
             if (Event.current.type == EventType.Repaint)
             {
@@ -365,12 +320,15 @@ namespace DarkwoodMP.World
         private static void LearnChosen()
         {
             var p = Player.Instance;
-            bool needNeg = p != null && _good != null
-                && SkillTree.NeedsNegative(SkillTree.Chosen(p), _good);
             string negative = null;
-            if (needNeg)
+            if (p != null)
             {
-                negative = _negative;
+                negative = SkillPanelRules.NegativeSent(
+                    SkillTree.ChoiceOf(p) with
+                    {
+                        Good = _good,
+                        Negative = _negative,
+                    });
             }
 
             if (SkillTree.Learn(_good, negative, out string why))
@@ -379,7 +337,7 @@ namespace DarkwoodMP.World
             }
             else
             {
-                _message = Capital(why);
+                _message = SkillPanelTexts.Capital(why);
             }
         }
     }

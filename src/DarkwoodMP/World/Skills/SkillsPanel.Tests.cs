@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.World.Skills;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -37,16 +38,13 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            var chosen = SkillTree.Chosen(p);
-            bool needNeg = SkillTree.NeedsNegative(chosen, good);
-            string needed = null;
-            if (needNeg)
+            var choice = SkillTree.ChoiceOf(p) with
             {
-                needed = negative;
-            }
+                Good = good,
+                Negative = negative,
+            };
 
-            return SkillTree.Check(p.currentLevel, chosen, good, needed)
-                == null;
+            return SkillPanelRules.Ready(choice, false);
         }
 
         /// <summary>
