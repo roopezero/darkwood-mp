@@ -1,9 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
-using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using HarmonyLib;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace DarkwoodMP.World.Rolls
@@ -11,8 +8,6 @@ namespace DarkwoodMP.World.Rolls
     public sealed partial class WorldEvents
     {
         // ---- night events ---------------------------------------------------
-
-        private const byte EventFired = 1, ShadowLightsKind = 2;
 
         /// <summary>
         /// Host: a night event fired (CustomEvent.fire); the joiners play it
@@ -32,23 +27,27 @@ namespace DarkwoodMP.World.Rolls
                 big = Player.Instance.whereAmI.bigLocation;
             }
 
-            var w = _session.Begin(MsgType.NightEvent);
-            w.W.Write(EventFired);
             string s = "";
             if (ns != null && ns.currentScenario != null)
             {
                 s = ns.currentScenario.name;
             }
 
-            w.WriteStr(s);
-            w.WriteStr(ev.gameObject.name);
             string sentName = "";
             if (big != null)
             {
                 sentName = big.name;
             }
 
-            w.WriteStr(sentName);
+            var w = _session.Begin(MsgType.NightEvent);
+            var fired = new NightFired
+            {
+                Scenario = s,
+                Event = ev.gameObject.name,
+                Where = sentName,
+            };
+
+            NightEventMessage.WriteFired(w, fired);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -67,9 +66,10 @@ namespace DarkwoodMP.World.Rolls
         private void SendShadowLights(Generator gen, Item keep)
         {
             var w = _session.Begin(MsgType.NightEvent);
-            w.W.Write(ShadowLightsKind);
-            ObjRef.Of(gen.gameObject).Write(w);
-            ObjRef.Of(keep.gameObject).Write(w);
+            NightEventMessage.WriteShadowLights(
+                w,
+                ObjRef.NameOf(ObjRef.Of(gen.gameObject)),
+                ObjRef.NameOf(ObjRef.Of(keep.gameObject)));
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -103,127 +103,156 @@ namespace DarkwoodMP.World.Rolls
 
         private void OnNightEvent(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !WorldShare.InWorld)
+            if (!FromHost(from))
             {
                 return;
             }
 
-            byte kind = r.R.ReadByte();
-            if (kind == EventFired)
+            NightEventBody body = NightEventMessage.Read(r);
+            if (body.Kind == NightEventMessage.Fired)
             {
-                string scenario = r.ReadStr(),
-                    name = r.ReadStr(),
-                    where = r.ReadStr();
-                if (!Follows)
+                if (Follows)
                 {
-                    return;
-                }
-
-                var ns = Singleton<NightScenarios>.Instance;
-                NightScenario sc = null;
-                if (ns != null)
-                {
-                    sc = ns.getScenario(scenario);
-                }
-
-                CustomEvent ev = null;
-                if (sc != null)
-                {
-                    ev = FindEvent(sc, name);
-                }
-
-                if (ev == null)
-                {
-                    Plugin.Log.LogWarning(
-                        $"No night event {scenario}/{name} here");
-                    return;
-                }
-
-                var big = Player.Instance.whereAmI.bigLocation;
-                if (big == null)
-                {
-                    if (WorldActions.Debug)
-                    {
-                        Plugin.Log.LogInfo(
-                            $"[world] night event {name} (the host's, at "
-                                + $"{where}): not at a location here, not "
-                                + "played");
-                    }
-
-                    return;
-                }
-
-                ns.currentScenario = sc;
-                Presentation++;
-                Coop.Guards.Replaying = true;
-                try
-                {
-                    ev.fire(force: true);
-                }
-                finally
-                {
-                    Coop.Guards.Replaying = false;
-                    Presentation--;
-                }
-
-                if (WorldActions.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] night event {name} (the host's, at {where}) "
-                            + $"played here at {big.name}");
+                    PlayNightEvent(body.Fired);
                 }
             }
-            else if (kind == ShadowLightsKind)
+            else if (body.Kind == NightEventMessage.ShadowLights)
             {
-                var g = ObjRef.Read(r);
-                var k = ObjRef.Read(r);
-                if (!Follows)
+                if (Follows)
                 {
-                    return;
-                }
-
-                var gen = ObjRef.Resolve<Generator>(g);
-                var keep = ObjRef.Resolve<Item>(k);
-                if (gen == null || keep == null)
-                {
-                    Plugin.Log.LogWarning(
-                        $"Shadow lights: no generator {g} or lamp {k} here");
-                    return;
-                }
-
-                Coop.Guards.Replaying = true;
-                try
-                {
-                    ShadowLights(gen, keep);
-                }
-                finally
-                {
-                    Coop.Guards.Replaying = false;
-                }
-
-                if (WorldActions.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] shadow lights: {keep.name} stays on (the "
-                            + "host's choice)");
+                    PlayShadowLights(body);
                 }
             }
         }
 
         /// <summary>
-        /// Player.shadowLightsTurnOff on the host, with its lamp chosen once
-        /// and sent: the chosen lamp comes on, all of the generator's lamps
-        /// flicker, and after 8 seconds the others go out for 30.
+        /// A joiner plays the host's night event at its own big location,
+        /// presentation only.
         /// </summary>
-        internal bool HostShadowLights(Player p, bool anyTime = false)
+        private void PlayNightEvent(NightFired sent)
         {
-            if (!anyTime
-                && (Singleton<CharacterSpawner>.Instance.shadowsRemove
-                    || Core.isDay()))
+            string scenario = sent.Scenario;
+            string name = sent.Event;
+            string where = sent.Where;
+            var ns = Singleton<NightScenarios>.Instance;
+            NightScenario sc = null;
+            if (ns != null)
+            {
+                sc = ns.getScenario(scenario);
+            }
+
+            CustomEvent ev = null;
+            if (sc != null)
+            {
+                ev = FindEvent(sc, name);
+            }
+
+            if (ev == null)
+            {
+                Plugin.Log.LogWarning(
+                    $"No night event {scenario}/{name} here");
+                return;
+            }
+
+            var big = Player.Instance.whereAmI.bigLocation;
+            if (big == null)
+            {
+                if (WorldActions.Debug)
+                {
+                    Plugin.Log.LogInfo(
+                        $"[world] night event {name} (the host's, at "
+                            + $"{where}): not at a location here, not "
+                            + "played");
+                }
+
+                return;
+            }
+
+            ns.currentScenario = sc;
+            Presentation++;
+            Coop.Guards.Replaying = true;
+            try
+            {
+                ev.fire(force: true);
+            }
+            finally
+            {
+                Coop.Guards.Replaying = false;
+                Presentation--;
+            }
+
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] night event {name} (the host's, at {where}) "
+                        + $"played here at {big.name}");
+            }
+        }
+
+        /// <summary>
+        /// A joiner's shadows' lights, with the lamp the host chose.
+        /// </summary>
+        private void PlayShadowLights(NightEventBody sent)
+        {
+            var g = ObjRef.RefOf(sent.Generator);
+            var k = ObjRef.RefOf(sent.Lamp);
+            var gen = ObjRef.Resolve<Generator>(g);
+            var keep = ObjRef.Resolve<Item>(k);
+            if (gen == null || keep == null)
+            {
+                Plugin.Log.LogWarning(
+                    $"Shadow lights: no generator {g} or lamp {k} here");
+                return;
+            }
+
+            Coop.Guards.Replaying = true;
+            try
+            {
+                ShadowLights(gen, keep);
+            }
+            finally
+            {
+                Coop.Guards.Replaying = false;
+            }
+
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] shadow lights: {keep.name} stays on (the "
+                        + "host's choice)");
+            }
+        }
+
+        /// <summary>
+        /// Player.shadowLightsTurnOff on the host, at night while the shadows
+        /// are there (ShadowRules.Rolls).
+        /// </summary>
+        internal bool HostShadowLights(Player p)
+        {
+            bool removed = Singleton<CharacterSpawner>.Instance.shadowsRemove;
+            if (!ShadowRules.Rolls(false, removed, Core.isDay()))
             {
                 return false;
             }
 
+            return TurnShadowLightsOff(p);
+        }
+
+        /// <summary>
+        /// The shadows' lights at any time, for the world test.
+        /// </summary>
+        internal bool ShadowLightsAnyTime(Player p)
+        {
+            return TurnShadowLightsOff(p);
+        }
+
+        /// <summary>
+        /// The shadows' lights with their lamp chosen once and sent: the
+        /// chosen lamp comes on, all of the generator's lamps flicker, and
+        /// after ShadowRules.FlickerFor the others go out.
+        /// </summary>
+        private bool TurnShadowLightsOff(Player p)
+        {
             Generator gen = null;
             if (p.whereAmI.bigLocation != null)
             {
@@ -235,17 +264,43 @@ namespace DarkwoodMP.World.Rolls
                 return false;
             }
 
-            var choices = Lights(gen);
-            choices.RemoveAll(l => l == null || l.dontTurnOnByShadowsEvent);
+            var lamps = gen.powerItems;
+            var choices = ShadowRules.Choices(FactsOf(gen));
             if (choices.Count == 0)
             {
                 return false;
             }
 
-            var keep = choices[UnityEngine.Random.Range(0, choices.Count)];
+            int roll = UnityEngine.Random.Range(0, choices.Count);
+            var keep = lamps[choices[roll]];
             ShadowLights(gen, keep);
             SendShadowLights(gen, keep);
             return true;
+        }
+
+        /// <summary>The generator's power items, as lamps.</summary>
+        private static List<LampFacts> FactsOf(Generator gen)
+        {
+            var own = gen.GetComponent<Item>();
+            var lamps = new List<LampFacts>(gen.powerItems.Count);
+            foreach (var l in gen.powerItems)
+            {
+                bool missing = l == null;
+                bool dark = false;
+                if (!missing)
+                {
+                    dark = l.dontTurnOnByShadowsEvent;
+                }
+
+                lamps.Add(new LampFacts
+                {
+                    Own = own != null && l == own,
+                    Missing = missing,
+                    KeptDark = dark,
+                });
+            }
+
+            return lamps;
         }
 
         private static List<Item> Lights(Generator gen)
@@ -277,7 +332,7 @@ namespace DarkwoodMP.World.Rolls
                 l.enable();
                 if (l.itemLight != null)
                 {
-                    l.itemLight.flicker_short(8f);
+                    l.itemLight.flicker_short(ShadowRules.FlickerFor);
                 }
             }
 
@@ -288,7 +343,7 @@ namespace DarkwoodMP.World.Rolls
                 {
                     if (l != null)
                     {
-                        l.empDisable(30f);
+                        l.empDisable(ShadowRules.DarkFor);
                     }
                 }
 
@@ -296,33 +351,44 @@ namespace DarkwoodMP.World.Rolls
                 {
                     keep.enable();
                 }
-            }, 8f, timeScaleDependent: true);
+            }, ShadowRules.FlickerFor, timeScaleDependent: true);
         }
 
         /// <summary>
         /// The GameEvent steps a joiner runs when it plays the host's night
-        /// event: what's seen and heard.
+        /// event: what's seen and heard (RollRules.Presents).
         /// </summary>
         internal static bool PresentationOnly(GameEvent e)
         {
-            switch (e.type)
+            return RollRules.Presents(StepOf(e.type), e.activeModifier);
+        }
+
+        private static NightStep StepOf(GameEvent.Type type)
+        {
+            switch (type)
             {
                 case GameEvent.Type.sound:
+                    return NightStep.Sound;
                 case GameEvent.Type.changeIdleSound:
+                    return NightStep.ChangeIdleSound;
                 case GameEvent.Type.playSound_NIEUZYWAJ:
+                    return NightStep.PlaySoundUnused;
                 case GameEvent.Type.particle:
+                    return NightStep.Particle;
                 case GameEvent.Type.cameraEffect:
+                    return NightStep.CameraEffect;
                 case GameEvent.Type.tweenColor:
+                    return NightStep.TweenColor;
                 case GameEvent.Type.playAnim:
+                    return NightStep.PlayAnim;
                 case GameEvent.Type.displayMessage:
+                    return NightStep.DisplayMessage;
                 case GameEvent.Type.debug:
-                    return true;
+                    return NightStep.Debug;
                 case GameEvent.Type.fireEvent:
-                    // other GameEvents (filtered the same way), not a world
-                    // event
-                    return !e.activeModifier;
+                    return NightStep.FireEvent;
                 default:
-                    return false;
+                    return NightStep.Other;
             }
         }
 

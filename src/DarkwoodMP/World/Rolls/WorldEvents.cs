@@ -1,9 +1,5 @@
-using System.Collections;
-using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using HarmonyLib;
-using Newtonsoft.Json;
 using UnityEngine;
 
 namespace DarkwoodMP.World.Rolls
@@ -45,13 +41,7 @@ namespace DarkwoodMP.World.Rolls
     {
         public static WorldEvents Instance { get; private set; }
         private readonly Session _session;
-        private const float Resend = 10f;
-        private float _nextCheck,
-            _nextScenarioSend,
-            _nextWeatherSend,
-            _randomDue = -1f;
-        private string _sentScenario;
-        private string _sentWeather;
+        private readonly HostRollClock _clock = new HostRollClock();
 
         /// <summary>
         /// Above 0 while a joiner plays a night event the host sent: only its
@@ -69,28 +59,37 @@ namespace DarkwoodMP.World.Rolls
             session.Register(MsgType.Weather, OnWeather);
             session.OnSessionEnded += () =>
             {
-                _sentScenario = null;
-                _sentWeather = null;
-                _randomDue = -1f;
+                _clock.SessionEnded();
                 Presentation = 0;
             };
-        }
-
-        private static bool Away()
-        {
-            var o = Singleton<OutsideLocations>.Instance;
-            var d = Singleton<Dreams>.Instance;
-            return (o != null && o.playerInOutsideLocation)
-                || (d != null && d.dreaming);
         }
 
         /// <summary>
         /// A joiner in the shared world: the host rolls the world's events,
         /// this game follows.
         /// </summary>
-        public static bool Follows => NetEnemies.ClientMode && !Away();
+        public static bool Follows
+        {
+            get
+            {
+                var o = Singleton<OutsideLocations>.Instance;
+                var d = Singleton<Dreams>.Instance;
+                bool outside = o != null && o.playerInOutsideLocation;
+                bool dreaming = d != null && d.dreaming;
+                return RollRules.Follows(
+                    NetEnemies.ClientMode, outside, dreaming);
+            }
+        }
 
         private bool HostSharing => _session.IsHost && Coop.Guards.Sharing;
+
+        private static Seconds Now => new Seconds(Time.unscaledTime);
+
+        private bool FromHost(ulong from)
+        {
+            return RollRules.FromHost(
+                from, _session.HostId, WorldShare.InWorld);
+        }
 
         public void Update()
         {
@@ -99,18 +98,15 @@ namespace DarkwoodMP.World.Rolls
                 return;
             }
 
-            if (_randomDue >= 0f && Time.unscaledTime >= _randomDue)
+            if (_clock.ObjectsDue(Now))
             {
-                _randomDue = -1f;
                 SendRandomObjects();
             }
 
-            if (Time.unscaledTime < _nextCheck)
+            if (!_clock.Checks(Now))
             {
                 return;
             }
-
-            _nextCheck = Time.unscaledTime + 1f;
 
             var ns = Singleton<NightScenarios>.Instance;
             string scenario = "";
@@ -119,37 +115,36 @@ namespace DarkwoodMP.World.Rolls
                 scenario = ns.currentScenario.name;
             }
 
-            if (scenario != _sentScenario
-                || Time.unscaledTime >= _nextScenarioSend)
+            RollSend send = _clock.Scenario(scenario, Now);
+            if (send != RollSend.None)
             {
-                if (WorldActions.Debug && scenario != _sentScenario)
+                if (WorldActions.Debug && send == RollSend.Changed)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] sent night scenario '{scenario}'");
                 }
 
-                _sentScenario = scenario;
-                _nextScenarioSend = Time.unscaledTime + Resend;
                 var w = _session.Begin(MsgType.NightScenario);
-                w.WriteStr(scenario);
+                NightScenarioMessage.Write(w, scenario);
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
 
             var rain = Singleton<Rain>.Instance;
             if (rain != null)
             {
-                string key = WeatherKey(rain);
-                if (key != _sentWeather
-                    || Time.unscaledTime >= _nextWeatherSend)
+                WeatherFacts facts = FactsOf(rain);
+                string key = WeatherKey.Of(facts);
+                send = _clock.Weather(key, Now);
+                if (send != RollSend.None)
                 {
-                    if (WorldActions.Debug && key != _sentWeather)
+                    if (WorldActions.Debug && send == RollSend.Changed)
                     {
                         Plugin.Log.LogInfo($"[world] sent weather {key}");
                     }
 
-                    _sentWeather = key;
-                    _nextWeatherSend = Time.unscaledTime + Resend;
-                    SendWeather(rain);
+                    var w = _session.Begin(MsgType.Weather);
+                    WeatherMessage.Write(w, facts);
+                    _session.Broadcast(w, Channel.Control, reliable: true);
                 }
             }
         }
@@ -158,12 +153,12 @@ namespace DarkwoodMP.World.Rolls
 
         private void OnScenario(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !WorldShare.InWorld)
+            if (!FromHost(from))
             {
                 return;
             }
 
-            string name = r.ReadStr();
+            string name = NightScenarioMessage.Read(r);
             if (!Follows)
             {
                 return;
@@ -208,127 +203,66 @@ namespace DarkwoodMP.World.Rolls
 
         // ---- weather --------------------------------------------------------
 
-        private static string WeatherKey(Rain r)
+        /// <summary>The day's rain and fog plan.</summary>
+        private static WeatherFacts FactsOf(Rain r)
         {
-            int rain = 0;
-            if (r.rainToday)
+            return new WeatherFacts
             {
-                rain = 1;
-            }
-
-            int lightning = 0;
-            if (r.preRainLightning)
-            {
-                lightning = 1;
-            }
-
-            return $"rain {rain} at {r.timeToStart:0} for {r.duration:0}, "
-                + $"lightning {lightning} {r.preRainLightningTime:0} "
-                + $"{r.lightningTime:0}, " +
-                $"fog {Tad(r.timeToFadeInFog)}-{Tad(r.timeToFadeOutFog)}";
+                RainToday = r.rainToday,
+                Start = r.timeToStart,
+                Duration = r.duration,
+                Lightning = r.preRainLightning,
+                LightningStart = r.preRainLightningTime,
+                LightningFor = r.lightningTime,
+                FogIn = FogOf(r.timeToFadeInFog),
+                FogOut = FogOf(r.timeToFadeOutFog),
+            };
         }
 
-        private static string Tad(TimeAndDay t)
+        private static FogTime FogOf(TimeAndDay t)
         {
             if (t == null)
             {
-                return "none";
+                return new FogTime();
             }
 
-            return $"{t.day}/{t.time}";
-        }
-
-        private void SendWeather(Rain r)
-        {
-            var w = _session.Begin(MsgType.Weather);
-            int flags = 0;
-            if (r.rainToday)
-            {
-                flags |= 1;
-            }
-
-            if (r.preRainLightning)
-            {
-                flags |= 2;
-            }
-
-            w.W.Write((byte)flags);
-            w.W.Write(r.timeToStart);
-            w.W.Write(r.duration);
-            w.W.Write(r.preRainLightningTime);
-            w.W.Write(r.lightningTime);
-            WriteTad(w, r.timeToFadeInFog);
-            WriteTad(w, r.timeToFadeOutFog);
-            _session.Broadcast(w, Channel.Control, reliable: true);
-        }
-
-        private static void WriteTad(PacketWriter w, TimeAndDay t)
-        {
-            int time = -1;
-            if (t != null)
-            {
-                time = t.time;
-            }
-
-            w.W.Write(time);
-            int day = -1;
-            if (t != null)
-            {
-                day = t.day;
-            }
-
-            w.W.Write(day);
-        }
-
-        private static TimeAndDay ReadTad(PacketReader r)
-        {
-            int time = r.R.ReadInt32(), day = r.R.ReadInt32();
-            if (time < 0)
-            {
-                return null;
-            }
-
-            return new TimeAndDay(time, day);
+            return new FogTime { Set = true, Day = t.day, Time = t.time };
         }
 
         private void OnWeather(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !WorldShare.InWorld)
+            if (!FromHost(from))
             {
                 return;
             }
 
-            byte f = r.R.ReadByte();
-            float start = r.R.ReadSingle(),
-                duration = r.R.ReadSingle(),
-                pre = r.R.ReadSingle(),
-                lightning = r.R.ReadSingle();
-            var fogIn = ReadTad(r);
-            var fogOut = ReadTad(r);
+            WeatherFacts sent = WeatherMessage.Read(r);
             var rain = Singleton<Rain>.Instance;
             if (!NetEnemies.ClientMode || rain == null)
             {
                 return;
             }
 
-            string before = WeatherKey(rain);
-            rain.rainToday = (f & 1) != 0;
-            rain.preRainLightning = (f & 2) != 0;
-            rain.timeToStart = start;
-            rain.duration = duration;
-            rain.preRainLightningTime = pre;
-            rain.lightningTime = lightning;
-            if (fogIn != null)
+            string before = WeatherKey.Of(FactsOf(rain));
+            rain.rainToday = sent.RainToday;
+            rain.preRainLightning = sent.Lightning;
+            rain.timeToStart = sent.Start;
+            rain.duration = sent.Duration;
+            rain.preRainLightningTime = sent.LightningStart;
+            rain.lightningTime = sent.LightningFor;
+            if (sent.FogIn.Set)
             {
-                rain.timeToFadeInFog = fogIn;
+                rain.timeToFadeInFog =
+                    new TimeAndDay(sent.FogIn.Time, sent.FogIn.Day);
             }
 
-            if (fogOut != null)
+            if (sent.FogOut.Set)
             {
-                rain.timeToFadeOutFog = fogOut;
+                rain.timeToFadeOutFog =
+                    new TimeAndDay(sent.FogOut.Time, sent.FogOut.Day);
             }
 
-            string now = WeatherKey(rain);
+            string now = WeatherKey.Of(FactsOf(rain));
             if (WorldActions.Debug && now != before)
             {
                 Plugin.Log.LogInfo($"[world] weather now the host's: {now}");

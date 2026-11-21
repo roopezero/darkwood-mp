@@ -2060,7 +2060,7 @@ namespace DarkwoodMP.World
             }
 
             bool lights = WorldEvents.Instance != null
-                && WorldEvents.Instance.HostShadowLights(player, anyTime: true);
+                && WorldEvents.Instance.ShadowLightsAnyTime(player);
             string text = "not here (no generator with lamps)";
             if (lights)
             {

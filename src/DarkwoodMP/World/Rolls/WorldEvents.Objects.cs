@@ -12,13 +12,18 @@ namespace DarkwoodMP.World.Rolls
     {
         // ---- random objects at dawn, night mushrooms ------------------------
 
-        private const byte DawnObjects = 1, NightObject = 2;
         private static readonly
             AccessTools.FieldRef<WorldChunk, List<GameObject>> RandomObjectsOf =
                 AccessTools.FieldRefAccess<WorldChunk, List<GameObject>>(
                     "randomObjects");
         private readonly System.Random _rng = new System.Random();
-        private long NewId() => ((long)_rng.Next() << 31) | (uint)_rng.Next();
+
+        private long NewId()
+        {
+            int first = _rng.Next();
+            int second = _rng.Next();
+            return RollRules.ObjectId(first, second);
+        }
 
         /// <summary>
         /// Host: the dawn's random objects were made; send them once their
@@ -28,7 +33,7 @@ namespace DarkwoodMP.World.Rolls
         {
             if (HostSharing)
             {
-                _randomDue = Time.unscaledTime + 2f;
+                _clock.ObjectsMade(Now);
             }
         }
 
@@ -41,8 +46,7 @@ namespace DarkwoodMP.World.Rolls
                 return;
             }
 
-            var all = new List<(long id, int chunk, int obj, Vector3 local,
-                string contents)>();
+            var all = new List<DawnObject>();
             for (int c = 0; c < gen.worldChunks.Count; c++)
             {
                 var chunk = gen.worldChunks[c];
@@ -91,21 +95,19 @@ namespace DarkwoodMP.World.Rolls
                             new Inventory.SaveState(inv));
                     }
 
-                    all.Add((id, c, oi, local, contents));
+                    all.Add(new DawnObject
+                    {
+                        Id = id,
+                        Chunk = c,
+                        Object = oi,
+                        Local = new Vec3(local.x, local.y, local.z),
+                        Contents = contents,
+                    });
                 }
             }
 
             var w = _session.Begin(MsgType.RandomObjects);
-            w.W.Write(DawnObjects);
-            w.W.Write((ushort)all.Count);
-            foreach (var o in all)
-            {
-                w.W.Write(o.id);
-                w.W.Write((ushort)o.chunk);
-                w.W.Write((ushort)o.obj);
-                w.Write(o.local);
-                w.WriteStr(o.contents);
-            }
+            RandomObjectsMessage.WriteDawn(w, all);
 
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
@@ -127,11 +129,16 @@ namespace DarkwoodMP.World.Rolls
 
             long id = NewId();
             ObjRef.RegisterSpawned(id, go);
+            Vector3 pos = go.transform.position;
             var w = _session.Begin(MsgType.RandomObjects);
-            w.W.Write(NightObject);
-            w.W.Write(id);
-            w.WriteStr(prefab);
-            w.Write(go.transform.position);
+            var sent = new NightMushroom
+            {
+                Id = id,
+                Prefab = prefab,
+                Pos = new Vec3(pos.x, pos.y, pos.z),
+            };
+
+            RandomObjectsMessage.WriteNight(w, sent);
             _session.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -143,179 +150,193 @@ namespace DarkwoodMP.World.Rolls
 
         private void OnRandomObjects(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !WorldShare.InWorld)
+            if (!FromHost(from))
             {
                 return;
             }
 
-            byte kind = r.R.ReadByte();
-            if (kind == DawnObjects)
+            RandomObjectsBody body = RandomObjectsMessage.Read(r);
+            if (body.Kind == RandomObjectsMessage.Dawn)
             {
-                int n = r.R.ReadUInt16();
-                var list = new List<(long id, int chunk, int obj,
-                    Vector3 local, string contents)>(n);
-                for (int i = 0; i < n; i++)
+                MakeDawnObjects(body.Dawn);
+            }
+            else if (body.Kind == RandomObjectsMessage.Night)
+            {
+                MakeNightObject(body.Night);
+            }
+        }
+
+        /// <summary>
+        /// A joiner, away or not, replaces its dawn's random objects with the
+        /// host's.
+        /// </summary>
+        private void MakeDawnObjects(List<DawnObject> list)
+        {
+            int n = list.Count;
+            if (!NetEnemies.ClientMode)
+            {
+                return; // away or not: the world's objects are the host's
+            }
+
+            var gen = Singleton<WorldGenerator>.Instance;
+            var rwo = Singleton<RandomWorldObjects>.Instance;
+            if (gen == null || rwo == null)
+            {
+                return;
+            }
+
+            foreach (var chunk in gen.worldChunks)
+            {
+                if (chunk == null)
                 {
-                    list.Add(
-                        (r.R.ReadInt64(), r.R.ReadUInt16(), r.R.ReadUInt16(), r
-                            .ReadVector3(), r.ReadStr()));
+                    continue;
                 }
 
-                if (!NetEnemies.ClientMode)
+                var objs = RandomObjectsOf(chunk);
+                foreach (var go in objs)
                 {
-                    return; // away or not: the world's objects are the host's
+                    if (go != null)
+                    {
+                        Object.Destroy(go);
+                    }
                 }
 
-                var gen = Singleton<WorldGenerator>.Instance;
-                var rwo = Singleton<RandomWorldObjects>.Instance;
-                if (gen == null || rwo == null)
-                {
-                    return;
-                }
+                objs.Clear();
+            }
 
-                foreach (var chunk in gen.worldChunks)
+            int made = 0;
+            Coop.Guards.Replaying = true;
+            try
+            {
+                foreach (var o in list)
                 {
-                    if (chunk == null)
+                    if (!RollRules.InRange(o.Chunk, gen.worldChunks.Count)
+                        || !RollRules.InRange(o.Object, rwo.objects.Count))
                     {
                         continue;
                     }
 
-                    var objs = RandomObjectsOf(chunk);
-                    foreach (var go in objs)
+                    var chunk = gen.worldChunks[o.Chunk];
+                    RandomWorldObjects.RandomObject randomObject =
+                        rwo.objects[o.Object];
+                    GameObject prefab = null;
+                    if (randomObject != null)
                     {
-                        if (go != null)
+                        prefab = randomObject.prefab;
+                    }
+
+                    if (chunk == null || prefab == null)
+                    {
+                        continue;
+                    }
+
+                    // as WorldChunk.tryToSpawnInChunk
+                    var go = Core.AddPrefab(
+                        prefab, LocalOf(o), Quaternion.Euler(90f, 0f, 0f),
+                        chunk.gameObject);
+                    if (go == null)
+                    {
+                        continue;
+                    }
+
+                    Core.addToSaveable(go, isDynamic: true);
+                    WorldGrid grid = Singleton<WorldGrid>.Instance;
+                    if (grid != null)
+                    {
+                        grid.registerToNode(go);
+                    }
+
+                    RandomObjectsOf(chunk).Add(go);
+                    ObjRef.RegisterSpawned(o.Id, go);
+                    var inv = go.GetComponent<Inventory>();
+                    if (inv != null && o.Contents.Length > 0)
+                    {
+                        CoopSession coop = Coop.Current;
+                        if (coop != null)
                         {
-                            Object.Destroy(go);
+                            coop.Containers.Apply(inv, o.Contents);
                         }
                     }
 
-                    objs.Clear();
-                }
-
-                int made = 0;
-                Coop.Guards.Replaying = true;
-                try
-                {
-                    foreach (var o in list)
-                    {
-                        if (o.chunk >= gen.worldChunks.Count
-                            || o.obj >= rwo.objects.Count)
-                        {
-                            continue;
-                        }
-
-                        var chunk = gen.worldChunks[o.chunk];
-                        RandomWorldObjects.RandomObject randomObject =
-                            rwo.objects[o.obj];
-                        GameObject prefab = null;
-                        if (randomObject != null)
-                        {
-                            prefab = randomObject.prefab;
-                        }
-
-                        if (chunk == null || prefab == null)
-                        {
-                            continue;
-                        }
-
-                        // as WorldChunk.tryToSpawnInChunk
-                        var go = Core.AddPrefab(
-                            prefab, o.local, Quaternion.Euler(90f, 0f, 0f),
-                            chunk.gameObject);
-                        if (go == null)
-                        {
-                            continue;
-                        }
-
-                        Core.addToSaveable(go, isDynamic: true);
-                        WorldGrid grid = Singleton<WorldGrid>.Instance;
-                        if (grid != null)
-                        {
-                            grid.registerToNode(go);
-                        }
-
-                        RandomObjectsOf(chunk).Add(go);
-                        ObjRef.RegisterSpawned(o.id, go);
-                        var inv = go.GetComponent<Inventory>();
-                        if (inv != null && o.contents.Length > 0)
-                        {
-                            CoopSession coop = Coop.Current;
-                            if (coop != null)
-                            {
-                                coop.Containers.Apply(inv, o.contents);
-                            }
-                        }
-
-                        made++;
-                    }
-                }
-                finally
-                {
-                    Coop.Guards.Replaying = false;
-                }
-
-                if (WorldActions.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] made the host's {made} of {n} random objects "
-                            + "of the dawn");
+                    made++;
                 }
             }
-            else if (kind == NightObject)
+            finally
             {
-                long id = r.R.ReadInt64();
-                string name = r.ReadStr();
-                var pos = r.ReadVector3();
-                if (!NetEnemies.ClientMode || ObjRef.Spawned.ContainsKey(id))
-                {
-                    return;
-                }
+                Coop.Guards.Replaying = false;
+            }
 
-                SaveManager saves = Singleton<SaveManager>.Instance;
-                GameObject prefab = null;
-                if (saves != null)
-                {
-                    prefab = saves.getPrefab(name);
-                }
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] made the host's {made} of {n} random objects "
+                        + "of the dawn");
+            }
+        }
 
-                if (prefab == null)
-                {
-                    Plugin.Log.LogWarning($"No night object {name} here");
-                    return;
-                }
+        private static Vector3 LocalOf(DawnObject o)
+        {
+            return new Vector3(o.Local.X, o.Local.Y, o.Local.Z);
+        }
 
-                GameObject go;
-                Coop.Guards.Replaying = true;
-                try
-                {
-                    go = Core.AddPrefab(
-                        prefab, pos, Quaternion.Euler(90f, 0f, 0f), null,
-                        worldSpace: true);
-                }
-                finally
-                {
-                    Coop.Guards.Replaying = false;
-                }
+        /// <summary>
+        /// A joiner makes the host's night mushroom, unless it has made it.
+        /// </summary>
+        private void MakeNightObject(NightMushroom sent)
+        {
+            long id = sent.Id;
+            string name = sent.Prefab;
+            var pos = new Vector3(sent.Pos.X, sent.Pos.Y, sent.Pos.Z);
+            bool known = ObjRef.Spawned.ContainsKey(id);
+            if (!RollRules.TakesNightObject(NetEnemies.ClientMode, known))
+            {
+                return;
+            }
 
-                if (go == null)
-                {
-                    return;
-                }
+            SaveManager saves = Singleton<SaveManager>.Instance;
+            GameObject prefab = null;
+            if (saves != null)
+            {
+                prefab = saves.getPrefab(name);
+            }
 
-                var chunk = WorldChunk.getChunkAtPos(pos);
-                if (chunk != null)
-                {
-                    // gone at dawn, as the host's
-                    chunk.nightSpawnedObjects.Add(go);
-                }
+            if (prefab == null)
+            {
+                Plugin.Log.LogWarning($"No night object {name} here");
+                return;
+            }
 
-                ObjRef.RegisterSpawned(id, go);
-                if (WorldActions.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[world] made the host's night object {name} #{id} at "
-                            + $"{pos}");
-                }
+            GameObject go;
+            Coop.Guards.Replaying = true;
+            try
+            {
+                go = Core.AddPrefab(
+                    prefab, pos, Quaternion.Euler(90f, 0f, 0f), null,
+                    worldSpace: true);
+            }
+            finally
+            {
+                Coop.Guards.Replaying = false;
+            }
+
+            if (go == null)
+            {
+                return;
+            }
+
+            var chunk = WorldChunk.getChunkAtPos(pos);
+            if (chunk != null)
+            {
+                // gone at dawn, as the host's
+                chunk.nightSpawnedObjects.Add(go);
+            }
+
+            ObjRef.RegisterSpawned(id, go);
+            if (WorldActions.Debug)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] made the host's night object {name} #{id} at "
+                        + $"{pos}");
             }
         }
     }
