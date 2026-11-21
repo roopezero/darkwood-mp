@@ -30,8 +30,8 @@ namespace DarkwoodMP.Sync
         private readonly Session _s;
         // our own: these are sent from inside game calls
         private readonly PacketWriter _w = new PacketWriter(new BepInLog());
-        private readonly List<KeyValuePair<string, float>> _sounds =
-            new List<KeyValuePair<string, float>>();
+        private readonly List<PlayedSound> _sounds = new List<PlayedSound>();
+        private readonly List<PlayedSound> _relayed = new List<PlayedSound>();
         private Seconds _nextSounds;
         private bool _burningSent;
         private readonly HashSet<string> _logged = new HashSet<string>();
@@ -77,17 +77,11 @@ namespace DarkwoodMP.Sync
                 _nextSounds = PlayerFxRules.NextSounds(now);
                 var w = Begin(MsgType.PlayerSounds);
                 int n = PlayerFxRules.BatchSize(_sounds.Count);
-                w.W.Write((byte)n);
-                for (int i = 0; i < n; i++)
-                {
-                    w.WriteStr(_sounds[i].Key);
-                    w.W.Write(_sounds[i].Value);
-                }
-
+                PlayerSounds.Write(w, _s.LocalId, _sounds.GetRange(0, n));
                 Send(w, reliable: false);
                 LogOnce(
                     "sent sounds",
-                    $"[fx] sending our player's sounds ({_sounds[0].Key}...)");
+                    $"[fx] sending our player's sounds ({_sounds[0].Id}...)");
                 _sounds.Clear();
             }
 
@@ -103,25 +97,27 @@ namespace DarkwoodMP.Sync
             if (PlayerFxRules.SendsBurning(burning, _burningSent))
             {
                 _burningSent = burning;
-                var w = Begin(MsgType.PlayerHurt);
+                var hurt = new HurtLook { Kind = (byte)HurtKind.Stopped };
                 if (burning)
                 {
-                    w.W.Write((byte)HurtKind.Burning);
                     string prefab = null;
                     if (p.burnPrefab != null)
                     {
                         prefab = p.burnPrefab.name;
                     }
 
-                    w.WriteStr(PlayerFxRules.BurnFlames(
-                        burn.noParticle, prefab));
-                    w.WriteStr(PlayerFxRules.BurnSound(
-                        burn.noSound, burn.burnSoundOverride));
+                    hurt = new HurtLook
+                    {
+                        Kind = (byte)HurtKind.Burning,
+                        Prefab = PlayerFxRules.BurnFlames(
+                            burn.noParticle, prefab),
+                        Sound = PlayerFxRules.BurnSound(
+                            burn.noSound, burn.burnSoundOverride),
+                    };
                 }
-                else
-                {
-                    w.W.Write((byte)HurtKind.Stopped);
-                }
+
+                var w = Begin(MsgType.PlayerHurt);
+                PlayerHurt.Write(w, _s.LocalId, hurt);
 
                 Send(w, reliable: true);
                 string text = "stopped";
@@ -140,35 +136,40 @@ namespace DarkwoodMP.Sync
         {
             if (PlayerFxRules.Queues(_sounds.Count))
             {
-                _sounds.Add(new KeyValuePair<string, float>(audioId, volume));
+                _sounds.Add(new PlayedSound { Id = audioId, Volume = volume });
             }
         }
 
         public void OurShot(InvItem gun)
         {
-            var w = Begin(MsgType.PlayerShot);
             string s = "";
             if (gun.muzzlePrefab != null)
             {
                 s = gun.muzzlePrefab.name;
             }
 
-            w.WriteStr(s);
             string particles = "";
             if (gun.muzzleParticles != null)
             {
                 particles = gun.muzzleParticles.name;
             }
 
-            w.WriteStr(particles);
-            int flashFlag = 1;
+            byte flashFlag = 1;
             if (gun.noMuzzleFlash)
             {
                 flashFlag = 0;
             }
 
-            w.W.Write((byte)flashFlag);
-            w.Write(gun.muzzleOffset);
+            Vector3 offset = gun.muzzleOffset;
+            var w = Begin(MsgType.PlayerShot);
+            PlayerShot.Write(w, _s.LocalId, new MuzzleFlash
+            {
+                Muzzle = s,
+                Particles = particles,
+                Flash = flashFlag,
+                Offset = new Vec3(offset.x, offset.y, offset.z),
+            });
+
             Send(w, reliable: false);
             LogOnce("sent shot", "[fx] sending our player's shots");
         }
@@ -177,26 +178,28 @@ namespace DarkwoodMP.Sync
         {
             var p = Player.Instance;
             var w = Begin(MsgType.PlayerHurt);
-            w.W.Write((byte)HurtKind.Blood);
-            w.WriteStr(prefab);
-            w.W.Write(splat.transform.position.y - p.transform.position.y);
-            w.W.Write(splat.transform.eulerAngles.y);
+            PlayerHurt.Write(w, _s.LocalId, new HurtLook
+            {
+                Kind = (byte)HurtKind.Blood,
+                Prefab = prefab,
+                Height = splat.transform.position.y - p.transform.position.y,
+                Yaw = splat.transform.eulerAngles.y,
+            });
+
             Send(w, reliable: false);
             Plugin.Log.LogInfo($"[fx] sent: our player bled ({prefab})");
         }
 
         /// <summary>
-        /// A message about a player: its type, then the player's id.
+        /// A message about a player: its type, then (written by its message
+        /// class) the player's id. A client's own id is replaced by the host
+        /// anyway.
         /// </summary>
-        private PacketWriter Begin(MsgType t, ulong owner)
+        private PacketWriter Begin(MsgType t)
         {
             _w.Begin(t);
-            _w.W.Write(owner);
             return _w;
         }
-
-        // a client's is replaced by the host anyway
-        private PacketWriter Begin(MsgType t) => Begin(t, _s.LocalId);
 
         private void Send(PacketWriter w, bool reliable)
         {
@@ -217,9 +220,8 @@ namespace DarkwoodMP.Sync
         /// (whatever it says); on a client, what the host says, if it came from
         /// the host. 0 if it's not to be shown.
         /// </summary>
-        private ulong Owner(ulong from, PacketReader r)
+        private ulong Owner(ulong from, ulong said)
         {
-            ulong said = r.R.ReadUInt64();
             return PlayerFxRules.Owner(new OwnerFacts
             {
                 Host = _s.IsHost,
@@ -234,11 +236,11 @@ namespace DarkwoodMP.Sync
         /// The host passes a client's message on to the other clients, with the
         /// sender's id in it.
         /// </summary>
-        private PacketWriter Relay(MsgType t, ulong owner)
+        private PacketWriter Relay(MsgType t)
         {
             if (_s.IsHost)
             {
-                return Begin(t, owner);
+                return Begin(t);
             }
 
             return null;
@@ -266,17 +268,11 @@ namespace DarkwoodMP.Sync
 
         private void OnSounds(ulong from, PacketReader r)
         {
-            ulong owner = Owner(from, r);
-            int n = r.R.ReadByte();
+            var (said, n) = PlayerSounds.ReadHead(r);
+            ulong owner = Owner(from, said);
             if (PlayerFxRules.TakesSounds(owner, n) != FxDrop.None)
             {
                 return;
-            }
-
-            var relay = Relay(MsgType.PlayerSounds, owner);
-            if (relay != null)
-            {
-                relay.W.Write((byte)n);
             }
 
             var puppet = Puppet(owner);
@@ -298,15 +294,13 @@ namespace DarkwoodMP.Sync
                         + $"{position}, we're at {ourPosition})");
             }
 
+            _relayed.Clear();
             for (int i = 0; i < n; i++)
             {
-                string id = r.ReadStr();
-                float volume = PlayerFxRules.Volume(r.R.ReadSingle());
-                if (relay != null)
-                {
-                    relay.WriteStr(id);
-                    relay.W.Write(volume);
-                }
+                PlayedSound sound = PlayerSounds.ReadSound(r);
+                string id = sound.Id;
+                float volume = PlayerFxRules.Volume(sound.Volume);
+                _relayed.Add(new PlayedSound { Id = id, Volume = volume });
 
                 if (near)
                 {
@@ -322,27 +316,33 @@ namespace DarkwoodMP.Sync
                 }
             }
 
+            var relay = Relay(MsgType.PlayerSounds);
+            if (relay != null)
+            {
+                PlayerSounds.Write(relay, owner, _relayed);
+            }
+
             Relayed(relay, from, reliable: false);
         }
 
         private void OnShot(ulong from, PacketReader r)
         {
-            ulong owner = Owner(from, r);
-            string muzzle = r.ReadStr(), particles = r.ReadStr();
-            byte flash = r.R.ReadByte();
-            Vector3 offset = r.ReadVector3();
+            var (said, shot) = PlayerShot.Read(r);
+            ulong owner = Owner(from, said);
             if (PlayerFxRules.TakesShot(owner) != FxDrop.None)
             {
                 return;
             }
 
-            var relay = Relay(MsgType.PlayerShot, owner);
+            string muzzle = shot.Muzzle, particles = shot.Particles;
+            byte flash = shot.Flash;
+            var offset =
+                new Vector3(shot.Offset.X, shot.Offset.Y, shot.Offset.Z);
+
+            var relay = Relay(MsgType.PlayerShot);
             if (relay != null)
             {
-                relay.WriteStr(muzzle);
-                relay.WriteStr(particles);
-                relay.W.Write(flash);
-                relay.Write(offset);
+                PlayerShot.Write(relay, owner, shot);
             }
 
             Relayed(relay, from, reliable: false);
@@ -388,42 +388,21 @@ namespace DarkwoodMP.Sync
 
         private void OnHurt(ulong from, PacketReader r)
         {
-            ulong owner = Owner(from, r);
-            byte what = r.R.ReadByte();
-            string a = "", b = "";
-            float dy = 0f, yaw = 0f;
-            if (what == (byte)HurtKind.Blood)
-            {
-                a = r.ReadStr();
-                dy = r.R.ReadSingle();
-                yaw = r.R.ReadSingle();
-            }
-            else if (what == (byte)HurtKind.Burning)
-            {
-                a = r.ReadStr();
-                b = r.ReadStr();
-            }
+            var (said, hurt) = PlayerHurt.Read(r);
+            ulong owner = Owner(from, said);
+            byte what = hurt.Kind;
+            string a = hurt.Prefab, b = hurt.Sound;
+            float dy = hurt.Height, yaw = hurt.Yaw;
 
             if (PlayerFxRules.TakesHurt(what, owner) != FxDrop.None)
             {
                 return;
             }
 
-            var relay = Relay(MsgType.PlayerHurt, owner);
+            var relay = Relay(MsgType.PlayerHurt);
             if (relay != null)
             {
-                relay.W.Write(what);
-                if (what == (byte)HurtKind.Blood)
-                {
-                    relay.WriteStr(a);
-                    relay.W.Write(dy);
-                    relay.W.Write(yaw);
-                }
-                else if (what == (byte)HurtKind.Burning)
-                {
-                    relay.WriteStr(a);
-                    relay.WriteStr(b);
-                }
+                PlayerHurt.Write(relay, owner, hurt);
             }
 
             Relayed(relay, from, PlayerFxRules.RelaysReliably((HurtKind)what));
