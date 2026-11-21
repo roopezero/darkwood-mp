@@ -9,23 +9,31 @@ A BepInEx 5 / HarmonyX mod that adds online co-op to Darkwood (Unity 2021.3.30f1
 - **No master server, ever.** Don't propose or document a Public browser tab.
 - Enemy AI picks targets by **threat**, never "the closest player".
 - It must work on **Windows** and on the **GOG** version (no Steam).
-- **Code architecture (`docs/ARCHITECTURE.md`):** a functional core and a thin shell. Decisions live in `src/DarkwoodMP.Core` (no Unity or game references), as `...Rules` taking a `...Facts` struct and returning a `Verdict` with a named `Refusal`; the plugin's shell reads the game (`FactsOf`) and does what the core decided. Every subsystem is an instance owned by `CoopSession` (no new statics; patches reach it through `Coop.Current`). Thin Harmony patches. Feature folders mirrored in both projects; map test steps in `src/DarkwoodMP.MapTests`, not shipped. Unit tests: xUnit + Shouldly, `<Class>Tests` with a nested class per tested method and verb-first sentence names (`DoorRulesTests+MayOpen.Refuses_a_locked_door`), rules and the network in one process (`LoopbackBackend`). The code is moving there one subsystem at a time; new code follows it now.
+- **Code architecture (`docs/ARCHITECTURE.md`):** a functional core and a thin shell. Decisions live in `src/DarkwoodMP.Core` (no Unity or game references), as `...Rules` taking a `...Facts` struct and returning a `Verdict` with a named `Refusal`; the plugin's shell reads the game (`FactsOf`) and does what the core decided. Every subsystem is an instance owned by `CoopSession` (no new statics; patches reach it through `Coop.Current`). Thin Harmony patches. Feature folders mirrored in both projects; map test steps in `src/DarkwoodMP.MapTests`, not shipped. Unit tests: xUnit + Shouldly, `<Class>Tests` with a nested class per tested method and verb-first sentence names (`DoorRulesTests+MayOpen.Refuses_a_locked_door`), rules and the network in one process (`LoopbackBackend`). The code follows this layout; new code must too. Process state that outlives a session lives on `ModHost` (reached as `Plugin.Instance.Host`).
 
 ## Layout
 
 ```
-src/DarkwoodMP/
-  Plugin.cs, DirectPanel.cs     entry point, config, F7 panel, --dwmp-* test arguments
-  Net/                          SteamBackend + Lobby + SteamTransport, IGuiSection, the core's adapters (UnityClock, BepInLog, PacketVectors)
-  Sync/                         player puppets: PlayerSnapshot (tk2d sprites), RemotePlayer, PlayerSync
-  Combat/                       NetPlayerProxy (remote players for the host's AI), Threat, NetEnemies (enemy replication),
-                                PlayerDamage, CombatPatches
-  World/                        WorldShare (save transfer, snapshot, world reload), SaveRedirect, TimeSync, WorldActions
-                                (doors, windows, traps, switches, NPC deaths), Containers (contents, locks, drops, loot),
-                                Characters (per-player characters), FlagsSync (story state), DeathPatches, WorldTest, ObjRef
+src/DarkwoodMP/                 the plugin (the shell): reads the game, does what the core decided
+  Plugin*.cs, ModConfig.cs      entry point (partial files: startup, test arguments, shots, solo and join tests), settings
+  ModHost.cs                    process state that outlives a session (backends, menus, loading, saves, the test harness)
+  CoopSession.cs, Coop.cs       one session's subsystems; Coop.Current is how patches reach it (null when playing alone)
+  CoreCheck.cs                  logs a fatal line if DarkwoodMP.Core.dll is missing or older
+  Net/                          the core's adapters (UnityClock, BepInLog, PacketVectors), Presence/
+  Net/Steam/                    SteamBackend, Lobby, SteamTransport, SteamStartup, IGuiSection (the only Steamworks code)
+  Menus/                        the Multiplayer window (CoopPanel), DirectPanel, options and start game windows, menu skin and fonts, cursor
+  Hosting/                      HostStart
+  Testing/                      in-game test harness (TestControl, TestWorld, StateDump, WorldTest, ...) for --dwmp-* tests
+  Sync/                         MoveCheck; Players/: player puppets (PlayerSnapshot, RemotePlayer, PlayerSync, PlayerFx)
+  Combat/<feature>/             Enemies (NetEnemies), Targeting (Threat), Joiners (NetPlayerProxy, JoinerAi), Damage
+                                (PlayerDamage), Hostiles, Nights, Noise, Effects, Cues, Beams, Landings, Motion
+  World/                        Authority, Guards, WorldActions, ObjRef, InventoryWatch, shared ids;
+  World/<feature>/              Joining (WorldShare), Saves (SaveRedirect), Inventories (Containers, SlotShare), Doors,
+                                Windows, Traps, Story (FlagsSync, Chapters), KeptCharacters, Loading, Clock, ... (one per feature)
+src/DarkwoodMP.Core/            rules, facts and small types with no Unity or game references (netstandard2.0); ships as a
+                                second DLL; the same feature folders as the plugin (Combat/, World/, Sync/, Menus/, Testing/, ...)
 src/DarkwoodMP.Core/Net/        Session (handshake, relay), TcpBackend + PortMapper (UPnP/NAT-PMP), MsgType (the message list),
-                                Protocol (Version), PacketWriter/PacketReader, ServerBrowser/ServerInfo, PlayerKey
-src/DarkwoodMP.Core/            rules and small types with no Unity or game references (netstandard2.0); ships as a second DLL
+                                Protocol (Version), PacketWriter/PacketReader, ServerBrowser/ServerInfo, PlayerKey, Steam/ (rules)
 src/DarkwoodMP.MapTests/        the in-game map test steps (World/MapScenario*), a second plugin that needs --dwmp-test-control;
                                 deployed to the test game folders only, never in the zips
 src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0007
@@ -71,13 +79,13 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 
 ## Rules the code depends on
 
-- **Steamworks stays inside `SteamBackend`, `Lobby` and `SteamTransport`.** Nothing else may name a Steamworks type: on GOG, Steam isn't there, and a type reference in a shared class would stop the mod loading. Steam is detected through reflection on the game's `SteamManager` (see `Plugin.SteamReady`).
-- **Wire format:** messages are `u8 type` + payload, little-endian. Strings use `PacketWriter.WriteStr` (u16 length + UTF-8), never `BinaryWriter.Write(string)`. TCP adds `u32 length` framing. **Any change to a message's bytes bumps `Protocol.Version`** in `src/DarkwoodMP.Core/Net/Protocol.cs`; the Python tests read it from there. Keep each `MsgType`'s `///` comment (`Net/MsgType.cs`) as the authoritative description of its bytes.
+- **Steamworks stays inside `SteamBackend`, `Lobby` and `SteamTransport`.** Nothing else may name a Steamworks type: on GOG, Steam isn't there, and a type reference in a shared class would stop the mod loading. Steam is detected through reflection on the game's `SteamManager` (see `SteamStartup.SteamReady` in `Net/Steam`).
+- **Wire format:** messages are `u8 type` + payload, little-endian. Strings use `PacketWriter.WriteStr` (u16 length + UTF-8), never `BinaryWriter.Write(string)`. TCP adds `u32 length` framing. **Any change to a message's bytes bumps `Protocol.Version`** in `src/DarkwoodMP.Core/Net/Protocol.cs`; the Python tests read it from there. Keep each `MsgType`'s `///` comment (`src/DarkwoodMP.Core/Net/MsgType.cs`) as the authoritative description of its bytes.
 - **Who decides:** the host runs enemies, the clock, trader restocks, world resets on death, and anything the world does by itself. A client sends only what **its own player** did: `WorldActions.ByLocalPlayer()`, `byPlayerKnown`, and a "fromPlayer" check for hits on enemies. A client's frozen copies of the host's enemies must never act (no AI, no animation events, no traps, no effects, no hearing).
-- **The host decides, clients predict (`World/Authority.cs`):** a client does its player's action at once and sends it as a `Request` (`Authority.Request(writer, what, done)`); the host's handler for that message checks it against the host's world (`Authority.InReach`, the thing's state, plausible numbers) and calls `Authority.Refuse(reason)` (after sending the state to roll back to, e.g. `WorldActions.SendState`) or `Authority.Result(...)` for what only the host decides. Anything left to chance that changes the shared world is rolled on the host (trap disarms), and damage to the host's enemies is capped by the weapon (`NetEnemies.DamageCap`). A refused request is rolled back on the client: the host's `ObjState`, and `InventoryWatch` undoes that frame's inventory change. Containers go slot by slot (`SlotShare`), refused per slot. Movement is capped by `Sync/MoveCheck` (`PlayerCorrection`). It's server reconciliation, not frame re-simulation: Darkwood isn't deterministic.
-- **Replays:** when applying something from another game, set `Coop.Guards.Replaying = true` so it isn't sent back, and have the host relay a client's change to the others (`except: from`).
+- **The host decides, clients predict (`World/Authority.cs`, reached as `Coop.Current.Authority`; its rules are `AuthorityRules` in the core):** a client does its player's action at once and sends it as a `Request` (`Authority.Request(writer, what, done)`); the host's handler for that message checks it against the host's world (`Authority.InReach`, the thing's state, plausible numbers) and calls `Authority.Refuse(verdict or reason)` (after sending the state to roll back to, e.g. `WorldActions.SendState`) or `Authority.Result(...)` for what only the host decides. Anything left to chance that changes the shared world is rolled on the host (trap disarms), and damage to the host's enemies is capped by the weapon (`WeaponRules.DamageCap` in the core's `Combat/Damage`). A refused request is rolled back on the client: the host's `ObjState`, and `InventoryWatch` (`World/InventoryWatch.cs`, `Authority.Inventory`) undoes that frame's inventory change. Containers go slot by slot (`World/Inventories/SlotShare`), refused per slot. Movement is capped by `Sync/MoveCheck` (`CoopSession.Moves`; the core's `PlayerCorrection` writes the correction). It's server reconciliation, not frame re-simulation: Darkwood isn't deterministic.
+- **Replays:** when applying something from another game, set `Coop.Guards.Replaying = true` (`World/Guards.cs`; `Guards.Alone` when there's no session) so it isn't sent back, and have the host relay a client's change to the others (`except: from`).
 - **Nested calls:** patched world calls use the `Coop.Guards.Depth` / `Outermost()` pattern, so only the outermost call that changed something is sent. A hit that breaks a barricade must not also send the break.
-- **Naming objects across games:** use `ObjRef` (things spawned while playing, then enemy net IDs, then save IDs, then name+position). Everyone loaded the host's save, so save IDs match.
+- **Naming objects across games:** use `ObjRef` (`World/ObjRef.cs`, rules in the core's `ObjRefRules`; things spawned while playing, then enemy net IDs, then save IDs, then name+position). Everyone loaded the host's save, so save IDs match.
 - **Harmony:** give argument types for overloaded methods (an ambiguous match used to stop the whole mod). Patch private methods and coroutine bodies by name. `Plugin.PatchAll` patches class by class and logs failures, so one patch that doesn't fit doesn't stop the rest.
 - **Game quirks:** the game has its own global `RandomNumberGenerator` and `Button` types that shadow .NET's (qualify them). Darkwood counts a new day at dawn, not midnight. `Player` is a 9000-line singleton, so don't instantiate it.
 - **Comments and docs:** plain, concrete sentences that say what happens and why; no hype.
