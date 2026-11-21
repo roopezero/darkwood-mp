@@ -1,5 +1,6 @@
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
+using DarkwoodMP.World.Clock;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -48,7 +49,6 @@ namespace DarkwoodMP.World
                 var w = _session.Begin(MsgType.TimeSync);
                 var dreams = Singleton<Dreams>.Instance;
                 bool dreaming = dreams != null && dreams.dreaming;
-                w.W.Write((uint)ctl.day);
                 int minute;
                 if (dreaming)
                 {
@@ -59,7 +59,9 @@ namespace DarkwoodMP.World
                     minute = ctl.CurrentTime;
                 }
 
-                w.W.Write((ushort)minute);
+                TimeSyncMessage.Write(
+                    w,
+                    new HostClock { Day = ctl.day, Minute = minute });
                 _session.Broadcast(w, Channel.Control, reliable: true);
             }
 
@@ -90,8 +92,9 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            int day = (int)r.R.ReadUInt32();
-            int time = r.R.ReadUInt16();
+            HostClock clock = TimeSyncMessage.Read(r);
+            int day = clock.Day;
+            int time = clock.Minute;
             var ctl = Singleton<Controller>.Instance;
             if (ctl == null || !WorldShare.InWorld)
             {
