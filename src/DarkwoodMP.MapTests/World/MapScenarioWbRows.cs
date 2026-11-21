@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using DarkwoodMP.World.Inventories;
 using DarkwoodMP.World.Workbenches;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;

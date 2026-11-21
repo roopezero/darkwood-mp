@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Inventories
 {
     /// <summary>
     /// The world's own durability changes in a watched storage (rot, drain,

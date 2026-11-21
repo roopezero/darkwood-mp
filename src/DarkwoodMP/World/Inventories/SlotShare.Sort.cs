@@ -1,10 +1,9 @@
-using DarkwoodMP.World.Inventories;
 using System.Collections.Generic;
 using DarkwoodMP.Net;
 using Newtonsoft.Json;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Inventories
 {
     /// <summary>
     /// Sort &amp; Stack for the workbench's storage (GitHub issue 10). A button
