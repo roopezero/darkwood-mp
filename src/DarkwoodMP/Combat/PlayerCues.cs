@@ -30,7 +30,7 @@ namespace DarkwoodMP.Combat
             }
 
             var w = s.Begin(Net.MsgType.PlayerCue);
-            w.W.Write(kind);
+            Cues.PlayerCue.Write(w, kind);
             s.SendToHost(w, Net.Channel.Control, reliable: true);
         }
 
@@ -46,7 +46,7 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            byte kind = r.R.ReadByte();
+            byte kind = Cues.PlayerCue.Read(r);
             if (!NetPlayerProxy.All.TryGetValue(from, out var proxy)
                 || proxy == null || !proxy.alive)
             {
