@@ -471,7 +471,7 @@ namespace DarkwoodMP
             if (tc >= 0 && tc + 1 < args.Length
                 && int.TryParse(args[tc + 1], out int controlPort))
             {
-                TestControl.Start(this, controlPort);
+                _host.Control.Start(this, controlPort);
             }
 
             ApplyTestArgs(args);
@@ -766,7 +766,8 @@ namespace DarkwoodMP
             // screenshots of the area once it's built.
             if (Has("--dwmp-testworld"))
             {
-                StartTest(TestWorld.Start(_world, reset: Has("--dwmp-reset")));
+                StartTest(
+                    _host.TestArea.Start(_world, reset: Has("--dwmp-reset")));
                 if (Arg("--dwmp-shots") is string tdir)
                 {
                     StartTest(TestWorldShots(tdir));
@@ -800,14 +801,15 @@ namespace DarkwoodMP
             // are then put back as they were ("[options]" lines).
             if (Arg("--dwmp-test-options") is string optDir)
             {
-                StartTest(OptionsTest.Run(optDir, Has("--dwmp-continue")));
+                StartTest(
+                    _host.OptionsTest.Run(optDir, Has("--dwmp-continue")));
             }
 
             // "--dwmp-test-drag": a window moved and resized by made-up mouse
             // events, slowly and fast ("[drag]" lines).
             if (Has("--dwmp-test-drag"))
             {
-                StartTest(DragTest.Run());
+                StartTest(_host.Drag.Run());
             }
 
             // "--dwmp-test-tooltips DIR": once in a world, dump the items' and
@@ -823,7 +825,7 @@ namespace DarkwoodMP
             // a real mouse to drag ("[drag-real]" lines).
             if (Has("--dwmp-test-drag-real"))
             {
-                StartTest(DragTest.RunReal());
+                StartTest(_host.Drag.RunReal());
             }
 
             if (Arg("--dwmp-solo-test") is string solo)
@@ -861,7 +863,7 @@ namespace DarkwoodMP
                 steps.Stop();
             }
 
-            OptionsTest.RestoreIfCutShort();
+            _host.OptionsTest.RestoreIfCutShort();
             // The switches the map steps and the solo tests turn on, back to
             // how a player's game has them.
             CoopSession session = Coop.Current;
@@ -2151,7 +2153,8 @@ namespace DarkwoodMP
 
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
             _host.Cursor.LateUpdate(
-                MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
+                MenuWindows.AnyOpen || SkillsPanel.Open
+                    || _host.Drag.WindowOpen);
         }
 
         private static int _fpsCap;
@@ -2193,7 +2196,7 @@ namespace DarkwoodMP
 
             _host.MenuEntry.Update();
             _host.LoadProfiler.Frame();
-            TestControl.Update();
+            _host.Control.Update();
             // Over the game's menus, its buttons (and its Escape) would take
             // the clicks and keys meant for our windows.
             bool windows = MenuWindows.AnyOpen;
@@ -2393,7 +2396,7 @@ namespace DarkwoodMP
             // also alone: a dialogue's NPC can go away then too
             _host.Dialogues.Update();
 
-            TestWorld.Update();
+            _host.TestArea.Update();
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {
                 coop = Coop.Current;
@@ -2541,7 +2544,7 @@ namespace DarkwoodMP
 
         private void OnGUI()
         {
-            TestControl.OnGUI();
+            _host.Control.OnGUI();
             if (NameTagStyle == null)
             {
                 NameTagStyle = new GUIStyle(GUI.skin.label)
@@ -2554,7 +2557,7 @@ namespace DarkwoodMP
             }
 
             _host.Players.DrawNameTags();
-            TestWorld.DrawLabels();
+            _host.TestArea.DrawLabels();
             CoopSession watching = Coop.Current;
             if (watching != null)
             {
@@ -2564,10 +2567,11 @@ namespace DarkwoodMP
             _host.Progress.OnGUI();
             SkillsPanel.OnGUI();
             ShowSystemCursor(
-                MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
+                MenuWindows.AnyOpen || SkillsPanel.Open
+                    || _host.Drag.WindowOpen);
             if (!_showMenu && !_host.MenuList.Shown && !MenuWindows.AnyOpen)
             {
-                DragTest.OnGUI();
+                _host.Drag.OnGUI();
                 return;
             }
 
@@ -2588,7 +2592,7 @@ namespace DarkwoodMP
             MenuWindows.DrawAll();
             _host.Confirm.OnGUI();
             GUI.skin = skin;
-            DragTest.OnGUI();
+            _host.Drag.OnGUI();
         }
 
         /// <summary>
@@ -2765,18 +2769,18 @@ namespace DarkwoodMP
                 if (Ui.Button(r[0], label))
                 {
                     SetPanel(false);
-                    StartCoroutine(TestWorld.Start(_world, reset: false));
+                    StartCoroutine(_host.TestArea.Start(_world, reset: false));
                 }
 
                 if (TestWorld.Exists && Ui.Button(r[1], "Reset it"))
                 {
                     SetPanel(false);
-                    StartCoroutine(TestWorld.Start(_world, reset: true));
+                    StartCoroutine(_host.TestArea.Start(_world, reset: true));
                 }
 
-                if (TestWorld.Status != null)
+                if (_host.TestArea.Status != null)
                 {
-                    Ui.Text(f, TestWorld.Status);
+                    Ui.Text(f, _host.TestArea.Status);
                 }
 
                 return;
@@ -3089,7 +3093,13 @@ namespace DarkwoodMP
 
         private void OnApplicationQuit()
         {
-            OptionsTest.RestoreIfCutShort();
+            // No host when the core didn't load (TurnOff).
+            ModHost host = _host;
+            if (host != null)
+            {
+                host.OptionsTest.RestoreIfCutShort();
+            }
+
             // Our character goes to the host here, while the world is whole,
             // and only here: OnDestroy's Dispose leaves the session (which
             // waits for the TCP writers) without sending it again.

@@ -20,18 +20,18 @@ namespace DarkwoodMP
     /// (and Unity's GUI.DragWindow) can't be tried this way. Logs "[drag]"
     /// lines, ending with "[drag] done".
     /// </summary>
-    internal static class DragTest
+    internal sealed class DragTest
     {
-        private static void Log(string s) => Plugin.Log.LogInfo("[drag] " + s);
-        private static UiWindow _win;
-        private static readonly Queue<Event> _events = new Queue<Event>();
-        private static int _fails;
+        private void Log(string s) => Plugin.Log.LogInfo("[drag] " + s);
+        private UiWindow _win;
+        private readonly Queue<Event> _events = new Queue<Event>();
+        private int _fails;
 
         /// <summary>
         /// Called last in Plugin.OnGUI. One made-up event replaces each frame's
         /// Repaint, before the window takes it.
         /// </summary>
-        public static void OnGUI()
+        public void OnGUI()
         {
             if (_win == null || !_win.Open)
             {
@@ -61,7 +61,7 @@ namespace DarkwoodMP
             GUI.skin = skin;
         }
 
-        private static Event Mouse(EventType type, Vector2 at, Vector2 delta)
+        private Event Mouse(EventType type, Vector2 at, Vector2 delta)
         {
             int clicks = 0;
             if (type == EventType.MouseDown)
@@ -87,7 +87,7 @@ namespace DarkwoodMP
         /// the window is from where the mouse puts it, how many drag events
         /// came and the cursor's lock state ("[drag-real]" lines).
         /// </summary>
-        public static IEnumerator RunReal()
+        public IEnumerator RunReal()
         {
             while (!WorldShare.MainMenuReady())
             {
@@ -149,17 +149,17 @@ namespace DarkwoodMP
             Plugin.Log.LogInfo("[drag-real] done");
         }
 
-        private static bool _real;
+        private bool _real;
         /// <summary>
         /// The test window is open: the mouse cursor is shown over it as over
         /// the mod's other windows.
         /// </summary>
-        internal static bool WindowOpen => _win != null && _win.Open;
-        private static Vector2 _mouse;
-        private static int _drags;
-        private static Vector2 _lastEv;
+        internal bool WindowOpen => _win != null && _win.Open;
+        private Vector2 _mouse;
+        private int _drags;
+        private Vector2 _lastEv;
 
-        public static IEnumerator Run()
+        public IEnumerator Run()
         {
             while (!WorldShare.MainMenuReady())
             {

@@ -41,7 +41,7 @@ No. What is true:
 | none | NONE: neither the mod nor a test is known to handle it specifically. |
 | n/a | Doesn't apply to this thing. |
 
-What a two-game dump compare checks (`World/StateDump.cs`, `tools/tests/mapcompare.py`):
+What a two-game dump compare checks (`Testing/StateDump.cs` and `Testing/DumpSections.cs`, `tools/tests/mapcompare.py`):
 
 - `enemies`: per shared enemy, keyed by ObjRef: `alive`, `health` (hostile NPCs only), `loopSound`, `pos` (60 units
   tolerance); for corpses `searchable`, `walkThrough`, `loot`. An enemy only in the host's dump 3300 or more from the
@@ -308,7 +308,7 @@ to die there).
    `loc-noise`-style noise by the client and assert damage from `EnemyAreaHits`; for the banshee, a client step that
    asserts the scream's `EnemyFx` effect was shown.
 5. **Enemy facing.** A corpse or an immobile enemy facing the wrong way stays wrong. Test: add `yaw` to the
-   `enemies` section (`StateDump.cs`) and a tolerance in `mapcompare.py` (`FIELD_TOL["yaw"]`, e.g. 30 degrees for
+   `enemies` section (`DumpSections.cs`) and a tolerance in `mapcompare.py` (`FIELD_TOL["yaw"]`, e.g. 30 degrees for
    enemies in play, 5 for corpses); the infected villagers' `ee-check` also compares the copy's yaw with the host's.
 6. **Fire at the join and fire's course.** Fire changes doors, furniture and health over time, and a late joiner's
    copy of a burning thing is untested. Test: PRE_JOIN `door-burn 3` and `throw-molotov Wardrobe_Big_1`; AT_JOIN
@@ -341,9 +341,9 @@ wait for doesn't happen (`combattest.py` could exit 1 unless everything in UNTIL
 
 - Steps: `src/DarkwoodMP/World/MapScenario*.cs` (`r.Fail` conditions), scenarios: `tools/tests/map_scenario*.py`,
   `map4_scenario.py`, `map4_multi.py`.
-- Dumps and compare: `src/DarkwoodMP/World/StateDump.cs`, the `AddSection` calls in `MapScenarioGaps.cs`,
+- Dumps and compare: `src/DarkwoodMP/Testing/DumpSections.cs`, the `AddSection` calls in `MapScenarioGaps.cs`,
   `MapScenarioIssues.cs`, `MapScenarioNight.cs`, `MapScenarioFixChecks.cs`; `tools/tests/mapcompare.py`.
 - Scripted tests: `tools/run-test.sh` (the `check` function: exceptions and saves only), `tools/tests/*.py`,
-  `src/DarkwoodMP/World/WorldTest.cs`.
+  `src/DarkwoodMP/Testing/WorldTest.cs`.
 - Enemy replication: `src/DarkwoodMP/Combat/Enemies/NetEnemies.cs`. Kinds: the game's `CharacterType` enum.
 - Status claims: `README.md`, `docs/INTERACTIONS.md`, `docs/MULTIPLAYER_ENGINEERING_LEDGER.md`, `git log`.

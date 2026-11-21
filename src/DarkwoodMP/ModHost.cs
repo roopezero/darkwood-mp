@@ -223,6 +223,23 @@ namespace DarkwoodMP
             Options = new OptionsWindow();
         }
 
+        /// The test control's connection and commands
+        /// (--dwmp-test-control), at the main menu too.
+        internal readonly TestControl Control = new TestControl();
+
+        /// The test world's loading, its area and labels (World.TestArea).
+        internal readonly World.TestArea TestArea = new World.TestArea();
+
+        /// The world dump's sections (World.StateDump), with those the map
+        /// test steps added.
+        internal readonly World.DumpSections Dump = new World.DumpSections();
+
+        /// The options window test (--dwmp-test-options).
+        internal readonly OptionsTest OptionsTest = new OptionsTest();
+
+        /// The window drag tests (--dwmp-test-drag, --dwmp-test-drag-real).
+        internal readonly DragTest Drag = new DragTest();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)

@@ -101,6 +101,6 @@ A full pass is `tools/run-test.sh full` (`all`, 28 tests, about 12 minutes, then
 
 ## Adding a test
 
-- **Host side:** add a step to `World/WorldTest.cs` (it runs once a player has joined) or a `--dwmp-test-*` argument in `Plugin.cs`. Then decode the new message type in `tools/tests/worldobs.py` (or `combattest.py`), and add a case to `tools/run-test.sh`.
+- **Host side:** add a step to `Testing/WorldTest.cs` (it runs once a player has joined) or a `--dwmp-test-*` argument in `Plugin.cs`. Then decode the new message type in `tools/tests/worldobs.py` (or `combattest.py`), and add a case to `tools/run-test.sh`.
 - **Client side:** teach `worldtest.py serve` to send it (or replay it from a recording), and check the game's `[world]` debug lines.
 - Remember the scripts are a second implementation of the protocol, so keep them in step with `MsgType` in `src/DarkwoodMP.Core/Net/MsgType.cs`.

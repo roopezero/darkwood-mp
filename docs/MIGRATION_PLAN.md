@@ -641,7 +641,14 @@ Finish with `tools/run-test.sh full`.
         no messages. `WideScreen`'s two patches run with no session, as the
         zoom matters alone too; it has no core rules. `CursorLock` and
         `RealMouse` keep no state and stay static.
-- [ ] 8.2 The in-game test code left in the plugin.
+- [x] 8.2 The in-game test code left in the plugin. Done: it is in
+      `src/DarkwoodMP/Testing`, namespaces unchanged, and stays in the plugin
+      (its --dwmp-* tests and DoorPush use it, not only the map steps). Its
+      state is on `ModHost` (`Control`, `TestArea`, `Dump`, `OptionsTest`,
+      `Drag`), since the tests start at the main menu; `TestWorld` and
+      `StateDump` keep static methods with no state, so the map steps didn't
+      change. It has no messages, rules or patches, so steps 3, 4 and 6 had
+      nothing to do. `WorldTest` is a partial class over six files.
 - [ ] 8.3 Split `Plugin.cs` into startup, settings, test arguments and the
       panel. Remove `Session.Instance` and the other `Instance` singletons.
 - [x] Turn style warnings into errors for the whole plugin.
