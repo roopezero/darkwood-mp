@@ -1,12 +1,11 @@
 using System.Collections.Generic;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using DarkwoodMP.World.Story;
 using HarmonyLib;
 using UnityEngine;
 using DreamSync = DarkwoodMP.World.Dreaming.DreamSync;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Story
 {
     /// <summary>
     /// The prologue is played together. In Darkwood it isn't a chapter of its
@@ -47,7 +46,7 @@ namespace DarkwoodMP.World
     /// the prologue. At the end, each joiner is moved to a free spot beside the
     /// hideout's start, off the host.
     /// </summary>
-    public static class Prologue
+    internal sealed class Prologue
     {
         private static Session S => Session.Instance;
         private static Dreams D => Singleton<Dreams>.Instance;
@@ -57,7 +56,6 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// The only code reading the game's Dreams for the rules.
-        /// Transition isn't read: no prologue rule looks at it.
         /// </summary>
         internal static DreamFacts DreamsOf(Dreams d)
         {
@@ -82,6 +80,8 @@ namespace DarkwoodMP.World
                 Prepared = d.dreamPrepared,
                 Switching = d.switchingDream,
                 Wanted = d.wantToDream,
+                Transition = d.currentTransition != null
+                    && d.currentTransition.isPlaying,
                 HasPreset = d.preset != null,
                 Preset = preset,
                 TrueName = trueName,
@@ -120,10 +120,10 @@ namespace DarkwoodMP.World
                 + $"loading {Core.loadingGame}";
         }
 
-        private static string _lastWhy;
+        private string _lastWhy;
 
         /// <summary>Host: log why joiners wait, when it changes.</summary>
-        internal static void NoteWait(string why)
+        internal void NoteWait(string why)
         {
             if (why == _lastWhy)
             {
@@ -148,7 +148,7 @@ namespace DarkwoodMP.World
         /// saved going into the stage we're in, so the joiner's game goes into
         /// it as it loads (SaveManager.Load: Dreams.wantToDream).
         /// </summary>
-        internal static void ForSnapshot(Dreams.SaveState state, Dreams d)
+        internal void ForSnapshot(Dreams.SaveState state, Dreams d)
         {
             if (!PrologueRules.Snapshots(WorldShare.Snapshotting, DreamsOf(d)))
             {
@@ -177,7 +177,7 @@ namespace DarkwoodMP.World
         /// into a level dream. What happened in the host's copy of the stage
         /// stays the host's.
         /// </summary>
-        internal static void ForSnapshot(OutsideLocations.SaveState state)
+        internal void ForSnapshot(OutsideLocations.SaveState state)
         {
             var d = D;
             if (!PrologueRules.Snapshots(WorldShare.Snapshotting, DreamsOf(d)))
@@ -242,13 +242,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static bool _firstPlaySet;
-        private static bool _loaded;
-        private static Seconds _loadedAt;
-        private static float _nextWhy;
+        private bool _firstPlaySet;
+        private bool _loaded;
+        private Seconds _loadedAt;
+        private float _nextWhy;
 
         /// <summary>Call every frame.</summary>
-        public static void Update()
+        public void Update()
         {
             if (S == null || !S.Active || !WorldShare.InWorld)
             {
@@ -369,10 +369,24 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// The true name of the dream that is ending, read before
+        /// Dreams.endDreaming (null: not dreaming).
+        /// </summary>
+        internal static string Ending(Dreams d)
+        {
+            if (d.dreaming && d.preset != null)
+            {
+                return Core.getTrueLocationName(d.preset.name);
+            }
+
+            return null;
+        }
+
+        /// <summary>
         /// Dreams.endDreaming has run: the prologue's end puts a joiner beside
         /// the hideout's start, off the host.
         /// </summary>
-        internal static void AfterEnd(Dreams d, string ended)
+        internal void AfterEnd(Dreams d, string ended)
         {
             if (!PrologueRules.EndsPrologue(ended, d != null,
                 d != null && d.dreaming))
@@ -408,42 +422,5 @@ namespace DarkwoodMP.World
                 Characters.PlaceFree(p, spawn.transform.position);
             }
         }
-    }
-
-    [HarmonyPatch(
-        typeof(Dreams.SaveState), MethodType.Constructor,
-        new[] { typeof(Dreams) })]
-    static class PrologueSnapshotPatch
-    {
-        static void Postfix(Dreams.SaveState __instance, Dreams dreams) =>
-            Prologue.ForSnapshot(__instance, dreams);
-    }
-
-    [HarmonyPatch(
-        typeof(OutsideLocations.SaveState), MethodType.Constructor,
-        new[] { typeof(OutsideLocations) })]
-    static class PrologueSnapshotPlacePatch
-    {
-        static void Postfix(OutsideLocations.SaveState __instance) =>
-            Prologue.ForSnapshot(__instance);
-    }
-
-    [HarmonyPatch(typeof(Dreams), nameof(Dreams.endDreaming))]
-    static class PrologueEndPatch
-    {
-        static void Prefix(Dreams __instance, out string __state)
-        {
-            if (__instance.dreaming && __instance.preset != null)
-            {
-                __state = Core.getTrueLocationName(__instance.preset.name);
-            }
-            else
-            {
-                __state = null;
-            }
-        }
-
-        static void Postfix(Dreams __instance, string __state) =>
-            Prologue.AfterEnd(__instance, __state);
     }
 }

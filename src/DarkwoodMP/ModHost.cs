@@ -105,6 +105,10 @@ namespace DarkwoodMP
         /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
         internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
 
+        /// For tests ("--dwmp-test-quick-end"): skip the epilogue and the
+        /// credits as soon as they start, also after leaving the session.
+        public bool TestQuickEnd;
+
         /// The shared essence and levels, and the stove's skill reset: also
         /// playing alone. A session adds its messages (Progression.Join).
         public readonly World.Progress.Progression Progress;

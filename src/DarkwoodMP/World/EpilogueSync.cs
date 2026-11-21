@@ -6,6 +6,7 @@ using DarkwoodMP.Net;
 using HarmonyLib;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 
 namespace DarkwoodMP.World
 {
@@ -207,7 +208,7 @@ namespace DarkwoodMP.World
         private static PacketWriter GameEnd(byte phase)
         {
             var w = S.Begin(MsgType.GameEnd);
-            w.W.Write((byte)Chapters.EndKind.Epilogue);
+            w.W.Write((byte)Story.EndKind.Epilogue);
             w.W.Write(phase);
             return w;
         }
@@ -232,7 +233,7 @@ namespace DarkwoodMP.World
                 "[epilogue] the host starts the epilogue: the players in its "
                     + "world play it too");
             S.Broadcast(GameEnd(0), Channel.Control, reliable: true);
-            if (Chapters.TestQuick)
+            if (Plugin.Instance.Host.TestQuickEnd)
             {
                 Plugin.Instance.StartCoroutine(TestHostQuick());
             }
@@ -710,7 +711,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool OnGameEnd(byte kind, byte phase)
         {
-            if (kind != (byte)Chapters.EndKind.Epilogue)
+            if (kind != (byte)Story.EndKind.Epilogue)
             {
                 return false;
             }
@@ -814,7 +815,7 @@ namespace DarkwoodMP.World
                 "[epilogue] the epilogue didn't start here: leaving, the end "
                     + "screen instead");
             Playing = false;
-            Chapters.SoloEnding(Chapters.EndKind.EndScreen);
+            Chapters.SoloEnding(Story.EndKind.EndScreen);
         }
 
         /// <summary>

@@ -6,6 +6,7 @@ using System.Linq;
 using BepInEx;
 using DarkwoodMP.Net;
 using UnityEngine;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 
 namespace DarkwoodMP.World
 {

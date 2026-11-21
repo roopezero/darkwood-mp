@@ -5,6 +5,7 @@ using System.Runtime.CompilerServices;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Hideout;
 using UnityEngine;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using UnityEngine.SceneManagement;
 
 namespace DarkwoodMP.World.Scripted

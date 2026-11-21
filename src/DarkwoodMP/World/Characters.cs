@@ -8,6 +8,8 @@ using DarkwoodMP.Net;
 using HarmonyLib;
 using Newtonsoft.Json;
 using UnityEngine;
+using Chapters = DarkwoodMP.World.Story.Chapters;
+using Prologue = DarkwoodMP.World.Story.Prologue;
 
 namespace DarkwoodMP.World
 {

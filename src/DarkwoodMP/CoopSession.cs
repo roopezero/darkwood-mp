@@ -201,6 +201,12 @@ namespace DarkwoodMP
         /// What the host's night events put into the world.
         public readonly World.Nights.NightObjects Nights;
 
+        /// The prologue's stages, played together.
+        public readonly World.Story.Prologue Prologue;
+
+        /// New chapters and the game's end, which the host's game starts.
+        public readonly World.Story.Chapters Chapters;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -271,6 +277,8 @@ namespace DarkwoodMP
             Porter = new World.Hideout.Porter(this);
             Ovens = new World.Hideout.Ovens(this);
             Nights = new World.Nights.NightObjects(this);
+            Prologue = new World.Story.Prologue();
+            Chapters = new World.Story.Chapters(this);
             // the progression lives as long as the game (ModHost.Progress);
             // this session brings its messages and forgets its record
             Plugin.Instance.Host.Progress.Join(this);

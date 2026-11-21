@@ -168,7 +168,7 @@ namespace DarkwoodMP.Combat
             bool inDream = dreaming
                 && go.transform.IsChildOf(d.dreamLocation.transform);
             bool own = inDream && (DreamSync.SharedNow == null
-                || World.Prologue.IsStage(DreamSync.SharedNow));
+                || World.Story.Prologue.IsStage(DreamSync.SharedNow));
             if (inDream && own)
             {
                 return new LocalFacts

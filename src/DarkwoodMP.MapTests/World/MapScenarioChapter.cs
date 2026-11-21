@@ -2,6 +2,7 @@ using System.Collections;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using DarkwoodMP.World.Places;
 using Object = UnityEngine.Object;
 using static DarkwoodMP.World.MapScenario;
@@ -89,6 +90,16 @@ namespace DarkwoodMP.World
 
         private static int Chapter => Chapters.HostChapter;
 
+        /// The host's next chapter is being built (false with no session).
+        private static bool Generating
+        {
+            get
+            {
+                CoopSession coop = Coop.Current;
+                return coop != null && coop.Chapters.Generating;
+            }
+        }
+
         private static IEnumerator Mark(string[] a, Result r)
         {
             _logFrom = MapScenarioIssues.LogMark();
@@ -168,7 +179,7 @@ namespace DarkwoodMP.World
 
             while (Chapter != 2
                 || SceneManager.GetActiveScene().name != "chapter2"
-                || !WorldShare.WorldReady || Chapters.Generating)
+                || !WorldShare.WorldReady || Generating)
             {
                 yield return new WaitForSecondsRealtime(0.5f);
             }

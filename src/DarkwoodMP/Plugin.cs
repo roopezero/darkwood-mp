@@ -12,6 +12,7 @@ using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
 using HarmonyLib;
+using Chapters = DarkwoodMP.World.Story.Chapters;
 using UnityEngine;
 
 namespace DarkwoodMP
@@ -439,7 +440,6 @@ namespace DarkwoodMP
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             WorldActions.Register(_host.Session);
             _characters = new Characters(_host.Session);
-            Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             UpdateLocalName();
 
@@ -692,7 +692,7 @@ namespace DarkwoodMP
 
             // "--dwmp-test-quick-end": as a joiner, skip the epilogue and the
             // credits soon after they start.
-            Chapters.TestQuick = Has("--dwmp-test-quick-end");
+            _host.TestQuickEnd = Has("--dwmp-test-quick-end");
             // "--dwmp-test-save N": N seconds after a player joins, the host's
             // game saves (as at dawn), writing their characters.
             if (Seconds("--dwmp-test-save", out float saveAfter))
@@ -888,7 +888,7 @@ namespace DarkwoodMP
             Threat.Debug = false;
             WorldActions.Debug = false;
             LoadSpeed.Verify = false;
-            Chapters.TestQuick = false;
+            _host.TestQuickEnd = false;
             _spawnType = null;
             _testPresence = false;
             TcpBackend.TestMaxPlayers = 0;
@@ -2342,7 +2342,12 @@ namespace DarkwoodMP
 
             JoinScreen.Update(_host.Session, _world);
             LoadingScreen.Update();
-            Chapters.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Chapters.Update();
+            }
+
             _host.Progress.Update();
             SkillsPanel.Update(_showMenu);
             coop = Coop.Current;
@@ -2351,7 +2356,12 @@ namespace DarkwoodMP
                 coop.Dreaming.Update();
             }
 
-            Prologue.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Prologue.Update();
+            }
+
             coop = Coop.Current;
             if (coop != null)
             {

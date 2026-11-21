@@ -369,7 +369,7 @@ namespace DarkwoodMP
                 // the far-off grid, World.Prologue).
                 if (last != null
                     && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away)
-                        || World.Prologue.InStage))
+                        || World.Story.Prologue.InStage))
                 {
                     n++;
                 }
