@@ -325,8 +325,18 @@ join on the GOG build.
       `Refuse(string)` and the core's `Refusal.Words`, which goes once the
       last of them has moved. The message classes are `RequestMessage` and
       `VerdictMessage`, since `Request` and `Verdict` were taken. No patches.
-- [ ] **4.4 Object names.** `ObjRef` is used by about 50 files, and its lookup
-      order becomes a unit-tested rule.
+- [x] **4.4 Object names.** `ObjRef` is used by about 50 files, and its lookup
+      order becomes a unit-tested rule. Done: `ObjRef` keeps its static
+      methods, so its callers didn't change; they reach the session's
+      tables (`ObjNames`, `CoopSession.Names`) through `Coop.Current`, and
+      with no session an empty `ModHost.AloneNames` that keeps nothing.
+      `HostIds` is a session instance; `SharedIds` keeps no state: the save
+      counters are on `ModHost` (`SaveIds`, the host saves before it hosts)
+      and the joiners' on `CoopSession` (`Joiners`). The `HostIds` message's
+      bytes are the core's `HostIdsMessage`, named apart from the plugin's
+      class. The files stay at `World/`, the same path in both projects,
+      since a `World/Names` folder would change the namespace of every
+      caller.
 - [ ] **4.5 Guards.** Move `Depth`, `Outermost()`, `Replaying` and `Sharing` out
       of `WorldActions` into one instance, since every later subsystem uses
       them. `Sharing` is false when there's no session.

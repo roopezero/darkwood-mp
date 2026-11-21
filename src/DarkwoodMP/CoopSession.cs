@@ -28,6 +28,15 @@ namespace DarkwoodMP
         /// The host's say over what a client's player does to the world.
         public readonly World.Authority Authority;
 
+        /// The tables ObjRef names objects by.
+        public readonly ObjNames Names;
+
+        /// Ids the host gives to what the world made by itself.
+        public readonly HostIds HostIds;
+
+        /// Host: the save id counters of the joiners let in to the world.
+        public readonly JoinerSaveIds Joiners;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -38,6 +47,9 @@ namespace DarkwoodMP
             // Subsystems are made here, before the first message can arrive.
             Moves = new Sync.MoveCheck(this);
             Authority = new World.Authority(this);
+            Names = new ObjNames(this);
+            HostIds = new HostIds(this);
+            Joiners = new JoinerSaveIds();
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

@@ -1,6 +1,3 @@
-using DarkwoodMP.Net;
-using HarmonyLib;
-
 namespace DarkwoodMP.World
 {
     /// <summary>
@@ -27,63 +24,36 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class SharedIds
     {
-        private static Session _session;
-        // the counter in the last save this game loaded
-        private static int _loaded;
-        // ... in the last save this game wrote to its own save folder
-        private static int _saved;
-        // ... in the last snapshot the host wrote for a joiner
-        private static int _snapshot;
-        // host: over the joiners let in to this world
-        private static int _hostMin = int.MaxValue, _hostMax;
-        // ... which is this loaded scene (its handle)
-        private static int _hostScene;
-
-        private static int Scene =>
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-
-        public static void Init(Session session)
-        {
-            _session = session;
-            session.OnSessionEnded += ResetHost;
-        }
-
         /// <summary>
         /// Save ids below this are named as Saved in refs this game sends.
         /// </summary>
-        public static int SendLimit
-        {
-            get
-            {
-                if (_session != null && _session.IsHost)
-                {
-                    if (_hostMax == 0)
-                    {
-                        return 0;
-                    }
-
-                    return _hostMin;
-                }
-
-                return _loaded;
-            }
-        }
+        public static int SendLimit => SharedIdRules.SendLimit(FactsOf());
 
         /// <summary>
         /// Saved refs that come in with an id below this are looked up; others
         /// are dropped.
         /// </summary>
-        public static int ResolveLimit
-        {
-            get
-            {
-                if (_session != null && _session.IsHost)
-                {
-                    return _hostMax;
-                }
+        public static int ResolveLimit =>
+            SharedIdRules.ResolveLimit(FactsOf());
 
-                return _loaded;
+        // The save counters live as long as the game (ModHost.SaveIds), the
+        // joiners' as long as the session (CoopSession.Joiners).
+        private static SaveIdCounters Counters => Plugin.Instance.Host.SaveIds;
+
+        private static IdLimitFacts FactsOf()
+        {
+            CoopSession coop = Coop.Current;
+            var facts = new IdLimitFacts { Loaded = Counters.Loaded };
+            if (coop == null)
+            {
+                return facts;
             }
+
+            return facts with
+            {
+                Host = coop.Net.IsHost,
+                Joiners = coop.Joiners.Ids,
+            };
         }
 
         /// <summary>
@@ -92,12 +62,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static int CounterOf(bool fromSnapshot)
         {
-            if (fromSnapshot)
-            {
-                return _snapshot;
-            }
-
-            return _saved;
+            return Counters.CounterOf(fromSnapshot);
         }
 
         /// <summary>
@@ -105,30 +70,11 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Joined(ulong peer, int n)
         {
-            if (n <= 0)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                return;
+                coop.Joiners.Joined(peer, n);
             }
-
-            if (_hostScene != Scene)
-            {
-                // joiners let in to an earlier world don't count here
-                ResetHost();
-            }
-
-            if (n < _hostMin)
-            {
-                _hostMin = n;
-            }
-
-            if (n > _hostMax)
-            {
-                _hostMax = n;
-            }
-
-            Plugin.Log.LogInfo(
-                $"#{peer} joined with save ids below {n}; save ids below "
-                    + $"{_hostMin} are shared with every player");
         }
 
         /// <summary>
@@ -137,73 +83,41 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void ResetHost()
         {
-            _hostMin = int.MaxValue;
-            _hostMax = 0;
-            _hostScene = Scene;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Joiners.Reset();
+            }
         }
 
         internal static void OnLoaded(int n)
         {
-            _loaded = n;
-            _saved = n;
-            Plugin.Log.LogInfo(
-                $"Loaded a world whose save id counter is at {n}");
+            Counters.OnLoaded(n);
         }
 
         internal static void OnSaved(int n)
         {
-            if (WorldShare.Snapshotting)
-            {
-                _snapshot = n;
-            }
-            else
-            {
-                _saved = n;
-            }
+            Counters.OnSaved(n);
         }
-    }
 
-    // SaveManager.SaveState's own methods are one line each, and Mono inlines
-    // them, so a patch on them never runs. The counter is read around them
-    // instead.
+        /// <summary>
+        /// SaveManager.Save has written the counter (SharedIdPatches).
+        /// </summary>
+        internal static void Saved(SaveManager sm)
+        {
+            OnSaved(sm.currentUniqueID);
+        }
 
-    /// <summary>
-    /// The counter as a save writes it: SaveManager.Save gives out the new ids,
-    /// then writes the counter, all before it returns.
-    /// </summary>
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save), new[]
-    {
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool),
-        typeof(bool)
-    })]
-    static class SaveIdCounterSavedPatch
-    {
-        static void Postfix(SaveManager __instance) =>
-            SharedIds.OnSaved(__instance.currentUniqueID);
-    }
-
-    /// <summary>
-    /// The counter as a loaded save sets it: the loading coroutine sets it
-    /// (SaveState.loadValues) just before it loads the player
-    /// (Player.SaveState.loadValues). Characters.cs calls that too, outside
-    /// loading.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Player.SaveState), nameof(Player.SaveState.loadValues),
-        new[] { typeof(bool) })]
-    static class SaveIdCounterLoadedPatch
-    {
-        static void Prefix(bool onlyState)
+        /// <summary>
+        /// Player.SaveState.loadValues is about to run (SharedIdPatches): while
+        /// a save loads, the counter it set just before.
+        /// </summary>
+        internal static void LoadingPlayer(bool onlyState)
         {
             var sm = Singleton<SaveManager>.Instance;
             if (!onlyState && Core.loadingGame && sm != null)
             {
-                SharedIds.OnLoaded(sm.currentUniqueID);
+                OnLoaded(sm.currentUniqueID);
             }
         }
     }

@@ -470,7 +470,6 @@ namespace DarkwoodMP
             Construction.Register(_host.Session);
             ScriptedEvents.Register(_host.Session);
             Hideouts.Register(_host.Session);
-            HostIds.Register(_host.Session);
             NightObjects.Register(_host.Session);
             TalkLock.Register(_host.Session);
             Progression.Register(_host.Session);
@@ -2291,7 +2290,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("fuel");
             _events.Update();
             ModProfiler.Mark("events");
-            HostIds.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.HostIds.Update();
+            }
+
             ModProfiler.Mark("host ids");
             NightObjects.Update();
             ModProfiler.Mark("night objects");

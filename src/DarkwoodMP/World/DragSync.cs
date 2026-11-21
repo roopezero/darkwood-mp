@@ -1049,7 +1049,12 @@ namespace DarkwoodMP.World
             {
                 if (s.IsClient && last && obj.K == ObjRef.Kind.Spawned)
                 {
-                    HostIds.HostMoved(obj.Id, pos); // for when our copy is tied
+                    // for when our copy is tied
+                    CoopSession coop = Coop.Current;
+                    if (coop != null)
+                    {
+                        coop.HostIds.HostMoved(obj.Id, pos);
+                    }
                 }
 
                 if (WorldActions.Debug)
