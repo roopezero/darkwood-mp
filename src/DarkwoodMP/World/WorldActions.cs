@@ -145,13 +145,9 @@ namespace DarkwoodMP.World
         public static void ResetDepth() => Depth = 0;
         public static bool Outermost()
         {
-            if (--Depth > 0)
-            {
-                return false;
-            }
-
-            Depth = 0;
-            return true;
+            bool outermost = GuardRules.IsOutermost(Depth);
+            Depth = GuardRules.Leave(Depth);
+            return outermost;
         }
 
         private static Session S => Session.Instance;
@@ -164,9 +160,35 @@ namespace DarkwoodMP.World
         /// each (WorldShare.Loading).
         /// </summary>
         public static bool Sharing =>
-            S != null && !Replaying && WorldShare.InWorld
-                && !WorldShare.Loading
-                && ((S.IsHost && S.Peers.Count > 0) || NetEnemies.ClientMode);
+            S != null && GuardRules.Sharing(FactsOf(S));
+
+        /// <summary>
+        /// Reads the game in the order the rule looks, and no further than
+        /// it needs: Loading asks the game's SaveManager singleton, which is
+        /// left alone at the main menu.
+        /// </summary>
+        private static GuardFacts FactsOf(Session s)
+        {
+            var facts = new GuardFacts { Replaying = Replaying };
+            if (facts.Replaying)
+            {
+                return facts;
+            }
+
+            facts = facts with { InWorld = WorldShare.InWorld };
+            if (!facts.InWorld)
+            {
+                return facts;
+            }
+
+            return facts with
+            {
+                Loading = WorldShare.Loading,
+                Host = s.IsHost,
+                Peers = s.Peers.Count,
+                Client = NetEnemies.ClientMode,
+            };
+        }
 
         public static void Register(Session s)
         {
