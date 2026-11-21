@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Pause;
 using HarmonyLib;
 using UnityEngine;
 
@@ -26,9 +27,7 @@ namespace DarkwoodMP.World
         {
             get
             {
-                var s = Net.Session.Instance;
-                return s != null && s.Active && s.Connected
-                    && WorldShare.InWorld && (s.IsClient || s.Peers.Count > 0);
+                return PauseRules.InCoop(CoopOf(Net.Session.Instance));
             }
         }
 
@@ -39,28 +38,62 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Update()
         {
-            if (!InCoop || !Core.Paused)
+            var facts = new PauseFacts
             {
-                return;
+                InCoop = InCoop,
+                Paused = Core.Paused,
+            };
+
+            // the player is looked at only when the rules will
+            Player p = Player.Instance;
+            Rigidbody rb = null;
+            if (facts.InCoop && facts.Paused && p != null && p.alive)
+            {
+                rb = p.GetComponent<Rigidbody>();
             }
 
-            if (Time.timeScale == 0f)
+            PauseTick tick = PauseRules.Tick(FactsOf(facts, p, rb));
+            if (tick.Unfreeze)
             {
                 Plugin.Log.LogInfo(
                     "Co-op: the game was paused; it runs on while others play");
-                Core.setTimeScale(1f);
-                AudioController.UnpauseAll(0.5f);
+                Core.setTimeScale(PauseRules.Normal);
+                AudioController.UnpauseAll(PauseRules.SoundFade);
             }
 
-            var p = Player.Instance;
-            if (p != null && p.alive)
+            if (tick.StandStill)
             {
-                var rb = p.GetComponent<Rigidbody>();
-                if (rb != null && !rb.isKinematic)
-                {
-                    rb.velocity = Vector3.zero;
-                }
+                rb.velocity = Vector3.zero;
             }
+        }
+
+        private static CoopFacts CoopOf(Net.Session s)
+        {
+            if (s == null)
+            {
+                return default;
+            }
+
+            return new CoopFacts
+            {
+                Active = s.Active,
+                Connected = s.Connected,
+                InWorld = WorldShare.InWorld,
+                IsClient = s.IsClient,
+                Peers = s.Peers.Count,
+            };
+        }
+
+        private static PauseFacts FactsOf(
+            PauseFacts facts, Player p, Rigidbody rb)
+        {
+            return facts with
+            {
+                TimeScale = Time.timeScale,
+                Alive = p != null && p.alive,
+                HasBody = rb != null,
+                Kinematic = rb != null && rb.isKinematic,
+            };
         }
     }
 
@@ -69,7 +102,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix()
         {
-            if (!CoopPause.InCoop)
+            if (PauseRules.RunsGamePause(CoopPause.InCoop))
             {
                 return true;
             }
@@ -89,10 +122,7 @@ namespace DarkwoodMP.World
     {
         static void Prefix(ref float _timeScale)
         {
-            if (_timeScale > 0f && _timeScale != 1f && CoopPause.InCoop)
-            {
-                _timeScale = 1f;
-            }
+            _timeScale = PauseRules.TimeScaleFor(_timeScale, CoopPause.InCoop);
         }
     }
 
@@ -107,7 +137,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(ref System.Collections.IEnumerator __result)
         {
-            if (!CoopPause.InCoop)
+            if (PauseRules.RunsScriptedSlowMotion(CoopPause.InCoop))
             {
                 return true;
             }
