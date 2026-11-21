@@ -445,9 +445,6 @@ namespace DarkwoodMP
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             SaveRedirect.Init();
             WorldTeardown.Init();
-            PlayerDamage.Register(_host.Session);
-            EnemyAreaHits.Register(_host.Session);
-            EnemyFx.Register(_host.Session);
             AfterNight.Register(_host.Session);
             _enemies = new NetEnemies(_host.Session);
             WorldActions.Register(_host.Session);
@@ -466,7 +463,6 @@ namespace DarkwoodMP
             Chapters.Register(_host.Session);
             EpilogueSync.Register(_host.Session);
             EnemyLandings.Register(_host.Session);
-            _host.Session.OnSessionEnded += EnemyAreaHits.Clear;
             UpdateLocalName();
 
             _harmony = new Harmony(PluginInfo.Guid);
@@ -2307,7 +2303,12 @@ namespace DarkwoodMP
             ModProfiler.Mark("host ids");
             NightObjects.Update();
             ModProfiler.Mark("night objects");
-            EnemyFx.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.EnemyFx.Update();
+            }
+
             ModProfiler.Mark("enemy fx");
             _world.Update();
             ModProfiler.Mark("world");
@@ -2362,7 +2363,7 @@ namespace DarkwoodMP
             if (WorldShare.InWorld && !_wasInWorld) // a new world
             {
                 Spectator.Reset();
-                EnemyAreaHits.Clear();
+                _host.Spawns.Clear();
             }
 
             _wasInWorld = WorldShare.InWorld;

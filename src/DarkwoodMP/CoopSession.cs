@@ -105,6 +105,15 @@ namespace DarkwoodMP
         /// Host: how much of the world each joiner's game keeps running.
         public readonly Combat.ViewRects Views;
 
+        /// Client: the host's enemies' hits on our player.
+        public readonly Combat.PlayerDamage Damage;
+
+        /// Client: the host's enemies' explosions, seen and heard here.
+        public readonly Combat.EnemyExplosions Explosions;
+
+        /// What the host's enemies do that a joiner sees or hears.
+        public readonly Combat.EnemyFx EnemyFx;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -145,6 +154,9 @@ namespace DarkwoodMP
             Switches = new World.SwitchSync(this);
             NpcDeaths = new World.NpcDeaths(this);
             Views = new Combat.ViewRects(this);
+            Damage = new Combat.PlayerDamage(this);
+            Explosions = new Combat.EnemyExplosions(this);
+            EnemyFx = new Combat.EnemyFx(this);
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

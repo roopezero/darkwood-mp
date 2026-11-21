@@ -58,6 +58,10 @@ namespace DarkwoodMP
         public readonly World.Doors.DoorLeaf Leaves =
             new World.Doors.DoorLeaf();
 
+        /// What the host's enemies and our player's weapon spawned, also
+        /// alone (the test dummy is hurt with no session).
+        internal readonly Combat.AreaSpawns Spawns = new Combat.AreaSpawns();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
@@ -83,6 +87,7 @@ namespace DarkwoodMP
             // the start runs, and is gone before the others' cleanups.
             Session.OnSessionStarted += StartCoop;
             Session.OnSessionEnded += Coop.End;
+            Session.OnSessionEnded += Spawns.Clear;
         }
 
         /// The Steam backend once Steam is up; null before that and on GOG.

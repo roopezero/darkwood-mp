@@ -426,6 +426,17 @@ Finish with `tools/run-test.sh full`.
   - [ ] Part b: `JoinerAiPatches`, `JoinerSight`, `WardPatches`,
         `ShadowArmorLight`, `PlayerCues`.
 - [ ] 6.3 Damage. `DamageCap` becomes a rule.
+  - [x] Part a: `DamageCap`, `PlayerDamage`, `EnemyAreaHits`, `EnemyFx`.
+        `WeaponCaps` gives `WeaponRules.DamageCap` its facts.
+        `PlayerDamage`, `EnemyFx` and `EnemyExplosions` (the client's side
+        of `EnemyAreaHits`) are `CoopSession.Damage`, `.EnemyFx` and
+        `.Explosions`, in `Combat/Damage` and `Combat/Effects` with the
+        namespace `DarkwoodMP.Combat`, so callers didn't change. The spawn
+        sets are `ModHost.Spawns` and `EnemyAreaHits` stays static: the
+        test dummy is hurt with no session. Effects travel as the core's
+        `SentEffects`, which `NetEnemies` and `HostileNpcs` use too.
+  - [ ] Part b: `CombatPatches` (melee on stand-ins, client hits, cut in
+        half, threat, culling, freezing, noise and flee patches).
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
 
