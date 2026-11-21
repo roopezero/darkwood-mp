@@ -313,14 +313,22 @@ namespace DarkwoodMP.World
         /// otherwise be in the starting point already, so the take would never
         /// be sent and the item would stay in the container too (doubled).
         /// </summary>
-        internal void OpenedNow()
+        internal void OpenedNow(Inventory inv)
         {
-            if (!Sharing)
+            if (inv == null || !Sharing)
             {
                 return;
             }
 
-            Poll();
+            try
+            {
+                Poll();
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning(
+                    $"Container open check failed: {e.Message}");
+            }
         }
 
         private void Poll()
@@ -1070,6 +1078,11 @@ namespace DarkwoodMP.World
         /// </summary>
         public void MadeFrom(Object prefab, GameObject go)
         {
+            if (_makingDepth > 0)
+            {
+                return;
+            }
+
             var step = SpawnRules.FromPrefab(FactsOf(prefab, go));
             if (step == MadeFromStep.Thrown)
             {
@@ -1136,7 +1149,27 @@ namespace DarkwoodMP.World
         /// which makes it with the Object overload: shared from there only
         /// (MadeFrom is skipped while it's above 0).
         /// </summary>
-        internal int MakingDepth;
+        private int _makingDepth;
+
+        /// <summary>
+        /// The string overload of Core.AddPrefab starts (AddPrefabByPath).
+        /// </summary>
+        public void MakingStarts()
+        {
+            _makingDepth++;
+        }
+
+        /// <summary>
+        /// The string overload of Core.AddPrefab is done, or threw.
+        /// </summary>
+        public void MakingEnds()
+        {
+            _makingDepth--;
+            if (_makingDepth < 0)
+            {
+                _makingDepth = 0;
+            }
+        }
 
         /// <summary>
         /// Host: a thrown item that went off made this (ThrownSpawns): send it
@@ -1170,6 +1203,41 @@ namespace DarkwoodMP.World
         /// if the host refuses.
         /// </summary>
         public void SendPlacedNow() => SendPendingSpawns(placedNow: true);
+
+        /// <summary>
+        /// Player.progressBarCompleted starts: our player may be placing
+        /// something. A client's character goes to the host first, the item
+        /// to place still in it (it's used up below), so the host's check of
+        /// what it carries (OnSpawn) sees what was picked up or made a moment
+        /// ago.
+        /// </summary>
+        public void PlacingStarts(Player player)
+        {
+            Placing = player.placingItem;
+            if (player.placingItem && NetEnemies.ClientMode
+                && Coop.Guards.Sharing)
+            {
+                Characters instance = Characters.Instance;
+                if (instance != null)
+                {
+                    instance.SaveNow();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Player.progressBarCompleted is done: what was placed goes now
+        /// (SendPlacedNow).
+        /// </summary>
+        public void PlacingEnds()
+        {
+            bool placed = Placing;
+            Placing = false;
+            if (placed)
+            {
+                SendPlacedNow();
+            }
+        }
 
         private void SendPendingSpawns(bool placedNow = false)
         {
@@ -1459,7 +1527,7 @@ namespace DarkwoodMP.World
             }
 
             // One placed thing less in the client's character's bags
-            // (PlacingPatch), even when its prefab isn't here.
+            // (PlacingStarts), even when its prefab isn't here.
             if (answer.CountsPlaced)
             {
                 Characters.Instance.Placed(from);
@@ -1593,164 +1661,6 @@ namespace DarkwoodMP.World
                 }
 
                 Send(ObjRef.Of(c.gameObject), Serialize(inv), except: 0);
-            }
-        }
-    }
-
-    /// <summary>
-    /// What the player places (a trap...) is made in
-    /// Player.progressBarCompleted; share it.
-    /// </summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.progressBarCompleted))]
-    static class PlacingPatch
-    {
-        static void Prefix(Player __instance)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            coop.Containers.Placing = __instance.placingItem;
-            // A client's character goes to the host first, the item to place
-            // still in it (it's used up below), so the host's check of what it
-            // carries (Containers.OnSpawn) sees what was picked up or made a
-            // moment ago.
-            if (__instance.placingItem && NetEnemies.ClientMode
-                && Coop.Guards.Sharing)
-            {
-                Characters instance = Characters.Instance;
-                if (instance != null)
-                {
-                    instance.SaveNow();
-                }
-            }
-        }
-
-        static void Postfix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop == null)
-            {
-                return;
-            }
-
-            bool placed = coop.Containers.Placing;
-            coop.Containers.Placing = false;
-            if (placed)
-            {
-                coop.Containers.SendPlacedNow();
-            }
-        }
-
-        static System.Exception Finalizer(System.Exception __exception)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Containers.Placing = false;
-            }
-
-            return __exception;
-        }
-    }
-
-    /// <summary>
-    /// Things made while playing together (a dropped item) are shared with the
-    /// others.
-    /// </summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
-    {
-        typeof(string),
-        typeof(Vector3),
-        typeof(Quaternion),
-        typeof(GameObject),
-        typeof(bool)
-    })]
-    static class SharedPrefabPatch
-    {
-        static void Prefix()
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Containers.MakingDepth++;
-            }
-        }
-
-        static void Postfix(string prefab, GameObject __result)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Containers.Made(prefab, __result);
-            }
-        }
-
-        static System.Exception Finalizer(System.Exception __exception)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                Containers containers = coop.Containers;
-                containers.MakingDepth--;
-                if (containers.MakingDepth < 0)
-                {
-                    containers.MakingDepth = 0;
-                }
-            }
-
-            return __exception;
-        }
-    }
-
-    /// <summary>
-    /// What the player places is made with the Object overload
-    /// (Player.progressBarCompleted passes the item's prefab, InvItem.item),
-    /// not the string one: shared from here, unless the string overload is the
-    /// caller.
-    /// </summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
-    {
-        typeof(Object),
-        typeof(Vector3),
-        typeof(Quaternion),
-        typeof(GameObject),
-        typeof(bool)
-    })]
-    static class PlacedPrefabPatch
-    {
-        static void Postfix(Object prefab, GameObject __result)
-        {
-            CoopSession coop = Coop.Current;
-            if (coop != null && coop.Containers.MakingDepth == 0)
-            {
-                coop.Containers.MadeFrom(prefab, __result);
-            }
-        }
-    }
-
-    /// <summary>See Containers.OpenedNow.</summary>
-    [HarmonyPatch(typeof(Player), nameof(Player.setOpenedItemInventory))]
-    static class ContainerOpenedNowPatch
-    {
-        static void Postfix(Inventory inv)
-        {
-            CoopSession coop = Coop.Current;
-            if (inv == null || coop == null)
-            {
-                return;
-            }
-
-            try
-            {
-                coop.Containers.OpenedNow();
-            }
-            catch (System.Exception e)
-            {
-                Plugin.Log.LogWarning(
-                    $"Container open check failed: {e.Message}");
             }
         }
     }

@@ -437,7 +437,7 @@ namespace DarkwoodMP.World
         /// (bags and hotbar), by the character it last sent this session, less
         /// the things it has placed since; null: not known (nothing sent yet).
         /// A client sends its character as its player begins placing something
-        /// (PlacingPatch), so this is current then.
+        /// (ContainerPatches.ProgressBarCompleted), so this is current then.
         /// </summary>
         public int? Carries(ulong peer, ICollection<string> types)
         {
