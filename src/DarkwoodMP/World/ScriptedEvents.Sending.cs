@@ -458,7 +458,7 @@ namespace DarkwoodMP.World
                 Replaying = Coop.Guards.Replaying,
                 Sharing = Coop.Guards.Sharing,
                 AnimationSent = AnimationSent,
-                Pan = name == EpilogueSync.PanEvent,
+                Pan = name == Story.EpilogueSync.PanEvent,
                 Known = ge != null,
                 Fired = ge != null && ge.fired,
                 MultipleFire = ge != null && ge.multipleFire,

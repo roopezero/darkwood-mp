@@ -9,9 +9,10 @@ using static DarkwoodMP.World.MapScenario;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// Map test steps for the epilogue played together (World.EpilogueSync).
-    /// The list is tools/tests/map_scenario_epilogue.py; the epilogue ends the
-    /// game, so it runs alone and last.
+    /// Map test steps for the epilogue played together
+    /// (World.Story.EpilogueSync). The list is
+    /// tools/tests/map_scenario_epilogue.py; the epilogue ends the game, so it
+    /// runs alone and last.
     /// </summary>
     public static class MapScenarioEpilogue
     {

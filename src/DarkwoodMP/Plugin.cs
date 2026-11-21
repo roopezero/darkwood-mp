@@ -115,7 +115,7 @@ namespace DarkwoodMP
                         + "world.";
                 }
 
-                if (EpilogueSync.InEpilogueAlone())
+                if (World.Story.EpilogueSync.InEpilogueAlone())
                 {
                     return "This world is in the epilogue, which can't be "
                         + "shared once it has begun. Host from a save before "

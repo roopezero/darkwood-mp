@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Story
 {
     /// <summary>
     /// The epilogue's patches (see EpilogueSync). Each does nothing with no
