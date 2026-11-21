@@ -2129,8 +2129,7 @@ namespace DarkwoodMP
             {
                 if (type
                     .GetCustomAttributes(typeof(HarmonyPatch), false).Length
-                        == 0
-                    || TestOnlyPatch(type))
+                        == 0)
                 {
                     continue;
                 }
@@ -2171,73 +2170,6 @@ namespace DarkwoodMP
             {
                 Log.LogInfo($"All {ok} patches applied");
             }
-        }
-
-        /// <summary>
-        /// Patches that only the tests use (the map test's steps watch and
-        /// steer the game through them): patched by TestControl.Start, not in a
-        /// player's game, so a game update that breaks one doesn't warn players
-        /// and "All N patches applied" counts only the mod's own. They are the
-        /// patch classes in the MapScenario* files.
-        /// </summary>
-        private static bool TestOnlyPatch(Type type)
-        {
-            var outer = type;
-            while (outer.DeclaringType != null)
-            {
-                outer = outer.DeclaringType;
-            }
-
-            return outer.Name.StartsWith(
-                "MapScenario", StringComparison.Ordinal)
-                || outer == typeof(LocationSetsPatch)
-                || outer == typeof(EnemyTestSpawnTracePatch)
-                || outer == typeof(FarEventsTestCountPatch);
-        }
-
-        /// <summary>
-        /// TestControl.Start: apply the test-only patches (TestOnlyPatch).
-        /// </summary>
-        internal void PatchTestOnly()
-        {
-            int ok = 0;
-            foreach (var type in AccessTools.GetTypesFromAssembly(
-                typeof(Plugin).Assembly))
-            {
-                if (type
-                    .GetCustomAttributes(typeof(HarmonyPatch), false).Length
-                        == 0
-                    || !TestOnlyPatch(type))
-                {
-                    continue;
-                }
-
-                try
-                {
-                    _harmony.CreateClassProcessor(type).Patch();
-                    ok++;
-                }
-                catch (Exception e)
-                {
-                    Exception innerException = e.InnerException;
-                    string message = null;
-                    if (innerException != null)
-                    {
-                        message = innerException.Message;
-                    }
-
-                    if (message == null)
-                    {
-                        message = e.Message;
-                    }
-
-                    Log.LogError(
-                        $"Test patch {type.Name} doesn't fit this build of the "
-                            + $"game, skipped: {message}");
-                }
-            }
-
-            Log.LogInfo($"{ok} test patches applied");
         }
 
         /// <summary>

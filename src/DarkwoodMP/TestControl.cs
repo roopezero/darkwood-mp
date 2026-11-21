@@ -48,8 +48,6 @@ namespace DarkwoodMP
         public static void Start(Plugin plugin, int port)
         {
             _plugin = plugin;
-            plugin.PatchTestOnly();
-            plugin.TestSteps = new MapSteps();
             var listener = new TcpListener(IPAddress.Loopback, port);
             listener.Start();
             Plugin.Log.LogInfo($"Test control on 127.0.0.1:{port}");

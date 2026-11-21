@@ -21,6 +21,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The map test steps (src/DarkwoodMP.MapTests) use the plugin's internal classes. -->
+    <InternalsVisibleTo Include="DarkwoodMP.MapTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- The mod's item and map descriptions (tools/gen_tooltips.py writes it; World/Tooltips.cs reads it). -->
     <EmbeddedResource Include="World/Tooltips.tsv" LogicalName="DarkwoodMP.Tooltips.tsv" />
   </ItemGroup>

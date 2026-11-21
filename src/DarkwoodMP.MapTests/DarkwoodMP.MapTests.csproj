@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The in-game map test steps, as a second BepInEx plugin. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>DarkwoodMP.MapTests</AssemblyName>
+    <RootNamespace>DarkwoodMP</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src/DarkwoodMP.MapTests</PathMap>
+  </PropertyGroup>
+
+  <Import Project="../GameReferences.props" />
+
+  <ItemGroup>
+    <ProjectReference Include="../DarkwoodMP/DarkwoodMP.csproj" />
+    <ProjectReference Include="../DarkwoodMP.Core/DarkwoodMP.Core.csproj" />
+  </ItemGroup>
+</Project>
