@@ -30,7 +30,7 @@ are under "In-game probe results" below.
 | Lightning flashes, rain drops | `Lightning.cs`, `Rain.cs:569-595` | look only | each game | no | b | |
 | Enemy AI (dodge, running away, waypoints, attack choice, projectile spread, cut in half, banshee babies) | `Character.cs` (34 rolls) | enemies | host only. Client copies are frozen (`NetEnemies`) | states sent 20 times a second | a | |
 | Enemy spawns, respawns, night spawns, worms, ShadowArmor | `CharacterSpawner`, `CharacterSpawnPoint`, `WorldChunk.spawnFreeRoamingCharacters`, `NightSpawns.cs:126` | which enemies exist | host. A client's own enemies are frozen and hidden | yes | a | |
-| A player's damage to enemies | the player's own game (bullet spread at `Player.cs:6307`) | enemy health | the client predicts; the host applies the hit, capped by `NetEnemies.DamageCap` and rate-limited | yes | a | Whether the hit lands is decided in the shooter's game |
+| A player's damage to enemies | the player's own game (bullet spread at `Player.cs:6307`) | enemy health | the client predicts; the host applies the hit, capped by `WeaponRules.DamageCap` and rate-limited | yes | a | Whether the hit lands is decided in the shooter's game |
 | Enemy damage to players | the host's enemy hits the player's proxy | player health | host, sent as `PlayerDamage` | yes | a | |
 | Durability, rot, drain and recharge of items in containers | `Inventory.refreshItems` | durability | each game, by its own clock. `SlotShare` allows it as `Drift`, and the client takes the host's durability when it opens the container | partly | a/b | small drift until the container is opened |
 | A player's own items wearing out; which items go into their death bag (`Player.cs:7589`) | the player's game | their own items | the player's own game. The bag is sent as `ObjSpawn` with its contents | yes | a | |
@@ -66,7 +66,7 @@ are under "In-game probe results" below.
 
 No change to game behaviour yet. Only the probe was added:
 
-- `src/DarkwoodMP/World/MapScenarioDice.cs` adds two map steps:
+- `src/DarkwoodMP.MapTests/World/MapScenarioDice.cs` adds two map steps:
   - `dice-sets`: a Harmony patch on `Location.Awake` notes which set each location kept. The reply is a count and an FNV digest, and every choice is logged as `[dice] set ...`.
   - `dice-events`: scans the loaded world's `GameEvents` for shared-part steps that pick a random object, or the object nearest the own player, out of 2 or more. It also lists the method names of shared `runFunction` steps, and non-thrown `Explodes` that spawn objects.
 - `ScriptedEvents.IsHostStep`: a new one-line public method, used by the scan.
