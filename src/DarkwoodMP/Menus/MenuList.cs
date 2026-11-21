@@ -1,68 +1,10 @@
 using System;
 using System.Collections.Generic;
-using DarkwoodMP.Menus;
 using DarkwoodMP.World;
 using UnityEngine;
 
 namespace DarkwoodMP.Menus
 {
-    /// <summary>
-    /// Hooks for the mod's own menu windows, so the main menu and the pause
-    /// menu (MenuList) can open them and know when one is up.
-    ///
-    /// - <see cref="OpenStartGame"/>: the main menu's Start Game. Until it's
-    ///   set, Start Game opens the game's own profiles screen (continue a
-    ///   profile or start a new one).
-    /// - <see cref="OpenOptions"/>: Options in both menus. Until it's set, the
-    ///   game's own options screen.
-    /// - <see cref="Register"/>: a window says how to tell it's open. While any
-    ///   is (or the co-op panel, or a ConfirmDialog), the menu's list takes no
-    ///   clicks or keys, the game's own menu buttons and its Escape are off,
-    ///   and the system mouse cursor is shown.
-    /// - <see cref="Draw"/>: called from the mod's OnGUI with MenuSkin's skin
-    ///   set, after the menu's list and the co-op panel and before a
-    ///   ConfirmDialog (which stays on top). Draw the window's UiWindow there.
-    /// </summary>
-    public static class MenuWindows
-    {
-        private static MenuWindowList Windows =>
-            Plugin.Instance.Host.Windows;
-
-        public static Action OpenStartGame
-        {
-            get => Windows.OpenStartGame;
-            set => Windows.OpenStartGame = value;
-        }
-
-        public static Action OpenOptions
-        {
-            get => Windows.OpenOptions;
-            set => Windows.OpenOptions = value;
-        }
-
-        public static event Action Draw
-        {
-            add => Windows.Draw += value;
-            remove => Windows.Draw -= value;
-        }
-
-        public static void Register(Func<bool> isOpen)
-        {
-            Windows.Register(isOpen);
-        }
-
-        /// <summary>
-        /// One of the mod's windows is up over the menus (a registered one, the
-        /// co-op panel or a ConfirmDialog).
-        /// </summary>
-        public static bool AnyOpen => Windows.AnyOpen;
-
-        internal static void DrawAll()
-        {
-            Windows.DrawAll();
-        }
-    }
-
     /// <summary>
     /// The main menu's and the pause menu's entries as Half-Life's main menu
     /// has them: a column of words in the lower left, in the game's pixel font
@@ -86,7 +28,7 @@ namespace DarkwoodMP.Menus
     /// and down (arrows, W/S, the d-pad) choose, Enter (or A) runs it; Escape
     /// is the game's (it closes the pause menu).
     /// </summary>
-    public sealed class MenuList
+    public sealed partial class MenuList
     {
         private sealed class Entry
         {
@@ -513,97 +455,6 @@ namespace DarkwoodMP.Menus
             }
         }
 
-        // ---- keys and the controller ----------------------------------------
-
-        private void Keys()
-        {
-            int dir = 0;
-            if (Input.GetKeyDown(KeyCode.UpArrow)
-                || Input.GetKeyDown(KeyCode.W))
-            {
-                dir = -1;
-            }
-
-            if (Input.GetKeyDown(KeyCode.DownArrow)
-                || Input.GetKeyDown(KeyCode.S))
-            {
-                dir = 1;
-            }
-
-            bool run = Input.GetKeyDown(KeyCode.Return)
-                || Input.GetKeyDown(KeyCode.KeypadEnter);
-            try
-            {
-                InputScript instance = Singleton<InputScript>.Instance;
-                Rewired.Player pad = null;
-                if (instance != null)
-                {
-                    pad = instance.rewiredPlayer;
-                }
-
-                if (pad != null)
-                {
-                    float v = pad.GetAxisRaw("Dpad Vertical");
-                    if (Mathf.Abs(v) > 0.5f && Time.unscaledTime >= _nextPad)
-                    {
-                        if (v > 0)
-                        {
-                            dir = -1;
-                        }
-                        else
-                        {
-                            dir = 1;
-                        }
-
-                        _nextPad = Time.unscaledTime + 0.25f;
-                    }
-                    else if (Mathf.Abs(v) <= 0.5f)
-                    {
-                        _nextPad = 0f;
-                    }
-
-                    if (pad.GetButtonDown("A"))
-                    {
-                        run = true;
-                    }
-                }
-            }
-            catch
-            {
-            }
-
-            if (dir != 0 && _entries.Count > 0)
-            {
-                if (_selected < 0)
-                {
-                    if (dir > 0)
-                    {
-                        _selected = 0;
-                    }
-                    else
-                    {
-                        _selected = _entries.Count - 1;
-                    }
-                }
-                else
-                {
-                    _selected =
-                        (_selected + dir + _entries.Count) % _entries.Count;
-                }
-            }
-
-            if (run && _selected >= 0 && _selected < _entries.Count)
-            {
-                Fire(_entries[_selected]);
-            }
-        }
-
-        private void Fire(Entry e)
-        {
-            Plugin.Log.LogInfo($"[menu] {e.Label}");
-            _pending = e.Run;
-        }
-
         // ---- drawing --------------------------------------------------------
 
         /// <summary>
@@ -683,94 +534,6 @@ namespace DarkwoodMP.Menus
                     TextAnchor.MiddleLeft, PixelFont.Kind.Title, sc);
                 y += step;
             }
-        }
-
-        // ---- for the tests --------------------------------------------------
-
-        /// <summary>
-        /// For the tests: the list, where each entry is and whether it would
-        /// take a click now.
-        /// </summary>
-        public string Check()
-        {
-            var mm = Singleton<MainMenu>.Instance;
-            var parts = new List<string>();
-            foreach (var en in _entries)
-            {
-                parts.Add(
-                    $"{en.Label} at {en.Rect.x:0},{en.Rect.y:0} "
-                        + $"{en.Rect.width:0}x{en.Rect.height:0}");
-            }
-
-            string text = "main menu";
-            if (_pause)
-            {
-                text = "pause menu";
-            }
-
-            return $"list shown {_shown} (alpha {_alpha:0.00}), {text}: "
-                + $"{string.Join("; ", parts)}; takes clicks "
-                + $"{!MenuWindows.AnyOpen}; " +
-                   $"game entries hidden {GameEntriesHidden(mm)}; screen "
-                + $"{Screen.width}x{Screen.height}";
-        }
-
-        private bool GameEntriesHidden(MainMenu mm)
-        {
-            if (mm == null)
-            {
-                return false;
-            }
-
-            foreach (var go in GameEntries(mm))
-            {
-                if (go == null || !go.activeInHierarchy)
-                {
-                    continue;
-                }
-
-                foreach (var r in go.GetComponentsInChildren<Renderer>())
-                {
-                    if (r.enabled)
-                    {
-                        return false;
-                    }
-                }
-
-                foreach (var c in go.GetComponentsInChildren<Collider>())
-                {
-                    if (c.enabled)
-                    {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
-        }
-
-        /// <summary>
-        /// For the tests: click the entry with this word, as the mouse does.
-        /// False if the list hasn't got it or isn't shown.
-        /// </summary>
-        public bool Click(string label)
-        {
-            if (!_shown || MenuWindows.AnyOpen)
-            {
-                return false;
-            }
-
-            foreach (var en in _entries)
-            {
-                if (string.Equals(
-                    en.Label, label, StringComparison.OrdinalIgnoreCase))
-                {
-                    Fire(en);
-                    return true;
-                }
-            }
-
-            return false;
         }
     }
 }
