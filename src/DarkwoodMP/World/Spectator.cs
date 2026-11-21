@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
+using DarkwoodMP.World.Spectating;
 using HarmonyLib;
 using UnityEngine;
 
@@ -55,8 +56,7 @@ namespace DarkwoodMP.World
         internal static bool AllowPermadeath;
 
         private static ulong _watching;
-        private static readonly Dictionary<ulong, float> _lastAlive =
-            new Dictionary<ulong, float>();
+        private static readonly Roster _roster = new Roster();
         private static Rigidbody _body;
 
         private static readonly AccessTools.FieldRef<Player, Light2D> FovLight =
@@ -189,34 +189,31 @@ namespace DarkwoodMP.World
                 return list;
             }
 
-            float now = Time.unscaledTime;
+            var remotes = new List<Watched>();
             foreach (var r in sync.Remotes.Values)
             {
-                if (r.Owner == PlayerSync.DummyId)
-                {
-                    continue;
-                }
-
-                if (r.Alive)
-                {
-                    _lastAlive[r.Owner] = now;
-                }
-
-                if (r.Spectating)
-                {
-                    continue;
-                }
-
-                if (r.Alive
-                    || (_lastAlive.TryGetValue(r.Owner, out float t)
-                        && now - t < 10f))
-                {
-                    list.Add(r);
-                }
+                remotes.Add(WatchedOf(r));
             }
 
-            list.Sort((a, b) => a.Owner.CompareTo(b.Owner));
+            var now = new Seconds(Time.unscaledTime);
+            foreach (ulong owner in _roster.Playing(remotes, now))
+            {
+                list.Add(sync.Remotes[owner]);
+            }
+
             return list;
+        }
+
+        /// The only code reading a remote player for the rules.
+        private static Watched WatchedOf(RemotePlayer r)
+        {
+            return new Watched
+            {
+                Owner = r.Owner,
+                Dummy = r.Owner == PlayerSync.DummyId,
+                Alive = r.Alive,
+                Spectating = r.Spectating,
+            };
         }
 
         /// <summary>
@@ -226,14 +223,22 @@ namespace DarkwoodMP.World
         internal static bool TryBegin()
         {
             var s = Session.Instance;
-            if (AllowPermadeath || s == null || !s.Active || !s.Connected
-                || !WorldShare.InWorld)
+            bool inSession = s != null && s.Active && s.Connected;
+            var playing = new List<RemotePlayer>();
+            if (!AllowPermadeath && inSession && WorldShare.InWorld)
             {
-                return false;
+                playing = Playing();
             }
 
-            var playing = Playing();
-            if (playing.Count == 0)
+            var facts = new BeginFacts
+            {
+                AllowPermadeath = AllowPermadeath,
+                InSession = inSession,
+                InWorld = WorldShare.InWorld,
+                Playing = playing.Count,
+            };
+
+            if (!SpectatorRules.MayBegin(facts))
             {
                 return false;
             }
@@ -266,16 +271,38 @@ namespace DarkwoodMP.World
                 p.alive = false;
             }
 
-            float until = Time.unscaledTime + 20f;
-            while (Time.unscaledTime < until)
+            var until =
+                new Seconds(Time.unscaledTime + SpectatorRules.DeadWait);
+            while (true)
             {
-                if (!WorldShare.InWorld || Active)
+                var playing = new List<RemotePlayer>();
+                var now = new Seconds(Time.unscaledTime);
+                if (now < until && WorldShare.InWorld && !Active)
+                {
+                    playing = Playing();
+                }
+
+                var facts = new DeadWaitFacts
+                {
+                    Now = now,
+                    Until = until,
+                    InWorld = WorldShare.InWorld,
+                    Active = Active,
+                    Playing = playing.Count,
+                };
+
+                DeadWaitStep step = SpectatorRules.DeadWaits(facts);
+                if (step == DeadWaitStep.Permadeath)
+                {
+                    break;
+                }
+
+                if (step == DeadWaitStep.Stops)
                 {
                     yield break;
                 }
 
-                var playing = Playing();
-                if (playing.Count > 0)
+                if (step == DeadWaitStep.Begins)
                 {
                     Begin(playing[0].Owner);
                     yield break;
@@ -296,13 +323,14 @@ namespace DarkwoodMP.World
         internal static bool BeginWatch()
         {
             var s = Session.Instance;
-            if (Active || s == null || !s.Active)
+            bool session = s != null && s.Active;
+            var playing = new List<RemotePlayer>();
+            if (!Active && session)
             {
-                return false;
+                playing = Playing();
             }
 
-            var playing = Playing();
-            if (playing.Count == 0)
+            if (!SpectatorRules.MayWatch(Active, session, playing.Count))
             {
                 return false;
             }
@@ -428,7 +456,8 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Run()
         {
-            float nobodySince = -1f;
+            bool nobody = false;
+            var nobodySince = new Seconds(0f);
             while (Active)
             {
                 var s = Session.Instance;
@@ -444,67 +473,55 @@ namespace DarkwoodMP.World
                     playing = new List<RemotePlayer>();
                 }
 
-                if (playing.Count == 0 && Epilogue)
+                var facts = new WatchFacts
                 {
-                    // nobody else crawling: stay put until the pan (EndWatch)
+                    Epilogue = Epilogue,
+                    InSession = inSession,
+                    InWorld = WorldShare.InWorld,
+                    Playing = playing.Count,
+                    Nobody = nobody,
+                    NobodySince = nobodySince,
+                    Now = new Seconds(Time.unscaledTime),
+                };
+
+                WatchStep step = SpectatorRules.Watch(facts);
+                nobody = step.Nobody;
+                nobodySince = step.NobodySince;
+                if (step.Action == WatchAction.Stay
+                    || step.Action == WatchAction.Waits)
+                {
+                    // the epilogue: nobody else crawling, stay put until the
+                    // pan (EndWatch); else nobody for now
                     yield return null;
                     continue;
                 }
 
-                if (playing.Count == 0)
+                if (step.Action == WatchAction.Ended)
                 {
                     // the world is being replaced (a reload): it decides again
-                    if (!WorldShare.InWorld)
-                    {
-                        End();
-                        yield break;
-                    }
-
-                    if (!inSession)
-                    {
-                        Plugin.Log.LogInfo(
-                            "The session ended while watching: permadeath");
-                        End();
-                        Permadeath();
-                        yield break;
-                    }
-
-                    if (nobodySince < 0f)
-                    {
-                        nobodySince = Time.unscaledTime;
-                    }
-
-                    if (Time.unscaledTime - nobodySince > 3f)
-                    {
-                        Plugin.Log.LogInfo(
-                            "Nobody is left playing: permadeath");
-                        End();
-                        Permadeath();
-                        yield break;
-                    }
-
-                    yield return null;
-                    continue;
+                    End();
+                    yield break;
                 }
 
-                nobodySince = -1f;
-
-                int i = playing.FindIndex(r => r.Owner == _watching);
-                if (i < 0)
+                if (step.Action == WatchAction.SessionLost)
                 {
-                    i = 0;
+                    Plugin.Log.LogInfo(
+                        "The session ended while watching: permadeath");
+                    End();
+                    Permadeath();
+                    yield break;
                 }
 
-                if (Input.GetMouseButtonDown(0)
-                    || Input.GetKeyDown(KeyCode.Space))
+                if (step.Action == WatchAction.NobodyLeft)
                 {
-                    i = (i + 1) % playing.Count;
-                }
-                else if (Input.GetMouseButtonDown(1))
-                {
-                    i = (i + playing.Count - 1) % playing.Count;
+                    Plugin.Log.LogInfo("Nobody is left playing: permadeath");
+                    End();
+                    Permadeath();
+                    yield break;
                 }
 
+                int found = playing.FindIndex(r => r.Owner == _watching);
+                int i = SpectatorRules.Pick(found, playing.Count, ChoiceOf());
                 _watching = playing[i].Owner;
 
                 var target = playing[i].Root;
@@ -531,6 +548,23 @@ namespace DarkwoodMP.World
                 AllAround(player);
                 yield return null;
             }
+        }
+
+        /// The only code reading the player's input while watching.
+        private static Choice ChoiceOf()
+        {
+            if (Input.GetMouseButtonDown(0)
+                || Input.GetKeyDown(KeyCode.Space))
+            {
+                return Choice.Next;
+            }
+
+            if (Input.GetMouseButtonDown(1))
+            {
+                return Choice.Previous;
+            }
+
+            return Choice.None;
         }
 
         private static void End()
@@ -564,7 +598,7 @@ namespace DarkwoodMP.World
             Active = false;
             AllowPermadeath = false;
             Epilogue = false;
-            _lastAlive.Clear();
+            _roster.Reset();
             _body = null;
         }
 
