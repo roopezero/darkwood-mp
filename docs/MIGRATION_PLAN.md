@@ -578,6 +578,12 @@ Finish with `tools/run-test.sh full`.
         since `SaveManager.Save` writes them also alone; `WorldShare` on
         `ModHost`), thin patches, the feature folders and the split of
         `WorldShare` into files of about 600 lines.
+    - [x] `WorldShare`'s state, patch and files. It is `ModHost.Share`
+          (`World/Joining/WorldShare`, a partial class in six files, with
+          `WorldSharePatches.cs`); its statics are fields of the instance.
+          The namespace stays `DarkwoodMP.World` for its 149 calling files,
+          and `WorldReady`, `Snapshotting` and the other game-state
+          questions stay static, reading `ModHost.Share`.
 
 Finish with `tools/run-test.sh full`.
 
