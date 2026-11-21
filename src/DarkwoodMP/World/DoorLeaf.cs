@@ -266,6 +266,28 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// An open door's leaf is saved as it's loaded. The game saves the
+        /// leaf's local z angle (shut is 90) as rot, but Door.init turns a
+        /// loaded open leaf by -rot from shut, which leaves it at 90 - rot:
+        /// mirrored on every load (a leaf at 10 comes back at 80, nearly shut).
+        /// A joiner loads the save the host just wrote, so its doors were
+        /// always drawn mirrored from the host's. Saving 90 - z (signed) makes
+        /// init put the leaf back where it was.
+        /// The file keeps the game's format (a float rot within -105..105) and
+        /// init, the only reader of rot, isn't patched, so a save written with
+        /// the mod loads in the game without it with each leaf where it was,
+        /// not mirrored; only a save the game writes by itself is mirrored on
+        /// load, as it always was.
+        /// </summary>
+        internal static void Saving(Door.SaveState state, Door door)
+        {
+            if (door != null && door.body != null)
+            {
+                state.rot = LeafRules.SaveAngle(Signed(door));
+            }
+        }
+
+        /// <summary>
         /// The leaf turned about its hinge to this signed angle from shut
         /// (within its limits), nothing else.
         /// </summary>
@@ -526,8 +548,16 @@ namespace DarkwoodMP.World
         /// that second would never be sent, and each game's own swing from the
         /// open would leave the leaves apart. So where the opener's leaf comes
         /// to rest goes to the host, which passes it on, as a push.
+        /// Door.open, with where the opener stood: DoorLeaf remembers the
+        /// push first, for a leaf that's switched off here.
         /// </summary>
-        internal void Opened(Door d)
+        internal void Opened(Door d, Vector3 opener)
+        {
+            _leaves.Opened(d, opener);
+            Watch(d);
+        }
+
+        private void Watch(Door d)
         {
             var open = new LeafOpenFacts
             {
@@ -853,84 +883,6 @@ namespace DarkwoodMP.World
             }
 
             return facts;
-        }
-    }
-
-    /// <summary>
-    /// An open door's leaf is saved as it's loaded. The game saves the leaf's
-    /// local z angle (shut is 90) as rot, but Door.init turns a loaded open
-    /// leaf by -rot from shut, which leaves it at 90 - rot: mirrored on every
-    /// load (a leaf at 10 comes back at 80, nearly shut). A joiner loads the
-    /// save the host just wrote, so its doors were always drawn mirrored from
-    /// the host's. Saving 90 - z (signed) makes init put the leaf back where it
-    /// was.
-    /// The file keeps the game's format (a float rot within -105..105) and
-    /// init, the only reader of rot, isn't patched, so a save written with the
-    /// mod loads in the game without it with each leaf where it was, not
-    /// mirrored; only a save the game writes by itself is mirrored on load, as
-    /// it always was.
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Door.SaveState), MethodType.Constructor, new[] { typeof(Door) })]
-    static class DoorLeafSavePatch
-    {
-        static void Postfix(Door.SaveState __instance, Door door)
-        {
-            if (door != null && door.body != null)
-            {
-                __instance.rot = LeafRules.SaveAngle(DoorLeaf.Signed(door));
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.open))]
-    static class DoorLeafOpenPatch
-    {
-        static void Postfix(
-            Door __instance, Vector3 openerPosition, Transform openerTransform)
-        {
-            Vector3 opener;
-            if (openerTransform != null)
-            {
-                opener = openerTransform.position;
-            }
-            else
-            {
-                opener = openerPosition;
-            }
-
-            var coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Leaves.Opened(__instance, opener);
-                coop.Pushes.Opened(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), nameof(Door.close))]
-    static class DoorLeafClosePatch
-    {
-        static void Postfix(Door __instance)
-        {
-            var coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Leaves.Closed(__instance);
-            }
-        }
-    }
-
-    [HarmonyPatch(typeof(Door), "OnEnable")]
-    static class DoorLeafEnablePatch
-    {
-        static void Postfix(Door __instance)
-        {
-            var coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Leaves.Enabled(__instance);
-            }
         }
     }
 }
