@@ -91,7 +91,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static NetPlayerProxy BeamOn(Vector3 pos)
         {
-            var ps = PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps == null)
             {
                 return null;

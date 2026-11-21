@@ -12,7 +12,11 @@ namespace DarkwoodMP.Sync
     /// </summary>
     public sealed class PlayerSync
     {
-        public static PlayerSync Instance { get; private set; }
+        /// Eases our player out of the puppets it walks into.
+        public readonly PlayerSeparation Separation = new PlayerSeparation();
+
+        /// The puppets' markers on the game's world map.
+        public readonly MapMarkers Markers;
 
         public readonly Dictionary<ulong, RemotePlayer> Remotes =
             new Dictionary<ulong, RemotePlayer>();
@@ -61,8 +65,8 @@ namespace DarkwoodMP.Sync
 
         public PlayerSync(Session session)
         {
-            Instance = this;
             _session = session;
+            Markers = new MapMarkers(this);
             session.Register(MsgType.PlayerState, OnPlayerState);
             session.OnPeerDisconnected += id =>
             {
@@ -98,8 +102,8 @@ namespace DarkwoodMP.Sync
                 r.Tick();
             }
 
-            PlayerSeparation.Update(this, _session.LocalId);
-            MapMarkers.Tick();
+            Separation.Update(this, _session.LocalId);
+            Markers.Tick();
         }
 
         /// <summary>
@@ -230,7 +234,7 @@ namespace DarkwoodMP.Sync
             };
         }
 
-        private static TagFacts TagsOf()
+        private TagFacts TagsOf()
         {
             return new TagFacts
             {
@@ -308,7 +312,7 @@ namespace DarkwoodMP.Sync
             TagLayer layer = NameTagRules.Where(TagsOf());
             if (layer == TagLayer.Map)
             {
-                MapMarkers.DrawNames();
+                Markers.DrawNames();
                 return;
             }
 

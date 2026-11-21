@@ -307,7 +307,7 @@ namespace DarkwoodMP.World
 
         private static IEnumerator Overlap(string[] a, Result r)
         {
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             Sync.RemotePlayer near = null;
             float best = float.MaxValue;
             if (sync != null)
@@ -338,8 +338,9 @@ namespace DarkwoodMP.World
             yield return Walk(near.Root.transform.position, 60f);
             var on = near.Root.transform.position + new Vector3(2f, 0f, 1f);
             Place(on);
-            float eased = Sync.PlayerSeparation.Eased,
-                want = Sync.PlayerSeparation.Distance * 0.75f;
+            Sync.PlayerSeparation apart =
+                Plugin.Instance.Host.Players.Separation;
+            float eased = apart.Eased, want = apart.Distance * 0.75f;
             float dist() => StateDump.Flat(
                 near.Root.transform.position - P.transform.position);
             float until = Time.unscaledTime + 4f;
@@ -353,15 +354,15 @@ namespace DarkwoodMP.World
                 $"put on {near.Name} "
                     + $"({gap:0.0} apart): {dist():0.0} apart after "
                     + $"{4f - (until - Time.unscaledTime):0.0} s, "
-                    + $"eased {Sync.PlayerSeparation.Eased - eased:0.0} here "
-                    + $"(apart at {Sync.PlayerSeparation.Distance:0})";
+                    + $"eased {apart.Eased - eased:0.0} here "
+                    + $"(apart at {apart.Distance:0})";
             if (dist() < want)
             {
                 r.Fail($"{r.Info}: not eased apart");
             }
 
             yield return new WaitForSeconds(1f);
-            if (dist() > Sync.PlayerSeparation.Distance * 3f)
+            if (dist() > apart.Distance * 3f)
             {
                 r.Fail($"{r.Info}, then {dist():0.0}: pushed too far");
             }

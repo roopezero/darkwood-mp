@@ -14,7 +14,7 @@ namespace DarkwoodMP.World.Mornings
         /// Others share this world (PauseRules.InCoop).
         public bool InCoop { get; init; }
 
-        /// PlayerSync.Instance exists.
+        /// Plugin.Instance.Host.Players exists.
         public bool HasSync { get; init; }
 
         /// A remote player is out of their morning (MorningRules.IsOut

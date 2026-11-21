@@ -16,9 +16,16 @@ namespace DarkwoodMP.Sync
     /// players in the main world: a player in a separate location or a dream is
     /// somewhere the map doesn't show.
     /// </summary>
-    public static class MapMarkers
+    public sealed class MapMarkers
     {
-        private static readonly Dictionary<ulong, Transform> Markers =
+        private readonly PlayerSync _sync;
+
+        public MapMarkers(PlayerSync sync)
+        {
+            _sync = sync;
+        }
+
+        private readonly Dictionary<ulong, Transform> _markers =
             new Dictionary<ulong, Transform>();
         private static readonly
             AccessTools.FieldRef<Map, Map.Type> CurrentType =
@@ -74,17 +81,16 @@ namespace DarkwoodMP.Sync
         /// After the map opens: an icon for each other player in the main
         /// world.
         /// </summary>
-        internal static void OnOpened(Map map)
+        public void OnOpened(Map map)
         {
-            Markers.Clear();
+            _markers.Clear();
             var type = WorldType(map);
-            var sync = PlayerSync.Instance;
-            if (type == null || sync == null || map.iconHolder == null)
+            if (type == null || map.iconHolder == null)
             {
                 return;
             }
 
-            foreach (var r in sync.Remotes.Values)
+            foreach (var r in _sync.Remotes.Values)
             {
                 if (!MapMarkerRules.Marks(FactsOf(r)))
                 {
@@ -110,7 +116,7 @@ namespace DarkwoodMP.Sync
                         col.enabled = false; // nothing to show when hovered
                     }
 
-                    Markers[r.Owner] = go.transform;
+                    _markers[r.Owner] = go.transform;
                     Place(type, go.transform, r.Root.transform.position);
                 }
                 catch (System.Exception e)
@@ -120,10 +126,10 @@ namespace DarkwoodMP.Sync
                 }
             }
 
-            if (Markers.Count > 0)
+            if (_markers.Count > 0)
             {
                 Plugin.Log.LogInfo(
-                    $"Map: marked {Markers.Count} other player(s)");
+                    $"Map: marked {_markers.Count} other player(s)");
             }
         }
 
@@ -146,22 +152,21 @@ namespace DarkwoodMP.Sync
         /// Each frame while the map is open: move the markers with their
         /// players.
         /// </summary>
-        public static void Tick()
+        public void Tick()
         {
-            if (Markers.Count == 0)
+            if (_markers.Count == 0)
             {
                 return;
             }
 
             var type = WorldType(Singleton<Map>.Instance);
-            var sync = PlayerSync.Instance;
-            if (type == null || sync == null)
+            if (type == null)
             {
-                Markers.Clear();
+                _markers.Clear();
                 return;
             }
 
-            foreach (var kv in Markers)
+            foreach (var kv in _markers)
             {
                 if (kv.Value == null)
                 {
@@ -169,7 +174,7 @@ namespace DarkwoodMP.Sync
                 }
 
                 bool there =
-                    sync.Remotes.TryGetValue(kv.Key, out var r) && OnMap(r);
+                    _sync.Remotes.TryGetValue(kv.Key, out var r) && OnMap(r);
                 if (kv.Value.gameObject.activeSelf != there)
                 {
                     kv.Value.gameObject.SetActive(there);
@@ -192,29 +197,28 @@ namespace DarkwoodMP.Sync
         /// <summary>
         /// IMGUI: each marked player's name beside their marker.
         /// </summary>
-        public static void DrawNames()
+        public void DrawNames()
         {
-            if (Markers.Count == 0 || Core.CamUI == null
+            if (_markers.Count == 0 || Core.CamUI == null
                 || Plugin.NameTagStyle == null)
             {
                 return;
             }
 
             var cam = Core.CamUI.GetComponent<Camera>();
-            var sync = PlayerSync.Instance;
-            if (cam == null || sync == null)
+            if (cam == null)
             {
                 return;
             }
 
-            foreach (var kv in Markers)
+            foreach (var kv in _markers)
             {
                 if (kv.Value == null || !kv.Value.gameObject.activeInHierarchy)
                 {
                     continue;
                 }
 
-                if (!sync.Remotes.TryGetValue(kv.Key, out var r))
+                if (!_sync.Remotes.TryGetValue(kv.Key, out var r))
                 {
                     continue;
                 }
@@ -231,6 +235,6 @@ namespace DarkwoodMP.Sync
     public static class MapOpenPatch
     {
         private static void Postfix(Map __instance) =>
-            MapMarkers.OnOpened(__instance);
+            Plugin.Instance.Host.Players.Markers.OnOpened(__instance);
     }
 }

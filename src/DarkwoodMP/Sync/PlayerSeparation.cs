@@ -20,25 +20,27 @@ namespace DarkwoodMP.Sync
     /// push past. The player's own game decides where it is, as for any walk,
     /// and the host's MoveCheck sees an ordinary slow move.
     /// </summary>
-    public static class PlayerSeparation
+    public sealed class PlayerSeparation
     {
         // our player's body, along the ground
-        private static float _radius;
-        private static Player _measured;
+        private float _radius;
+        private Player _measured;
+        // The puppets' bodies, filled again each frame they're eased.
+        private readonly List<PuppetBody> _bodies = new List<PuppetBody>();
 
         /// <summary>
         /// Total distance our player was eased out of others (for the tests'
         /// log).
         /// </summary>
-        public static float Eased;
+        public float Eased { get; private set; }
 
         /// <summary>
         /// How close two players' centres can be before they're eased apart
         /// (two body widths).
         /// </summary>
-        public static float Distance => SeparationRules.Distance(_radius);
+        public float Distance => SeparationRules.Distance(_radius);
 
-        public static void Update(PlayerSync sync, ulong localId)
+        public void Update(PlayerSync sync, ulong localId)
         {
             var p = Player.Instance;
             Rigidbody rb = null;
@@ -87,10 +89,11 @@ namespace DarkwoodMP.Sync
             };
         }
 
-        private static PushFacts PushOf(
+        private PushFacts PushOf(
             PlayerSync sync, Rigidbody rb, ulong localId)
         {
-            var bodies = new List<PuppetBody>(sync.Remotes.Count);
+            var bodies = _bodies;
+            bodies.Clear();
             foreach (var r in sync.Remotes.Values)
             {
                 bool shown = r.Root != null && r.Root.activeSelf;
@@ -139,7 +142,7 @@ namespace DarkwoodMP.Sync
             };
         }
 
-        private static void Measure(Player p)
+        private void Measure(Player p)
         {
             _measured = p;
             var colliders = new List<ColliderFacts>();

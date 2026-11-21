@@ -462,7 +462,8 @@ namespace DarkwoodMP.Sync
             {
                 _seen.Add(s.PathHash);
                 var coll =
-                    SpriteCollections.Get(s.CollectionHash, _last.Library);
+                    Plugin.Instance.Host.Sprites.Get(
+                        s.CollectionHash, _last.Library);
                 if (coll == null)
                 {
                     continue;
@@ -645,14 +646,14 @@ namespace DarkwoodMP.Sync
     /// <summary>
     /// Lookup of loaded tk2d sprite collections by stable name hash.
     /// </summary>
-    public static class SpriteCollections
+    public sealed class SpriteCollections
     {
-        private static readonly Dictionary<int, tk2dSpriteCollectionData>
+        private readonly Dictionary<int, tk2dSpriteCollectionData>
             _byHash = new Dictionary<int, tk2dSpriteCollectionData>();
-        private static Seconds _lastRescan =
+        private Seconds _lastRescan =
             new Seconds(SpriteCacheRules.NeverScanned);
 
-        private static readonly HashSet<string> _loadedLibraries =
+        private readonly HashSet<string> _loadedLibraries =
             new HashSet<string>();
 
         /// <summary>
@@ -660,7 +661,7 @@ namespace DarkwoodMP.Sync
         /// belong to the animation library the other player's body uses (their
         /// weapon, a torch in hand): that's loaded once, and looked for again.
         /// </summary>
-        public static tk2dSpriteCollectionData Get(int hash, string library)
+        public tk2dSpriteCollectionData Get(int hash, string library)
         {
             var c = Get(hash);
             bool tried = library != null && _loadedLibraries.Contains(library);
@@ -692,14 +693,15 @@ namespace DarkwoodMP.Sync
                 return null;
             }
 
-            Keep.Add(lib); // held, so its sprites stay loaded while it's in use
+            // held, so its sprites stay loaded while it's in use
+            _keep.Add(lib);
             _lastRescan = new Seconds(SpriteCacheRules.NeverScanned);
             return Get(hash);
         }
 
-        private static readonly List<Object> Keep = new List<Object>();
+        private readonly List<Object> _keep = new List<Object>();
 
-        public static tk2dSpriteCollectionData Get(int hash)
+        public tk2dSpriteCollectionData Get(int hash)
         {
             if (_byHash.TryGetValue(hash, out var c) && c != null)
             {

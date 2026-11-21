@@ -19,7 +19,7 @@ namespace DarkwoodMP.Sync
     /// screen there. This names it: every 0.25 s, in a co-op session, the same
     /// ray at our player, logged once per set of hits (again after 30 s).
     /// </summary>
-    public static class ViewWatch
+    public sealed class ViewWatch
     {
         /// <summary>
         /// The layers of Light2D.LateUpdate's ray (Default 0, Static 15,
@@ -51,8 +51,8 @@ namespace DarkwoodMP.Sync
             return (Vector3?)null;
         }
 
-        private static Seconds _next;
-        private static ViewLog _logged;
+        private Seconds _next;
+        private ViewLog _logged;
 
         /// <summary>
         /// What the game's ray at this position hits: each collider's path,
@@ -107,7 +107,7 @@ namespace DarkwoodMP.Sync
             return p;
         }
 
-        public static void LateUpdate(bool inSession)
+        public void LateUpdate(bool inSession)
         {
             var now = new Seconds(Time.unscaledTime);
             if (!ViewWatchRules.Looks(inSession, now, _next))

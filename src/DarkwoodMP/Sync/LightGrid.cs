@@ -24,34 +24,36 @@ namespace DarkwoodMP.Sync
     /// lookup for it and clears the nodes it held, rather than let the game
     /// index outside the grid.
     /// </summary>
-    [HarmonyPatch(
-        typeof(Light2D), nameof(Light2D.populateAffectedNodes),
-        new[] { typeof(int) })]
-    static class LightGridPatch
+    public sealed class LightGrid
     {
-        private static readonly HashSet<int> Logged = new HashSet<int>();
+        // The lights already logged, by instance id.
+        private readonly HashSet<int> _logged = new HashSet<int>();
 
-        static bool Prefix(Light2D __instance, int _nodeLightRadius)
+        /// <summary>
+        /// Light2D.populateAffectedNodes: false skips the game's lookup for
+        /// a light outside the grid, after clearing its nodes.
+        /// </summary>
+        public bool Populates(Light2D light, int radius)
         {
             try
             {
-                Vector3 pos = __instance.transform.position;
+                Vector3 pos = light.transform.position;
                 if (!LightGridRules.SkipsLookup(
-                    FactsOf(pos, _nodeLightRadius)))
+                    FactsOf(pos, radius)))
                 {
                     return true;
                 }
 
-                var nodes = __instance.affectedNodes;
+                var nodes = light.affectedNodes;
                 if (nodes != null)
                 {
                     Array.Clear(nodes, 0, nodes.Length);
                 }
 
-                if (Logged.Add(__instance.GetInstanceID()))
+                if (_logged.Add(light.GetInstanceID()))
                 {
                     Plugin.Log.LogInfo(
-                        $"[lights] {Path(__instance.transform)} at {pos} is "
+                        $"[lights] {Path(light.transform)} at {pos} is "
                             + "outside the pathfinding grid: it lights no "
                             + "nodes there");
                 }
@@ -109,6 +111,21 @@ namespace DarkwoodMP.Sync
             }
 
             return s;
+        }
+    }
+
+    /// <summary>
+    /// Runs with or without a session (LightGrid.Populates).
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Light2D), nameof(Light2D.populateAffectedNodes),
+        new[] { typeof(int) })]
+    static class LightGridPatch
+    {
+        static bool Prefix(Light2D __instance, int _nodeLightRadius)
+        {
+            return Plugin.Instance.Host.Lights.Populates(
+                __instance, _nodeLightRadius);
         }
     }
 }

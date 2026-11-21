@@ -42,7 +42,7 @@ namespace DarkwoodMP.Sync
                 }
             }
 
-            var sync = PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (sync != null)
             {
                 foreach (var r in sync.Remotes.Values)

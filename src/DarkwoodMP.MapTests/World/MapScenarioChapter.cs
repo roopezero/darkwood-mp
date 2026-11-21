@@ -386,7 +386,7 @@ namespace DarkwoodMP.World
         private static IEnumerator All(string[] a, Result r)
         {
             int want = int.Parse(a[0]);
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             float until = Time.realtimeSinceStartup + 200f;
             System.Collections.Generic.List<string> seen = null;
             while (Time.realtimeSinceStartup < until)
@@ -474,7 +474,7 @@ namespace DarkwoodMP.World
         /// </summary>
         private static Vector3? Host()
         {
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             var s = Net.Session.Instance;
             if (ps == null || s == null)
             {

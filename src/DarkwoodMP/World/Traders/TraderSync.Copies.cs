@@ -116,7 +116,7 @@ namespace DarkwoodMP.World
 
             _nextCheck = TraderCopyRules.Next(now);
             var remotes = new List<RemoteMorning>();
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (sync != null)
             {
                 foreach (var kv in sync.Remotes)

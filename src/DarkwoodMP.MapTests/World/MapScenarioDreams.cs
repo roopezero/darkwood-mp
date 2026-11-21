@@ -157,7 +157,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(3f);
             bool seen = false;
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps != null)
             {
                 foreach (var rp in ps.Remotes.Values)

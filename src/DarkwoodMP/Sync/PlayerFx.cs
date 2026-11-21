@@ -18,14 +18,13 @@ namespace DarkwoodMP.Sync
     /// presentation only: nothing in it changes the world, so the host has
     /// nothing to check.
     /// </summary>
-    public sealed class PlayerFx
+    internal sealed class PlayerFx
     {
-        public static PlayerFx Instance { get; private set; }
         /// <summary>
         /// How many of the other players' shots this game has shown on their
-        /// puppets (for the map test).
+        /// puppets in this session (for the map test).
         /// </summary>
-        public static int ShotsSeen;
+        public int ShotsSeen { get; private set; }
 
         private readonly Session _s;
         // our own: these are sent from inside game calls
@@ -36,21 +35,20 @@ namespace DarkwoodMP.Sync
         private bool _burningSent;
         private readonly HashSet<string> _logged = new HashSet<string>();
 
-        public PlayerFx(Session session)
+        public PlayerFx(CoopSession coop)
         {
-            Instance = this;
-            _s = session;
-            session.Register(MsgType.PlayerSounds, OnSounds);
-            session.Register(MsgType.PlayerShot, OnShot);
-            session.Register(MsgType.PlayerHurt, OnHurt);
+            _s = coop.Net;
+            coop.Handle(MsgType.PlayerSounds, OnSounds);
+            coop.Handle(MsgType.PlayerShot, OnShot);
+            coop.Handle(MsgType.PlayerHurt, OnHurt);
             // a newcomer hears whether we burn
-            session.OnPeerConnected += _ => _burningSent = false;
-            session.OnSessionEnded += () =>
-            {
-                _sounds.Clear();
-                _burningSent = false;
-                _logged.Clear();
-            };
+            _s.OnPeerConnected += OnPeer;
+            coop.Hook(() => _s.OnPeerConnected -= OnPeer);
+        }
+
+        private void OnPeer(ulong id)
+        {
+            _burningSent = false;
         }
 
         /// <summary>We're in a world with someone to tell.</summary>
@@ -256,7 +254,7 @@ namespace DarkwoodMP.Sync
 
         private static Transform Puppet(ulong owner)
         {
-            var ps = PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps == null || !ps.Remotes.TryGetValue(owner, out var rp)
                 || rp.Root == null || !rp.Root.activeInHierarchy)
             {
@@ -408,7 +406,7 @@ namespace DarkwoodMP.Sync
             Relayed(relay, from, PlayerFxRules.RelaysReliably((HurtKind)what));
 
             string who = _s.NameOf(owner);
-            var ps = PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             RemotePlayer rp = null;
             if (ps == null || !ps.Remotes.TryGetValue(owner, out rp))
             {
@@ -480,7 +478,7 @@ namespace DarkwoodMP.Sync
             };
         }
 
-        private static SoundSourceFacts SoundOf(Transform parent)
+        private SoundSourceFacts SoundOf(Transform parent)
         {
             var p = Player.Instance;
             bool ours = false;
@@ -516,13 +514,13 @@ namespace DarkwoodMP.Sync
         /// Inside one of Player's own methods that play its sounds without a
         /// place (at the listener).
         /// </summary>
-        internal static int InPlayerCode;
+        public int InPlayerCode;
         /// <summary>
         /// Inside Player.getHit: the blood splats it makes are ours.
         /// </summary>
-        internal static int InGetHit;
+        public int InGetHit;
 
-        internal static bool IsOurs(Transform parent)
+        public bool IsOurs(Transform parent)
         {
             // A sound without a place, played by our player's own code (a
             // gunshot, a reload, a swing, pain). Not while a shared world
@@ -543,9 +541,14 @@ namespace DarkwoodMP.Sync
             string audioID, float volume, Transform parentObj,
             AudioObject __result)
         {
-            var fx = PlayerFx.Instance;
-            if (__result == null || fx == null || !fx.Sharing
-                || !PlayerFx.IsOurs(parentObj))
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            var fx = coop.PlayerFx;
+            if (__result == null || !fx.Sharing || !fx.IsOurs(parentObj))
             {
                 return;
             }
@@ -627,10 +630,23 @@ namespace DarkwoodMP.Sync
             }
         }
 
-        private static void Prefix() => PlayerFx.InPlayerCode++;
+        private static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.PlayerFx.InPlayerCode++;
+            }
+        }
+
         private static void Finalizer()
         {
-            PlayerFx.InPlayerCode = PlayerFxRules.Leave(PlayerFx.InPlayerCode);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                PlayerFx fx = coop.PlayerFx;
+                fx.InPlayerCode = PlayerFxRules.Leave(fx.InPlayerCode);
+            }
         }
     }
 
@@ -642,12 +658,13 @@ namespace DarkwoodMP.Sync
     {
         private static void Postfix(Player __instance)
         {
-            var fx = PlayerFx.Instance;
-            if (fx == null)
+            CoopSession coop = Coop.Current;
+            if (coop == null)
             {
                 return;
             }
 
+            var fx = coop.PlayerFx;
             bool ours = __instance == Player.Instance;
             InvItemClass currentItem = __instance.currentItem;
             InvItem gun = null;
@@ -681,10 +698,23 @@ namespace DarkwoodMP.Sync
         })]
     public static class PlayerGetHitFxPatch
     {
-        private static void Prefix() => PlayerFx.InGetHit++;
+        private static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.PlayerFx.InGetHit++;
+            }
+        }
+
         private static void Finalizer()
         {
-            PlayerFx.InGetHit = PlayerFxRules.Leave(PlayerFx.InGetHit);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                PlayerFx fx = coop.PlayerFx;
+                fx.InGetHit = PlayerFxRules.Leave(fx.InGetHit);
+            }
         }
     }
 
@@ -700,13 +730,19 @@ namespace DarkwoodMP.Sync
     {
         private static void Postfix(string prefab, GameObject __result)
         {
-            var fx = PlayerFx.Instance;
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
+            var fx = coop.PlayerFx;
             var blood = new BloodFacts
             {
-                InGetHit = PlayerFx.InGetHit,
+                InGetHit = fx.InGetHit,
                 HasResult = __result != null,
                 Prefab = prefab,
-                Sharing = fx != null && fx.Sharing,
+                Sharing = fx.Sharing,
                 Replaying = Coop.Guards.Replaying,
             };
 

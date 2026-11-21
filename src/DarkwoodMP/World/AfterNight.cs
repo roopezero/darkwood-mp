@@ -155,7 +155,7 @@ namespace DarkwoodMP.World
             }
 
             bool someoneOut = false;
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (CoopPause.InCoop && sync != null
                 && UnityEngine.Time.unscaledTime - _since >= Grace)
             {
@@ -296,7 +296,7 @@ namespace DarkwoodMP.World
         /// PlayerState says it's out.</summary>
         private static void TellLateMornings(Session s, Controller c)
         {
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (_overDay < 0 || sync == null || !WorldShare.InWorld)
             {
                 return;

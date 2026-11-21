@@ -182,7 +182,7 @@ namespace DarkwoodMP.World
         private static List<RemotePlayer> Playing()
         {
             var list = new List<RemotePlayer>();
-            var sync = PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (sync == null)
             {
                 return list;

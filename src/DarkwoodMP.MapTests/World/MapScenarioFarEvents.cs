@@ -79,7 +79,7 @@ namespace DarkwoodMP.World
             _since = Time.realtimeSinceStartup;
             PlayerStepsRun.Clear();
             Dialogues = 0;
-            WatchSteps = Sync.PlayerSync.Instance != null
+            WatchSteps = Plugin.Instance.Host.Players != null
                 && Net.Session.Instance != null && Net.Session.Instance.IsHost;
             _refreshesAtReset = SharedCullingPatch.LoadingRefreshes;
             var locs = WorldLocations()
