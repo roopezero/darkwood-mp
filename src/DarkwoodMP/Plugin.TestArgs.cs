@@ -404,7 +404,7 @@ namespace DarkwoodMP
 
             _host.Share.TestHoldSecs = 0f;
 
-            SkillsPanel.TestMouse = null;
+            _host.SkillsPanel.TestMouse = null;
             _host.TestMouse = null;
             _host.TestAsPlayer = false;
             var player = Player.Instance;

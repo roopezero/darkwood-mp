@@ -180,7 +180,7 @@ namespace DarkwoodMP
         internal readonly World.SkillLearning Learning =
             new World.SkillLearning();
 
-        /// The Skills panel, also alone (World.SkillsPanel).
+        /// The Skills panel, also alone (World.SkillsWindow).
         internal readonly World.SkillsWindow SkillsPanel =
             new World.SkillsWindow();
 

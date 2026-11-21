@@ -278,7 +278,7 @@ namespace DarkwoodMP
 
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
             _host.Cursor.LateUpdate(
-                MenuWindows.AnyOpen || SkillsPanel.Open
+                MenuWindows.AnyOpen || _host.SkillsPanel.Open
                     || _host.Drag.WindowOpen);
         }
 
@@ -427,7 +427,7 @@ namespace DarkwoodMP
             }
 
             _host.Progress.Update();
-            SkillsPanel.Update(_host.Panel.IsOpen);
+            _host.SkillsPanel.Update(_host.Panel.IsOpen);
             coop = Coop.Current;
             if (coop != null)
             {
@@ -521,7 +521,7 @@ namespace DarkwoodMP
             }
 
             _host.Progress.OnGUI();
-            SkillsPanel.OnGUI();
+            _host.SkillsPanel.OnGUI();
             _host.Panel.OnGUI();
         }
 

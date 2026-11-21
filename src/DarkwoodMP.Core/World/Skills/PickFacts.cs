@@ -10,7 +10,7 @@ namespace DarkwoodMP.World.Skills
         public TierFacts[] Tiers { get; init; }
 
         /// The skills our player has; null when there's no player, which
-        /// skips the last check (SkillsPanel's p != null).
+        /// skips the last check (SkillsWindow's p != null).
         public HashSet<string> Chosen { get; init; }
 
         /// The name of the skill clicked.

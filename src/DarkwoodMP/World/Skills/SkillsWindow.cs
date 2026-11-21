@@ -8,9 +8,9 @@ using UnityEngine;
 namespace DarkwoodMP.World
 {
     /// <summary>
-    /// The Skills panel (one for the game, ModHost.SkillsPanel; reached
-    /// through SkillsPanel): a key (the SkillsKey setting, K by default; none
-    /// of the game's default keys use K) opens it anywhere in the world, on the
+    /// The Skills panel (one for the game, ModHost.SkillsPanel, since it works
+    /// playing alone too): a key (the SkillsKey setting, K by default; none of
+    /// the game's default keys use K) opens it anywhere in the world, on the
     /// right. It doesn't open the backpack; the player can open that beside the
     /// panel with its own key. It shows the skill points to spend and the
     /// game's four tiers of skills with their own icons, names and
@@ -23,8 +23,8 @@ namespace DarkwoodMP.World
     /// Learned skills have a bright frame and a check mark. Clicks on the panel
     /// don't reach the world: while the mouse is over it, the game's mouse
     /// actions read as not pressed (RewiredPlayerGetButtonDown,
-    /// RewiredPlayerGetButton). Escape closes the panel before the game's
-    /// pause menu sees it (InputScriptOnPressEsc).
+    /// RewiredPlayerGetButton). Escape closes the panel before the game's pause
+    /// menu sees it (InputScriptOnPressEsc).
     /// </summary>
     internal sealed partial class SkillsWindow
     {
@@ -44,6 +44,25 @@ namespace DarkwoodMP.World
         private readonly SkillIcons _icons = new SkillIcons();
 
         public bool Open => _win != null && _win.Open;
+
+        /// <summary>
+        /// The panel's key (the SkillsKey setting, K by default; KeyCode.None
+        /// turns it off).
+        /// </summary>
+        internal KeyCode Key
+        {
+            get
+            {
+                if (Plugin.Cfg != null)
+                {
+                    return Plugin.Cfg.SkillsKey.Value;
+                }
+
+                return KeyCode.K;
+            }
+        }
+
+        public string KeyName => Key.ToString();
 
         private const string Title = "Skills";
 
@@ -198,7 +217,7 @@ namespace DarkwoodMP.World
 
             // Escape is taken in InputScriptOnPressEsc, before the game's pause
             // menu sees it.
-            var key = SkillsPanel.Key;
+            var key = Key;
             var facts = new KeyFacts
             {
                 CoopMenuOpen = coopPanelOpen,

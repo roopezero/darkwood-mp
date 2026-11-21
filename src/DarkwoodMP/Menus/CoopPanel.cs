@@ -143,7 +143,7 @@ namespace DarkwoodMP.Menus
         public void OnGUI()
         {
             ShowSystemCursor(
-                MenuWindows.AnyOpen || SkillsPanel.Open
+                MenuWindows.AnyOpen || Plugin.Instance.Host.SkillsPanel.Open
                     || _host.Drag.WindowOpen);
             if (!_showMenu && !_host.MenuList.Shown && !MenuWindows.AnyOpen)
             {

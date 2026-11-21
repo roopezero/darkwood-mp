@@ -13,6 +13,10 @@ namespace DarkwoodMP.World.Progress
     // The skill reset at the stove, the stove's overlay, and the tests' hooks.
     internal sealed partial class Progression
     {
+        /// The Skills panel's key, as the messages name it.
+        private static string SkillsKeyName =>
+            Plugin.Instance.Host.SkillsPanel.KeyName;
+
         /// <summary>
         /// Take back all of a player's chosen skills (good and negative).
         /// keepLevel: the levels stay, and the points come back to spend again
@@ -176,7 +180,7 @@ namespace DarkwoodMP.World.Progress
 
             p.displayMessage(
                 $"Skills reset: {SkillTree.Points(p)} skill points to spend "
-                    + $"({SkillsPanel.KeyName})");
+                    + $"({SkillsKeyName})");
         }
 
         /// <summary>At our stove: the levels waiting, the points to spend, and
@@ -204,7 +208,7 @@ namespace DarkwoodMP.World.Progress
             if (points > 0)
             {
                 lines.Add(
-                    $"Skill points to spend: {points} ({SkillsPanel.KeyName}: "
+                    $"Skill points to spend: {points} ({SkillsKeyName}: "
                         + "Skills)");
             }
 

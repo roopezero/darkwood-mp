@@ -20,6 +20,9 @@ namespace DarkwoodMP
 {
     public sealed partial class Plugin
     {
+        /// The Skills panel the solo tests drive (ModHost.SkillsPanel).
+        private SkillsWindow SkillsPanel => _host.SkillsPanel;
+
         private System.Collections.IEnumerator SoloTest(string dir)
         {
             System.IO.Directory.CreateDirectory(dir);
