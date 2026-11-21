@@ -28,47 +28,47 @@ namespace DarkwoodMP.World
     /// recruiter has left, the follower goes back to following the host's
     /// player.
     /// </summary>
-    public static class NpcFollowers
+    internal sealed class NpcFollowers
     {
         /// <summary>
         /// Host: follower -> the peer id of the joiner who recruited it.
         /// </summary>
-        private static readonly Dictionary<Character, ulong> Recruiter =
+        private readonly Dictionary<Character, ulong> _recruiter =
             new Dictionary<Character, ulong>();
-        private static bool _hooked;
 
-        private static void Hook()
+        public NpcFollowers(CoopSession coop)
         {
-            if (_hooked || Session.Instance == null)
+            Session net = coop.Net;
+            net.OnPeerDisconnected += Forget;
+            coop.Hook(() => net.OnPeerDisconnected -= Forget);
+        }
+
+        /// <summary>
+        /// A joiner left: its followers go back to following the host's
+        /// player.
+        /// </summary>
+        private void Forget(ulong id)
+        {
+            var gone = new List<Character>();
+            foreach (var kv in _recruiter)
             {
-                return;
+                if (kv.Value == id)
+                {
+                    gone.Add(kv.Key);
+                }
             }
 
-            _hooked = true;
-            Session.Instance.OnSessionEnded += () => Recruiter.Clear();
-            Session.Instance.OnPeerDisconnected += id =>
+            foreach (var c in gone)
             {
-                var gone = new List<Character>();
-                foreach (var kv in Recruiter)
-                {
-                    if (kv.Value == id)
-                    {
-                        gone.Add(kv.Key);
-                    }
-                }
-
-                foreach (var c in gone)
-                {
-                    Recruiter.Remove(c);
-                }
-            };
+                _recruiter.Remove(c);
+            }
         }
 
         /// <summary>
         /// Host: note that this joiner recruited this character, if it's a
         /// follower now or about to be.
         /// </summary>
-        internal static void Recruited(GameObject go, ulong by)
+        internal void Recruited(GameObject go, ulong by)
         {
             Character c = null;
             if (go != null)
@@ -81,8 +81,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            Hook();
-            Recruiter[c] = by;
+            _recruiter[c] = by;
             if (WorldActions.Debug)
             {
                 Plugin.Log.LogInfo(
@@ -104,9 +103,9 @@ namespace DarkwoodMP.World
         /// Host: the stand-in of the joiner a follower follows, or null (it
         /// follows the host's player).
         /// </summary>
-        public static NetPlayerProxy LeaderOf(Character c)
+        public NetPlayerProxy LeaderOf(Character c)
         {
-            if (c == null || Recruiter.Count == 0)
+            if (c == null || _recruiter.Count == 0)
             {
                 return null;
             }
@@ -124,12 +123,12 @@ namespace DarkwoodMP.World
         /// The facts of a character that may follow a joiner, and that
         /// joiner's stand-in (null with none, or not recorded).
         /// </summary>
-        private static FollowerFacts FactsOf(
+        private FollowerFacts FactsOf(
             Character c,
             out NetPlayerProxy leader)
         {
             leader = null;
-            bool recruited = Recruiter.TryGetValue(c, out ulong id);
+            bool recruited = _recruiter.TryGetValue(c, out ulong id);
             if (recruited
                 && NetPlayerProxy.All.TryGetValue(id, out var p) && p != null)
             {
@@ -151,7 +150,7 @@ namespace DarkwoodMP.World
         /// only its leader among the players, and goes after it. Returns false
         /// if it isn't one (the caller does as for any friendly NPC).
         /// </summary>
-        public static bool BeforeSightCheck(Character c)
+        public bool BeforeSightCheck(Character c)
         {
             var leader = LeaderOf(c);
             if (leader == null)
@@ -297,6 +296,12 @@ namespace DarkwoodMP.World
                 return;
             }
 
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return;
+            }
+
             ulong by = ScriptedEvents.By;
             StepFacts step = NpcFollowers.FactsOf(__instance, by);
             if (!FollowerRules.Recruits(step))
@@ -310,7 +315,7 @@ namespace DarkwoodMP.World
                 FollowerFacts target = NpcFollowers.TargetFactsOf(c);
                 if (FollowerRules.Counts(step, target))
                 {
-                    NpcFollowers.Recruited(go, step.By);
+                    coop.Followers.Recruited(go, step.By);
                 }
             }
         }

@@ -26,9 +26,8 @@ namespace DarkwoodMP.World
     /// has that part on doesn't let its copy walk off by itself (a follower
     /// after the client's own player, say).
     /// </summary>
-    public sealed class NpcSync
+    internal sealed class NpcSync
     {
-        public static NpcSync Instance { get; private set; }
         private readonly Session _session;
 
         /// <summary>Host: where each NPC was when last sent.</summary>
@@ -44,17 +43,10 @@ namespace DarkwoodMP.World
         /// </summary>
         private readonly List<(int id, NPC npc)> _npcs = new List<(int, NPC)>();
 
-        public NpcSync(Session session)
+        public NpcSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.NpcPos, OnPos);
-            session.OnSessionEnded += () =>
-            {
-                _sent.Clear();
-                _target.Clear();
-                _npcs.Clear();
-            };
+            _session = coop.Net;
+            coop.Handle(MsgType.NpcPos, OnPos);
         }
 
         /// <summary>
