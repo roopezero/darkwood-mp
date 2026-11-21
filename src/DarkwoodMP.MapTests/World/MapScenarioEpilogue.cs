@@ -1,4 +1,5 @@
 using DarkwoodMP.World.Dreaming;
+using DarkwoodMP.World.Story;
 using HarmonyLib;
 using System.Collections;
 using UnityEngine.SceneManagement;
@@ -555,7 +556,7 @@ namespace DarkwoodMP.World
                 r.Fail($"no pan: {r.Info}");
             }
             else if (Net.Session.Instance.IsClient
-                && EpilogueSync.HostBurned != 1)
+                && EpilogueSync.HostBurned != HostBurned.Yes)
             {
                 r.Fail($"the host's outcomes didn't come: {r.Info}");
             }
