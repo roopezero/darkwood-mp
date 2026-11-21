@@ -412,6 +412,16 @@ namespace DarkwoodMP
                 case Refusal.NotPlayersFolder:
                     return "it isn't prof<N>/darkwoodmp_players in the save"
                         + " folder";
+                case Refusal.WaitForMainMenu:
+                    return "Wait for the main menu.";
+                case Refusal.NoSaveInSlot:
+                    return "No save in that slot.";
+                case Refusal.NeedsProfilesScreen:
+                    return "This save needs the game's profiles screen.";
+                case Refusal.ChooseOverwrite:
+                    return "Choose a save to overwrite.";
+                case Refusal.NameLocked:
+                    return "You can change it when you're in no game.";
                 default:
                     return verdict.Reason.ToString();
             }
