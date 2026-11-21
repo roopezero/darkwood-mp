@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using DarkwoodMP.Combat.Damage;
 using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using UnityEngine;
@@ -7,13 +8,9 @@ namespace DarkwoodMP.Combat
 {
     /// <summary>
     /// PlayerDamage, host -> client: an enemy on the host hit this client's
-    /// proxy.
-    ///   f32 damage, u8 flags (1: shadow), str attacker, u8 n, n x effect
-    ///   effect: i32 type, f32 startDelay, f32 duration, f32 modifier,
-    ///           f32 interval, u8 flags (1 stopsBleeding, 2 stopsPoison,
-    ///           4 hasPoisonOverlay), str activateSound
-    /// The client applies it to its own Player as the game would have, effects
-    /// (bleeding, poison...) included.
+    /// proxy (the core's PlayerDamageMessage has the bytes, DamageRules
+    /// what becomes of the hit). The client applies it to its own Player as
+    /// the game would have, effects (bleeding, poison...) included.
     /// </summary>
     public static class PlayerDamage
     {
@@ -30,147 +27,146 @@ namespace DarkwoodMP.Combat
                 from = attacker.name;
             }
 
-            // A friendly NPC is each player's own: one the host doesn't run as
-            // an enemy (Combat.HostileNpcs) hits the joiner with the joiner's
-            // own copy, so the host's copy's hit on the proxy would be a second
-            // one.
+            var session = Session.Instance;
+            switch (DamageRules.Send(FactsOf(owner, attacker, session)))
+            {
+                case ProxyHit.LeftToTheirCopy:
+                    // A friendly NPC is each player's own: one the host
+                    // doesn't run as an enemy (Combat.HostileNpcs) hits the
+                    // joiner with the joiner's own copy, so the host's
+                    // copy's hit on the proxy would be a second one.
+                    if (Threat.Debug)
+                    {
+                        Plugin.Log.LogInfo(
+                            $"[threat] {from} (an NPC) hit a remote player's "
+                                + "stand-in: left to that player's own copy "
+                                + "of it");
+                    }
+
+                    return;
+                case ProxyHit.ToDummy:
+                    HitDummy(damage, from, effects);
+                    return;
+                case ProxyHit.NotSent:
+                    return;
+            }
+
+            var w = session.Begin(MsgType.PlayerDamage);
+            var hit = new StandInHit
+            {
+                Damage = damage,
+                Shadow = shadow,
+                Attacker = from,
+                Effects = SentOf(effects),
+            };
+
+            PlayerDamageMessage.Write(w, hit);
+            session.SendTo(owner, w, Channel.Control, reliable: true);
+        }
+
+        /// <summary>
+        /// The attacker, the stand-in's owner and the session: the only code
+        /// reading them for DamageRules.Send.
+        /// </summary>
+        private static ProxyHitFacts FactsOf(
+            ulong owner, Transform attacker, Session session)
+        {
             Character npc = null;
             if (attacker != null)
             {
                 npc = attacker.GetComponentInParent<Character>();
             }
 
-            if (npc != null && npc.npc != null && !NetEnemies.Eligible(npc))
+            bool byNpc = npc != null && npc.npc != null;
+            return new ProxyHitFacts
             {
-                if (Threat.Debug)
-                {
-                    Plugin.Log.LogInfo(
-                        $"[threat] {from} (an NPC) hit a remote player's "
-                            + "stand-in: left to that player's own copy of it");
-                }
-
-                return;
-            }
-
-            if (owner == PlayerSync.DummyId)
-            {
-                string effectNote = "";
-                if (effects != null && effects.Count > 0)
-                {
-                    effectNote = $" (+{effects.Count} effects)";
-                }
-
-                Plugin.Log.LogInfo(
-                    $"[dummy] hit for {damage:0} by {from}" + effectNote);
-                PlayerSync instance = PlayerSync.Instance;
-                if (instance != null)
-                {
-                    instance.FlashDummy(damage);
-                }
-
-                return;
-            }
-
-            var session = Session.Instance;
-            if (session == null || !session.IsHost)
-            {
-                return;
-            }
-
-            var w = session.Begin(MsgType.PlayerDamage);
-            w.W.Write(damage);
-            int shadowFlag = 0;
-            if (shadow)
-            {
-                shadowFlag = 1;
-            }
-
-            w.W.Write((byte)shadowFlag);
-            w.WriteStr(from);
-            WriteEffects(w, effects);
-            session.SendTo(owner, w, Channel.Control, reliable: true);
+                ByNpc = byNpc,
+                NpcIsEnemy = byNpc && NetEnemies.Eligible(npc),
+                ToDummy = owner == PlayerSync.DummyId,
+                Host = session != null && session.IsHost,
+            };
         }
 
-        /// <summary>u8 n, n x effect (see the class's summary).</summary>
+        private static void HitDummy(
+            float damage, string from, List<InvItemEffect> effects)
+        {
+            string effectNote = "";
+            if (effects != null && effects.Count > 0)
+            {
+                effectNote = $" (+{effects.Count} effects)";
+            }
+
+            Plugin.Log.LogInfo(
+                $"[dummy] hit for {damage:0} by {from}" + effectNote);
+            PlayerSync instance = PlayerSync.Instance;
+            if (instance != null)
+            {
+                instance.FlashDummy(damage);
+            }
+        }
+
+        /// <summary>
+        /// u8 n, n x effect (the core's SentEffects).
+        /// </summary>
         public static void WriteEffects(
             PacketWriter w, List<InvItemEffect> effects)
         {
-            int n;
-            if (effects == null)
-            {
-                n = 0;
-            }
-            else
-            {
-                n = Mathf.Min(effects.Count, 16);
-            }
-
-            w.W.Write((byte)n);
-            for (int i = 0; i < n; i++)
-            {
-                var e = effects[i];
-                w.W.Write((int)e.type);
-                w.W.Write(e.startDelay);
-                w.W.Write(e.duration);
-                w.W.Write(e.modifier);
-                w.W.Write(e.interval);
-                int flags = 0;
-                if (e.stopsBleeding)
-                {
-                    flags |= 1;
-                }
-
-                if (e.stopsPoison)
-                {
-                    flags |= 2;
-                }
-
-                if (e.hasPoisonOverlay)
-                {
-                    flags |= 4;
-                }
-
-                w.W.Write((byte)flags);
-                string activateSound = e.activateSound;
-                if (activateSound == null)
-                {
-                    activateSound = "";
-                }
-
-                w.WriteStr(activateSound);
-            }
+            SentEffects.Write(w, SentOf(effects));
         }
 
-        public static List<InvItemEffect> ReadEffects(PacketReader r)
+        public static List<InvItemEffect> ReadEffects(PacketReader r) =>
+            GameOf(SentEffects.Read(r));
+
+        private static List<SentEffect> SentOf(List<InvItemEffect> effects)
         {
-            int n = r.R.ReadByte();
-            var effects = new List<InvItemEffect>();
-            for (int i = 0; i < n; i++)
+            if (effects == null)
             {
-                var e = new InvItemEffect
-                {
-                    type = (CharacterEffectType)r.R.ReadInt32(),
-                    startDelay = r.R.ReadSingle(),
-                    duration = r.R.ReadSingle(),
-                    modifier = r.R.ReadSingle(),
-                    interval = r.R.ReadSingle(),
-                };
+                return null;
+            }
 
-                byte f = r.R.ReadByte();
-                e.stopsBleeding = (f & 1) != 0;
-                e.stopsPoison = (f & 2) != 0;
-                e.hasPoisonOverlay = (f & 4) != 0;
-                string snd = r.ReadStr();
-                if (snd.Length > 0)
+            var sent = new List<SentEffect>(effects.Count);
+            foreach (var e in effects)
+            {
+                sent.Add(new SentEffect
                 {
-                    e.activateSound = snd;
-                }
-                else
-                {
-                    e.activateSound = null;
-                }
+                    Type = (int)e.type,
+                    StartDelay = e.startDelay,
+                    Duration = e.duration,
+                    Modifier = e.modifier,
+                    Interval = e.interval,
+                    StopsBleeding = e.stopsBleeding,
+                    StopsPoison = e.stopsPoison,
+                    PoisonOverlay = e.hasPoisonOverlay,
+                    Sound = e.activateSound,
+                });
+            }
 
-                effects.Add(e);
+            return sent;
+        }
+
+        private static List<InvItemEffect> GameOf(
+            IReadOnlyList<SentEffect> sent)
+        {
+            var effects = new List<InvItemEffect>();
+            if (sent == null)
+            {
+                return effects;
+            }
+
+            foreach (var e in sent)
+            {
+                effects.Add(new InvItemEffect
+                {
+                    type = (CharacterEffectType)e.Type,
+                    startDelay = e.StartDelay,
+                    duration = e.Duration,
+                    modifier = e.Modifier,
+                    interval = e.Interval,
+                    stopsBleeding = e.StopsBleeding,
+                    stopsPoison = e.StopsPoison,
+                    hasPoisonOverlay = e.PoisonOverlay,
+                    activateSound = e.Sound,
+                });
             }
 
             return effects;
@@ -179,33 +175,33 @@ namespace DarkwoodMP.Combat
         private static void OnDamage(ulong from, PacketReader r)
         {
             var session = Session.Instance;
-            if (session == null || !session.IsClient || from != session.HostId)
+            if (!DamageRules.Reads(
+                    session != null && session.IsClient,
+                    session != null && from == session.HostId))
             {
                 return;
             }
 
-            float damage = r.R.ReadSingle();
-            bool shadow = (r.R.ReadByte() & 1) != 0;
-            string attacker = r.ReadStr();
-            var effects = ReadEffects(r);
-
+            var hit = PlayerDamageMessage.Read(r);
             var player = Player.Instance;
-            if (player == null || !player.alive)
+            if (!DamageRules.Takes(player != null, player != null
+                && player.alive))
             {
                 return;
             }
 
-            Plugin.Log.LogInfo($"Hit for {damage:0} by {attacker} on the host");
-            if (shadow)
+            Plugin.Log.LogInfo(
+                $"Hit for {hit.Damage:0} by {hit.Attacker} on the host");
+            if (hit.Shadow)
             {
-                player.getHitByShadow(damage);
+                player.getHitByShadow(hit.Damage);
             }
             else
             {
-                player.getHit(damage);
+                player.getHit(hit.Damage);
             }
 
-            foreach (var e in effects)
+            foreach (var e in GameOf(hit.Effects))
             {
                 player.effects.activate(e);
             }

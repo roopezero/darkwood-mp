@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using DarkwoodMP.Combat.Damage;
+using DarkwoodMP.Combat.Effects;
 using DarkwoodMP.Net;
 using DarkwoodMP.World;
 using HarmonyLib;
@@ -59,8 +61,8 @@ namespace DarkwoodMP.Combat
             PlayerDepth = 0;
         }
 
-        private static bool Hosting => Proxies.Any
-            && (Session.Instance == null || !Session.Instance.IsClient);
+        private static bool Hosting => AreaHitRules.Hosting(
+            Proxies.Any, Session.Instance != null && Session.Instance.IsClient);
 
         internal static void Spawned(GameObject go)
         {
@@ -69,12 +71,13 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            if (EnemyDepth > 0 && Hosting)
+            var sets = AreaHitRules.Sets(EnemyDepth, PlayerDepth, Hosting);
+            if ((sets & SpawnSets.Enemy) != 0)
             {
                 Add(EnemySpawned, go);
             }
 
-            if (PlayerDepth > 0)
+            if ((sets & SpawnSets.Player) != 0)
             {
                 Add(PlayerSpawned, go);
             }
@@ -82,7 +85,7 @@ namespace DarkwoodMP.Combat
 
         private static void Add(HashSet<GameObject> set, GameObject go)
         {
-            if (set.Count > 512)
+            if (AreaHitRules.Prunes(set.Count))
             {
                 set.RemoveWhere(g => g == null);
             }
@@ -113,13 +116,10 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static bool ByEnemy(Transform t, Transform spawnedBy = null)
         {
-            if (spawnedBy != null
-                && IsEnemy(spawnedBy.GetComponent<Character>()))
-            {
-                return true;
-            }
-
-            return In(EnemySpawned, t);
+            bool enemySpawner = spawnedBy != null
+                && IsEnemy(spawnedBy.GetComponent<Character>());
+            return AreaHitRules.ByEnemy(
+                enemySpawner, !enemySpawner && In(EnemySpawned, t));
         }
 
         private static bool IsEnemy(Character c) =>
@@ -153,13 +153,14 @@ namespace DarkwoodMP.Combat
         {
             foreach (var p in NetPlayerProxy.All.Values)
             {
-                if (p == null || !p.alive)
+                if (p == null)
                 {
                     continue;
                 }
 
                 var col = p.GetComponent<Collider>();
-                if (col != null && !col.enabled)
+                if (!AreaHitRules.Living(
+                        p.alive, col != null, col != null && col.enabled))
                 {
                     continue;
                 }
@@ -176,25 +177,19 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static void Explosion(Explodes ex)
         {
-            if (ex == null || ex.effect == null || !Hosting)
+            if (ex == null || !ExplosionRules.Handles(
+                    ex.effect != null, Hosting))
             {
                 return;
             }
 
             var at = ex.transform;
-            if (ex.affectsPlayer && ex.radius > 0f)
+            if (ExplosionRules.HurtsStandIns(ex.affectsPlayer, ex.radius))
             {
                 foreach (var p in LivingProxies())
                 {
-                    float d =
-                        Core.trueDistance(p.transform.position, at.position);
-                    if (d >= ex.radius || !Core.canSee(at, p.transform))
-                    {
-                        continue;
-                    }
-
-                    float damage = ex.damage * ((ex.radius - d) / ex.radius);
-                    if (damage <= 0f)
+                    if (!ExplosionRules.Hits(
+                            FactsOf(ex, p), out float damage))
                     {
                         continue;
                     }
@@ -221,10 +216,25 @@ namespace DarkwoodMP.Combat
                 }
             }
 
-            if (ByEnemy(at, ex.objectThatSpawnedMe))
+            SendExplosion(ex);
+        }
+
+        /// <summary>
+        /// An explosion and one stand-in: the only code reading them for
+        /// ExplosionRules.Hits. Its sight is read only within the radius, as
+        /// the game does.
+        /// </summary>
+        private static BlastFacts FactsOf(Explodes ex, NetPlayerProxy p)
+        {
+            var at = ex.transform;
+            float d = Core.trueDistance(p.transform.position, at.position);
+            return new BlastFacts
             {
-                SendExplosion(ex);
-            }
+                Radius = ex.radius,
+                Damage = ex.damage,
+                Distance = d,
+                Sees = d < ex.radius && Core.canSee(at, p.transform),
+            };
         }
 
         /// <summary>
@@ -236,11 +246,6 @@ namespace DarkwoodMP.Combat
         private static void SendExplosion(Explodes ex)
         {
             var s = Session.Instance;
-            if (s == null || !s.IsHost || s.Peers.Count == 0)
-            {
-                return;
-            }
-
             string sound = ex.explodeSound;
             if (sound == null)
             {
@@ -253,15 +258,30 @@ namespace DarkwoodMP.Combat
                 fx = ex.explosionPrefab.name;
             }
 
-            if (sound.Length == 0 && fx.Length == 0)
+            var facts = new ExplosionSendFacts
+            {
+                ByEnemy = ByEnemy(ex.transform, ex.objectThatSpawnedMe),
+                Host = s != null && s.IsHost,
+                Peers = PeersOf(s),
+                Sound = sound.Length > 0,
+                Effect = fx.Length > 0,
+            };
+
+            if (!ExplosionRules.Sends(facts))
             {
                 return;
             }
 
             var w = s.Begin(MsgType.EnemyExplosion);
-            w.Write(ex.transform.position);
-            w.WriteStr(sound);
-            w.WriteStr(fx);
+            var pos = ex.transform.position;
+            var blast = new EnemyExplosion
+            {
+                At = new Vec3(pos.x, pos.y, pos.z),
+                Sound = sound,
+                Effect = fx,
+            };
+
+            EnemyExplosionMessage.Write(w, blast);
             s.Broadcast(w, Channel.Control, reliable: true);
             if (WorldActions.Debug)
             {
@@ -269,6 +289,16 @@ namespace DarkwoodMP.Combat
                     $"[world] enemy explosion ({fx}, {sound}) at "
                         + $"{ex.transform.position}");
             }
+        }
+
+        private static int PeersOf(Session s)
+        {
+            if (s == null)
+            {
+                return 0;
+            }
+
+            return s.Peers.Count;
         }
 
         private static readonly Dictionary<string, GameObject> FxByName =
@@ -283,12 +313,18 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            var pos = r.ReadVector3();
-            string sound = r.ReadStr();
-            string fx = r.ReadStr();
+            var blast = EnemyExplosionMessage.Read(r);
+            var pos = new Vector3(blast.At.X, blast.At.Y, blast.At.Z);
+            string sound = blast.Sound;
+            string fx = blast.Effect;
             var me = Player.Instance;
-            if (me == null || PlayerAway()
-                || Core.trueDistance(me.transform.position, pos) > 4000f)
+            float d = 0f;
+            if (me != null)
+            {
+                d = Core.trueDistance(me.transform.position, pos);
+            }
+
+            if (!EffectRules.Shown(me != null, PlayerAway(), d))
             {
                 return;
             }
@@ -367,8 +403,8 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static void Aura(Character c)
         {
-            if (c == null || !c.alive || !Hosting
-                || c.aroundMeDamageRange <= 0f)
+            if (c == null || !AreaHitRules.AuraRuns(
+                    c.alive, Hosting, c.aroundMeDamageRange))
             {
                 return;
             }
@@ -377,18 +413,13 @@ namespace DarkwoodMP.Combat
             {
                 float d = Core.trueDistance(
                     p.transform.position, c.transform.position);
-                if (d > c.aroundMeDamageRange)
-                {
-                    continue;
-                }
-
-                float f =
-                    (c.aroundMeDamageRange / 2f - d) / c.aroundMeDamageRange;
-                if (f > 0f)
+                if (AreaHitRules.AuraHit(
+                        c.aroundMeDamage, c.aroundMeDamageRange, d,
+                        out float hit))
                 {
                     PlayerDamage.Send(
-                        p.Owner, c.aroundMeDamage * f, c.transform,
-                        shadow: false, effects: null);
+                        p.Owner, hit, c.transform, shadow: false,
+                        effects: null);
                 }
             }
         }
@@ -417,13 +448,15 @@ namespace DarkwoodMP.Combat
                 proxy = target.GetComponent<NetPlayerProxy>();
             }
 
-            if (proxy != null)
+            var whom = AreaHitRules.Dive(
+                proxy != null, Player.Instance != null);
+            if (whom == FlierTarget.StandIn)
             {
                 PlayerDamage.Send(
                     proxy.Owner, damage, flier.transform, shadow: false,
                     effects: null);
             }
-            else if (Player.Instance != null)
+            else if (whom == FlierTarget.OurPlayer)
             {
                 Player.Instance.getHit(damage);
             }
@@ -435,28 +468,29 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static void Shot(Shooter sh)
         {
-            if (sh == null || sh.target == null || !Hosting)
+            // A Shooter of the world's own runs in every game.
+            if (sh == null || !AreaHitRules.Shoots(
+                    sh.target != null, Hosting,
+                    IsEnemy(sh.GetComponentInParent<Character>())))
             {
                 return;
             }
 
-            if (!IsEnemy(sh.GetComponentInParent<Character>()))
-            {
-                return; // a Shooter of the world's own runs in every game
-            }
-
             foreach (var p in LivingProxies())
             {
-                if (!Core.canSee(sh.transform, p.transform))
+                bool sees = Core.canSee(sh.transform, p.transform);
+                float d = 0f;
+                if (sees)
                 {
-                    continue;
+                    d = Core.trueDistance(sh.transform, p.transform);
                 }
 
-                float d =
-                    Mathf.Max(1f, Core.trueDistance(sh.transform, p.transform));
-                PlayerDamage.Send(
-                    p.Owner, sh.damage / d, sh.transform, shadow: false,
-                    effects: null);
+                if (AreaHitRules.ShotHit(sh.damage, d, sees, out float hit))
+                {
+                    PlayerDamage.Send(
+                        p.Owner, hit, sh.transform, shadow: false,
+                        effects: null);
+                }
             }
         }
 
@@ -466,7 +500,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static void FlameTouch(Flame f, Transform t, Collider col)
         {
-            if (f == null || !f.isActive || !Hosting)
+            if (f == null)
             {
                 return;
             }
@@ -482,7 +516,16 @@ namespace DarkwoodMP.Combat
                 p = t.GetComponent<NetPlayerProxy>();
             }
 
-            if (p == null || !p.alive || !ByEnemy(f.transform))
+            var touch = new FlameTouchFacts
+            {
+                Active = f.isActive,
+                Hosting = Hosting,
+                StandIn = p != null,
+                Alive = p != null && p.alive,
+                ByEnemy = p != null && p.alive && ByEnemy(f.transform),
+            };
+
+            if (!AreaHitRules.FlameHurts(touch))
             {
                 return;
             }
@@ -810,8 +853,10 @@ namespace DarkwoodMP.Combat
     static class FlierTargetPatch
     {
         static bool Prefix(Flier __instance) =>
-            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(
-                __instance.GetComponent<Character>()));
+            !AreaHitRules.Frozen(
+                NetEnemies.ClientMode,
+                NetEnemies.ClientMode && NetEnemies.Frozen.Contains(
+                    __instance.GetComponent<Character>()));
 
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions)
@@ -872,9 +917,10 @@ namespace DarkwoodMP.Combat
         static bool Prefix(Shooter __instance)
         {
             // A client's frozen copy of the host's enemy doesn't shoot.
-            if (NetEnemies.ClientMode
-                && NetEnemies.Frozen.Contains(
-                    __instance.GetComponentInParent<Character>()))
+            if (AreaHitRules.Frozen(
+                    NetEnemies.ClientMode,
+                    NetEnemies.ClientMode && NetEnemies.Frozen.Contains(
+                        __instance.GetComponentInParent<Character>())))
             {
                 return false;
             }
