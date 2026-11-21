@@ -137,41 +137,69 @@ namespace DarkwoodMP.Combat
         /// </summary>
         public static bool LocalOnly(GameObject go)
         {
+            return FreezeRules.LocalOnly(LocalOf(go));
+        }
+
+        /// <summary>
+        /// A thing and where our player is, as FreezeRules.LocalOnly sees
+        /// them. In the dream's own place counts also while our player is
+        /// still on the way in (a stage's start event fires before the player
+        /// stands there), when the distance doesn't tell yet. Not a shared
+        /// level dream's (or the epilogue's): the host runs those
+        /// (World.Locations.SharedDream); a prologue stage each game runs.
+        /// </summary>
+        private static LocalFacts LocalOf(GameObject go)
+        {
             if (go == null)
             {
-                return false;
+                return default;
             }
 
-            if (go.scene
-                != UnityEngine.SceneManagement.SceneManager.GetActiveScene())
+            bool active = go.scene
+                == UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active)
             {
-                return true;
+                return new LocalFacts { Exists = true };
             }
 
-            // In the dream's own place: also while our player is still on the
-            // way in (a stage's start event fires before the player stands
-            // there), when the distance below doesn't tell yet. Not a shared
-            // level dream's (or the epilogue's): the host runs those
-            // (World.Locations.SharedDream); a prologue stage each game runs.
             var d = Singleton<Dreams>.Instance;
-            if (d != null && d.dreamLocation != null
-                && (d.dreaming || d.dreamPrepared || d.switchingDream)
-                && go.transform.IsChildOf(d.dreamLocation.transform)
-                && (DreamSync.SharedNow == null || World.Prologue.IsStage(
-                    DreamSync.SharedNow)))
+            bool dreaming = d != null && d.dreamLocation != null
+                && (d.dreaming || d.dreamPrepared || d.switchingDream);
+            bool inDream = dreaming
+                && go.transform.IsChildOf(d.dreamLocation.transform);
+            bool own = inDream && (DreamSync.SharedNow == null
+                || World.Prologue.IsStage(DreamSync.SharedNow));
+            if (inDream && own)
             {
-                return true;
-            }
-
-            if (World.Locations.HostRunsHere())
-            {
-                return false;
+                return new LocalFacts
+                {
+                    Exists = true,
+                    ActiveScene = true,
+                    Dreaming = true,
+                    InDream = true,
+                    OwnDream = true,
+                };
             }
 
             var p = Player.Instance;
-            return p != null
-                && (go.transform.position - p.transform.position).sqrMagnitude
-                    < 4000f * 4000f;
+            Vec3 us = default;
+            if (p != null)
+            {
+                us = VecOf(p.transform.position);
+            }
+
+            return new LocalFacts
+            {
+                Exists = true,
+                ActiveScene = true,
+                Dreaming = dreaming,
+                InDream = inDream,
+                OwnDream = own,
+                HostRunsHere = World.Locations.HostRunsHere(),
+                HasPlayer = p != null,
+                Thing = VecOf(go.transform.position),
+                Us = us,
+            };
         }
 
         /// <summary>
@@ -248,21 +276,23 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static void PlayIdleLoop(Character c)
         {
-            if (c == null || !c.alive || c.sounds == null)
+            if (c == null || c.sounds == null)
+            {
+                return;
+            }
+
+            var loop = CopyStateRules.IdleLoopFor(c.alive, c.sleeping);
+            if (loop == IdleLoop.None)
             {
                 return;
             }
 
             try
             {
-                string loopName;
-                if (c.sleeping)
+                string loopName = c.sounds.idleLoop;
+                if (loop == IdleLoop.Sleeping)
                 {
                     loopName = c.sounds.sleeping;
-                }
-                else
-                {
-                    loopName = c.sounds.idleLoop;
                 }
 
                 c.sounds.playIdleLoop(loopName);
@@ -307,18 +337,18 @@ namespace DarkwoodMP.Combat
             motion.Frame(dt);
             foreach (var p in _puppets.Values)
             {
-                if (p.C != null && p.DiedAt >= 0f && !p.Settled
-                    && now - p.DiedAt > DeathAnimTime)
+                if (CopyStateRules.Settles(SettleOf(p, now)))
                 {
                     Settle(p);
                 }
 
-                if (!p.Has || p.C == null)
+                if (!CopyStateRules.Draws(p.Has, p.C != null))
                 {
                     continue;
                 }
 
-                if (!p.C.gameObject.activeSelf && !p.Settled)
+                if (CopyStateRules.SwitchesOn(
+                    p.C.gameObject.activeSelf, p.Settled))
                 {
                     Plugin.Log.LogInfo(
                         $"[enemy] the host's {p.C.name} #{p.Id} was switched "
@@ -335,6 +365,20 @@ namespace DarkwoodMP.Combat
                 motion.Drawn(p.Motion, pos, dt);
                 AlignShadow(p.C);
             }
+        }
+
+        /// <summary>
+        /// A copy as CopyStateRules.Settles sees it, this frame.
+        /// </summary>
+        private static SettleFacts SettleOf(Puppet p, float now)
+        {
+            return new SettleFacts
+            {
+                Exists = p.C != null,
+                Dead = p.DiedAt >= 0f,
+                Settled = p.Settled,
+                SinceDeath = new Seconds(now - p.DiedAt),
+            };
         }
 
         /// <summary>

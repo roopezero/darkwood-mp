@@ -143,13 +143,14 @@ namespace DarkwoodMP.Combat
             // never let a puppet's frames act (attack, sound) here
             a.AnimationEventTriggered = CopyFrameEvent;
             a.AnimationCompleted = null;
-            if (clipHash == 0 || a.Library == null)
+            var cur = a.CurrentClip;
+            var step = CopyStateRules.Clip(ClipOf(a, clipHash, frame));
+            if (step == ClipStep.Skip)
             {
                 return;
             }
 
-            var cur = a.CurrentClip;
-            if (cur == null || StableHash.Of(cur.name) != clipHash)
+            if (step == ClipStep.Switch)
             {
                 foreach (var clip in a.Library.clips)
                 {
@@ -157,9 +158,8 @@ namespace DarkwoodMP.Combat
                     {
                         a.PlayFromFrame(
                             clip,
-                            Mathf.Clamp(
-                                frame, 0,
-                                Mathf.Max(0, clip.frames.Length - 1)));
+                            CopyStateRules.StartFrame(
+                                frame, clip.frames.Length));
                         break;
                     }
                 }
@@ -169,20 +169,57 @@ namespace DarkwoodMP.Combat
             // animator update goes back to the copy's own clip time, so the
             // copy flicked to the host's frame and back on every update and
             // stayed off, as a world rabbit did 3 frames ahead.)
-            else if (Mathf.Abs(a.CurrentFrame - frame) > 2
-                && cur.frames != null && frame < cur.frames.Length)
+            else if (step == ClipStep.Replay)
             {
                 a.PlayFromFrame(cur, frame);
             }
 
-            if (!playing && a.Playing)
+            var play = CopyStateRules.Play(playing, a.Playing, a.Paused);
+            if (play == PlayStep.Pause)
             {
                 a.Pause();
             }
-            else if (playing && a.Paused)
+            else if (play == PlayStep.Resume)
             {
                 a.Resume();
             }
+        }
+
+        /// <summary>
+        /// The animator and the host's clip and frame as
+        /// CopyStateRules.Clip sees them.
+        /// </summary>
+        private static ClipFacts ClipOf(
+            tk2dSpriteAnimator a,
+            int clipHash,
+            int frame)
+        {
+            var cur = a.CurrentClip;
+            bool same = cur != null && StableHash.Of(cur.name) == clipHash;
+            bool frames = same && cur.frames != null;
+            int count = 0;
+            if (frames)
+            {
+                count = cur.frames.Length;
+            }
+
+            // read only for the clip it plays, as before
+            int current = 0;
+            if (same)
+            {
+                current = a.CurrentFrame;
+            }
+
+            return new ClipFacts
+            {
+                Clip = clipHash,
+                Frame = frame,
+                Library = a.Library != null,
+                Same = same,
+                Current = current,
+                HasFrames = frames,
+                Frames = count,
+            };
         }
 
         /// <summary>
@@ -202,7 +239,7 @@ namespace DarkwoodMP.Combat
                     f = clip.GetFrame(frame);
                 }
 
-                if (f == null || f.eventInfo != "TweenShadows")
+                if (f == null || !CopyStateRules.PlaysEvent(f.eventInfo))
                 {
                     return;
                 }
@@ -215,7 +252,8 @@ namespace DarkwoodMP.Combat
 
                 if (c != null)
                 {
-                    c.tweenShadows(hide: f.eventInt == 0);
+                    c.tweenShadows(
+                        hide: CopyStateRules.HidesShadows(f.eventInt));
                 }
             }
             catch (System.Exception e)

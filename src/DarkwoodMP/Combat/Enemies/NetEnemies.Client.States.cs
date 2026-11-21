@@ -85,24 +85,41 @@ namespace DarkwoodMP.Combat
                 return;
             }
 
-            _nextSweep = Time.unscaledTime + 1f;
+            _nextSweep = Time.unscaledTime + FreezeRules.SweepInterval;
             foreach (var c in Plugin.Instance.Host.Characters.Active())
             {
-                if (!Eligible(c) || _byChar.ContainsKey(c))
-                {
-                    continue;
-                }
-
-                bool local = LocalOnly(c);
-                if (local && _frozen.Contains(c))
+                var step = FreezeRules.Sweep(SweepOf(c));
+                if (step == SweepStep.Thaw)
                 {
                     ThawHere(c);
                 }
-                else if (!local && !_frozen.Contains(c))
+                else if (step == SweepStep.Freeze)
                 {
                     Freeze(c, hide: true);
                 }
             }
+        }
+
+        /// <summary>
+        /// One of our characters as the sweep sees it. Whether it's in an
+        /// area of our own is read only for an eligible one that isn't a
+        /// copy, as before.
+        /// </summary>
+        private SweepFacts SweepOf(Character c)
+        {
+            bool eligible = Eligible(c);
+            bool copy = _byChar.ContainsKey(c);
+            if (!eligible || copy)
+            {
+                return new SweepFacts { Eligible = eligible, Copy = copy };
+            }
+
+            return new SweepFacts
+            {
+                Eligible = true,
+                Local = LocalOnly(c),
+                Frozen = _frozen.Contains(c),
+            };
         }
 
         private static string KindOfOrNull(Character c)
@@ -117,7 +134,7 @@ namespace DarkwoodMP.Combat
 
         private void OnSpawn(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !ClientMode)
+            if (!FreezeRules.FromHost(from == _session.HostId, ClientMode))
             {
                 return;
             }
@@ -283,7 +300,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private void OnArmor(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !ClientMode)
+            if (!FreezeRules.FromHost(from == _session.HostId, ClientMode))
             {
                 return;
             }
@@ -348,21 +365,27 @@ namespace DarkwoodMP.Combat
         internal static bool IsCopy(ShadowArmor a)
         {
             var s = Session.Instance;
-            if (a == null || s == null || !s.IsClient)
+            if (a == null || s == null)
             {
                 return false;
             }
 
             var c = a.GetComponent<Character>();
             NetEnemies enemies = Instance;
-            return c != null && enemies != null
-                && (enemies._frozen.Contains(c)
-                    || enemies._byChar.ContainsKey(c));
+            if (c == null || enemies == null)
+            {
+                return false;
+            }
+
+            return FreezeRules.IsCopy(
+                s.IsClient,
+                enemies._frozen.Contains(c),
+                enemies._byChar.ContainsKey(c));
         }
 
         private void OnState(ulong from, PacketReader r)
         {
-            if (from != _session.HostId || !ClientMode)
+            if (!FreezeRules.FromHost(from == _session.HostId, ClientMode))
             {
                 return;
             }
@@ -411,7 +434,7 @@ namespace DarkwoodMP.Combat
                     SetHealth(p.C, healthFraction);
                 }
 
-                if (alive && p.C.sleeping != asleep)
+                if (CopyStateRules.SleepChanges(alive, p.C.sleeping, asleep))
                 {
                     // Asleep or awake as the host's is, with the idle loop to
                     // match (a mimic's sleeping one).
@@ -425,30 +448,24 @@ namespace DarkwoodMP.Combat
                         loop = p.C.sounds.idleAudioObject;
                     }
 
-                    if (asleep || loop == null || !loop.IsPlaying()
-                        || loop.audioID == p.C.sounds.sleeping)
+                    if (CopyStateRules.ReplaysIdle(SleepOf(asleep, p.C, loop)))
                     {
                         PlayIdleLoop(p.C);
                     }
                 }
 
-                if (!alive && cut)
+                if (CopyStateRules.MarksCut(alive, cut))
                 {
                     p.Cut = true;
                 }
 
-                if (!alive && p.DiedAt < 0f)
+                if (CopyStateRules.FirstDeath(alive, p.DiedAt >= 0f))
                 {
                     // Out of play as on the host: a character with a pre-death
                     // stage would still count as in it here
                     // (Character.hasPreDeath with health left).
-                    if (p.C.maxHealth > 0f)
-                    {
-                        p.C.health = Mathf.Min(
-                            p.C.health,
-                            Mathf.Clamp01(healthFraction) * p.C.maxHealth);
-                    }
-
+                    p.C.health = CopyStateRules.DeathHealth(
+                        p.C.maxHealth, p.C.health, healthFraction);
                     p.C.alive = false;
                     p.DiedAt = Time.unscaledTime;
                     StopSounds(p.C, keepDeathSound: true);
@@ -539,9 +556,8 @@ namespace DarkwoodMP.Combat
             // AudioObjects under it.
             foreach (var ao in c.GetComponentsInChildren<AudioObject>(true))
             {
-                if (ao == null
-                    || (keepDeathSound && !string.IsNullOrEmpty(death)
-                        && ao.audioID == death))
+                if (ao == null || CopyStateRules.KeepsSound(
+                    keepDeathSound, death, ao.audioID))
                 {
                     continue;
                 }
@@ -564,23 +580,39 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static void SetHealth(Character c, float fraction)
         {
-            if (c.maxHealth <= 0f)
+            var change = CopyStateRules.Health(c.maxHealth, c.health, fraction);
+            if (!change.Changes)
             {
                 return;
             }
 
-            float hp = Mathf.Clamp01(fraction) * c.maxHealth;
-            if (Mathf.Abs(hp - c.health) < 0.01f)
-            {
-                return;
-            }
-
-            bool lost = hp < c.health;
-            c.health = hp;
+            c.health = change.Health;
             HealthBar(
                 c,
-                show: lost && Player.Instance != null
+                show: change.Lost && Player.Instance != null
                     && Player.Instance.selectedObject == c.transform);
+        }
+
+        /// <summary>
+        /// A copy's sleep and idle loop as CopyStateRules.ReplaysIdle sees
+        /// them.
+        /// </summary>
+        private static SleepFacts SleepOf(
+            bool asleep,
+            Character c,
+            AudioObject loop)
+        {
+            if (loop == null)
+            {
+                return new SleepFacts { Asleep = asleep };
+            }
+
+            return new SleepFacts
+            {
+                Asleep = asleep,
+                Playing = loop.IsPlaying(),
+                SleepingLoop = loop.audioID == c.sounds.sleeping,
+            };
         }
 
         /// <summary>

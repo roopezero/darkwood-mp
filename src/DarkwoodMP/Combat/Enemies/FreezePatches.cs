@@ -69,8 +69,11 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(Character __instance, bool enable)
         {
-            if (!enable || !NetEnemies.ClientMode
-                || !NetEnemies.Frozen.Contains(__instance))
+            bool client = enable && NetEnemies.ClientMode;
+            if (!FreezeRules.StaysFrozen(
+                enable,
+                client,
+                client && NetEnemies.Frozen.Contains(__instance)))
             {
                 return true;
             }
@@ -107,14 +110,16 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(CharacterSounds __instance, string loopName)
         {
-            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0
-                || !NetEnemies.ClientMode)
+            if (string.IsNullOrEmpty(loopName) || NetEnemies.Hidden.Count == 0)
             {
                 return true;
             }
 
             var c = __instance.GetComponent<Character>();
-            return c == null || !NetEnemies.Hidden.Contains(c);
+            return !FreezeRules.StaysSilent(
+                loopName,
+                NetEnemies.ClientMode,
+                c != null && NetEnemies.Hidden.Contains(c));
         }
     }
 
@@ -133,8 +138,9 @@ namespace DarkwoodMP.Combat
     {
         private static bool Prefix(CharacterSpawnPoint __instance)
         {
-            if (!NetEnemies.ClientMode
-                || NetEnemies.LocalOnly(__instance.gameObject))
+            bool client = NetEnemies.ClientMode;
+            if (FreezeRules.SpawnsOwn(
+                client, client && NetEnemies.LocalOnly(__instance.gameObject)))
             {
                 return true;
             }
@@ -238,7 +244,11 @@ namespace DarkwoodMP.Combat
     public static class CharacterHeardSoundDeaf
     {
         [HarmonyPriority(Priority.First)]
-        private static bool Prefix(Character __instance) =>
-            !(NetEnemies.ClientMode && NetEnemies.Frozen.Contains(__instance));
+        private static bool Prefix(Character __instance)
+        {
+            bool client = NetEnemies.ClientMode;
+            return FreezeRules.Hears(
+                client, client && NetEnemies.Frozen.Contains(__instance));
+        }
     }
 }
