@@ -42,7 +42,7 @@ namespace DarkwoodMP.World
         public const float Window = 30f;
         private const float Settle = 1f;
         private const byte MadeBefore = 1;
-        private const int MaxPerMessage = 1000;
+        private const int MaxPerMessage = HostIdsMessage.MaxPerMessage;
 
         private static readonly List<(GameObject go, float at)> _started =
             new List<(GameObject, float)>();
@@ -428,20 +428,27 @@ namespace DarkwoodMP.World
             List<(long id, string name, Vector3 pos, int place)> list,
             byte flags, ulong to)
         {
-            for (int start = 0; start < list.Count; start += MaxPerMessage)
+            var ids = new List<HostIdEntry>(list.Count);
+            foreach (var e in list)
             {
-                int n = Mathf.Min(MaxPerMessage, list.Count - start);
-                var w = _session.Begin(MsgType.HostIds);
-                w.W.Write(flags);
-                w.W.Write((ushort)n);
-                for (int i = start; i < start + n; i++)
-                {
-                    w.W.Write(list[i].id);
-                    w.WriteStr(list[i].name);
-                    w.Write(list[i].pos);
-                    w.W.Write(list[i].place);
-                }
+                ids.Add(
+                    new HostIdEntry
+                    {
+                        Id = e.id,
+                        Name = e.name,
+                        Pos = new Vec3(e.pos.x, e.pos.y, e.pos.z),
+                        Place = e.place,
+                    });
+            }
 
+            for (int start = 0; start < ids.Count; start += MaxPerMessage)
+            {
+                int n = Mathf.Min(MaxPerMessage, ids.Count - start);
+                var w = _session.Begin(MsgType.HostIds);
+                HostIdsMessage.Write(
+                    w,
+                    flags,
+                    new HostIdSlice { List = ids, Start = start, Count = n });
                 if (to == 0)
                 {
                     _session.Broadcast(w, Channel.Control, reliable: true);
@@ -499,15 +506,14 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            byte flags = r.R.ReadByte();
-            int n = r.R.ReadUInt16();
+            var ids = HostIdsMessage.Read(r, out byte flags);
             float until = Time.unscaledTime + Window;
-            for (int i = 0; i < n; i++)
+            foreach (var e in ids)
             {
-                long id = r.R.ReadInt64();
-                string name = r.ReadStr();
-                var pos = r.ReadVector3();
-                int place = r.R.ReadInt32();
+                long id = e.Id;
+                string name = e.Name;
+                var pos = new Vector3(e.Pos.X, e.Pos.Y, e.Pos.Z);
+                int place = e.Place;
                 ObjRef.Announced(id, name, pos);
                 _hostAt[id] = pos;
                 // Made before this joiner came: its copy is in the save it

@@ -54,12 +54,24 @@ namespace DarkwoodMP.World
 
         public void Write(PacketWriter w)
         {
-            w.W.Write((byte)K);
-            w.W.Write(Id);
+            NameOf(this).Write(w);
         }
 
-        public static ObjRef Read(PacketReader r) =>
-            new ObjRef { K = (Kind)r.R.ReadByte(), Id = r.R.ReadInt64() };
+        public static ObjRef Read(PacketReader r)
+        {
+            return RefOf(ObjName.Read(r));
+        }
+
+        /// The core's name for a ref: the same kind values and id.
+        public static ObjName NameOf(ObjRef r)
+        {
+            return new ObjName((ObjKind)r.K, r.Id);
+        }
+
+        public static ObjRef RefOf(ObjName name)
+        {
+            return new ObjRef { K = (Kind)name.Kind, Id = name.Id };
+        }
 
         /// <summary>
         /// Objects made while playing together, by id, in every game.
