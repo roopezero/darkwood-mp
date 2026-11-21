@@ -36,7 +36,7 @@ namespace DarkwoodMP
             bool Has(string name) => TestArgRules.Has(args, name);
             if (TestArgRules.IsTestGame(args))
             {
-                TestMode = true;
+                _host.TestMode = true;
             }
 
             _host.Loading.ShotsDir = Arg("--dwmp-load-shots");
@@ -137,7 +137,7 @@ namespace DarkwoodMP
             _host.Threats.Debug = Has("--dwmp-debug-threat");
             _host.Profiler.Enabled = Has("--dwmp-profile-mod");
             _host.LoadSpeed.Verify = Has("--dwmp-verify-load");
-            WorldActions.Debug = Has("--dwmp-debug-world");
+            _host.DebugWorld = Has("--dwmp-debug-world");
             if (Has("--dwmp-test-world"))
             {
                 StartTest(WorldTest.Run());
@@ -406,7 +406,7 @@ namespace DarkwoodMP
 
             SkillsPanel.TestMouse = null;
             _host.TestMouse = null;
-            WorldActions.TestAsPlayer = false;
+            _host.TestAsPlayer = false;
             var player = Player.Instance;
             if (player != null)
             {
@@ -415,7 +415,7 @@ namespace DarkwoodMP
             }
 
             _host.Threats.Debug = false;
-            WorldActions.Debug = false;
+            _host.DebugWorld = false;
             _host.LoadSpeed.Verify = false;
             _host.TestQuickEnd = false;
             _host.SpawnType = null;

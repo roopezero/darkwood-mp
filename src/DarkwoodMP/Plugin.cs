@@ -34,7 +34,6 @@ namespace DarkwoodMP
         public static ConfigEntry<int> SendRate => Cfg.SendRate;
         public static ConfigEntry<bool> LogPlayerSprites =>
             Cfg.LogPlayerSprites;
-        public static GUIStyle NameTagStyle;
 
         private Harmony _harmony;
         private ModHost _host;
@@ -116,13 +115,6 @@ namespace DarkwoodMP
         internal void HostWhenReady(bool steam) =>
             StartCoroutine(_host.Hosting.WhenWorldReady(steam));
 
-
-        /// <summary>
-        /// Whether the game was started for the tests (a --dwmp-test...
-        /// argument, the test world, or tools/run-test.sh's test control). Only
-        /// then does the Multiplayer window offer the test world and its tools.
-        /// </summary>
-        public static bool TestMode { get; private set; }
 
         /// <summary>
         /// The map test steps, set by the DarkwoodMP.MapTests plugin at its
@@ -508,15 +500,16 @@ namespace DarkwoodMP
         private void OnGUI()
         {
             _host.Control.OnGUI();
-            if (NameTagStyle == null)
+            if (_host.NameTagStyle == null)
             {
-                NameTagStyle = new GUIStyle(GUI.skin.label)
+                var style = new GUIStyle(GUI.skin.label)
                 {
                     alignment = TextAnchor.MiddleCenter,
                     fontStyle = FontStyle.Bold
                 };
 
-                NameTagStyle.normal.textColor = new Color(0.9f, 0.85f, 0.7f);
+                style.normal.textColor = new Color(0.9f, 0.85f, 0.7f);
+                _host.NameTagStyle = style;
             }
 
             _host.Players.DrawNameTags();

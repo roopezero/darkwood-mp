@@ -232,7 +232,7 @@ namespace DarkwoodMP.World
         public void DrawLabels()
         {
             if (!TestWorld.Active || _labels.Count == 0
-                || Plugin.NameTagStyle == null)
+                || Plugin.Instance.Host.NameTagStyle == null)
             {
                 return;
             }
@@ -259,7 +259,7 @@ namespace DarkwoodMP.World
 
                 GUI.Label(
                     new Rect(sp.x - 160, Screen.height - sp.y + 30, 320, 40),
-                    label, Plugin.NameTagStyle);
+                    label, Plugin.Instance.Host.NameTagStyle);
             }
         }
     }

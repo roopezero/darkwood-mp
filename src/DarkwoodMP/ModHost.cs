@@ -111,8 +111,6 @@ namespace DarkwoodMP
         /// <summary>Our player's noise (Combat.PlayerNoise).</summary>
         internal readonly Combat.PlayerNoise Noise = new Combat.PlayerNoise();
 
-        /// For tests ("--dwmp-test-quick-end"): skip the epilogue and the
-        /// credits as soon as they start, also after leaving the session.
         /// <summary>--dwmp-fps N: the frame cap, 0 for none.</summary>
         public int FpsCap;
 
@@ -125,7 +123,28 @@ namespace DarkwoodMP
         /// <summary>--dwmp-spawn TYPE: what the dummy test spawns.</summary>
         public string SpawnType;
 
+        /// For tests ("--dwmp-test-quick-end"): skip the epilogue and the
+        /// credits as soon as they start, also after leaving the session.
         public bool TestQuickEnd;
+
+        /// "--dwmp-debug-world": log every shared-world message sent and
+        /// applied (WorldActions.Debug).
+        public bool DebugWorld;
+
+        /// Tests only: count what's done now as our own player's doing
+        /// (WorldActions.ByLocalPlayer).
+        public bool TestAsPlayer;
+
+        /// <summary>
+        /// Whether the game was started for the tests (a --dwmp-test...
+        /// argument, the test world, or tools/run-test.sh's test control).
+        /// Only then does the Multiplayer window offer the test world and
+        /// its tools.
+        /// </summary>
+        public bool TestMode;
+
+        /// The players' name tags' style, made at the first OnGUI.
+        public UnityEngine.GUIStyle NameTagStyle;
 
         /// The shared essence and levels, and the stove's skill reset: also
         /// playing alone. A session adds its messages (Progression.Join).

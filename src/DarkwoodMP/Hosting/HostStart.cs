@@ -145,7 +145,7 @@ namespace DarkwoodMP.Hosting
             HostRules.OpensPort(
                 PortMapper.TestRouter != null,
                 Plugin.Cfg.OpenPort.Value,
-                Plugin.TestMode);
+                Plugin.Instance.Host.TestMode);
 
         /// <summary>
         /// Host with Direct on the configured port; a password or player limit

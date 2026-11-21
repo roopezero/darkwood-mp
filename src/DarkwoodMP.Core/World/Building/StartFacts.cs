@@ -13,7 +13,8 @@ namespace DarkwoodMP.World.Building
         /// The construct call's manual argument: the player built it.
         public bool Manual { get; init; }
 
-        /// A test step builds it as the player (WorldActions.TestAsPlayer).
+        /// A test step builds it as the player
+        /// (ModHost.TestAsPlayer).
         public bool TestAsPlayer { get; init; }
 
         /// This game is a client (Session.IsClient).

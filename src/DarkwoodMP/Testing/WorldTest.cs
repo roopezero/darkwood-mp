@@ -26,18 +26,18 @@ namespace DarkwoodMP.World
                         - at).sqrMagnitude).FirstOrDefault();
 
         /// <summary>
-        /// Runs a as our own player's action (WorldActions.TestAsPlayer).
+        /// Runs a as our own player's action (ModHost.TestAsPlayer).
         /// </summary>
         private static void AsPlayer(System.Action a)
         {
-            WorldActions.TestAsPlayer = true;
+            Plugin.Instance.Host.TestAsPlayer = true;
             try
             {
                 a();
             }
             finally
             {
-                WorldActions.TestAsPlayer = false;
+                Plugin.Instance.Host.TestAsPlayer = false;
             }
         }
 

@@ -5,7 +5,7 @@ namespace DarkwoodMP.Testing
 {
     /// How the --dwmp-* launch arguments are read: Plugin.ApplyTestArgs's
     /// Arg, Has and Seconds, the WxH parse of --dwmp-window, which tests
-    /// they start, and Plugin.TestMode.
+    /// they start, and ModHost.TestMode.
     public static class TestArgRules
     {
         /// Any argument starting with this makes the game a test game.

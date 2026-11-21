@@ -308,7 +308,7 @@ namespace DarkwoodMP.Menus
                 }
             }
 
-            if (Plugin.TestMode)
+            if (Plugin.Instance.Host.TestMode)
             {
                 DrawTestWorld(f);
             }

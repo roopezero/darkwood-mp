@@ -638,7 +638,7 @@ namespace DarkwoodMP.World.Spectating
             {
                 GUI.Label(
                     rect, $"Watching {name}. Click for the next player.",
-                    Plugin.NameTagStyle);
+                    Plugin.Instance.Host.NameTagStyle);
                 return;
             }
 
@@ -646,7 +646,7 @@ namespace DarkwoodMP.World.Spectating
                 rect,
                 $"You're dead. Watching {name}. Click for the next player, "
                     + "right-click for the one before.",
-                Plugin.NameTagStyle);
+                Plugin.Instance.Host.NameTagStyle);
         }
     }
 }

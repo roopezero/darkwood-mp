@@ -26,6 +26,9 @@ namespace DarkwoodMP
         /// whether the world is shared).
         public readonly World.Guards Guards;
 
+        /// The hammer stroke being made, and a client's actions it holds.
+        public readonly World.HammerStrokes Hammer;
+
         /// The host's check on where each client's player says it is.
         public readonly Sync.MoveCheck Moves;
 
@@ -223,6 +226,7 @@ namespace DarkwoodMP
             Net = net;
             // Subsystems are made here, before the first message can arrive.
             Guards = new World.Guards(this);
+            Hammer = new World.HammerStrokes();
             Moves = new Sync.MoveCheck(this);
             Authority = new World.Authority(this);
             Names = new ObjNames(this);

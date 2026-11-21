@@ -128,9 +128,9 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// "--dwmp-debug-world": log every shared-world message sent and
-        /// applied.
+        /// applied (ModHost.DebugWorld).
         /// </summary>
-        public static bool Debug;
+        public static bool Debug => Plugin.Instance.Host.DebugWorld;
 
         private static Session S => Plugin.Instance.Host.Session;
 
@@ -165,14 +165,9 @@ namespace DarkwoodMP.World
                 typeof(Padlock), typeof(global::Button),
             };
 
-        /// <summary>
-        /// Tests only: count what's done now as our own player's doing.
-        /// </summary>
-        public static bool TestAsPlayer;
-
         public static bool ByLocalPlayer()
         {
-            if (TestAsPlayer)
+            if (Plugin.Instance.Host.TestAsPlayer)
             {
                 return true;
             }
@@ -349,9 +344,9 @@ namespace DarkwoodMP.World
                 }
             }
 
-            if (S.IsClient && HammerStroke.Depth > 0)
+            if (S.IsClient && Coop.Current.Hammer.Striking)
             {
-                HammerStroke.Held.Add(
+                Coop.Current.Hammer.Hold(
                     () => Send(a, r, name, x, y, f1, f2, str));
                 return;
             }
@@ -1000,44 +995,27 @@ namespace DarkwoodMP.World
     /// A hammer stroke (Player.checkFrameTrigger "HammerWork"): the stroke that
     /// nails up a barricade or rebuilds a broken door calls Door.barricade (or
     /// Window.barricade) first and takes the wood and nails after it. A client
-    /// sends that action as a request once the call is over, so the request
-    /// carries the materials it used up and a refused one gives them back
-    /// (InventoryWatch).
+    /// sends that action as a request once the call is over (HammerStrokes).
+    /// Does nothing with no session.
     /// </summary>
     [HarmonyPatch(typeof(Player), nameof(Player.checkFrameTrigger))]
     static class HammerStroke
     {
-        internal static int Depth;
-        internal static readonly System.Collections.Generic.List<System.Action>
-            Held = new System.Collections.Generic.List<System.Action>();
+        static void Prefix()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Hammer.Enter();
+            }
+        }
 
-        static void Prefix() => Depth++;
         static void Finalizer()
         {
-            if (--Depth > 0)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                return;
-            }
-
-            Depth = 0;
-            if (Held.Count == 0)
-            {
-                return;
-            }
-
-            var held = Held.ToArray();
-            Held.Clear();
-            foreach (var send in held)
-            {
-                try
-                {
-                    send();
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning(
-                        $"Couldn't send a hammer stroke's action: {e.Message}");
-                }
+                coop.Hammer.Leave();
             }
         }
     }
