@@ -122,6 +122,11 @@ static class WrapCode
         {
             return plan;
         }
+        plan = BreakChain(line, free, plainNames: true);
+        if (plan != null)
+        {
+            return plan;
+        }
         return split;
     }
 
@@ -801,7 +806,8 @@ static class WrapCode
 
     /// Breaks before the last "." of a call chain that fits: first a dot
     /// behind a call or an index (a real chain), then any dot of a call.
-    static LinePlan BreakChain(WrapLine line, List<SyntaxToken> tokens)
+    static LinePlan BreakChain(
+        WrapLine line, List<SyntaxToken> tokens, bool plainNames = false)
     {
         var inner = line.Indent + Wrap.Step;
         var dots = tokens
@@ -819,9 +825,10 @@ static class WrapCode
         if (dot == default)
         {
             // A dot behind a plain name (InvItemClass.isNull, r.Read) is
-            // never a chain's link: breaking there hides the call.
-            dot = dots.LastOrDefault(t =>
-                ((MemberAccessExpressionSyntax)t.Parent).Expression
+            // not a chain's link: breaking there hides the call, so it is
+            // the last place tried (plainNames), when nothing else fits.
+            dot = dots.LastOrDefault(t => plainNames
+                || ((MemberAccessExpressionSyntax)t.Parent).Expression
                     .DescendantNodesAndSelf()
                     .Any(n => n is InvocationExpressionSyntax
                         or ElementAccessExpressionSyntax));
