@@ -31,9 +31,8 @@ namespace DarkwoodMP.World
     /// fuel and whether it runs, if that changed, and the others take it
     /// (switching theirs on or off to match).
     /// </summary>
-    public sealed class FuelSync
+    internal sealed class FuelSync
     {
-        public static FuelSync Instance { get; private set; }
 
         /// <summary>
         /// What the local player did to one tank since the last send: fuel
@@ -45,7 +44,7 @@ namespace DarkwoodMP.World
             public InvItemClass Can;
         }
 
-        private readonly Session _session;
+        private readonly CoopSession _coop;
         // Poured here, not sent yet. A saw's cut (negative) is kept apart from
         // a pour, since the host checks them differently.
         private readonly Dictionary<(Component c, bool cut), Pour> _pending =
@@ -54,20 +53,24 @@ namespace DarkwoodMP.World
         private readonly Dictionary<Generator, (float fuel, bool on)> _sent =
             new Dictionary<Generator, (float, bool)>();
 
-        internal static readonly HashSet<Generator> Generators =
-            new HashSet<Generator>();
-
-        public FuelSync(Session session)
+        public FuelSync(CoopSession coop)
         {
-            Instance = this;
-            _session = session;
-            session.Register(MsgType.Fuel, OnFuel);
-            session.OnSessionEnded += () =>
-            {
-                _pending.Clear();
-                _sent.Clear();
-            };
+            _coop = coop;
+            coop.Handle(MsgType.Fuel, OnFuel);
         }
+
+        /// <summary>
+        /// For the tests: the last drain's generator, whose skill it used, and
+        /// the modifier (GeneratorDrainSkillPatch).
+        /// </summary>
+        public string LastDrain { get; set; }
+
+        private Session Net => _coop.Net;
+
+        /// The generators the game started, kept as long as the game runs
+        /// (ModHost.Generators): a world loaded before hosting has them too.
+        private static HashSet<Generator> Generators =>
+            Plugin.Instance.Host.Generators;
 
         private static Seconds Now => new Seconds(Time.unscaledTime);
 
@@ -124,7 +127,7 @@ namespace DarkwoodMP.World
                 Flush();
             }
 
-            if (!FuelRules.CheckDue(_session.IsHost, Now, _nextHost))
+            if (!FuelRules.CheckDue(Net.IsHost, Now, _nextHost))
             {
                 return;
             }
@@ -174,7 +177,7 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                if (_session.IsHost)
+                if (Net.IsHost)
                 {
                     Send(c, except: 0);
                 }
@@ -257,7 +260,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            var w = _session.Begin(MsgType.Fuel);
+            var w = Net.Begin(MsgType.Fuel);
             FuelMessage.Write(w, new TankFuel
             {
                 Tank = ObjRef.NameOf(r),
@@ -365,7 +368,7 @@ namespace DarkwoodMP.World
 
             var g = c as Generator;
             bool on = g != null && g.isOn;
-            var w = _session.Begin(MsgType.Fuel);
+            var w = Net.Begin(MsgType.Fuel);
             FuelMessage.Write(w, new TankFuel
             {
                 Tank = ObjRef.NameOf(r),
@@ -376,11 +379,11 @@ namespace DarkwoodMP.World
 
             if (to != 0)
             {
-                _session.SendTo(to, w, Channel.Control, reliable: true);
+                Net.SendTo(to, w, Channel.Control, reliable: true);
             }
             else
             {
-                _session.Broadcast(
+                Net.Broadcast(
                     w, Channel.Control, reliable: true, except: except);
             }
 
@@ -475,7 +478,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (_session.IsClient && from != _session.HostId)
+            if (Net.IsClient && from != Net.HostId)
             {
                 return;
             }
@@ -495,7 +498,7 @@ namespace DarkwoodMP.World
             }
 
             FuelAnswer answer = default;
-            if (_session.IsHost)
+            if (Net.IsHost)
             {
                 // Only taken inside a Request (Authority.RequestOnly): a player
                 // poured this much, or cut a log at the saw.
@@ -521,12 +524,12 @@ namespace DarkwoodMP.World
             float max = MaxOf(c);
             float have = FuelOf(c);
             float fuel;
-            if (_session.IsHost)
+            if (Net.IsHost)
             {
                 if (answer.Verdict.Refused)
                 {
                     Plugin.Log.LogInfo(
-                        $"[authority] {_session.NameOf(from)}'s fuel "
+                        $"[authority] {Net.NameOf(from)}'s fuel "
                             + $"{value:+0.0;-0.0} for {c.name} (have "
                             + $"{have:0.0}): "
                             + $"{Refusals.Text(answer.Verdict)}; sent back");
@@ -552,7 +555,7 @@ namespace DarkwoodMP.World
                 if (g != null)
                 {
                     g.fuel = fuel;
-                    if (_session.IsClient)
+                    if (Net.IsClient)
                     {
                         Switch(g, sent.On);
                     }
@@ -572,7 +575,7 @@ namespace DarkwoodMP.World
             if (WorldActions.Debug)
             {
                 string change = "";
-                if (_session.IsHost)
+                if (Net.IsHost)
                 {
                     change = $"{have:0.0} {value:+0.0;-0.0} -> ";
                 }
@@ -582,7 +585,7 @@ namespace DarkwoodMP.World
                         + $"{change}{fuel:0.0}{StateOf(g)}");
             }
 
-            if (_session.IsHost)
+            if (Net.IsHost)
             {
                 // everyone, the pourer too: the level with everyone's pours in
                 // it
@@ -619,10 +622,10 @@ namespace DarkwoodMP.World
             __state = __instance.fuel;
         static void Postfix(Generator __instance, float __state)
         {
-            FuelSync instance = FuelSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Poured(__instance, __instance.fuel - __state);
+                coop.Fuel.Poured(__instance, __instance.fuel - __state);
             }
         }
     }
@@ -634,10 +637,10 @@ namespace DarkwoodMP.World
             __state = __instance.fuel;
         static void Postfix(Saw __instance, float __state)
         {
-            FuelSync instance = FuelSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Poured(__instance, __instance.fuel - __state);
+                coop.Fuel.Poured(__instance, __instance.fuel - __state);
             }
         }
     }
@@ -658,10 +661,10 @@ namespace DarkwoodMP.World
         static System.Exception Finalizer(
             Saw __instance, System.Exception __exception, float __state)
         {
-            FuelSync instance = FuelSync.Instance;
-            if (instance != null)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                instance.Poured(__instance, __instance.fuel - __state);
+                coop.Fuel.Poured(__instance, __instance.fuel - __state);
             }
 
             return __exception;
@@ -672,7 +675,7 @@ namespace DarkwoodMP.World
     static class GeneratorListPatch
     {
         static void Postfix(Generator __instance) =>
-            FuelSync.Generators.Add(__instance);
+            Plugin.Instance.Host.Generators.Add(__instance);
     }
 
     /// <summary>
@@ -687,10 +690,10 @@ namespace DarkwoodMP.World
         {
             if (Coop.Guards.Sharing && !Coop.Guards.Replaying)
             {
-                FuelSync instance = FuelSync.Instance;
-                if (instance != null)
+                CoopSession coop = Coop.Current;
+                if (coop != null)
                 {
-                    instance.Flush();
+                    coop.Fuel.Flush();
                 }
             }
         }
@@ -711,12 +714,6 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Generator), nameof(Generator.drainFuel))]
     static class GeneratorDrainSkillPatch
     {
-        /// <summary>
-        /// For the tests: the last drain's generator, whose skill it used, and
-        /// the modifier.
-        /// </summary>
-        public static string Last;
-
         static void Prefix(Generator __instance, out float? __state)
         {
             __state = null;
@@ -780,7 +777,13 @@ namespace DarkwoodMP.World
                 modifier = DrainRules.Modifier(has.Value);
             }
 
-            Last = $"{__instance.name}: {ownerName}'s skill, {modifier}";
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Fuel.LastDrain =
+                    $"{__instance.name}: {ownerName}'s skill, {modifier}";
+            }
+
             if (has == null)
             {
                 return;

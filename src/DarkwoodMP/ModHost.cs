@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using BepInEx;
 using DarkwoodMP.Net;
 
@@ -29,6 +30,11 @@ namespace DarkwoodMP
         /// One generator for the random ids of shared objects
         /// (HostIds.NewId), so ids made in the same millisecond differ.
         public readonly Random IdRandom = new Random();
+
+        /// The generators the game started (Generator.Start), also alone: a
+        /// world loaded before hosting has them too (FuelSync checks them).
+        public readonly HashSet<Generator> Generators =
+            new HashSet<Generator>();
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
