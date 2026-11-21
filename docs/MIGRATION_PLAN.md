@@ -412,7 +412,7 @@ Finish with `tools/run-test.sh full`.
 | 6.4 | `NetEnemies`, `EnemyMotion`, `HostileNpcs`, `NightSpawns`, `EnemyLandings` | 2,675 | `combat map:night map:enemies map:hostile map:far map4` |
 
 - [ ] 6.1 Player puppets.
-- [ ] 6.2 Threat. Unit tests pin down that targets are picked by threat, never
+- [x] 6.2 Threat. Unit tests pin down that targets are picked by threat, never
       by the closest player.
   - [x] Part a: `Threat`, `NetPlayerProxy`, `ViewRects`. The threat tables
         and the stand-ins are `ModHost.Threats` and `ModHost.Proxies`, since
@@ -423,8 +423,14 @@ Finish with `tools/run-test.sh full`.
         down threat over closeness
         (`Picks_a_far_player_with_more_threat_over_the_closest` in `Order`
         and `Best`).
-  - [ ] Part b: `JoinerAiPatches`, `JoinerSight`, `WardPatches`,
-        `ShadowArmorLight`, `PlayerCues`.
+  - [x] Part b: `JoinerAiPatches`, `JoinerSight`, `WardPatches`,
+        `ShadowArmorLight`, `PlayerCues`. `PlayerCues` is `CoopSession.Cues`,
+        its bytes the core's `PlayerCue`. The enemy AI, sight, ward and
+        puppet light patches keep running with no session, because the test
+        dummy needs them alone; they hold no state, except the chase noted
+        for `gotoNextWaypoint`, which is `ModHost.Chases`. `JoinerAi` is a
+        partial class over three files, and `ShadowArmorLight` became
+        `JoinerBeams` in `Combat/Beams`.
 - [ ] 6.3 Damage. `DamageCap` becomes a rule.
 - [ ] 6.4 Enemies. `NetEnemies` is the largest file and splits by host and
       client. A client's frozen copies must still never act.
