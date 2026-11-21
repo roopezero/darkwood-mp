@@ -4,7 +4,6 @@ using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using DarkwoodMP.Combat;
-using HarmonyLib;
 using Newtonsoft.Json;
 
 namespace DarkwoodMP.World.KeptCharacters
@@ -156,15 +155,6 @@ namespace DarkwoodMP.World.KeptCharacters
                 Plugin.Log.LogWarning(
                     $"Couldn't write players' characters: {e.Message}");
             }
-        }
-    }
-
-    [HarmonyPatch(typeof(SaveManager), nameof(SaveManager.Save))]
-    static class HostSavedPatch
-    {
-        static void Postfix()
-        {
-            Plugin.Instance.Host.Kept.HostSaved();
         }
     }
 }
