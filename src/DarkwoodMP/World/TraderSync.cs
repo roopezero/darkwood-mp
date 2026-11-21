@@ -69,16 +69,30 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void ClientStocking(NPC npc)
         {
-            if (!_session.Connected || npc == null)
+            if (npc == null)
             {
                 return;
             }
 
-            string key = Key(npc.name, ObjRef.Of(npc.gameObject));
-            if (_waiting.TryGetValue(key, out var stock))
+            var facts = StockingOf(npc);
+            string key = null;
+            if (facts.Trader && facts.HasInventory)
             {
+                key = Key(npc.name, ObjRef.Of(npc.gameObject));
+                facts = facts with { Waiting = _waiting.ContainsKey(key) };
+            }
+
+            var plan = TraderRules.Stocking(facts);
+            if (plan == StockPlan.UseWaiting)
+            {
+                string stock = _waiting[key];
                 _waiting.Remove(key);
                 Apply(npc, stock);
+                return;
+            }
+
+            if (plan != StockPlan.AskHost)
+            {
                 return;
             }
 
@@ -95,13 +109,34 @@ namespace DarkwoodMP.World
         /// <summary>Host: this trader restocked; everyone gets it.</summary>
         internal void HostStocked(NPC npc)
         {
-            if (!_session.IsHost || _session.Peers.Count == 0 || npc == null
-                || Inv(npc) == null)
+            if (npc == null)
             {
                 return;
             }
 
-            Send(npc, to: 0, StockOf(npc));
+            var plan = TraderRules.Stocking(StockingOf(npc));
+            if (plan == StockPlan.SendToAll)
+            {
+                Send(npc, to: 0, StockOf(npc));
+            }
+        }
+
+        /// <summary>
+        /// What the stocking rule knows of this trader and the session: the
+        /// only code that reads the NPC for it. Waiting is the caller's.
+        /// </summary>
+        private StockFacts StockingOf(NPC npc)
+        {
+            return new StockFacts
+            {
+                ClientMode = NetEnemies.ClientMode,
+                Trader = npc.trader,
+                HasInventory = npc.inventory != null,
+                HasStock = Inv(npc) != null,
+                Connected = _session.Connected,
+                IsHost = _session.IsHost,
+                Peers = _session.Peers.Count,
+            };
         }
 
         /// <summary>
@@ -137,12 +172,8 @@ namespace DarkwoodMP.World
         /// </summary>
         private static string Key(string name, ObjRef r)
         {
-            if (r.K == ObjRef.Kind.Saved)
-            {
-                return $"{name}@{r}";
-            }
-
-            return name;
+            return TraderRules.WaitingKey(
+                name, r.K == ObjRef.Kind.Saved, r.ToString());
         }
 
         /// <summary>A trader's inventory. NPC.inventory is set when he first
@@ -198,16 +229,18 @@ namespace DarkwoodMP.World
 
             var (name, who, at) = Unpack(TraderAsk.Read(r));
             var npc = Find(name, who, at);
-            if (npc != null)
+            var answer = TraderRules.Answer(
+                _session.IsHost, npc != null, who.K == ObjRef.Kind.Saved);
+            if (answer == AskAnswer.SendStock)
             {
                 Send(npc, from);
                 return;
             }
 
-            if (who.K == ObjRef.Kind.Saved)
+            // A trader from the shared save who isn't here (yet) gets no copy
+            // of ours.
+            if (answer != AskAnswer.PutCopy)
             {
-                // one from the shared save that isn't here (yet): no copy of
-                // ours
                 return;
             }
 
@@ -238,24 +271,10 @@ namespace DarkwoodMP.World
         /// </summary>
         private readonly List<(Location loc, NPC npc, float since)> _copies =
             new List<(Location, NPC, float)>();
-        private float _nextCheck;
-        /// <summary>
-        /// A joiner's PlayerState says they're in a morning a moment after
-        /// their trader appears: wait this long.
-        /// </summary>
-        private const float CopyGrace = 10f;
+        private Seconds _nextCheck;
 
         private bool SpawnHostCopy(string name, Vector3 at, ulong from)
         {
-            // The wolf comes to a hideout in the morning too
-            // (Location.spawnWolf), but he isn't one to trade with.
-            if (name
-                .IndexOf("wolf", System.StringComparison.OrdinalIgnoreCase)
-                >= 0)
-            {
-                return false;
-            }
-
             Flags instance = Singleton<Flags>.Instance;
             Flags.NPCState st = null;
             if (instance != null)
@@ -263,35 +282,32 @@ namespace DarkwoodMP.World
                 st = instance.getNPCState(name);
             }
 
-            if (st != null && st.dead)
+            // The wolf comes to a hideout in the morning too
+            // (Location.spawnWolf), but he isn't one to trade with.
+            if (!TraderCopyRules.MayCopy(name, st != null && st.dead))
             {
                 return false;
             }
 
-            Location best = null;
-            float bestD = 300f * 300f;
+            var locs = new List<Location>();
+            var bases = new List<HideoutBase>();
             foreach (var loc in Object.FindObjectsOfType<Location>(true))
             {
-                if (loc == null || !loc.playerBase
-                    || loc.traderPosition == null)
+                if (loc != null)
                 {
-                    continue;
-                }
-
-                float d = WorldActions.FlatSq(
-                    loc.traderPosition.transform.position, at);
-                if (d < bestD)
-                {
-                    bestD = d;
-                    best = loc;
+                    locs.Add(loc);
+                    bases.Add(FactsOf(loc));
                 }
             }
 
-            if (best == null)
+            int nearest = TraderCopyRules.NearestBase(
+                bases, new Vec2(at.x, at.z));
+            if (nearest < 0)
             {
                 return false;
             }
 
+            Location best = locs[nearest];
             bool had = best.trader != null;
             NPC npc;
             try
@@ -305,17 +321,24 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (npc == null)
+            string spawned = null;
+            if (npc != null)
+            {
+                spawned = npc.name;
+            }
+
+            var result = TraderCopyRules.AfterSpawn(name, spawned, had);
+            if (result == SpawnResult.NoTrader)
             {
                 return false;
             }
 
-            if (npc.name != name)
+            if (result != SpawnResult.Kept)
             {
                 Plugin.Log.LogInfo(
                     $"[world] {_session.NameOf(from)} asked about {name}, but "
                         + $"{best.name}'s morning trader here is {npc.name}");
-                if (!had)
+                if (result == SpawnResult.OtherGoes)
                 {
                     best.despawnTrader();
                 }
@@ -338,72 +361,121 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void HostUpdate()
         {
-            if (_copies.Count == 0 || Time.unscaledTime < _nextCheck)
+            var now = new Seconds(Time.unscaledTime);
+            if (!TraderCopyRules.Due(_copies.Count, now, _nextCheck))
             {
                 return;
             }
 
-            _nextCheck = Time.unscaledTime + 1f;
-            bool someone = false;
+            _nextCheck = TraderCopyRules.Next(now);
+            var remotes = new List<RemoteMorning>();
             var sync = Sync.PlayerSync.Instance;
             if (sync != null)
             {
                 foreach (var kv in sync.Remotes)
                 {
-                    if (kv.Key != Sync.PlayerSync.DummyId
-                        && kv.Value.Last != null && kv.Value.Last.AfterNight)
-                    {
-                        someone = true;
-                        break;
-                    }
+                    remotes.Add(FactsOf(kv.Key, kv.Value));
                 }
             }
 
-            var c = Singleton<Controller>.Instance;
-            var p = Player.Instance;
+            bool someone = TraderCopyRules.SomeoneInMorning(remotes);
             for (int i = _copies.Count - 1; i >= 0; i--)
             {
                 var (loc, npc, since) = _copies[i];
-                if (npc == null || loc == null)
+                var facts = FactsOf(loc, npc) with
                 {
-                    _copies.RemoveAt(i);
-                    continue;
-                }
+                    Someone = someone,
+                    Now = now,
+                    Since = new Seconds(since),
+                };
 
-                var ch = npc.GetComponent<Character>();
-                if (ch != null && !ch.alive)
-                {
-                    _copies.RemoveAt(i);
-                    continue;
-                }
-
-                if (someone || Time.unscaledTime - since < CopyGrace)
+                var fate = TraderCopyRules.Fate(facts);
+                if (fate == CopyFate.Keep)
                 {
                     continue;
                 }
 
-                // ours now
-                if (c != null && c.isAfterNight && p != null
-                    && p.whereAmI != null && p.whereAmI.bigLocation == loc)
+                if (fate == CopyFate.TakeAway)
                 {
-                    _copies.RemoveAt(i);
-                    continue;
-                }
-
-                Plugin.Log.LogInfo(
-                    $"[world] no joiner is in a morning: our {npc.name} leaves "
-                        + $"{loc.name}");
-                if (loc.trader == npc.gameObject)
-                {
-                    loc.despawnTrader();
-                }
-                else
-                {
-                    Object.Destroy(npc.gameObject);
+                    Plugin.Log.LogInfo(
+                        $"[world] no joiner is in a morning: our {npc.name} "
+                            + $"leaves {loc.name}");
+                    if (loc.trader == npc.gameObject)
+                    {
+                        loc.despawnTrader();
+                    }
+                    else
+                    {
+                        Object.Destroy(npc.gameObject);
+                    }
                 }
 
                 _copies.RemoveAt(i);
             }
+        }
+
+        /// <summary>
+        /// What the copy rules know of a hideout: the only code that reads a
+        /// Location for them.
+        /// </summary>
+        private static HideoutBase FactsOf(Location loc)
+        {
+            var spot = loc.traderPosition;
+            var facts = new HideoutBase
+            {
+                PlayerBase = loc.playerBase,
+                HasTraderSpot = spot != null,
+            };
+
+            if (spot != null)
+            {
+                var at = spot.transform.position;
+                facts = facts with { TraderSpot = new Vec2(at.x, at.z) };
+            }
+
+            return facts;
+        }
+
+        /// <summary>
+        /// Whether a remote player is in a morning, as their last state says.
+        /// </summary>
+        private static RemoteMorning FactsOf(ulong id, Sync.RemotePlayer p)
+        {
+            var last = p.Last;
+            var facts = new RemoteMorning
+            {
+                Dummy = id == Sync.PlayerSync.DummyId,
+                HasState = last != null,
+            };
+
+            if (last != null)
+            {
+                facts = facts with { AfterNight = last.AfterNight };
+            }
+
+            return facts;
+        }
+
+        /// <summary>
+        /// What the copy rules know of one of our copies: gone, dead, and
+        /// whether our own player's morning is in that hideout (ours now).
+        /// </summary>
+        private static TraderCopyFacts FactsOf(Location loc, NPC npc)
+        {
+            if (npc == null || loc == null)
+            {
+                return new TraderCopyFacts { Gone = true };
+            }
+
+            var ch = npc.GetComponent<Character>();
+            var c = Singleton<Controller>.Instance;
+            var p = Player.Instance;
+            return new TraderCopyFacts
+            {
+                Dead = ch != null && !ch.alive,
+                OursNow = c != null && c.isAfterNight && p != null
+                    && p.whereAmI != null && p.whereAmI.bigLocation == loc,
+            };
         }
 
         private void OnStock(ulong from, PacketReader r)
@@ -441,12 +513,20 @@ namespace DarkwoodMP.World
             NPC npc, Dictionary<string, int> took, Dictionary<string, int> gave,
             int repChange)
         {
-            if (!_session.Connected || npc == null || npc.inventory == null)
+            if (npc == null)
             {
                 return;
             }
 
-            if (_session.IsHost && _session.Peers.Count == 0)
+            var send = TradeRules.Share(new TradeShareFacts
+            {
+                Connected = _session.Connected,
+                HasInventory = npc.inventory != null,
+                IsHost = _session.IsHost,
+                Peers = _session.Peers.Count,
+            });
+
+            if (send == TradeSend.None)
             {
                 return;
             }
@@ -488,7 +568,7 @@ namespace DarkwoodMP.World
 
             Plugin.Log.LogInfo(
                 $"Traded with {name}: took {Text(took)}, gave {Text(gave)}");
-            if (_session.IsHost)
+            if (send == TradeSend.ToAll)
             {
                 _session.Broadcast(w, Channel.Control, reliable: true);
                 return;
@@ -496,17 +576,7 @@ namespace DarkwoodMP.World
 
             _applied.TryGetValue(npc.GetInstanceID(), out int seen);
             // for InventoryWatch.Undo: + what the player got, - what they gave
-            var change = new Dictionary<string, int>();
-            foreach (var kv in took)
-            {
-                change[kv.Key] = kv.Value;
-            }
-
-            foreach (var kv in gave)
-            {
-                change.TryGetValue(kv.Key, out int n);
-                change[kv.Key] = n - kv.Value;
-            }
+            var change = TradeRules.Undo(took, gave);
 
             // The session may have ended by the time the answer comes (it
             // then runs as refused), so keep this session's Authority.
@@ -548,7 +618,7 @@ namespace DarkwoodMP.World
                 }
 
                 _applied.TryGetValue(t.GetInstanceID(), out int now);
-                if (now != seen || t.inventory == null)
+                if (!TradeRules.UndoesStock(seen, now, t.inventory != null))
                 {
                     return; // the host's stock came: that's what he has
                 }
@@ -589,8 +659,8 @@ namespace DarkwoodMP.World
         {
             var trade = TraderTrade.Read(r);
             var (name, who, at) = Unpack(trade.Trader);
-            var took = (Dictionary<string, int>)trade.Took;
-            var gave = (Dictionary<string, int>)trade.Gave;
+            var took = trade.Took;
+            var gave = trade.Gave;
             string stock = trade.Stock;
             int repChange = trade.Change;
             if (!_session.IsHost)
@@ -619,28 +689,15 @@ namespace DarkwoodMP.World
             // Host: a client's trade, as a request, checked against our copy of
             // that trader.
             var npc = Find(name, who, at);
-            if (npc == null)
-            {
-                Coop.Current.Authority.Refuse($"{name} isn't here");
-                return;
-            }
-
-            if (!Coop.Current.Authority.InReach(at, WorldActions.Reach, name))
+            var verdict = TradeRules.MayTrade(FactsOf(npc, trade, at));
+            if (TradeRules.SendsStock(verdict))
             {
                 Send(npc, from);
-                return;
             }
 
-            string why = Check(Inv(npc), took, gave, stock);
-            if (why == null)
+            if (verdict.Refused)
             {
-                why = CheckReputation(name, took, gave, repChange);
-            }
-
-            if (why != null)
-            {
-                Send(npc, from);
-                Coop.Current.Authority.Refuse(why);
+                Coop.Current.Authority.Refuse(verdict);
                 return;
             }
 
@@ -661,16 +718,27 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// Host: why the trade's reputation change can't be (null: it can). As
-        /// acceptTrade, his reputation (the host's) must pay for it; and taking
-        /// only can't raise it, nor giving only lower it. (The items' values
-        /// depend on their state, which the host doesn't have, so the amount
-        /// itself isn't recomputed.)
+        /// Host: what the trade rule knows of a client's trade and our copy
+        /// of the trader (null: not here): the only code that reads the NPC,
+        /// his stock and his reputation for it.
         /// </summary>
-        private static string CheckReputation(
-            string name, Dictionary<string, int> took,
-            Dictionary<string, int> gave, int repChange)
+        private TradeFacts FactsOf(NPC npc, in Trade trade, Vector3 at)
         {
+            string name = trade.Trader.Name;
+            var facts = new TradeFacts
+            {
+                Name = name,
+                Found = npc != null,
+                Took = trade.Took,
+                Gave = trade.Gave,
+                Change = trade.Change,
+            };
+
+            if (npc == null)
+            {
+                return facts;
+            }
+
             Flags instance = Singleton<Flags>.Instance;
             Flags.NPCState st = null;
             if (instance != null)
@@ -684,110 +752,63 @@ namespace DarkwoodMP.World
                 rep = st.reputation;
             }
 
-            if (rep + repChange < 0)
+            facts = facts with
             {
-                return $"his reputation is {rep}, which doesn't pay for "
-                    + $"{-repChange}";
-            }
+                Reach = Coop.Current.Authority.ReachOf(at),
+                Has = TraderTradePatch.Stacks(Inv(npc)),
+                Reputation = rep,
+            };
 
-            if (gave.Count == 0 && repChange > 0)
-            {
-                return "taking only can't raise the reputation "
-                    + $"({repChange:+0})";
-            }
-
-            if (took.Count == 0 && repChange < 0)
-            {
-                return $"giving only can't lower the reputation ({repChange})";
-            }
-
-            return null;
-        }
-
-        /// <summary>Host: why this trade can't be (null: it can). He must have
-        /// had what was taken, and the new stock must be his stock less that,
-        /// plus what was given.</summary>
-        private static string Check(
-            Inventory inv, Dictionary<string, int> took,
-            Dictionary<string, int> gave, string stock)
-        {
-            var have = TraderTradePatch.Count(inv);
-            Inventory.SaveState state;
             try
             {
-                state =
-                    JsonConvert.DeserializeObject<Inventory.SaveState>(stock);
+                var state = JsonConvert.DeserializeObject<Inventory.SaveState>(
+                    trade.Stock);
+                if (state != null && state.invItems != null)
+                {
+                    var stacks = new List<ItemStack>();
+                    foreach (var it in state.invItems)
+                    {
+                        if (it != null)
+                        {
+                            stacks.Add(new ItemStack
+                            {
+                                Type = it.type,
+                                Amount = it.amount,
+                            });
+                        }
+                    }
+
+                    facts = facts with { Stock = stacks };
+                }
             }
             catch (System.Exception e)
             {
-                return "bad stock: " + e.Message;
+                facts = facts with { StockError = e.Message };
             }
 
-            if (state == null || state.invItems == null)
-            {
-                return "no stock";
-            }
-
-            var after = new Dictionary<string, int>();
-            foreach (var it in state.invItems)
-            {
-                if (it == null || string.IsNullOrEmpty(it.type))
-                {
-                    continue;
-                }
-
-                after.TryGetValue(it.type, out int n);
-                after[it.type] = n + System.Math.Max(1, it.amount);
-            }
-
-            foreach (var kv in took)
-            {
-                if (kv.Value <= 0)
-                {
-                    return $"took {kv.Value} {kv.Key}";
-                }
-
-                have.TryGetValue(kv.Key, out int n);
-                if (n < kv.Value)
-                {
-                    return $"he has {n} {kv.Key}, not {kv.Value}";
-                }
-
-                have[kv.Key] = n - kv.Value;
-            }
-
-            foreach (var kv in gave)
-            {
-                if (kv.Value <= 0)
-                {
-                    return $"gave {kv.Value} {kv.Key}";
-                }
-
-                have.TryGetValue(kv.Key, out int n);
-                have[kv.Key] = n + kv.Value;
-            }
-
-            foreach (var kv in have)
-            {
-                after.TryGetValue(kv.Key, out int n);
-                if (n != kv.Value)
-                {
-                    return $"his stock would have {kv.Value} {kv.Key}, not {n}";
-                }
-            }
-
-            foreach (var kv in after)
-            {
-                if (!have.ContainsKey(kv.Key))
-                {
-                    return $"his stock wouldn't have {kv.Key}";
-                }
-            }
-
-            return null;
+            return facts;
         }
 
-        private static string Text(Dictionary<string, int> d)
+        /// <summary>
+        /// The stacks of a saved inventory's items, for the trade rule.
+        /// </summary>
+        private static List<ItemStack> StacksOf(
+            List<InvItemClass.SaveState> items)
+        {
+            var stacks = new List<ItemStack>();
+            foreach (var it in items)
+            {
+                if (it != null)
+                {
+                    stacks.Add(
+                        new ItemStack { Type = it.type, Amount = it.amount });
+                }
+            }
+
+            return stacks;
+        }
+
+        private static string Text(IReadOnlyDictionary<string, int> d)
         {
             if (d.Count == 0)
             {
@@ -849,43 +870,67 @@ namespace DarkwoodMP.World
         /// </summary>
         private static NPC Find(string name, ObjRef who, Vector3 at)
         {
+            NPC byRef = null;
             if (who.Valid)
             {
-                var n = ObjRef.Resolve<NPC>(who);
-                if (n != null && n.trader && n.name == name && Inv(n) != null)
-                {
-                    return n;
-                }
-
-                if (who.K == ObjRef.Kind.Saved)
-                {
-                    return null;
-                }
+                byRef = ObjRef.Resolve<NPC>(who);
             }
 
-            NPC best = null;
-            float bestD = float.MaxValue;
+            var npcs = new List<NPC>();
+            var candidates = new List<TraderCandidate>();
             foreach (var n in Object.FindObjectsOfType<NPC>())
             {
-                if (n == null || !n.trader || n.name != name || Inv(n) == null)
+                if (n != null && n.trader)
                 {
-                    continue;
-                }
-
-                if (ObjRef.Of(n.gameObject).K == ObjRef.Kind.Saved)
-                {
-                    continue;
-                }
-
-                float d = WorldActions.FlatSq(n.transform.position, at);
-                if (d < bestD)
-                {
-                    bestD = d;
-                    best = n;
+                    npcs.Add(n);
+                    candidates.Add(CandidateOf(n));
                 }
             }
 
-            return best;
+            var find = new FindFacts
+            {
+                Name = name,
+                Valid = who.Valid,
+                Saved = who.K == ObjRef.Kind.Saved,
+                Resolved = byRef != null,
+                At = new Vec2(at.x, at.z),
+                Candidates = candidates,
+            };
+
+            if (byRef != null)
+            {
+                find = find with { ByRef = CandidateOf(byRef) };
+            }
+
+            var match = TraderRules.Find(find);
+            if (match.How == TraderFound.ByRef)
+            {
+                return byRef;
+            }
+
+            if (match.How == TraderFound.Nearest)
+            {
+                return npcs[match.Index];
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// What the find rule knows of one NPC: the only code that reads an
+        /// NPC for it.
+        /// </summary>
+        private static TraderCandidate CandidateOf(NPC n)
+        {
+            var at = n.transform.position;
+            return new TraderCandidate
+            {
+                Trader = n.trader,
+                Name = n.name,
+                HasInventory = Inv(n) != null,
+                Saved = ObjRef.Of(n.gameObject).K == ObjRef.Kind.Saved,
+                Position = new Vec2(at.x, at.z),
+            };
         }
     }
 
@@ -898,18 +943,15 @@ namespace DarkwoodMP.World
     {
         static bool Prefix(NPC __instance)
         {
-            if (!NetEnemies.ClientMode)
+            if (TraderRules.RollsHere(NetEnemies.ClientMode))
             {
                 return true;
             }
 
-            if (__instance.trader && __instance.inventory != null)
+            TraderSync instance = TraderSync.Instance;
+            if (instance != null)
             {
-                TraderSync instance = TraderSync.Instance;
-                if (instance != null)
-                {
-                    instance.ClientStocking(__instance);
-                }
+                instance.ClientStocking(__instance);
             }
 
             return false;
@@ -917,7 +959,7 @@ namespace DarkwoodMP.World
 
         static void Postfix(NPC __instance)
         {
-            if (!NetEnemies.ClientMode)
+            if (TraderRules.RollsHere(NetEnemies.ClientMode))
             {
                 TraderSync instance = TraderSync.Instance;
                 if (instance != null)
@@ -938,24 +980,31 @@ namespace DarkwoodMP.World
         /// <summary>Item type -> how many, in this inventory.</summary>
         internal static Dictionary<string, int> Count(Inventory inv)
         {
-            var d = new Dictionary<string, int>();
+            return TradeRules.Count(Stacks(inv));
+        }
+
+        /// <summary>
+        /// The stacks in this inventory, for the trade rules: the only code
+        /// that reads an inventory's items for them. None for no inventory.
+        /// </summary>
+        internal static List<ItemStack> Stacks(Inventory inv)
+        {
+            var stacks = new List<ItemStack>();
             if (inv == null)
             {
-                return d;
+                return stacks;
             }
 
             foreach (var it in inv.getAllItems())
             {
-                if (InvItemClass.isNull(it) || string.IsNullOrEmpty(it.type))
+                if (!InvItemClass.isNull(it))
                 {
-                    continue;
+                    stacks.Add(
+                        new ItemStack { Type = it.type, Amount = it.amount });
                 }
-
-                d.TryGetValue(it.type, out int n);
-                d[it.type] = n + System.Math.Max(1, it.amount);
             }
 
-            return d;
+            return stacks;
         }
 
         static void Prefix(
@@ -985,15 +1034,18 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (took.Count == 0 && gave.Count == 0)
-            {
-                return;
-            }
-
             // Accepted: both windows were emptied. Not accepted (not enough
             // reputation, no room): the things are still in them.
-            if (Count(__instance.exchangeTrader).Count != 0
-                || Count(__instance.exchangePlayer).Count != 0)
+            var accept = new AcceptFacts
+            {
+                Counted = true,
+                Took = took.Count,
+                Gave = gave.Count,
+                TraderLeft = Count(__instance.exchangeTrader).Count,
+                PlayerLeft = Count(__instance.exchangePlayer).Count,
+            };
+
+            if (!TradeRules.Accepted(accept))
             {
                 return;
             }
