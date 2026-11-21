@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Beams
 {
     /// Shadow armour after the game's light check on the host
-    /// (ShadowArmor.checkIfInLight, ShadowArmorJoinerLightPatch).
+    /// (ShadowArmor.checkIfInLight, JoinerBeams).
     public readonly struct ArmorFacts
     {
         /// The armour isn't null.

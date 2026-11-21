@@ -358,8 +358,8 @@ namespace DarkwoodMP.World
 
         /// <summary>"near-joiner" (host, the client standing at "client"): a
         /// dog 1200 from the client and 2600 from us is near a player
-        /// (Character.inSightOrCloseToPlayer, NearJoinerPatch); one 1700 from
-        /// the client and 2200 from us isn't.</summary>
+        /// (Character.inSightOrCloseToPlayer, JoinerAi.NearJoiner); one 1700
+        /// from the client and 2200 from us isn't.</summary>
         private static IEnumerator NearJoiner(string[] a, Result r)
         {
             var other = Other();

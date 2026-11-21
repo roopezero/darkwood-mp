@@ -62,7 +62,7 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Host, until ee-shadow-check: how the client's beam (as
-        /// ShadowArmorJoinerLightPatch sees it) stood to the dog.
+        /// JoinerBeams sees it) stood to the dog.
         /// </summary>
         private static IEnumerator BeamWatch(ShadowArmor armor)
         {
@@ -86,7 +86,7 @@ namespace DarkwoodMP.World
                 {
                     on++;
                     var pos = armor.transform.position;
-                    var spot = ShadowArmorJoinerLightPatch.InBeam(
+                    var spot = JoinerBeams.InBeam(
                         rp.Root.transform, pos);
                     float ahead = spot.Ahead;
                     float aside = spot.Aside;

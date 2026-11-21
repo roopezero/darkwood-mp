@@ -263,30 +263,25 @@ namespace DarkwoodMP.Combat
         }
     }
 
-    [HarmonyPatch(typeof(Character), "canSeeEnemy")]
-    static class WardSightPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions) => Wards.SwapEffects(
-                instructions);
-    }
-
     /// <summary>
-    /// An enemy afraid of a ward runs from the player it was after (who has
-    /// it), not from the host's.
+    /// The ward checks read the enemy's target, and an enemy afraid of a ward
+    /// runs from the player it was after (who has it), not from the host's.
     /// </summary>
     [HarmonyPatch(typeof(Character), "canSeeEnemy")]
-    static class WardFleePatch
+    static class CharacterCanSeeEnemy
     {
         static IEnumerable<CodeInstruction> Transpiler(
-            IEnumerable<CodeInstruction> instructions) =>
-            PlayerPositionTranspiler.Swap(
-                instructions, PlayerPositionTranspiler.Flee,
+            IEnumerable<CodeInstruction> instructions)
+        {
+            return PlayerPositionTranspiler.Swap(
+                Wards.SwapEffects(instructions),
+                PlayerPositionTranspiler.Flee,
                 "Character.canSeeEnemy");
+        }
     }
 
     [HarmonyPatch(typeof(Character), "processAnims")]
-    static class ForestSkillsAnimsPatch
+    static class CharacterProcessAnims
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -294,59 +289,11 @@ namespace DarkwoodMP.Combat
     }
 
     [HarmonyPatch(typeof(Character), "onSeeEnemyNear")]
-    static class ForestSkillsNearPatch
+    static class CharacterOnSeeEnemyNear
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
                 Wards.SwapForestSkills(
                     instructions, "Character.onSeeEnemyNear");
-    }
-
-    /// <summary>
-    /// The game lights the path-finding nodes under each player light every
-    /// 0.3 s (Controller.updateLogicLights), and shadow creatures and shadow
-    /// armour check those nodes (Core.isInLight). A puppet's torch or lantern
-    /// is the item's own light prefab, which lights nodes as the game's do. A
-    /// puppet's flashlight beam is a copy of the host's "Flashlight", which the
-    /// game clips to the host's player's flashlight collider, so it would light
-    /// nothing where the puppet is. That collider is sized and placed only by
-    /// the host's own flashlight (Player.processFlashlight, from the host's
-    /// cursor), so it isn't used: the clip box is a square 1000 a side centred
-    /// 500 ahead of the puppet, which covers the beam from the puppet out to
-    /// 1000 ahead (we don't know where its player aims).
-    /// </summary>
-    [HarmonyPatch(
-        typeof(Light2D), nameof(Light2D.lightGraphNodes),
-        new[] { typeof(Bounds) })]
-    static class PuppetBeamLightPatch
-    {
-        static void Prefix(Light2D __instance, ref Bounds _bounds)
-        {
-            var parent = __instance.transform.parent;
-            string name = null;
-            if (parent != null)
-            {
-                name = parent.name;
-            }
-
-            if (!BeamRules.IsPuppetLight(parent != null, name))
-            {
-                return;
-            }
-
-            // players are rotated Euler(90, yaw, 0): local up is ahead
-            Vector3 up = parent.TransformDirection(Vector3.up);
-            Vector3 at = parent.position;
-            BeamBox box = BeamRules.PuppetBox(
-                new Vec3(at.x, at.y, at.z), new Vec3(up.x, up.y, up.z));
-            if (!box.Changed)
-            {
-                return;
-            }
-
-            _bounds = new Bounds(
-                new Vector3(box.Center.X, box.Center.Y, box.Center.Z),
-                new Vector3(box.Size.X, box.Size.Y, box.Size.Z));
-        }
     }
 }

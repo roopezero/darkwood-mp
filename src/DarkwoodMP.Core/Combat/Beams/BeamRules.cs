@@ -4,8 +4,8 @@ namespace DarkwoodMP.Combat.Beams
 {
     /// A joiner's flashlight on the host: the beam's shape, whose beam is
     /// on shadow armour and what it does to it, and the box the puppet's
-    /// light lights (the plugin's ShadowArmorJoinerLightPatch and
-    /// PuppetBeamLightPatch). Players are rotated Euler(90, yaw, 0), so a
+    /// light lights (the plugin's JoinerBeams and
+    /// Light2DLightGraphNodes). Players are rotated Euler(90, yaw, 0), so a
     /// puppet's local up is where it faces.
     public static class BeamRules
     {

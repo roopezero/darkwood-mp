@@ -17,8 +17,7 @@ namespace DarkwoodMP.Combat
     /// (BeamOn). Their beam hurts the armour and sets the character on that
     /// player.
     /// </summary>
-    [HarmonyPatch(typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight))]
-    static class ShadowArmorJoinerLightPatch
+    static class JoinerBeams
     {
         private static readonly
             AccessTools.FieldRef<ShadowArmor, float> RefreshRate =
@@ -28,9 +27,11 @@ namespace DarkwoodMP.Combat
                 AccessTools.Method(
                     typeof(ShadowArmor), "switchDamageParticles"));
 
-        static void Postfix(ShadowArmor __instance)
+        /// <summary>
+        /// Host: after the game's light check on this armour.
+        /// </summary>
+        public static void Checked(ShadowArmor a)
         {
-            var a = __instance;
             if (!BeamRules.ChecksArmour(FactsOf(a)))
             {
                 return;
@@ -148,7 +149,7 @@ namespace DarkwoodMP.Combat
         /// such box ahead of their puppet: from beside them to MaxBeam ahead,
         /// widening with distance (the cursor's distance isn't sent).
         /// </summary>
-        internal static NetPlayerProxy BeamOn(Vector3 pos)
+        private static NetPlayerProxy BeamOn(Vector3 pos)
         {
             var ps = PlayerSync.Instance;
             if (ps == null)
@@ -190,6 +191,48 @@ namespace DarkwoodMP.Combat
                 VecOf(pos));
         }
 
+        /// <summary>
+        /// The game lights the path-finding nodes under each player light
+        /// every 0.3 s (Controller.updateLogicLights), and shadow creatures
+        /// and shadow armour check those nodes (Core.isInLight). A puppet's
+        /// torch or lantern is the item's own light prefab, which lights
+        /// nodes as the game's do. A puppet's flashlight beam is a copy of
+        /// the host's "Flashlight", which the game clips to the host's
+        /// player's flashlight collider, so it would light nothing where the
+        /// puppet is. That collider is sized and placed only by the host's
+        /// own flashlight (Player.processFlashlight, from the host's cursor),
+        /// so it isn't used: the clip box is a square 1000 a side centred 500
+        /// ahead of the puppet, which covers the beam from the puppet out to
+        /// 1000 ahead (we don't know where its player aims).
+        /// </summary>
+        public static void LightBox(Light2D light, ref Bounds bounds)
+        {
+            var parent = light.transform.parent;
+            string name = null;
+            if (parent != null)
+            {
+                name = parent.name;
+            }
+
+            if (!BeamRules.IsPuppetLight(parent != null, name))
+            {
+                return;
+            }
+
+            // players are rotated Euler(90, yaw, 0): local up is ahead
+            Vector3 up = parent.TransformDirection(Vector3.up);
+            Vector3 at = parent.position;
+            BeamBox box = BeamRules.PuppetBox(VecOf(at), VecOf(up));
+            if (!box.Changed)
+            {
+                return;
+            }
+
+            bounds = new Bounds(
+                new Vector3(box.Center.X, box.Center.Y, box.Center.Z),
+                new Vector3(box.Size.X, box.Size.Y, box.Size.Z));
+        }
+
         private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
     }
 
@@ -198,22 +241,50 @@ namespace DarkwoodMP.Combat
     /// (NetEnemies.SetArmor) or on one of our frozen characters only shows its
     /// effect. Its light check (which would hurt it, set it on our player and
     /// show its health bar) and its damage do nothing: the host's armour takes
-    /// them, and the host says when it dies (EnemyArmor).
+    /// them, and the host says when it dies (EnemyArmor). On the host, a
+    /// joiner's flashlight counts after the game's check
+    /// (JoinerBeams.Checked).
     /// </summary>
-    [HarmonyPatch]
-    static class ShadowArmorCopyPatch
+    [HarmonyPatch(typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight))]
+    static class ShadowArmorCheckIfInLight
     {
-        static System.Collections.Generic.IEnumerable<
-            System.Reflection.MethodBase> TargetMethods()
+        static bool Prefix(ShadowArmor __instance)
         {
-            yield return AccessTools.Method(
-                typeof(ShadowArmor), nameof(ShadowArmor.checkIfInLight));
-            yield return AccessTools.Method(
-                typeof(ShadowArmor), nameof(ShadowArmor.damageMe),
-                new[] { typeof(float), typeof(bool) });
+            return Coop.Current == null || !NetEnemies.IsCopy(__instance);
         }
 
-        static bool Prefix(ShadowArmor __instance) =>
-            !NetEnemies.IsCopy(__instance);
+        static void Postfix(ShadowArmor __instance)
+        {
+            if (Coop.Current != null)
+            {
+                JoinerBeams.Checked(__instance);
+            }
+        }
+    }
+
+    [HarmonyPatch(
+        typeof(ShadowArmor), nameof(ShadowArmor.damageMe),
+        new[] { typeof(float), typeof(bool) })]
+    static class ShadowArmorDamageMe
+    {
+        static bool Prefix(ShadowArmor __instance)
+        {
+            return Coop.Current == null || !NetEnemies.IsCopy(__instance);
+        }
+    }
+
+    /// <summary>
+    /// A puppet's flashlight lights the light graph ahead of it
+    /// (JoinerBeams.LightBox), also with only the test dummy.
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Light2D), nameof(Light2D.lightGraphNodes),
+        new[] { typeof(Bounds) })]
+    static class Light2DLightGraphNodes
+    {
+        static void Prefix(Light2D __instance, ref Bounds _bounds)
+        {
+            JoinerBeams.LightBox(__instance, ref _bounds);
+        }
     }
 }

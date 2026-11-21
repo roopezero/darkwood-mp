@@ -695,7 +695,7 @@ namespace DarkwoodMP.Combat
         /// armour is put on (CharacterSpawner adds it to a chapter 2+ night
         /// spawn after spawning it) or dies (light, or a hit). Only the host
         /// decides that: a client's copy shows the armour and never checks
-        /// light or takes damage (ShadowArmorCopyPatch).
+        /// light or takes damage (ShadowArmorDamageMe).
         /// </summary>
         private void ArmorSync(Tracked t)
         {
@@ -2226,7 +2226,7 @@ namespace DarkwoodMP.Combat
         /// <summary>
         /// Client: a copy wears shadow armour as the host's enemy does. The
         /// armour only shows its effect: its light check and damage do
-        /// nothing on a copy (ShadowArmorCopyPatch), and it goes when the
+        /// nothing on a copy (ShadowArmorDamageMe), and it goes when the
         /// host's does (EnemyArmor), fading as the game's ShadowArmor.die makes
         /// it. A copy from our save may wear armour the host's no longer does;
         /// that goes at once.

@@ -513,36 +513,32 @@ namespace DarkwoodMP.Combat
             proxy = Threat.BestPlayerFor(a.thisCharacter) as NetPlayerProxy;
             return proxy != null;
         }
-    }
 
-    /// <summary>
-    /// Host: an enemy bumping into a joiner's proxy does what it does when it
-    /// bumps into the host's player (Character.onCollideWith only checks for a
-    /// Player): a banshee goes off, a sleeping enemy wakes, others react to
-    /// them. The rest of the game's method (doors, water and so on) still runs,
-    /// as it does after a player bump.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), "onCollideWith")]
-    static class ProxyBumpPatch
-    {
         private static readonly
             Action<Character, Character, Transform, bool> React =
             AccessTools
                 .MethodDelegate<Action<Character, Character, Transform, bool>>(
                     AccessTools.Method(typeof(Character), "reactToCharacter"));
 
-        static bool Prefix(Character __instance, Collider _collider)
+        /// <summary>
+        /// Host: an enemy bumping into a joiner's proxy does what it does
+        /// when it bumps into the host's player (Character.onCollideWith
+        /// only checks for a Player): a banshee goes off, a sleeping enemy
+        /// wakes, others react to them. The rest of the game's method
+        /// (doors, water and so on) still runs, as it does after a player
+        /// bump. False skips the game's method.
+        /// </summary>
+        public static bool Bumped(Character c, Collider collider)
         {
-            var c = __instance;
-            var step = JoinerAiRules.Bump(FactsOf(c, _collider, out var proxy));
+            var step = JoinerAiRules.Bump(FactsOf(c, collider, out var proxy));
             if (step == BumpStep.Game)
             {
                 return true;
             }
 
-            if (!c.touchingColliders.Contains(_collider))
+            if (!c.touchingColliders.Contains(collider))
             {
-                c.touchingColliders.Add(_collider);
+                c.touchingColliders.Add(collider);
             }
 
             if (step == BumpStep.Banshee)
@@ -624,19 +620,12 @@ namespace DarkwoodMP.Combat
                 DiesOnContact = c.dieOnContactWithTarget,
             };
         }
-    }
 
-    /// <summary>
-    /// Host: an enemy hit or bumped by a joiner reacts as it does to the host's
-    /// player: it chases and attacks them, instead of rolling its cowardice.
-    /// The transpiler swaps reactToCharacter's GetComponent&lt;Player&gt;()
-    /// test for one that also accepts a proxy, and its attackPlayer() for an
-    /// attack on whoever it reacted to.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), "reactToCharacter")]
-    static class ReactToJoinerPatch
-    {
-        static IEnumerable<CodeInstruction> Transpiler(
+        /// <summary>
+        /// reactToCharacter: its GetComponent&lt;Player&gt;() test becomes
+        /// PlayerOrProxyOn, and its attackPlayer() AttackWhoReacted.
+        /// </summary>
+        public static IEnumerable<CodeInstruction> SwapReact(
             IEnumerable<CodeInstruction> instructions)
         {
             var attackPlayer = AccessTools.Method(
@@ -686,25 +675,19 @@ namespace DarkwoodMP.Combat
 
             return list;
         }
-    }
 
-    /// <summary>
-    /// Host: an enemy that left its location doesn't jump back to its spawn
-    /// point while a joiner is near it (inSightOrCloseToPlayer only looks at
-    /// the host's player). Line of sight to a proxy isn't checked, so a joiner
-    /// counts within 1500, more than the game's 1000 for the host's player.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), nameof(Character.inSightOrCloseToPlayer))]
-    static class NearJoinerPatch
-    {
-        static void Postfix(Character __instance, ref bool __result)
+        /// <summary>
+        /// After inSightOrCloseToPlayer: a living joiner within
+        /// JoinerAiRules.NearRange makes it true.
+        /// </summary>
+        public static void NearJoiner(Character c, ref bool result)
         {
-            if (!JoinerAiRules.LooksForJoiners(__result, Threat.Enabled))
+            if (!JoinerAiRules.LooksForJoiners(result, Threat.Enabled))
             {
                 return;
             }
 
-            Vector3 me = __instance.transform.position;
+            Vector3 me = c.transform.position;
             foreach (var p in NetPlayerProxy.All.Values)
             {
                 if (p == null)
@@ -722,10 +705,99 @@ namespace DarkwoodMP.Combat
 
                 if (JoinerAiRules.IsNear(alive, away, distance))
                 {
-                    __result = true;
+                    result = true;
                     return;
                 }
             }
+        }
+
+        /// <summary>
+        /// checkBrotherWeakAttack while the brother fights a joiner: by the
+        /// health of that joiner. False skips the game's method.
+        /// </summary>
+        public static bool BrotherWeakAttack(Character c)
+        {
+            var proxy = ProxyOf(c.target);
+            if (proxy == null)
+            {
+                return true;
+            }
+
+            if (JoinerAiRules.BrotherWeak(FactsOf(c, proxy)))
+            {
+                c.attacks[0].disabled = true;
+                c.attacks[1].disabled = true;
+                c.attacks[2].disabled = false;
+            }
+
+            return false;
+        }
+
+        private static BrotherFacts FactsOf(
+            Character c, NetPlayerProxy proxy)
+        {
+            var host = Player.Instance;
+            float max = 0f;
+            if (host != null)
+            {
+                max = host.maxHealth;
+            }
+
+            return new BrotherFacts
+            {
+                HealthPercent = proxy.HealthPercent,
+                HasHost = host != null,
+                HostMaxHealth = max,
+                Attacks = c.attacks.Count,
+            };
+        }
+    }
+
+    /// <summary>
+    /// Host: an enemy bumping into a joiner's proxy does what it does when it
+    /// bumps into the host's player (Character.onCollideWith only checks for a
+    /// Player): a banshee goes off, a sleeping enemy wakes, others react to
+    /// them. The rest of the game's method (doors, water and so on) still runs,
+    /// as it does after a player bump.
+    /// </summary>
+    [HarmonyPatch(typeof(Character), "onCollideWith")]
+    static class CharacterOnCollideWith
+    {
+        static bool Prefix(Character __instance, Collider _collider)
+        {
+            return JoinerAi.Bumped(__instance, _collider);
+        }
+    }
+
+    /// <summary>
+    /// Host: an enemy hit or bumped by a joiner reacts as it does to the host's
+    /// player: it chases and attacks them, instead of rolling its cowardice.
+    /// The transpiler swaps reactToCharacter's GetComponent&lt;Player&gt;()
+    /// test for one that also accepts a proxy, and its attackPlayer() for an
+    /// attack on whoever it reacted to.
+    /// </summary>
+    [HarmonyPatch(typeof(Character), "reactToCharacter")]
+    static class CharacterReactToCharacter
+    {
+        static IEnumerable<CodeInstruction> Transpiler(
+            IEnumerable<CodeInstruction> instructions)
+        {
+            return JoinerAi.SwapReact(instructions);
+        }
+    }
+
+    /// <summary>
+    /// Host: an enemy that left its location doesn't jump back to its spawn
+    /// point while a joiner is near it (inSightOrCloseToPlayer only looks at
+    /// the host's player). Line of sight to a proxy isn't checked, so a joiner
+    /// counts within 1500, more than the game's 1000 for the host's player.
+    /// </summary>
+    [HarmonyPatch(typeof(Character), nameof(Character.inSightOrCloseToPlayer))]
+    static class CharacterInSightOrCloseToPlayer
+    {
+        static void Postfix(Character __instance, ref bool __result)
+        {
+            JoinerAi.NearJoiner(__instance, ref __result);
         }
     }
 
@@ -734,7 +806,7 @@ namespace DarkwoodMP.Combat
     /// not whenever the host does.
     /// </summary>
     [HarmonyPatch(typeof(Character), "checkStuff")]
-    static class ForestSpiritIndoorsPatch
+    static class CharacterCheckStuff
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -752,7 +824,7 @@ namespace DarkwoodMP.Combat
     /// most threat for, not always the host.
     /// </summary>
     [HarmonyPatch(typeof(Character), "OnAniFinish")]
-    static class DefensiveWakeTargetPatch
+    static class CharacterOnAniFinish
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -770,7 +842,7 @@ namespace DarkwoodMP.Combat
     /// the host, is the nearest player.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.onSpiderSpawn))]
-    static class SpiderHatchLocationPatch
+    static class CharacterOnSpiderSpawn
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions) =>
@@ -788,7 +860,7 @@ namespace DarkwoodMP.Combat
     /// </summary>
     [HarmonyPatch(
         typeof(Character.Activity), nameof(Character.Activity.assignTarget))]
-    static class SpawnedActivityTargetPatch
+    static class ActivityAssignTarget
     {
         static IEnumerable<CodeInstruction> Transpiler(
             IEnumerable<CodeInstruction> instructions)
@@ -814,7 +886,7 @@ namespace DarkwoodMP.Combat
     /// waypoint (JoinerChases).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.checkOutLocation))]
-    static class CheckOutLocationJoinerPatch
+    static class CharacterCheckOutLocation
     {
         static void Prefix(Character __instance)
         {
@@ -829,7 +901,7 @@ namespace DarkwoodMP.Combat
     }
 
     [HarmonyPatch(typeof(Character), nameof(Character.gotoNextWaypoint))]
-    static class CheckOutLocationWaypointPatch
+    static class CharacterGotoNextWaypoint
     {
         static void Prefix(Character __instance, ref Waypoint _waypoint)
         {
@@ -842,43 +914,11 @@ namespace DarkwoodMP.Combat
     /// player it is fighting.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.checkBrotherWeakAttack))]
-    static class BrotherWeakAttackPatch
+    static class CharacterCheckBrotherWeakAttack
     {
         static bool Prefix(Character __instance)
         {
-            var proxy = JoinerAi.ProxyOf(__instance.target);
-            if (proxy == null)
-            {
-                return true;
-            }
-
-            if (JoinerAiRules.BrotherWeak(FactsOf(__instance, proxy)))
-            {
-                __instance.attacks[0].disabled = true;
-                __instance.attacks[1].disabled = true;
-                __instance.attacks[2].disabled = false;
-            }
-
-            return false;
-        }
-
-        private static BrotherFacts FactsOf(
-            Character c, NetPlayerProxy proxy)
-        {
-            var host = Player.Instance;
-            float max = 0f;
-            if (host != null)
-            {
-                max = host.maxHealth;
-            }
-
-            return new BrotherFacts
-            {
-                HealthPercent = proxy.HealthPercent,
-                HasHost = host != null,
-                HostMaxHealth = max,
-                Attacks = c.attacks.Count,
-            };
+            return JoinerAi.BrotherWeakAttack(__instance);
         }
     }
 }

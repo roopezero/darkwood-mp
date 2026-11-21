@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Joiners
 {
     /// An enemy about to check out a location (Character.checkOutLocation
-    /// on the host), for CheckOutLocationJoinerPatch.
+    /// on the host), for JoinerChases.
     public readonly struct ChaseFacts
     {
         /// Threat is on (ThreatRules.IsOn).

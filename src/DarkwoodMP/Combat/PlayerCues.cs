@@ -160,7 +160,7 @@ namespace DarkwoodMP.Combat
     /// to dodge.
     /// </summary>
     [HarmonyPatch(typeof(Player), "notifyEnemiesAboutAttack")]
-    static class AttackCuePatch
+    static class PlayerNotifyEnemiesAboutAttack
     {
         static void Postfix()
         {
@@ -177,7 +177,7 @@ namespace DarkwoodMP.Combat
     /// calls scareInArea.
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.scareInArea))]
-    static class AimCuePatch
+    static class CharacterScareInArea
     {
         static void Prefix()
         {
@@ -194,16 +194,20 @@ namespace DarkwoodMP.Combat
     /// (the host's do, and are sent).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.doIWantToDodge))]
-    static class FrozenNoDodgePatch
+    static class CharacterDoIWantToDodge
     {
-        static bool Prefix(Character __instance) =>
-            PlayerCues.Reacts(__instance);
+        static bool Prefix(Character __instance)
+        {
+            return Coop.Current == null || PlayerCues.Reacts(__instance);
+        }
     }
 
     [HarmonyPatch(typeof(Character), nameof(Character.getScared))]
-    static class FrozenNotScaredPatch
+    static class CharacterGetScared
     {
-        static bool Prefix(Character __instance) =>
-            PlayerCues.Reacts(__instance);
+        static bool Prefix(Character __instance)
+        {
+            return Coop.Current == null || PlayerCues.Reacts(__instance);
+        }
     }
 }

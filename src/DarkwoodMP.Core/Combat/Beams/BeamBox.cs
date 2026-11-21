@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Beams
 {
     /// The box a puppet's flashlight lights the light graph in
-    /// (Light2D.lightGraphNodes(Bounds), PuppetBeamLightPatch).
+    /// (Light2D.lightGraphNodes(Bounds), Light2DLightGraphNodes).
     public readonly struct BeamBox
     {
         /// The box replaces the game's; false leaves the game's.

@@ -1,7 +1,7 @@
 namespace DarkwoodMP.Combat.Beams
 {
     /// A stand-in whose player's flashlight may be on a thing
-    /// (ShadowArmorJoinerLightPatch.BeamOn), before the beam's shape.
+    /// (JoinerBeams.BeamOn), before the beam's shape.
     public readonly struct BeamOwnerFacts
     {
         /// The stand-in isn't null and is alive.

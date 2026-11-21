@@ -20,6 +20,10 @@ namespace DarkwoodMP.Combat
     {
         private static readonly AccessTools.FieldRef<Player, float> Fov =
             AccessTools.FieldRefAccess<Player, float>("currentFOV");
+        private static readonly MethodInfo LostEnemy =
+            AccessTools.Method(typeof(Character), "lostEnemy");
+        private static readonly MethodInfo Check =
+            AccessTools.Method(typeof(Character), "checkIfInSightOfPlayer");
 
         public static bool Sees(NetPlayerProxy p, Transform t)
         {
@@ -219,25 +223,17 @@ namespace DarkwoodMP.Combat
             };
         }
 
-        public static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
-
-        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
-    }
-
-    /// <summary>
-    /// The forest spirit's teleport (Character.waitToTeleport, every 8-15 s):
-    /// it jumps to beside its target when the host's player doesn't see it and
-    /// is more than 200 away. With others playing, that's any player: it
-    /// doesn't jump while a joiner looks at it or is near it, even when the
-    /// host is far off.
-    /// </summary>
-    [HarmonyPatch(typeof(Character), "waitToTeleport")]
-    static class ForestSpiritTeleportPatch
-    {
-        static bool Prefix(Character __instance)
+        /// <summary>
+        /// The forest spirit's teleport (Character.waitToTeleport, every
+        /// 8-15 s): it jumps to beside its target when the host's player
+        /// doesn't see it and is more than 200 away. With others playing,
+        /// that's any player: it doesn't jump while a joiner looks at it or
+        /// is near it, even when the host is far off. False skips the
+        /// game's method.
+        /// </summary>
+        public static bool WaitToTeleport(Character c)
         {
-            var c = __instance;
-            var spirit = JoinerSight.SpiritFactsOf(c);
+            var spirit = SpiritFactsOf(c);
             var step = JoinerSightRules.Teleport(spirit);
             if (step == TeleportStep.Game)
             {
@@ -252,38 +248,28 @@ namespace DarkwoodMP.Combat
                     JoinerSightRules.SpreadMin, JoinerSightRules.SpreadMax);
                 spirit = spirit with { RollX = x, RollZ = z };
                 c.teleportWithEffect(
-                    JoinerSight.VectorOf(JoinerSightRules.SpotOf(spirit)),
+                    VectorOf(JoinerSightRules.SpotOf(spirit)),
                     JoinerSightRules.SpiritEffect,
                     JoinerSightRules.SpiritEffectTime);
             }
 
             return false;
         }
-    }
 
-    /// <summary>
-    /// The banshee: Character.checkIfInSightOfPlayer (twice a second once it's
-    /// been seen) agitates it and sends it at the host's player whenever the
-    /// host sees it. With others playing, a joiner seeing it does the same for
-    /// that joiner: it goes for them, its sight light comes on, and it keeps
-    /// checking. The screen effects of being seen are each player's own
-    /// (Combat/EnemyFx.cs), so the host's screen isn't touched for a joiner.
-    /// When the host's player stops seeing a banshee that is after a joiner, it
-    /// keeps after the joiner (onBansheeOutOfSightOfPlayer would send it at the
-    /// host).
-    /// </summary>
-    [HarmonyPatch(typeof(Character), "checkIfInSightOfPlayer")]
-    static class BansheeSightPatch
-    {
-        private static readonly MethodInfo LostEnemy =
-            AccessTools.Method(typeof(Character), "lostEnemy");
-        private static readonly MethodInfo Check =
-            AccessTools.Method(typeof(Character), "checkIfInSightOfPlayer");
-
-        static bool Prefix(Character __instance)
+        /// <summary>
+        /// The banshee: Character.checkIfInSightOfPlayer (twice a second once
+        /// it's been seen) agitates it and sends it at the host's player
+        /// whenever the host sees it. With others playing, a joiner seeing it
+        /// does the same for that joiner: it goes for them, its sight light
+        /// comes on, and it keeps checking. The screen effects of being seen
+        /// are each player's own (Combat/EnemyFx.cs), so the host's screen
+        /// isn't touched for a joiner. When the host's player stops seeing a
+        /// banshee that is after a joiner, it keeps after the joiner
+        /// (onBansheeOutOfSightOfPlayer would send it at the host).
+        /// </summary>
+        public static bool CheckIfInSight(Character c)
         {
-            var c = __instance;
-            var banshee = JoinerSight.BansheeFactsOf(c, out var proxy);
+            var banshee = BansheeFactsOf(c, out var proxy);
             if (!JoinerSightRules.BansheeGoesForJoiner(banshee))
             {
                 return true; // the game's own, or nobody sees it
@@ -329,19 +315,49 @@ namespace DarkwoodMP.Combat
 
             return false;
         }
-    }
 
-    [HarmonyPatch(typeof(Character), "onBansheeOutOfSightOfPlayer")]
-    static class BansheeOutOfSightPatch
-    {
-        static void Postfix(Character __instance)
+        /// <summary>
+        /// After onBansheeOutOfSightOfPlayer: a banshee after a joiner
+        /// keeps after them.
+        /// </summary>
+        public static void OutOfSight(Character c)
         {
-            var c = __instance;
-            var banshee = JoinerSight.ChaseFactsOf(c, out var proxy);
+            var banshee = ChaseFactsOf(c, out var proxy);
             if (JoinerSightRules.BansheeKeepsChasing(banshee))
             {
                 c.goToPos(proxy.transform);
             }
+        }
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+    }
+
+    [HarmonyPatch(typeof(Character), "waitToTeleport")]
+    static class CharacterWaitToTeleport
+    {
+        static bool Prefix(Character __instance)
+        {
+            return JoinerSight.WaitToTeleport(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(Character), "checkIfInSightOfPlayer")]
+    static class CharacterCheckIfInSightOfPlayer
+    {
+        static bool Prefix(Character __instance)
+        {
+            return JoinerSight.CheckIfInSight(__instance);
+        }
+    }
+
+    [HarmonyPatch(typeof(Character), "onBansheeOutOfSightOfPlayer")]
+    static class CharacterOnBansheeOutOfSightOfPlayer
+    {
+        static void Postfix(Character __instance)
+        {
+            JoinerSight.OutOfSight(__instance);
         }
     }
 }
