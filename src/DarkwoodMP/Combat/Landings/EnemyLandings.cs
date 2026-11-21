@@ -486,11 +486,13 @@ namespace DarkwoodMP.Combat
             }
         }
 
+        // ---- what the patches hand on --------------------------------------
+
         /// <summary>
-        /// Host: whether this landing thrown thing was thrown by one of the
-        /// host's shared enemies.
+        /// Host: ThrownItem.onCollide starts. Whether it's the landing of
+        /// one of our shared enemies' throws, noted until it ends.
         /// </summary>
-        internal static bool ByHostEnemy(ThrownItem t, out uint by)
+        internal static bool LandingStarts(ThrownItem t)
         {
             Character c = null;
             if (t != null && t.objectThatSpawnedMe != null)
@@ -498,7 +500,192 @@ namespace DarkwoodMP.Combat
                 c = t.objectThatSpawnedMe.GetComponent<Character>();
             }
 
-            return LandingRules.Notes(WatchOf(c, false, out by));
+            var start = WatchOf(c, Landing != null, out uint by);
+            if (!LandingRules.Notes(start))
+            {
+                return false;
+            }
+
+            LandingBy = by;
+            Landing = t;
+            Made.Clear();
+            return true;
+        }
+
+        /// <summary>Host: the noted landing ended; send what it left.</summary>
+        internal static void LandingEnds()
+        {
+            Landing = null;
+            Landed();
+        }
+
+        /// <summary>Host: the noted landing threw; forget it.</summary>
+        internal static void LandingFailed()
+        {
+            Landing = null;
+            Made.Clear();
+        }
+
+        /// <summary>
+        /// Host: Core.AddPrefab made this of that prefab: noted when it's
+        /// what the noted landing leaves.
+        /// </summary>
+        internal static void PrefabMade(Object prefab, GameObject made)
+        {
+            var t = Landing;
+            bool noting = t != null && made != null;
+            bool land = noting && prefab != null
+                && prefab == t.prefabToSpawnOnLand;
+            if (LandingRules.TakesLanded(noting, land))
+            {
+                Made.Add(made);
+            }
+        }
+
+        /// <summary>
+        /// Client: whether this character may throw (Character
+        /// .spawnProjectile): not a copy of the host's enemy.
+        /// </summary>
+        internal static bool MayThrow(Character c)
+        {
+            if (c == null)
+            {
+                return true;
+            }
+
+            bool copy = NetEnemies.Instance != null
+                && NetEnemies.Instance.IsPuppet(c, out _);
+            return LandingRules.MayThrow(
+                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(c), copy);
+        }
+
+        /// <summary>
+        /// Host: Character.spawnProjectile starts. Whether it's one of our
+        /// shared enemies' throws, noted until it ends.
+        /// </summary>
+        internal static bool ThrowStarts(Character c, string type)
+        {
+            var start = WatchOf(c, Throwing != null, out uint by);
+            if (!LandingRules.Notes(start))
+            {
+                return false;
+            }
+
+            ThrowingBy = by;
+            Throwing = type;
+            Thrown.Clear();
+            return true;
+        }
+
+        /// <summary>Host: the noted throw ended; send what it threw.</summary>
+        internal static void ThrowEnds()
+        {
+            Threw();
+            Throwing = null;
+        }
+
+        /// <summary>Host: the noted throw threw; forget it.</summary>
+        internal static void ThrowFailed()
+        {
+            Throwing = null;
+            Thrown.Clear();
+        }
+
+        /// <summary>
+        /// Host: Core.AddPooledPrefab made this: noted when the noted throw
+        /// threw it.
+        /// </summary>
+        internal static void PooledMade(Transform made)
+        {
+            bool noting = Throwing != null && made != null;
+            bool thrown = noting && made.GetComponent<ThrownItem>() != null;
+            bool listed = noting && Thrown.Contains(made);
+            if (LandingRules.TakesThrown(noting, thrown, listed))
+            {
+                Thrown.Add(made);
+            }
+        }
+
+        /// <summary>
+        /// Client: ThrownItem.onCollide starts. Whether it's one of our
+        /// copies of the host's enemies' projectiles, which then just goes.
+        /// </summary>
+        internal static bool CopyEnds(ThrownItem t)
+        {
+            if (t == null || !Copies.Remove(t))
+            {
+                return false;
+            }
+
+            Gone(t.transform);
+            return true;
+        }
+
+        /// <summary>
+        /// Host: Character.rangedAttack starts. Whether it's one of our
+        /// shared enemies' ranged attacks, noted until it ends.
+        /// </summary>
+        internal static bool SensorThrowStarts(
+            Character c, Character.SensorType sensor)
+        {
+            Character thrower = null;
+            if (sensor != null)
+            {
+                thrower = c;
+            }
+
+            var start = WatchOf(thrower, SensorThrowing != null, out uint by);
+            if (!LandingRules.Notes(start))
+            {
+                return false;
+            }
+
+            SensorThrowingBy = by;
+            string name = sensor.name;
+            if (name == null)
+            {
+                name = "";
+            }
+
+            SensorThrowing = name;
+            SensorThrown.Clear();
+            return true;
+        }
+
+        /// <summary>
+        /// Host: the noted ranged attack ended; send what it threw.
+        /// </summary>
+        internal static void SensorThrowEnds()
+        {
+            SensorThrew();
+            SensorThrowing = null;
+        }
+
+        /// <summary>Host: the noted ranged attack threw; forget it.</summary>
+        internal static void SensorThrowFailed()
+        {
+            SensorThrowing = null;
+            SensorThrown.Clear();
+        }
+
+        /// <summary>
+        /// Host: Core.AddPrefab made this: noted when the noted ranged attack
+        /// threw it.
+        /// </summary>
+        internal static void SensorMade(GameObject made)
+        {
+            if (SensorThrowing == null || made == null)
+            {
+                return;
+            }
+
+            var ti = made.GetComponent<ThrownItem>();
+            bool thrown = ti != null;
+            bool listed = thrown && SensorThrown.Contains(ti);
+            if (LandingRules.TakesThrown(true, thrown, listed))
+            {
+                SensorThrown.Add(ti);
+            }
         }
 
         /// <summary>Host: after the landing, send what it left.</summary>

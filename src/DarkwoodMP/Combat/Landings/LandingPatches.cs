@@ -1,35 +1,27 @@
 using System.Collections.Generic;
-using DarkwoodMP.Combat.Landings;
-using DarkwoodMP.World;
 using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.Combat
 {
+    /// <summary>
+    /// Host: the landing of one of our shared enemies' throws; what it
+    /// leaves is sent after it (EnemyLanded).
+    /// </summary>
     [HarmonyPatch(typeof(ThrownItem), nameof(ThrownItem.onCollide))]
-    static class EnemyLandingPatch
+    static class ThrownItemOnCollideLanded
     {
         static void Prefix(ThrownItem __instance, out bool __state)
         {
-            __state = EnemyLandings.Landing == null
-                && EnemyLandings.ByHostEnemy(
-                    __instance, out EnemyLandings.LandingBy);
-            if (__state)
-            {
-                EnemyLandings.Landing = __instance;
-                EnemyLandings.Made.Clear();
-            }
+            __state = EnemyLandings.LandingStarts(__instance);
         }
 
         static void Postfix(bool __state)
         {
-            if (!__state)
+            if (__state)
             {
-                return;
+                EnemyLandings.LandingEnds();
             }
-
-            EnemyLandings.Landing = null;
-            EnemyLandings.Landed();
         }
 
         static System.Exception Finalizer(
@@ -37,8 +29,7 @@ namespace DarkwoodMP.Combat
         {
             if (__state && __exception != null)
             {
-                EnemyLandings.Landing = null;
-                EnemyLandings.Made.Clear();
+                EnemyLandings.LandingFailed();
             }
 
             return __exception;
@@ -57,18 +48,11 @@ namespace DarkwoodMP.Combat
         typeof(GameObject),
         typeof(bool)
     })]
-    static class EnemyLandingSpawnPatch
+    static class CoreAddPrefabLanded
     {
         static void Postfix(Object prefab, GameObject __result)
         {
-            var t = EnemyLandings.Landing;
-            bool noting = t != null && __result != null;
-            bool land = noting && prefab != null
-                && prefab == t.prefabToSpawnOnLand;
-            if (LandingRules.TakesLanded(noting, land))
-            {
-                EnemyLandings.Made.Add(__result);
-            }
+            EnemyLandings.PrefabMade(prefab, __result);
         }
     }
 
@@ -77,21 +61,12 @@ namespace DarkwoodMP.Combat
     /// host's throw lands here as EnemyLanded).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.spawnProjectile))]
-    static class ClientNoEnemyThrowPatch
+    static class CharacterSpawnProjectileCopy
     {
         [HarmonyPriority(Priority.First)]
         static bool Prefix(Character __instance)
         {
-            if (__instance == null)
-            {
-                return true;
-            }
-
-            bool copy = NetEnemies.Instance != null
-                && NetEnemies.Instance.IsPuppet(__instance, out _);
-            return LandingRules.MayThrow(
-                NetEnemies.ClientMode, NetEnemies.Frozen.Contains(__instance),
-                copy);
+            return EnemyLandings.MayThrow(__instance);
         }
     }
 
@@ -100,31 +75,20 @@ namespace DarkwoodMP.Combat
     /// it's aimed (EnemyProjectile).
     /// </summary>
     [HarmonyPatch(typeof(Character), nameof(Character.spawnProjectile))]
-    static class EnemyThrowPatch
+    static class CharacterSpawnProjectile
     {
         static void Prefix(
             Character __instance, string _projectileType, out bool __state)
         {
-            var start = EnemyLandings.WatchOf(
-                __instance, EnemyLandings.Throwing != null, out uint by);
-            __state = LandingRules.Notes(start);
-            if (__state)
-            {
-                EnemyLandings.ThrowingBy = by;
-                EnemyLandings.Throwing = _projectileType;
-                EnemyLandings.Thrown.Clear();
-            }
+            __state = EnemyLandings.ThrowStarts(__instance, _projectileType);
         }
 
         static void Postfix(bool __state)
         {
-            if (!__state)
+            if (__state)
             {
-                return;
+                EnemyLandings.ThrowEnds();
             }
-
-            EnemyLandings.Threw();
-            EnemyLandings.Throwing = null;
         }
 
         static System.Exception Finalizer(
@@ -132,30 +96,28 @@ namespace DarkwoodMP.Combat
         {
             if (__state && __exception != null)
             {
-                EnemyLandings.Throwing = null;
-                EnemyLandings.Thrown.Clear();
+                EnemyLandings.ThrowFailed();
             }
 
             return __exception;
         }
     }
 
+    /// <summary>
+    /// Host: the pooled projectile a noted throw makes is noted, to send
+    /// after it.
+    /// </summary>
     [HarmonyPatch]
-    static class EnemyThrowSpawnPatch
+    static class CoreAddPooledPrefabThrown
     {
         static IEnumerable<System.Reflection.MethodBase> TargetMethods() =>
             AccessTools.GetDeclaredMethods(typeof(Core)).FindAll(
                 m => m.Name == nameof(Core.AddPooledPrefab)
                     && m.ReturnType == typeof(Transform));
+
         static void Postfix(Transform __result)
         {
-            bool noting = EnemyLandings.Throwing != null && __result != null;
-            if (LandingRules.TakesThrown(
-                noting, noting && __result.GetComponent<ThrownItem>() != null,
-                noting && EnemyLandings.Thrown.Contains(__result)))
-            {
-                EnemyLandings.Thrown.Add(__result);
-            }
+            EnemyLandings.PooledMade(__result);
         }
     }
 
@@ -164,18 +126,12 @@ namespace DarkwoodMP.Combat
     /// nothing: it just goes.
     /// </summary>
     [HarmonyPatch(typeof(ThrownItem), nameof(ThrownItem.onCollide))]
-    static class EnemyProjectileCopyPatch
+    static class ThrownItemOnCollideCopy
     {
         [HarmonyPriority(Priority.First)]
         static bool Prefix(ThrownItem __instance)
         {
-            if (__instance == null || !EnemyLandings.Copies.Remove(__instance))
-            {
-                return true;
-            }
-
-            EnemyLandings.Gone(__instance.transform);
-            return false;
+            return !EnemyLandings.CopyEnds(__instance);
         }
     }
 
@@ -187,44 +143,21 @@ namespace DarkwoodMP.Combat
     /// spawnProjectile's.
     /// </summary>
     [HarmonyPatch(typeof(Character), "rangedAttack")]
-    static class EnemySensorThrowPatch
+    static class CharacterRangedAttack
     {
         static void Prefix(
             Character __instance, Character.SensorType sensorType,
             out bool __state)
         {
-            Character thrower = null;
-            if (sensorType != null)
-            {
-                thrower = __instance;
-            }
-
-            var start = EnemyLandings.WatchOf(
-                thrower, EnemyLandings.SensorThrowing != null, out uint by);
-            __state = LandingRules.Notes(start);
-            if (__state)
-            {
-                EnemyLandings.SensorThrowingBy = by;
-                string sensorThrowing = sensorType.name;
-                if (sensorThrowing == null)
-                {
-                    sensorThrowing = "";
-                }
-
-                EnemyLandings.SensorThrowing = sensorThrowing;
-                EnemyLandings.SensorThrown.Clear();
-            }
+            __state = EnemyLandings.SensorThrowStarts(__instance, sensorType);
         }
 
         static void Postfix(bool __state)
         {
-            if (!__state)
+            if (__state)
             {
-                return;
+                EnemyLandings.SensorThrowEnds();
             }
-
-            EnemyLandings.SensorThrew();
-            EnemyLandings.SensorThrowing = null;
         }
 
         static System.Exception Finalizer(
@@ -232,14 +165,17 @@ namespace DarkwoodMP.Combat
         {
             if (__state && __exception != null)
             {
-                EnemyLandings.SensorThrowing = null;
-                EnemyLandings.SensorThrown.Clear();
+                EnemyLandings.SensorThrowFailed();
             }
 
             return __exception;
         }
     }
 
+    /// <summary>
+    /// Host: the sensor's prefab a noted ranged attack makes is noted, to send
+    /// after it.
+    /// </summary>
     [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
     {
         typeof(Object),
@@ -248,22 +184,11 @@ namespace DarkwoodMP.Combat
         typeof(GameObject),
         typeof(bool)
     })]
-    static class EnemySensorSpawnPatch
+    static class CoreAddPrefabSensor
     {
         static void Postfix(GameObject __result)
         {
-            if (EnemyLandings.SensorThrowing == null || __result == null)
-            {
-                return;
-            }
-
-            var ti = __result.GetComponent<ThrownItem>();
-            bool thrown = ti != null;
-            bool listed = thrown && EnemyLandings.SensorThrown.Contains(ti);
-            if (LandingRules.TakesThrown(true, thrown, listed))
-            {
-                EnemyLandings.SensorThrown.Add(ti);
-            }
+            EnemyLandings.SensorMade(__result);
         }
     }
 }
