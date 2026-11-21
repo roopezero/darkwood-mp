@@ -49,8 +49,10 @@ for plat in win_x64 win_x86 linux_x64; do
     grep -qxF "BepInEx/plugins/DarkwoodMP/$f" <<<"$files" \
       || { echo "$f is missing from $out"; exit 1; }
   done
+  # DarkwoodMP.MapTests.dll (the map test steps) goes to the test game folders
+  # only, never to players.
   if grep -q MapTests <<<"$files"; then
-    echo "the map tests are in $out"; exit 1
+    echo "the map tests (DarkwoodMP.MapTests.dll) are in $out"; exit 1
   fi
   safe_rm "$TMPROOT" "$stage"; stage=""
   echo "Built $out"
