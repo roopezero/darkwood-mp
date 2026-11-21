@@ -226,74 +226,56 @@ namespace DarkwoodMP.World
                 && (ReferenceEquals(sheet, ItemsSheet) || sheet == ItemsSheet)
                 && key.EndsWith(DescEnd, StringComparison.Ordinal);
 
-        [HarmonyPatch(
-            typeof(global::Language), nameof(global::Language.Get),
-            new[] { typeof(string), typeof(string) })]
-        private static class GetPatch
+        // ---- what the patches hand over (TooltipPatches) ----
+
+        /// Language.Get gave "" for an empty entry or the key itself for a
+        /// missing one: an item's description is the mod's then.
+        internal void Got(string key, string sheet, ref string text)
         {
-            // Language.Get gives "" for an empty entry and the key itself for a
-            // missing one.
-            private static void Postfix(
-                string key, string sheetTitle, ref string __result)
+            if (!IsItemDesc(key, sheet))
             {
-                if (!Current.IsItemDesc(key, sheetTitle))
-                {
-                    return;
-                }
+                return;
+            }
 
-                if (!string.IsNullOrEmpty(__result)
-                    && !ReferenceEquals(__result, key) && __result != key)
-                {
-                    return;
-                }
+            if (!string.IsNullOrEmpty(text)
+                && !ReferenceEquals(text, key) && text != key)
+            {
+                return;
+            }
 
-                if (Current.ItemText(key) is string t)
-                {
-                    __result = t;
-                }
+            if (ItemText(key) is string t)
+            {
+                text = t;
             }
         }
 
-        [HarmonyPatch(
-            typeof(global::Language), nameof(global::Language.HasKey),
-            new[] { typeof(string), typeof(string) })]
-        private static class HasKeyPatch
+        /// Language.HasKey: an item's description the mod has is there.
+        internal void HadKey(string key, string sheet, ref bool has)
         {
-            private static void Postfix(
-                string key, string sheetTitle, ref bool __result)
+            if (has || !IsItemDesc(key, sheet))
             {
-                if (__result || !Current.IsItemDesc(key, sheetTitle))
-                {
-                    return;
-                }
+                return;
+            }
 
-                if (Current.Items.ContainsKey(key))
-                {
-                    __result = true;
-                }
+            if (Items.ContainsKey(key))
+            {
+                has = true;
             }
         }
 
-        /// <summary>The map's popup for a location (Map.Update, every frame the
-        /// mouse is on one): the mod's line first, then the game's own text
-        /// ("You are here") if it gave one.</summary>
-        [HarmonyPatch(
-            typeof(ItemPopup), nameof(ItemPopup.show),
-            new[] { typeof(string), typeof(Vector2), typeof(string) })]
-        private static class MapPopupPatch
+        /// The map's popup for a location: the mod's line first, then the
+        /// game's own text ("You are here") if it gave one.
+        internal void PopupShowing(string name, ref string desc)
         {
-            private static void Prefix(string _name, ref string descText)
+            if (LocationText(name) is string t)
             {
-                if (Current.LocationText(_name) is string t)
+                if (string.IsNullOrEmpty(desc))
                 {
-                    if (string.IsNullOrEmpty(descText))
-                    {
-                        descText = t;
-                    }
-                    else
-                    {
-                        descText = t + "\n" + descText;
-                    }
+                    desc = t;
+                }
+                else
+                {
+                    desc = t + "\n" + desc;
                 }
             }
         }

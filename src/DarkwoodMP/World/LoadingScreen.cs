@@ -1,4 +1,3 @@
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP.World
@@ -614,15 +613,5 @@ namespace DarkwoodMP.World
 
             SetLine(GameStage(), null);
         }
-    }
-
-    /// <summary>
-    /// The game set its bar: while a client joins, JoinScreen's bar (download
-    /// first, then this) wins.
-    /// </summary>
-    [HarmonyPatch(typeof(WorldGenerator), "set_percentLoaded")]
-    static class PercentLoadedPatch
-    {
-        static void Postfix() => Plugin.Instance.Host.Join.OnGameBar();
     }
 }

@@ -572,29 +572,39 @@ namespace DarkwoodMP.World
             w.registerToClosestNode(GO);
             return false;
         }
-    }
 
-    /// <summary>
-    /// SaveManager.Load's loop over loadedObjects: ElementAt from an array copy
-    /// (see LoadSpeed).
-    /// </summary>
-    [HarmonyPatch]
-    static class LoadElementAtPatch
-    {
-        static MethodBase TargetMethod()
+        // ---- what the patches hand over (LoadSpeedPatches) ----------------
+
+        /// SaveManager.Load's coroutine is about to step.
+        internal void LoadStepping()
         {
-            var t =
-                typeof(SaveManager).GetNestedTypes(BindingFlags.NonPublic)
-                    .FirstOrDefault(n => n.Name.StartsWith("<Load>d__"));
-            if (t == null)
+            if (!Loading)
             {
-                return null;
+                LoadStarted();
             }
-
-            return AccessTools.Method(t, "MoveNext");
         }
 
-        static IEnumerable<CodeInstruction> Transpiler(
+        /// SaveManager.Load's coroutine stepped: false when it's done.
+        internal void LoadStepped(bool more)
+        {
+            if (!more)
+            {
+                LoadEnded();
+            }
+        }
+
+        /// WorldGenerator.Start ran: a saved world is parsed meanwhile.
+        internal void WorldStarted()
+        {
+            if (Core.loadingGame)
+            {
+                ParseAhead();
+            }
+        }
+
+        /// SaveManager.Load's loop with its ElementAt calls and its JSON
+        /// parses replaced by ElementAt, Dynamic and Static here.
+        internal static IEnumerable<CodeInstruction> Rewrite(
             IEnumerable<CodeInstruction> code)
         {
             var fast = AccessTools.Method(
@@ -660,147 +670,58 @@ namespace DarkwoodMP.World
             }
         }
 
-        static void Prefix()
-        {
-            if (!LoadSpeed.Current.Loading)
-            {
-                LoadSpeed.Current.LoadStarted();
-            }
-        }
-
-        static void Postfix(bool __result)
-        {
-            if (!__result)
-            {
-                LoadSpeed.Current.LoadEnded();
-            }
-        }
-    }
-
-    /// <summary>
-    /// The game is about to load a saved world (after its 1.6 s fade): parse
-    /// the save meanwhile.
-    /// </summary>
-    [HarmonyPatch(typeof(WorldGenerator), "Start")]
-    static class ParseAheadPatch
-    {
-        static void Postfix()
-        {
-            if (Core.loadingGame)
-            {
-                LoadSpeed.Current.ParseAhead();
-            }
-        }
-    }
-
-    /// <summary>
-    /// Core.AddPrefab(path, ...) while loading: each path's prefab is looked up
-    /// once (see LoadSpeed).
-    /// </summary>
-    [HarmonyPatch(typeof(Core), nameof(Core.AddPrefab), new[]
-    {
-        typeof(string),
-        typeof(Vector3),
-        typeof(Quaternion),
-        typeof(GameObject),
-        typeof(bool)
-    })]
-    static class AddPrefabCachePatch
-    {
-        static bool Prefix(
-            string prefab, Vector3 position, Quaternion quaternion,
-            GameObject parentGO, bool worldSpace, ref GameObject __result)
-        {
-            if (!LoadSpeed.Current.Loading)
-            {
-                return true;
-            }
-
-            __result = Core.AddPrefab(
-                LoadSpeed.Current.Prefab(prefab), position, quaternion,
-                parentGO, worldSpace);
-            return false;
-        }
-    }
-
-    [HarmonyPatch(
-        typeof(WorldGrid.Grid), nameof(WorldGrid.Grid.registerCullablesOnLoad))]
-    static class GridRegisterBatchPatch
-    {
-        static void Prefix() => LoadSpeed.Current.BeginBatch();
-        static Exception Finalizer(Exception __exception)
-        {
-            LoadSpeed.Current.EndBatch();
-            return __exception;
-        }
-    }
-
-    [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToNodes), new[]
-    {
-        typeof(GameObject),
-        typeof(Vector2),
-        typeof(WorldGrid.Cullable.Type)
-    })]
-    static class RegisterToNodesPatch
-    {
-        static bool Prefix(
-            WorldGrid __instance, GameObject GO, Vector2 size,
+        /// WorldGrid.registerToNodes during a batch: false when it was done
+        /// here, true for the game's own.
+        internal bool GameRegistersToNodes(
+            WorldGrid w, GameObject go, Vector2 size,
             WorldGrid.Cullable.Type type)
         {
-            if (!LoadSpeed.Current.Batch)
+            if (!Batch)
             {
                 return true;
             }
 
             try
             {
-                return LoadSpeed.Current.RegisterToNodes(
-                    __instance, GO, size, type);
+                return RegisterToNodes(w, go, size, type);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
                     $"LoadSpeed: {e.Message}; the game's own registerToNodes "
                         + "instead");
-                LoadSpeed.Current.EndBatch();
+                EndBatch();
                 return true;
             }
         }
-    }
 
-    [HarmonyPatch(typeof(WorldGrid), nameof(WorldGrid.registerToClosestNode))]
-    static class RegisterToClosestNodePatch
-    {
-        static bool Prefix(WorldGrid __instance, GameObject GO) =>
-            !LoadSpeed.Current.Batch
-            || LoadSpeed.Current.RegisterToClosestNode(__instance, GO);
-    }
-
-    [HarmonyPatch(
-        typeof(WorldGrid), nameof(WorldGrid.registerToNode),
-        new[] { typeof(GameObject), typeof(WorldGrid.Cullable.Type) })]
-    static class RegisterToNodePatch
-    {
-        static bool Prefix(
-            WorldGrid __instance, GameObject GO, WorldGrid.Cullable.Type type)
+        /// WorldGrid.registerToNode during a batch, as GameRegistersToNodes.
+        internal bool GameRegistersToNode(
+            WorldGrid w, GameObject go, WorldGrid.Cullable.Type type)
         {
-            if (!LoadSpeed.Current.Batch)
+            if (!Batch)
             {
                 return true;
             }
 
             try
             {
-                return LoadSpeed.Current.RegisterToNode(__instance, GO, type);
+                return RegisterToNode(w, go, type);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning(
                     $"LoadSpeed: {e.Message}; the game's own registerToNode "
                         + "instead");
-                LoadSpeed.Current.EndBatch();
+                EndBatch();
                 return true;
             }
+        }
+
+        /// WorldGrid.registerToClosestNode, as GameRegistersToNodes.
+        internal bool GameRegistersToClosestNode(WorldGrid w, GameObject go)
+        {
+            return !Batch || RegisterToClosestNode(w, go);
         }
     }
 }

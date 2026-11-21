@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using HarmonyLib;
 using UnityEngine;
 
 namespace DarkwoodMP
@@ -335,33 +334,6 @@ namespace DarkwoodMP
         }
     }
 
-    [HarmonyPatch(typeof(MainMenu), "OnEnable")]
-    static class MenuEntryLayoutPatch
-    {
-        static void Postfix(MainMenu __instance) =>
-            Plugin.Instance.Host.MenuEntry.PauseMenuOpened(__instance);
-    }
-
-    /// <summary>
-    /// The game placed one of the menu's things (PositionMe): lay the menu out
-    /// again at once, so it never shows in the game's place.
-    /// </summary>
-    [HarmonyPatch(typeof(PositionMe), nameof(PositionMe.init))]
-    static class MenuLayoutPatch
-    {
-        static void Postfix(PositionMe __instance)
-        {
-            var mm = Singleton<MainMenu>.Instance;
-            if (mm == null || mm.Menu0 == null
-                || !__instance.transform.IsChildOf(mm.Menu0.transform))
-            {
-                return;
-            }
-
-            Plugin.Instance.Host.MenuLayout.Apply(mm);
-        }
-    }
-
     /// <summary>
     /// The main menu and the pause menu laid out as Half-Life's and
     /// Counter-Strike 1.6's: the logo in the top left, the entries in a column
@@ -373,6 +345,20 @@ namespace DarkwoodMP
     /// </summary>
     public sealed class MenuLayout
     {
+        /// The game placed one of the menu's things (PositionMe): the menu is
+        /// laid out again at once, so it never shows in the game's place.
+        internal void Placed(PositionMe placed)
+        {
+            var mm = Singleton<MainMenu>.Instance;
+            if (mm == null || mm.Menu0 == null
+                || !placed.transform.IsChildOf(mm.Menu0.transform))
+            {
+                return;
+            }
+
+            Apply(mm);
+        }
+
         // the logo's left edge (and MenuList's), as a share of the screen's
         // width the logo's word's top below the screen's top, as a share of its
         // height the versions' distance from the right and bottom edges, as a
@@ -542,23 +528,6 @@ namespace DarkwoodMP
                 Mathf.Min(a.x, c.x), Mathf.Min(a.y, c.y), Mathf.Max(a.x, c.x),
                 Mathf.Max(a.y, c.y));
         }
-    }
-
-    [HarmonyPatch(typeof(MainMenu), nameof(MainMenu.close))]
-    static class MenuEntryClosePatch
-    {
-        static void Postfix(MainMenu __instance) =>
-            Plugin.Instance.Host.MenuEntry.PauseMenuClosed(__instance);
-    }
-
-    /// <summary>
-    /// The menu went away without close (the game turned it off): the HUD comes
-    /// back too.
-    /// </summary>
-    [HarmonyPatch(typeof(MainMenu), "OnDisable")]
-    static class MenuEntryDisablePatch
-    {
-        static void Postfix() => Plugin.Instance.Host.PauseHud.Restore();
     }
 
     /// <summary>
