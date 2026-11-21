@@ -1,8 +1,7 @@
 using System.Collections.Generic;
-using DarkwoodMP.World.Workbenches;
 using UnityEngine;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Workbenches
 {
     /// <summary>
     /// Each workbench level adds a row of RowSize slots to the workbench's

@@ -1,6 +1,6 @@
 using HarmonyLib;
 
-namespace DarkwoodMP.World
+namespace DarkwoodMP.World.Workbenches
 {
     /// <summary>
     /// The workbench's storage was drawn: it's drawn smaller if it would run

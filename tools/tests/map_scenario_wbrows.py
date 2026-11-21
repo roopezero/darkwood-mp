@@ -1,4 +1,4 @@
-"""Map test steps for the workbench storage's rows (World/WorkbenchStorage.cs); same format as map_scenario.py.
+"""Map test steps for the workbench storage's rows (World/Workbenches/WorkbenchStorage.cs); same format as map_scenario.py.
 The steps are in src/DarkwoodMP/World/MapScenarioWbRows.cs (and MapScenarioUi.cs for the window).
 Run alone: tools/run-test.sh map:wbrows.
 

@@ -28,8 +28,8 @@ namespace DarkwoodMP
 
         /// The workbenches' storage rows, which grow with each upgrade also
         /// without co-op.
-        public readonly World.WorkbenchStorage Workbenches =
-            new World.WorkbenchStorage();
+        public readonly World.Workbenches.WorkbenchStorage Workbenches =
+            new World.Workbenches.WorkbenchStorage();
 
         /// One generator for the random ids of shared objects
         /// (HostIds.NewId), so ids made in the same millisecond differ.

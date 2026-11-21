@@ -12,7 +12,7 @@ namespace DarkwoodMP.World
 {
     /// <summary>
     /// Map test steps for the workbench storage's rows
-    /// (World.WorkbenchStorage): an upgrade adds a row of six slots in both
+    /// (WorkbenchStorage): an upgrade adds a row of six slots in both
     /// games, the open window draws it (every slot on the screen, none on top
     /// of another, Sort &amp; Stack under the last row), a client puts
     /// something in the new row, and the host's save and reload keep it. The

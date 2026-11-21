@@ -245,7 +245,7 @@ namespace DarkwoodMP.Net
         /// <summary>
         /// Either way: i32 level: the workbench was upgraded. Each game gives
         /// every workbench's storage that level's rows as it takes it, before
-        /// any change to the new slots arrives (see World.WorkbenchStorage).
+        /// any change to the new slots arrives (see WorkbenchStorage).
         /// </summary>
         WorkbenchLevel = 39,
         /// <summary>
