@@ -10,9 +10,11 @@ moves to the final run, and the hand tests of a test build on Windows and on
 GOG, which are still to do. The formatting pass over all the code is done, and
 the style rules are errors in the plugin too. The rules of Phases 4 to 8 are
 written in the core with their unit tests; the plugin doesn't call them yet.
-Phase 2 is next. See [Changes made while carrying out the
-plan](#changes-made-while-carrying-out-the-plan). Tick the boxes below as steps
-are merged, and delete this file when Phase 8 is finished.
+Phase 2's move is done: the map test steps are in `src/DarkwoodMP.MapTests`, a
+second plugin. Splitting its files over 600 lines is next. See [Changes made
+while carrying out the plan](#changes-made-while-carrying-out-the-plan). Tick
+the boxes below as steps are merged, and delete this file when Phase 8 is
+finished.
 
 ## Where the code is today
 
@@ -200,16 +202,16 @@ are still to do.
 The map test steps are 26% of the code, and players don't need them. They move
 first so that later steps don't have to move them too.
 
-- [ ] Cut the plugin's references to the map steps. Only three files have any:
+- [x] Cut the plugin's references to the map steps. Only three files have any:
       `TestControl.cs`, `Plugin.cs` and `Combat/CombatPatches.cs`. They go
       through a small `ITestSteps` interface in the plugin.
-- [ ] Create `src/DarkwoodMP.MapTests` as a second BepInEx plugin that depends
+- [x] Create `src/DarkwoodMP.MapTests` as a second BepInEx plugin that depends
       on the main one and does nothing without `--dwmp-test-control`.
-- [ ] Give it access with `InternalsVisibleTo`, since most of the plugin's
+- [x] Give it access with `InternalsVisibleTo`, since most of the plugin's
       classes are internal.
-- [ ] Move the 40 `MapScenario*` files and apply their test-only patches from
+- [x] Move the 40 `MapScenario*` files and apply their test-only patches from
       the new project. `TestOnlyPatch` in `Plugin.cs` goes away.
-- [ ] Deploy the DLL to test game folders only, and check that it's in no zip.
+- [x] Deploy the DLL to test game folders only, and check that it's in no zip.
 - [ ] Format the moved files, splitting the five over 600 lines, then switch
       this project's style warnings to errors.
 
@@ -399,6 +401,7 @@ on the migration.
 |---|---|---|
 | Recipe step 7 formats each folder as it moves | One formatting pass over all the code, after Phase 1 and before Phase 2 | Later moves carry code that is already formatted, and the proof is simpler |
 | Phase 2 splits five map test files over 600 lines | Fifteen files | Formatting makes them longer |
+| Phase 2 switches the map tests' style warnings to errors | They were errors from the project's first build | The files were formatted before they moved, and the style rules were already errors everywhere |
 | Phase 8 turns style errors on for the plugin | They went on when the formatting pass left no finding | Nothing is left to wait for |
 | Recipe step 2 writes each subsystem's rules as it moves | The rules of Phases 4 to 8 were all written first, each with its unit tests, and the plugin calls them as each subsystem moves | The rules only add code to the core, so they could be written side by side without touching the plugin |
 | Process state goes on the `Plugin` instance | On `ModHost`, which `Plugin` owns | `Plugin` must stay loadable when the core is missing |
