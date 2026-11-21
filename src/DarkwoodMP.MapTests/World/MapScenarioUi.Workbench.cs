@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using DarkwoodMP.World.Inventories;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
 
@@ -37,7 +38,7 @@ namespace DarkwoodMP.World
             float seconds = 1f;
             if (Net.Session.Instance != null && Net.Session.Instance.IsClient)
             {
-                seconds = SlotShare.AskTimeout + 0.5f;
+                seconds = SlotRules.AskTimeout + 0.5f;
             }
 
             yield return new WaitForSeconds(seconds);

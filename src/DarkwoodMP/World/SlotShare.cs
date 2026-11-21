@@ -138,13 +138,13 @@ namespace DarkwoodMP.World
             }
 
             var keys = Keys(inv);
-            if (!_watched.TryGetValue(inv, out var before)
-                || before.Length != keys.Length)
+            _watched.TryGetValue(inv, out var before);
+            if (SlotRules.IsFirstLook(before, keys.Length))
             {
                 _watched[inv] = keys; // as we found it
                 var found = ObjRef.Of(inv.gameObject);
                 _refs[inv] = found;
-                if (askHost && _session.IsClient && found.Valid)
+                if (SlotRules.Asks(askHost, _session.IsClient, found.Valid))
                 {
                     Ask(inv, found);
                 }
@@ -154,7 +154,8 @@ namespace DarkwoodMP.World
 
             if (_awaiting.TryGetValue(inv, out float asked))
             {
-                if (Time.unscaledTime - asked < AskTimeout)
+                var now = new Seconds(Time.unscaledTime);
+                if (SlotRules.StillWaiting(new Seconds(asked), now))
                 {
                     // what we change meanwhile goes once the host's answer is
                     // in
@@ -164,22 +165,19 @@ namespace DarkwoodMP.World
                 _awaiting.Remove(inv);
                 Plugin.Log.LogWarning(
                     $"[slots] {_refs[inv]} no contents from host in "
-                        + $"{AskTimeout:0} s; sending changes against what we "
-                        + "saw");
+                        + $"{SlotRules.AskTimeout:0} s; sending changes "
+                        + "against what we saw");
             }
 
             var changed = new List<SlotChange>();
-            for (int i = 0; i < keys.Length; i++)
+            foreach (int i in SlotRules.Changed(before, keys))
             {
-                if (keys[i] != before[i])
+                changed.Add(new SlotChange
                 {
-                    changed.Add(new SlotChange
-                    {
-                        Slot = i,
-                        Old = before[i],
-                        New = Json(inv, i)
-                    });
-                }
+                    Slot = i,
+                    Old = before[i],
+                    New = Json(inv, i)
+                });
             }
 
             if (changed.Count == 0)
@@ -238,12 +236,6 @@ namespace DarkwoodMP.World
         }
 
         // ---- the host's contents as the starting point ----------------------
-
-        /// <summary>
-        /// How long a client waits for the host's contents of something it
-        /// opened before sending its changes anyway.
-        /// </summary>
-        public const float AskTimeout = 3f;
 
         // client: what we have open and asked the host about, and when
         private readonly Dictionary<Inventory, float> _awaiting =
@@ -681,86 +673,58 @@ namespace DarkwoodMP.World
 
         private static string Key(InvSlot s) => Key(s.invItem);
 
-        private static string Key(InvItemClass it)
+        private static string Key(InvItemClass it) =>
+            SlotKeyRules.Of(FactsOf(it));
+
+        /// <summary>
+        /// What the slot rules look at in an item (SlotItem; the zero value
+        /// when the slot is empty).
+        /// </summary>
+        private static SlotItem FactsOf(InvItemClass it)
         {
             if (InvItemClass.isNull(it))
             {
-                return "";
+                return default;
             }
 
-            int recipe = 0;
-            if (it.isRecipe)
+            int upgrades = 0;
+            if (it.upgrades != null)
             {
-                recipe = 1;
+                upgrades = it.upgrades.Count;
             }
 
-            List<ItemUpgrade> upgrades = it.upgrades;
-            int count = 0;
-            if (upgrades != null)
+            var item = new SlotItem
             {
-                count = upgrades.Count;
+                Filled = true,
+                Type = it.type,
+                Amount = it.amount,
+                Durability = it.durability,
+                Recipe = it.isRecipe,
+                Upgrades = upgrades,
+            };
+
+            var basic = it.baseClass;
+            if (basic == null)
+            {
+                return item;
             }
 
-            int durability = Mathf.RoundToInt(it.durability * 1000f);
-            return $"{it.type}|{it.amount}|{durability}|{recipe}|{count}";
+            return item with
+            {
+                HasBase = true,
+                Rots = basic.rottenItem != null,
+                Regenerates = basic.regeneratesWhenInactive,
+                Drain = basic.durabilityDrain,
+                MaxDurability = basic.maxDurability,
+            };
         }
 
         /// <summary>
-        /// Items whose durability the world changes by itself in a container:
-        /// food that rots, and items that drain while switched on or recharge
-        /// while off.
+        /// Keys a and b name the same item but for its durability, which the
+        /// world changes by itself for the item here (SlotKeyRules.RotOnly).
         /// </summary>
-        private static bool Drifts(InvItemClass it) =>
-            !InvItemClass.isNull(it) && it.baseClass != null
-                && (it.baseClass.rottenItem != null
-                    || it.baseClass.regeneratesWhenInactive
-                    || it.baseClass.durabilityDrain > 0f);
-
-        /// <summary>
-        /// How far two games' durabilities of one drifting item may be apart
-        /// and still count as the same item (of its maximum).
-        /// </summary>
-        public const float DriftTolerance = 0.25f;
-
-        /// <summary>
-        /// Keys a and b name the same item but for its durability, by less than
-        /// DriftTolerance of its maximum, and the item (here) is one whose
-        /// durability the world changes by itself.
-        /// </summary>
-        private static bool RotOnly(InvItemClass here, string a, string b)
-        {
-            if (a == b)
-            {
-                return true;
-            }
-
-            if (!Drifts(here) || string.IsNullOrEmpty(a)
-                || string.IsNullOrEmpty(b))
-            {
-                return false;
-            }
-
-            var x = a.Split('|');
-            var y = b.Split('|');
-            if (x.Length != 5 || y.Length != 5)
-            {
-                return false;
-            }
-
-            if (x[0] != y[0] || x[1] != y[1] || x[3] != y[3] || x[4] != y[4])
-            {
-                return false;
-            }
-
-            if (!int.TryParse(x[2], out int dx)
-                || !int.TryParse(y[2], out int dy))
-            {
-                return false;
-            }
-
-            float max = Mathf.Max(1f, here.baseClass.maxDurability) * 1000f;
-            return Mathf.Abs(dx - dy) <= DriftTolerance * max;
-        }
+        private static bool RotOnly(InvItemClass here, string a, string b) =>
+            SlotKeyRules.RotOnly(FactsOf(here), a, b);
 
         /// <summary>
         /// Host: start the rot of perishables in a container a client opened,
