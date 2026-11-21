@@ -48,7 +48,6 @@ namespace DarkwoodMP.World
             _cacheDir = Path.Combine(cacheRoot, "DarkwoodMP", "worlds");
             Directory.CreateDirectory(_cacheDir);
 
-            SharedIds.Init(session);
             session.BeforeWelcome = HostBeforeWelcome;
             session.ClientWorldHash = ClientHelloHash;
             session.Register(MsgType.SaveOffer, OnSaveOffer);

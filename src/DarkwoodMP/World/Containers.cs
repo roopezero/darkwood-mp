@@ -207,7 +207,6 @@ namespace DarkwoodMP.World
             {
                 _watched.Clear();
                 _pending.Clear();
-                ObjRef.ClearSpawned();
                 _corpsesSent.Clear();
                 _locks.Clear();
             };

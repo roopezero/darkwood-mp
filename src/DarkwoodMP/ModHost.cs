@@ -18,6 +18,18 @@ namespace DarkwoodMP
         public readonly TcpBackend Tcp;
         public readonly ServerBrowser Browser;
 
+        /// The save id counters of the saves this game loaded and wrote.
+        public readonly World.SaveIdCounters SaveIds =
+            new World.SaveIdCounters();
+
+        /// The tables ObjRef uses with no session: empty, apart from its
+        /// scans of the scene.
+        public readonly World.ObjNames AloneNames = new World.ObjNames(null);
+
+        /// One generator for the random ids of shared objects
+        /// (HostIds.NewId), so ids made in the same millisecond differ.
+        public readonly Random IdRandom = new Random();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)

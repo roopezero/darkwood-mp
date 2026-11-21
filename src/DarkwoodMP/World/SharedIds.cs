@@ -1,4 +1,3 @@
-using DarkwoodMP.Net;
 using HarmonyLib;
 
 namespace DarkwoodMP.World
@@ -27,26 +26,6 @@ namespace DarkwoodMP.World
     /// </summary>
     public static class SharedIds
     {
-        private static Session _session;
-        // the counter in the last save this game loaded
-        private static int _loaded;
-        // ... in the last save this game wrote to its own save folder
-        private static int _saved;
-        // ... in the last snapshot the host wrote for a joiner
-        private static int _snapshot;
-        // host: over the joiners let in to this world, which is the loaded
-        // scene its Scene names (its handle)
-        private static JoinerIds _joiners;
-
-        private static int Scene =>
-            UnityEngine.SceneManagement.SceneManager.GetActiveScene().handle;
-
-        public static void Init(Session session)
-        {
-            _session = session;
-            session.OnSessionEnded += ResetHost;
-        }
-
         /// <summary>
         /// Save ids below this are named as Saved in refs this game sends.
         /// </summary>
@@ -59,13 +38,23 @@ namespace DarkwoodMP.World
         public static int ResolveLimit =>
             SharedIdRules.ResolveLimit(FactsOf());
 
+        // The save counters live as long as the game (ModHost.SaveIds), the
+        // joiners' as long as the session (CoopSession.Joiners).
+        private static SaveIdCounters Counters => Plugin.Instance.Host.SaveIds;
+
         private static IdLimitFacts FactsOf()
         {
-            return new IdLimitFacts
+            CoopSession coop = Coop.Current;
+            var facts = new IdLimitFacts { Loaded = Counters.Loaded };
+            if (coop == null)
             {
-                Host = _session != null && _session.IsHost,
-                Joiners = _joiners,
-                Loaded = _loaded,
+                return facts;
+            }
+
+            return facts with
+            {
+                Host = coop.Net.IsHost,
+                Joiners = coop.Joiners.Ids,
             };
         }
 
@@ -75,12 +64,7 @@ namespace DarkwoodMP.World
         /// </summary>
         public static int CounterOf(bool fromSnapshot)
         {
-            if (fromSnapshot)
-            {
-                return _snapshot;
-            }
-
-            return _saved;
+            return Counters.CounterOf(fromSnapshot);
         }
 
         /// <summary>
@@ -88,13 +72,10 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void Joined(ulong peer, int n)
         {
-            // joiners let in to an earlier world don't count here
-            _joiners = SharedIdRules.Joined(_joiners, n, Scene);
-            if (n > 0)
+            CoopSession coop = Coop.Current;
+            if (coop != null)
             {
-                Plugin.Log.LogInfo(
-                    $"#{peer} joined with save ids below {n}; save ids below "
-                        + $"{_joiners.Min} are shared with every player");
+                coop.Joiners.Joined(peer, n);
             }
         }
 
@@ -104,27 +85,21 @@ namespace DarkwoodMP.World
         /// </summary>
         public static void ResetHost()
         {
-            _joiners = SharedIdRules.Reset(Scene);
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Joiners.Reset();
+            }
         }
 
         internal static void OnLoaded(int n)
         {
-            _loaded = n;
-            _saved = n;
-            Plugin.Log.LogInfo(
-                $"Loaded a world whose save id counter is at {n}");
+            Counters.OnLoaded(n);
         }
 
         internal static void OnSaved(int n)
         {
-            if (WorldShare.Snapshotting)
-            {
-                _snapshot = n;
-            }
-            else
-            {
-                _saved = n;
-            }
+            Counters.OnSaved(n);
         }
     }
 

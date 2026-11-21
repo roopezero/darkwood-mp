@@ -133,11 +133,20 @@ namespace DarkwoodMP.World
             }
 
             _worldMadeHealth = _worldMade.health;
+            int given = 0;
+            int tied = 0;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                given = coop.HostIds.Given;
+                tied = coop.HostIds.Tied;
+            }
+
             r.Info =
                 $"{made.name} "
                     + $"{ObjRef.Of(made)} at {Fmt(made.transform.position)}, "
-                    + $"health {_worldMade.health}, ids given {HostIds.Given}, "
-                    + $"tied {HostIds.Tied}";
+                    + $"health {_worldMade.health}, ids given {given}, "
+                    + $"tied {tied}";
         }
 
         /// <summary>"ids-tied [hit]" (both): the chair world-furniture made is

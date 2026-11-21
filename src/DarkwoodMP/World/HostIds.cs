@@ -34,80 +34,77 @@ namespace DarkwoodMP.World
     /// Objects with a save id every game shares keep being named by it; this
     /// only changes what was Placed.
     /// </summary>
-    public static class HostIds
+    internal sealed class HostIds
     {
-        private static Session _session;
+        private readonly Session _session;
+        private readonly ObjNames _names;
         // how far apart in time the host's object and a client's copy may start
         public const float Window = HostIdRules.Window;
         private const int MaxPerMessage = HostIdsMessage.MaxPerMessage;
 
-        private static readonly List<(GameObject go, float at)> _started =
+        private readonly List<(GameObject go, float at)> _started =
             new List<(GameObject, float)>();
-        private static readonly List<(long id, string name, Vector3 pos,
+        private readonly List<(long id, string name, Vector3 pos,
             int place, float until)> _pending =
                 new List<(long, string, Vector3, int, float)>();
         // Client: ids the host gave out that weren't tied in time (or were made
         // before we came), by name.
-        private static readonly
+        private readonly
             Dictionary<string, List<(long id, Vector3 pos, int place)>> _late =
                 new Dictionary<string, List<(long, Vector3, int)>>();
-        private static readonly HashSet<GameObject> _lateChecked =
+        private readonly HashSet<GameObject> _lateChecked =
             new HashSet<GameObject>();
         // still in _started: a fresh id may take over
-        private static readonly HashSet<GameObject> _lateTied =
+        private readonly HashSet<GameObject> _lateTied =
             new HashSet<GameObject>();
-        private static readonly
+        private readonly
             List<(long id, string name, Vector3 pos, int place)> _outgoing =
                 new List<(long, string, Vector3, int)>();
         // Client: where the host last had each announced object (as announced,
         // or where an ObjMove for it that came before we tied it put it), for
         // our copy to go there once it's tied (Place).
-        private static readonly Dictionary<long, Vector3> _hostAt =
+        private readonly Dictionary<long, Vector3> _hostAt =
             new Dictionary<long, Vector3>();
-        private static readonly System.Random _rng = new System.Random();
-        private static float _nextPrune;
+        private float _nextPrune;
 
         /// <summary>
         /// A random 62-bit id for a Spawned or shared object; one generator, so
         /// ids made in the same millisecond differ.
         /// </summary>
-        internal static long NewId() =>
-            HostIdRules.NewId(_rng.Next(), _rng.Next());
+        internal static long NewId()
+        {
+            System.Random rng = Plugin.Instance.Host.IdRandom;
+            return HostIdRules.NewId(rng.Next(), rng.Next());
+        }
 
         /// <summary>
         /// How many ids this game gave out (host) or tied (client); for the
         /// tests.
         /// </summary>
-        public static int Given, Tied;
+        public int Given { get; private set; }
 
-        public static void Register(Session s)
+        public int Tied { get; private set; }
+
+        /// <summary>
+        /// For one session (CoopSession.HostIds), after its ObjNames.
+        /// </summary>
+        public HostIds(CoopSession coop)
         {
-            _session = s;
-            s.Register(MsgType.HostIds, OnHostIds);
-            s.OnPeerConnected += SendAllTo;
-            s.OnSessionEnded += () =>
-            {
-                _started.Clear();
-                _pending.Clear();
-                _outgoing.Clear();
-                _late.Clear();
-                _lateChecked.Clear();
-                _lateTied.Clear();
-                _hostAt.Clear();
-                Given = 0;
-                Tied = 0;
-            };
+            _session = coop.Net;
+            _names = coop.Names;
+            coop.Handle(MsgType.HostIds, OnHostIds);
+            _session.OnPeerConnected += SendAllTo;
+            coop.Hook(() => _session.OnPeerConnected -= SendAllTo);
         }
 
-        private static bool Hosting =>
-            _session != null && _session.IsHost && WorldActions.Sharing;
-        private static bool Joined => Combat.NetEnemies.ClientMode
+        private bool Hosting => _session.IsHost && WorldActions.Sharing;
+        private bool Joined => Combat.NetEnemies.ClientMode
             && WorldShare.InWorld && !WorldShare.Loading;
 
         /// <summary>
         /// A saveable object started (SaveableObject.init ran for it).
         /// </summary>
-        internal static void Started(GameObject go)
+        internal void Started(GameObject go)
         {
             if (go == null || WorldActions.Replaying || Core.loadingGame)
             {
@@ -120,18 +117,13 @@ namespace DarkwoodMP.World
             }
         }
 
-        public static void Update()
+        public void Update()
         {
-            if (_session == null)
-            {
-                return;
-            }
-
             float now = Time.unscaledTime;
             if (now >= _nextPrune)
             {
                 _nextPrune = now + HostIdRules.PruneEvery;
-                ObjRef.PruneShared();
+                _names.PruneShared();
             }
 
             if (_started.Count == 0 && _pending.Count == 0)
@@ -150,13 +142,13 @@ namespace DarkwoodMP.World
                     }
 
                     _started.RemoveAt(i--);
-                    if (!HostIdRules.NeedsId(go != null, ObjRef.Unnamed(go)))
+                    if (!HostIdRules.NeedsId(go != null, _names.Unnamed(go)))
                     {
                         continue;
                     }
 
                     long id = NewId();
-                    ObjRef.BindShared(id, go);
+                    _names.BindShared(id, go);
                     // where it settles from here on is sent (as announced: it
                     // may not have yet)
                     DragSync instance = DragSync.Instance;
@@ -229,7 +221,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void AddLate(
+        private void AddLate(
             long id, string name, Vector3 pos, int place)
         {
             if (!_late.TryGetValue(name, out var list))
@@ -270,10 +262,10 @@ namespace DarkwoodMP.World
             return new Vec2(p.x, p.z);
         }
 
-        private static void TryBindLate(GameObject go)
+        private void TryBindLate(GameObject go)
         {
             if (!_late.TryGetValue(go.name, out var list)
-                || !ObjRef.Unnamed(go))
+                || !_names.Unnamed(go))
             {
                 return;
             }
@@ -285,7 +277,7 @@ namespace DarkwoodMP.World
             {
                 var (id, pos, p) = list[i];
                 float d = HostIdRules.SquaredDistance(q, GroundOf(pos));
-                if (!HostIdRules.IsLateCandidate(ObjRef.IsBound(id), d))
+                if (!HostIdRules.IsLateCandidate(_names.IsBound(id), d))
                 {
                     continue;
                 }
@@ -298,7 +290,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            if (best < 0 || !ObjRef.BindShared(list[best].id, go))
+            if (best < 0 || !_names.BindShared(list[best].id, go))
             {
                 return;
             }
@@ -318,7 +310,7 @@ namespace DarkwoodMP.World
         /// What TryBind looks at in an object that started at at: whether it
         /// may be the copy of the id announced for name.
         /// </summary>
-        private static CopyFacts CopyOf(GameObject go, float at, string name)
+        private CopyFacts CopyOf(GameObject go, float at, string name)
         {
             if (go == null)
             {
@@ -330,12 +322,12 @@ namespace DarkwoodMP.World
                 Alive = true,
                 Age = new Seconds(Time.unscaledTime - at),
                 SameName = go.name == name,
-                Unnamed = ObjRef.Unnamed(go),
+                Unnamed = _names.Unnamed(go),
                 LateTied = _lateTied.Contains(go),
             };
         }
 
-        private static bool TryBind(
+        private bool TryBind(
             long id, string name, Vector3 pos, int place)
         {
             GameObject best = null;
@@ -378,10 +370,10 @@ namespace DarkwoodMP.World
             // gives out now is the one for it.
             if (_lateTied.Remove(best))
             {
-                ObjRef.Unbind(best);
+                _names.Unbind(best);
             }
 
-            if (!ObjRef.BindShared(id, best))
+            if (!_names.BindShared(id, best))
             {
                 return false;
             }
@@ -406,9 +398,9 @@ namespace DarkwoodMP.World
         /// carried or being moved by another game). Called by ObjRef too, when
         /// it ties an id it is asked for by the announced name and position.
         /// </summary>
-        internal static void Place(long id, GameObject go)
+        internal void Place(long id, GameObject go)
         {
-            if (go == null || _session == null || _session.IsHost
+            if (go == null || _session.IsHost
                 || !_hostAt.TryGetValue(id, out var pos))
             {
                 return;
@@ -425,7 +417,7 @@ namespace DarkwoodMP.World
         /// Client: the host sent where an object we haven't tied yet came to
         /// rest (ObjMove, last).
         /// </summary>
-        internal static void HostMoved(long id, Vector3 pos)
+        internal void HostMoved(long id, Vector3 pos)
         {
             if (_hostAt.ContainsKey(id))
             {
@@ -433,7 +425,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void Send(
+        private void Send(
             List<(long id, string name, Vector3 pos, int place)> list,
             byte flags, ulong to)
         {
@@ -488,15 +480,15 @@ namespace DarkwoodMP.World
         /// Host: a joiner came in; its world has what was made before, so it
         /// gets every id given out.
         /// </summary>
-        private static void SendAllTo(ulong peer)
+        private void SendAllTo(ulong peer)
         {
-            if (_session == null || !_session.IsHost)
+            if (!_session.IsHost)
             {
                 return;
             }
 
             var all = new List<(long, string, Vector3, int)>();
-            foreach (var kv in ObjRef.SharedObjects)
+            foreach (var kv in _names.SharedObjects)
             {
                 all.Add((kv.Key, kv.Value.name, kv.Value.transform.position,
                     PlaceOf(kv.Value)));
@@ -508,7 +500,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static void OnHostIds(ulong from, PacketReader r)
+        private void OnHostIds(ulong from, PacketReader r)
         {
             if (_session.IsHost || from != _session.HostId)
             {
@@ -523,7 +515,7 @@ namespace DarkwoodMP.World
                 string name = e.Name;
                 var pos = new Vector3(e.Pos.X, e.Pos.Y, e.Pos.Z);
                 int place = e.Place;
-                ObjRef.Announced(id, name, pos);
+                _names.Announced(id, name, pos);
                 _hostAt[id] = pos;
                 // Made before this joiner came: its copy is in the save it
                 // loaded, found by name and position when named.
@@ -551,9 +543,10 @@ namespace DarkwoodMP.World
             __state = !Initialized(__instance);
         static void Postfix(SaveableObject __instance, bool __state)
         {
-            if (__state && Initialized(__instance))
+            CoopSession coop = Coop.Current;
+            if (coop != null && __state && Initialized(__instance))
             {
-                HostIds.Started(__instance.gameObject);
+                coop.HostIds.Started(__instance.gameObject);
             }
         }
 
