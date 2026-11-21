@@ -107,7 +107,7 @@ namespace DarkwoodMP
 
         /// The shared essence and levels, and the stove's skill reset: also
         /// playing alone. A session adds its messages (Progression.Join).
-        public readonly World.Progression Progress;
+        public readonly World.Progress.Progression Progress;
 
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
@@ -128,7 +128,7 @@ namespace DarkwoodMP
             };
 
             Session.Add(Tcp);
-            Progress = new World.Progression(Session);
+            Progress = new World.Progress.Progression(Session);
             Browser = new ServerBrowser(Paths.ConfigPath, log);
             Stacks = new World.StackSizes();
             // First, so a CoopSession exists before any other handler of

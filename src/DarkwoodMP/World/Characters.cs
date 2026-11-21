@@ -1175,7 +1175,7 @@ namespace DarkwoodMP.World
             p.setHealth(p.maxHealth);
             // The host's skills are the host's: a new player takes the shared
             // levels at a stove and picks their own.
-            Progression.ClearSkills(p);
+            Progress.Progression.ClearSkills(p);
             if (spawn != Vector3.zero)
             {
                 p.transform.position = spawn;
