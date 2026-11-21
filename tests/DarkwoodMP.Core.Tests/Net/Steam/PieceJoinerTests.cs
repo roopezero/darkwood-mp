@@ -126,6 +126,164 @@ namespace DarkwoodMP.Tests.Net.Steam
 
                 answer.Whole.ShouldBe(new byte[] { 1, 2, 0, 0, 0, 7 });
             }
+
+            [Fact]
+            public void Joins_what_SteamPieces_split()
+            {
+                var data = new byte[600000];
+                new Random(1).NextBytes(data);
+                var pieces = SteamPieces.Split(
+                    new ArraySegment<byte>(data),
+                    170);
+                var joiner = new PieceJoiner(32 << 20);
+
+                PieceAnswer answer = default;
+                foreach (var piece in pieces)
+                {
+                    answer = joiner.Add(From, 0, Bytes(piece));
+                }
+
+                answer.Whole.ShouldBe(data);
+            }
+
+            [Fact]
+            public void Waits_until_the_last_of_three_pieces()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+                joiner.Add(From, 0, Bytes(170, 3, 0, 0, 0, 1));
+
+                var answer = joiner.Add(From, 0, Bytes(170, 2));
+
+                (answer.Whole, joiner.Count).ShouldBe((null, 1));
+            }
+
+            [Fact]
+            public void Reads_the_piece_from_its_segments_offset()
+            {
+                var buf = new byte[] { 9, 9, 170, 1, 0, 0, 0, 5, 9 };
+                var joiner = new PieceJoiner(32 << 20);
+
+                var answer = joiner.Add(
+                    From,
+                    0,
+                    new ArraySegment<byte>(buf, 2, 6));
+
+                answer.Whole.ShouldBe(new byte[] { 5 });
+            }
+
+            [Fact]
+            public void Keeps_the_data_when_the_buffer_is_reused()
+            {
+                // SteamTransport receives every message into one buffer.
+                var buf = new byte[] { 170, 2, 0, 0, 0, 1 };
+                var joiner = new PieceJoiner(32 << 20);
+                joiner.Add(From, 0, Bytes(buf));
+                buf[5] = 99;
+
+                var answer = joiner.Add(From, 0, Bytes(170, 2));
+
+                answer.Whole.ShouldBe(new byte[] { 1, 2 });
+            }
+
+            [Fact]
+            public void Waits_after_a_first_piece_with_no_data()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+                joiner.Add(From, 0, Bytes(170, 1, 0, 0, 0));
+
+                var answer = joiner.Add(From, 0, Bytes(170, 8));
+
+                answer.Whole.ShouldBe(new byte[] { 8 });
+            }
+
+            [Fact]
+            public void Refuses_a_length_of_zero()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+
+                var answer = joiner.Add(From, 0, Bytes(170, 0, 0, 0, 0, 1));
+
+                answer.Why.ShouldBe(
+                    Verdict.Refuse(Refusal.BadMessageLength, "0"));
+            }
+
+            [Fact]
+            public void Takes_a_length_exactly_at_the_limit()
+            {
+                var joiner = new PieceJoiner(4);
+
+                var answer = joiner.Add(From, 0, First);
+
+                (answer.Why, joiner.Count).ShouldBe((Verdict.Allow, 1));
+            }
+
+            [Fact]
+            public void Keeps_nothing_of_a_refused_first_piece()
+            {
+                var joiner = new PieceJoiner(3);
+
+                joiner.Add(From, 0, First);
+
+                joiner.Count.ShouldBe(0);
+            }
+
+            [Fact]
+            public void Refuses_a_later_piece_that_comes_first()
+            {
+                // Pieces aren't numbered: one that comes before the first is
+                // read as a first piece, and a short one has no length.
+                var joiner = new PieceJoiner(32 << 20);
+
+                var answer = joiner.Add(From, 0, Rest);
+
+                answer.Why.ShouldBe(
+                    Verdict.Refuse(Refusal.BadMessageLength, "-1"));
+            }
+
+            [Fact]
+            public void Joins_the_first_piece_after_a_refused_later_one()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+                joiner.Add(From, 0, Rest);
+                joiner.Add(From, 0, First);
+
+                var answer = joiner.Add(From, 0, Rest);
+
+                answer.Whole.ShouldBe(new byte[] { 1, 2, 3, 4 });
+            }
+
+            [Fact]
+            public void Reads_a_long_later_piece_that_comes_first_as_a_length()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+
+                var answer = joiner.Add(From, 0, Bytes(170, 2, 0, 0, 0, 7, 8));
+
+                answer.Whole.ShouldBe(new byte[] { 7, 8 });
+            }
+
+            [Fact]
+            public void Joins_each_sender_apart()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+                joiner.Add(From, 0, First);
+
+                var answer = joiner.Add(From + 1, 0, Rest);
+
+                answer.Why.Reason.ShouldBe(Refusal.BadMessageLength);
+            }
+
+            [Fact]
+            public void Finishes_a_sender_after_another_starts()
+            {
+                var joiner = new PieceJoiner(32 << 20);
+                joiner.Add(From, 0, First);
+                joiner.Add(From + 1, 0, First);
+
+                var answer = joiner.Add(From, 0, Rest);
+
+                answer.Whole.ShouldBe(new byte[] { 1, 2, 3, 4 });
+            }
         }
 
         public class Forget
