@@ -30,7 +30,13 @@ namespace DarkwoodMP.World.Story
             get
             {
                 var d = Singleton<Dreams>.Instance;
-                return DreamSync.SharedNow != null && d != null && d.dreaming;
+                string shared = null;
+                if (Coop.Current != null)
+                {
+                    shared = Coop.Current.Dreaming.Shared;
+                }
+
+                return shared != null && d != null && d.dreaming;
             }
         }
 

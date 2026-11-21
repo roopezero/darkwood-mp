@@ -151,8 +151,14 @@ namespace DarkwoodMP.Combat
                 && (d.dreaming || d.dreamPrepared || d.switchingDream);
             bool inDream = dreaming
                 && go.transform.IsChildOf(d.dreamLocation.transform);
-            bool own = inDream && (DreamSync.SharedNow == null
-                || World.Story.Prologue.IsStage(DreamSync.SharedNow));
+            string shared = null;
+            if (Coop.Current != null)
+            {
+                shared = Coop.Current.Dreaming.Shared;
+            }
+
+            bool own = inDream && (shared == null
+                || World.Story.Prologue.IsStage(shared));
             if (inDream && own)
             {
                 return new LocalFacts

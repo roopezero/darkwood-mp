@@ -21,9 +21,10 @@ namespace DarkwoodMP.World
                 name = a[0];
             }
 
-            if (DreamSync.SharedNow != null)
+            if (Coop.Current.Dreaming.Shared != null)
             {
-                r.Fail($"already in the shared dream {DreamSync.SharedNow}");
+                r.Fail("already in the shared dream "
+                    + Coop.Current.Dreaming.Shared);
                 yield break;
             }
 
@@ -43,7 +44,7 @@ namespace DarkwoodMP.World
                 presetName = preset.name;
             }
 
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
@@ -53,7 +54,7 @@ namespace DarkwoodMP.World
                 $"dreaming {presetName} (shared {shared}) at "
                     + $"{Whereabouts.Current()}; host runs here "
                     + $"{Whereabouts.HostRunsHere()}";
-            if (!D.dreaming || DreamSync.SharedNow != null
+            if (!D.dreaming || Coop.Current.Dreaming.Shared != null
                 || Whereabouts.HostRunsHere())
             {
                 r.Fail($"not in a dream of our own: {r.Info}");

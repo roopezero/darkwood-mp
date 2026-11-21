@@ -177,7 +177,7 @@ namespace DarkwoodMP.World.Story
                 case JoinEnd.Joined:
                     Plugin.Log.LogInfo(
                         "[epilogue] playing the epilogue together (shared "
-                            + $"dream {DreamSync.SharedNow})");
+                            + $"dream {_coop.Dreaming.Shared})");
                     yield break;
                 case JoinEnd.Stopped:
                     yield break;

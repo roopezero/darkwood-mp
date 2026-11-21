@@ -111,7 +111,7 @@ namespace DarkwoodMP.World
 
             bool dreaming = D != null && D.dreaming;
             bool inEpilogue = P != null && P.inEpilogue;
-            string shared = DreamSync.SharedNow;
+            string shared = Coop.Current.Dreaming.Shared;
             if (shared == null)
             {
                 shared = "none";
@@ -164,7 +164,7 @@ namespace DarkwoodMP.World
 
             yield return new WaitForSeconds(2f);
             r.Info = Where();
-            if (!Playing() || DreamSync.SharedNow == null)
+            if (!Playing() || Coop.Current.Dreaming.Shared == null)
             {
                 r.Fail($"the epilogue isn't shared: {r.Info}");
             }
@@ -193,7 +193,7 @@ namespace DarkwoodMP.World
             r.Info =
                 $"{state}; session {active}; a friend's puppet shown "
                     + $"{FriendShown()}";
-            if (!Playing() || DreamSync.SharedNow == null
+            if (!Playing() || Coop.Current.Dreaming.Shared == null
                 || !Plugin.Instance.Host.Session.Active)
             {
                 r.Fail($"not in the shared epilogue: {r.Info}");

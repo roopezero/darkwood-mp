@@ -259,11 +259,17 @@ namespace DarkwoodMP.World.Story
 
             var d = D;
             var p = Player.Instance;
+            string shared = null;
+            if (Coop.Current != null)
+            {
+                shared = Coop.Current.Dreaming.Shared;
+            }
+
             var facts = new PrologueFacts
             {
                 InSession = true,
                 Dreams = DreamsOf(d),
-                Shared = DreamSync.SharedNow,
+                Shared = shared,
                 Joiner = NetEnemies.ClientMode,
                 HasPlayer = p != null,
                 Loading = Core.loadingGame,
