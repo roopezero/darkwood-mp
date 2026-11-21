@@ -15,13 +15,22 @@ static class DiffTestCommand
         {
             throw new Stop("codemod difftest <rule>");
         }
+        if (args[0] == "interpolated")
+        {
+            return RunCases(args[0], InterpolatedCases.Run);
+        }
         var rule = RuleRegistry.Find(args[0]);
         if (rule == null)
         {
             throw new Stop($"No rule named {args[0]}. Rules: {RuleRegistry.Names}");
         }
+        return RunCases(rule.Name, c => DiffHarness.Run(rule, c));
+    }
+
+    static int RunCases(string name, Func<DiffCase, DiffOutcome> run)
+    {
         var file = Path.Combine(
-            RepoPaths.Find().Root, CaseFolder, rule.Name + ".cases");
+            RepoPaths.Find().Root, CaseFolder, name + ".cases");
         if (!File.Exists(file))
         {
             throw new Stop("No differential cases for this rule: " + file);
@@ -30,7 +39,7 @@ static class DiffTestCommand
         var cases = DiffCase.Read(file);
         foreach (var diffCase in cases)
         {
-            var outcome = DiffHarness.Run(rule, diffCase);
+            var outcome = run(diffCase);
             if (outcome.Passed)
             {
                 Console.WriteLine($"ok    {diffCase.Name} ({outcome.Rows} rows)");

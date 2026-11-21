@@ -27,10 +27,21 @@ static class Wrap
 
     public static string Run(string source, CSharpParseOptions parse)
     {
+        return Run(source, parse, null);
+    }
+
+    /// The same with stage 11's rule for interpolated strings: split makes
+    /// one for the tree of each pass. Null leaves them whole, as stage 10
+    /// does.
+    public static string Run(
+        string source,
+        CSharpParseOptions parse,
+        Func<SyntaxTree, IInterpolatedSplit> split)
+    {
         var text = source;
         for (int pass = 0; pass < MaxPasses; pass++)
         {
-            var next = Pass(text, parse);
+            var next = Pass(text, parse, split);
             if (next == text)
             {
                 return text;
@@ -44,10 +55,13 @@ static class Wrap
 
     /// One pass: the planned breaks, then the layout pass. Unchanged text
     /// when no line has a break to make.
-    static string Pass(string text, CSharpParseOptions parse)
+    static string Pass(
+        string text,
+        CSharpParseOptions parse,
+        Func<SyntaxTree, IInterpolatedSplit> split)
     {
         var tree = CSharpSyntaxTree.ParseText(text, parse);
-        var plans = Plan(tree);
+        var plans = Plan(tree, split);
         var lines = tree.GetText().Lines;
         var edits = new List<TextChange>();
         int end = -1;
@@ -185,6 +199,17 @@ static class Wrap
     /// with no edits carries the reason the line stays long.
     public static List<LinePlan> Plan(SyntaxTree tree)
     {
+        return Plan(tree, null);
+    }
+
+    public static List<LinePlan> Plan(
+        SyntaxTree tree, Func<SyntaxTree, IInterpolatedSplit> split)
+    {
+        IInterpolatedSplit splitter = null;
+        if (split != null)
+        {
+            splitter = split(tree);
+        }
         var root = tree.GetRoot();
         var text = tree.GetText();
         var plans = new List<LinePlan>();
@@ -195,7 +220,9 @@ static class Wrap
             {
                 continue;
             }
-            var plan = PlanLine(new WrapLine(root, text, line));
+            var at = new WrapLine(root, text, line);
+            at.Split = splitter;
+            var plan = PlanLine(at);
             plans.Add(plan);
             foreach (var number in plan.Lines)
             {
@@ -232,6 +259,14 @@ static class Wrap
         }
         return WrapCode.Plan(line);
     }
+}
+
+/// Stage 11's rule for an interpolated string that crosses the limit (see
+/// Interpolated/Cutter.cs): a break that splits it, or the reason it stays
+/// whole.
+interface IInterpolatedSplit
+{
+    LinePlan Plan(WrapLine line, InterpolatedStringExpressionSyntax text);
 }
 
 /// What a pass does to one long line: the edits (the same break may need

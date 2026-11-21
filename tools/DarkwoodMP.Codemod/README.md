@@ -33,7 +33,8 @@ not in the default place.
 | `check [--braces \| --wrap] <dirA> <dirB>` | Compares two copies of the sources, file by file: the same comment words in the same order, the same code once whitespace is ignored, and every comment between the same two tokens of code, apart from the moves `layout` makes (see below). Stage 1 adds tokens, so check it with `--braces`: the second copy must be the first with only the new blocks added, and every comment between the same two tokens of code. Stage 10 splits strings, shortens dividers, opens summaries and moves comments above their code, so check it with `--wrap`: the same checks the stage's own gate makes (split strings joined back, comment words as the wrap gate counts them, comments where `Stages/WrapPlaces.cs` allows). Exits with 1 on any difference. |
 | `rule <name> [--receivers unity\|other] --out DIR [--src DIR] [--dry-run]` | One operator rule (stages 3 to 7). Rewrites the sites it can, in the plugin's sources or in the copy given with `--src`, and writes the files listed under "Operator rules" below to `DIR`. `--dry-run` writes only `DIR`. |
 | `ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]` | Compares two builds method by method against a rule's manifest. Exits with 1 when anything outside it differs. `--list` first prints each changed method with the manifest entry it was credited to. |
-| `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases`. Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
+| `interpolated --out DIR [--src DIR] [--dry-run]` | Stage 11. Splits each interpolated string that crosses 80 columns into parts joined with `+` (see "The interpolated stage" below), in the plugin's sources or in the copy given with `--src`, and writes `manifest.json`, `sites.jsonl` and `queue.jsonl` to `DIR`. `--dry-run` writes only `DIR`. |
+| `difftest <rule>` | Runs the rule's differential cases in `DiffTest/Cases/<rule>.cases` (`difftest interpolated` runs stage 11's). Exits with 1 if any differs. Stops with exit code 2 if the file holds no case, has a line before its first `=== name` header or a header with no method. |
 | `selftest [--show NAME]` | Runs the golden cases and the checks below. Exits with 1 if any fails. `--show` prints what the stages make of one case. |
 
 ## What stops a command
@@ -210,6 +211,86 @@ the 11,803 long lines: 1,102 in interpolated strings, 190 indented comment
 lines, 114 code lines with no place to break, 51 comment list items, 9 long
 headings, 3 strings with no space in time, 3 verbatim or raw strings, one
 line of commented-out code and one long URL.
+
+## The interpolated stage
+
+`codemod interpolated` (stage 11, `Interpolated/`) runs the wrap stage's
+passes over every file with one more rule: an interpolated string that
+crosses the limit, where the wrap stage leaves it whole, is cut in two at
+the last space of its literal text that keeps the first part within 80
+columns (`Cutter`, `InterpolatedParts`). It is never cut inside a hole, and
+each hole is copied as it is written, with its alignment and format. A part
+with no hole becomes a plain string (`$` dropped, `{{` and `}}` written once).
+The second part goes on a new line one level in, behind a leading `+`, and
+the next pass cuts it again while it is too long, so the parts of one string
+share a column. The string is parenthesised unless its parent keeps the
+parts together, as for a plain string; a lambda's body does too. Each pass
+replaces the file's tree in the compilation, so every cut is planned with a
+semantic model of the text it cuts.
+
+A string stays whole, and its line goes in `queue.jsonl` with the reason,
+when it is converted to `FormattableString`, `IFormattable` or an
+interpolated string handler type (`StringBuilder.Append` on .NET 6 and
+later; the plugin's net472 has none), when its type isn't `string`, when it
+is a `const`, an attribute argument, a constant in a pattern or case label,
+a parameter's default value, inside another interpolated string's hole or in
+a lambda made into an expression tree, when it is an operand of a type's own
+`+` operator, for a verbatim or raw string with a line break in it, for any
+raw string, and when no space fits.
+
+The order of evaluation decides the rest (`HoleOrder`). In the plugin an
+interpolated string becomes a `string.Format` (or `string.Concat`) call,
+which evaluates every hole first and only then makes each value into text.
+After the cut, the first part's values are made into text before the second
+part's holes are evaluated. So a cut is made only where nobody can notice:
+every hole in front of it has a type whose text depends only on its value
+(`string`, numbers, `bool`, `char`, enums, `DateTime`, `TimeSpan`, `Guid`
+and Unity's vector, colour, rect and bounds structs), or every hole behind it
+is inert (a constant, a literal, `this`, `typeof`, `default`, or a local or
+parameter that isn't `ref` and that no lambda captures). It tries the cuts
+that fit from the last one back. The current culture is read by both forms
+at the same place in the text; a hole that changes the culture is not looked
+for.
+
+Before it writes anything, the command stops with exit code 2, naming the
+file or member, unless:
+
+- the rewritten sources compile with no errors,
+- both trees are the same code once every string is spelled out by value and
+  hole (expression, alignment, format) and the strings of each `+` chain are
+  joined (`JoinedParts`): the parts of each split string, joined, are the
+  original,
+- the comment words are the same and every comment is where the wrap stage
+  may put it (`Stages/WrapPlaces.cs`, on the joined trees), and the protocol
+  version line is still there,
+- every call and object creation binds to the same method, and every
+  argument has the same type and converted type, in order,
+- the layout pass keeps the output and a second run changes nothing,
+- every manifest member is a method of the built DLL,
+- the IL (both builds emitted in memory) differs only in the manifest's
+  members, and in each of them the string constants lost and gained hold the
+  same literal characters, format items such as `{0,-5:0.0}` aside.
+
+`DIR` gets `manifest.json` (the members holding a cut, and under
+`stringChanges` one record per member of the string constants it lost and
+gained, taken from the two builds; the text they make is proven by the
+joined-parts gate, not by these records), `sites.jsonl` (one line per cut:
+`file`, `line` in the text that pass read, `member`, the string `before` the
+cut) and `queue.jsonl` (one line per long line left with a string whole:
+`file`, `line` in the written text, `rule`, `reason`, `snippet`).
+
+The IL diff takes the records of exactly the member it checks first, and
+only then those that cover it (an overload's record also covers its name).
+A member such as an iterator with lambdas has strings credited both to an
+overload (the lambdas) and to its name (`MoveNext`), and with the covering
+records alone the two could never both match.
+
+On the plugin at 5e47dd4 (1,104 lines over 80 columns, 1,100 of them with an
+interpolated string) it makes 1,382 cuts in 138 files and 662 members, 535 of
+them with new string constants, and leaves 167 strings whole: 80 with no
+space to split at in time, 64 where every cut that fits has a hole in front
+that could be noticed, and 23 converted to `FormattableString`
+(`FormattableString.Invariant`). 170 lines stay over 80 columns.
 
 ## Operator rules
 
@@ -792,6 +873,18 @@ temporary that receiver goes into, a Unity class with an `==` of its own,
 a `??` of `object`, a type parameter, the nested sites, the refusals of
 stages 5 and 6 and the site kept as written (`unity-null/07-kept`).
 
+`difftest interpolated` runs stage 11 over `DiffTest/Cases/interpolated.cases`
+through the same harness (`DiffTest/InterpolatedCases.cs`), with the stage's
+gates. Its cases are compiled against the game's `mscorlib`, `System` and
+`System.Core`, as the plugin is, because .NET 8's interpolated string handler
+evaluates and formats each hole in turn and would hide the order `string.Format`
+has; so this command needs the game installed. The cases: null holes in both
+parts, an `IFormattable` hole with a format (made into text once), a
+culture-sensitive value in a culture with a decimal comma, a hole whose
+`ToString` has a side effect (run once per hole, in order) and alignments with
+and without a format. With `HoleOrder.Safe` made to allow every cut, a case
+whose later hole reads what an earlier `ToString` wrote fails, as it should.
+
 ## Golden cases
 
 `SelfTest/Golden/*.golden` holds one case per file: an `=== input` section and
@@ -825,6 +918,15 @@ same to the byte. `01-comments` covers the comment rules and what they leave,
 `02-code` the code rules and the protocol version line, `03-strings` the
 string split and every string it must not split.
 
+Stage 11's cases are in `SelfTest/Interpolated/*.golden`: an `=== input`
+section, the file the stage must make of it in `=== split`, and in
+`=== report` each long line it leaves with a string whole, one `line: reason`
+each. For every case the self test also runs the stage's gates (see "The
+interpolated stage"). `01-splits` covers the splits (holes with alignments and
+formats, plain parts, braces, a receiver, a lambda, a verbatim string),
+`02-left-whole` every string it must leave whole.
+
 To add a case, write the `=== input` section, read the output of
-`selftest --show NAME` line by line (`--show RULE/NAME` for a rule's case, `--show wrap/NAME` for a wrap case), and
+`selftest --show NAME` line by line (`--show RULE/NAME` for a rule's case, `--show wrap/NAME` for a wrap case,
+`--show interpolated/NAME` for a stage 11 case), and
 only then save it as the expected text.

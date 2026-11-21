@@ -1,0 +1,135 @@
+=== input
+using System;
+using System.Text;
+
+[AttributeUsage(AttributeTargets.All)]
+class NoteAttribute : Attribute
+{
+    public NoteAttribute(string text)
+    {
+    }
+}
+
+class Money
+{
+    public static Money operator +(Money a, string b)
+    {
+        return a;
+    }
+
+    public override string ToString()
+    {
+        return "money";
+    }
+}
+
+class Whole
+{
+    const string Key = "key";
+    const string Joined = $"a constant interpolated string with {Key} in it, long enough to cross";
+
+    static void Take(FormattableString text)
+    {
+    }
+
+    static void Format(IFormattable text)
+    {
+    }
+
+    [Note($"an attribute argument with {Key} in it that is long enough to cross the limit")]
+    static string Show(Money money, object thing, int count, StringBuilder builder)
+    {
+        Take($"a FormattableString argument {count} that is long enough to cross the limit");
+        Format($"an IFormattable argument {count} that is long enough to cross the limit here");
+        builder.Append($"a handler argument {count} that is long enough to cross the limit at all");
+        var sum = money + $"an operand of a type's own operator {count}, long enough to cross";
+        var order = $"an object {thing} in front of every cut that fits, and a call behind {Count()}";
+        var lines = $@"a verbatim string {count} with a line break in it, long enough to cross
+the limit on its first line";
+        var nospace = $"{count}-{count}-{count}-{count}-{count}-{count}-{count}-{count}-{count}-{count}";
+        return sum.ToString() + order + lines + nospace + Joined;
+    }
+
+    static int Count()
+    {
+        return 1;
+    }
+}
+=== split
+using System;
+using System.Text;
+
+[AttributeUsage(AttributeTargets.All)]
+class NoteAttribute : Attribute
+{
+    public NoteAttribute(string text)
+    {
+    }
+}
+
+class Money
+{
+    public static Money operator +(Money a, string b)
+    {
+        return a;
+    }
+
+    public override string ToString()
+    {
+        return "money";
+    }
+}
+
+class Whole
+{
+    const string Key = "key";
+    const string Joined =
+        $"a constant interpolated string with {Key} in it, long enough to cross";
+
+    static void Take(FormattableString text)
+    {
+    }
+
+    static void Format(IFormattable text)
+    {
+    }
+
+    [Note(
+        $"an attribute argument with {Key} in it that is long enough to cross the limit")]
+    static string Show(
+        Money money, object thing, int count, StringBuilder builder)
+    {
+        Take(
+            $"a FormattableString argument {count} that is long enough to cross the limit");
+        Format(
+            $"an IFormattable argument {count} that is long enough to cross the limit here");
+        builder.Append(
+            $"a handler argument {count} that is long enough to cross the limit at all");
+        var sum = money
+            + $"an operand of a type's own operator {count}, long enough to cross";
+        var order =
+            "an object "
+                + $"{thing} in front of every cut that fits, and a call behind {Count()}";
+        var lines =
+            $@"a verbatim string {count} with a line break in it, long enough to cross
+the limit on its first line";
+        var nospace =
+            $"{count}-{count}-{count}-{count}-{count}-{count}-{count}-{count}-{count}-{count}";
+        return sum.ToString() + order + lines + nospace + Joined;
+    }
+
+    static int Count()
+    {
+        return 1;
+    }
+}
+=== report
+29: a const
+40: an attribute argument
+45: converted to FormattableString
+47: converted to IFormattable
+49: converted to an interpolated string handler type
+51: an operand of a type's own operator, which + would change
+54: a hole in front of every cut that fits is made into text by code a later hole could see or change
+56: a verbatim or raw string with line breaks in it
+59: no space to split at in time

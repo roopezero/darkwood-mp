@@ -35,11 +35,43 @@ static class DiffHarness
     const BindingFlags AnyStatic =
         BindingFlags.Static | BindingFlags.Public | BindingFlags.NonPublic;
 
+    /// What a rewrite made of a case: the new text, or null and why it
+    /// left the case alone.
+    public delegate (string After, string Why) Rewrite(
+        CSharpCompilation compilation, SyntaxTree tree);
+
     public static DiffOutcome Run(Rule rule, DiffCase diffCase)
+    {
+        Rewrite rewrite = (compilation, tree) =>
+        {
+            var result = RuleEngine.Run(
+                rule, compilation, new[] { tree }, ReceiverFilter.All, ".");
+            if (result.Rewritten.TryGetValue(tree.FilePath, out var after))
+            {
+                return (after, null);
+            }
+            var reasons = result.Queue.Select(q => q.Reason);
+            return (null, string.Join("; ", reasons));
+        };
+        return Run(
+            diffCase,
+            rewrite,
+            rule.Name == "unity-null",
+            SnippetCompiler.References);
+    }
+
+    /// The same for any rewrite, compiled against these references. Stage
+    /// 11 compiles its cases against the game's own mscorlib, which has no
+    /// interpolated string handler, so they are lowered to string.Format
+    /// as in the plugin.
+    public static DiffOutcome Run(
+        DiffCase diffCase,
+        Rewrite rewrite,
+        bool unityRule,
+        IEnumerable<MetadataReference> references)
     {
         var parse = SnippetCompiler.Parse;
         var source = Passes.Layout(DiffFixture.Wrap(diffCase.Method), parse);
-        bool unityRule = rule.Name == "unity-null";
         var fixtureParse = parse;
         if (unityRule)
         {
@@ -51,19 +83,16 @@ static class DiffHarness
         var compilation = CSharpCompilation.Create(
             "DiffCase",
             new[] { fixture, caseTree },
-            SnippetCompiler.References,
+            references,
             new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                 .WithOptimizationLevel(OptimizationLevel.Release));
         RequireCompiles(compilation, diffCase.Name);
 
         var outcome = new DiffOutcome();
-        var result = RuleEngine.Run(
-            rule, compilation, new[] { caseTree }, ReceiverFilter.All, ".");
-        if (!result.Rewritten.TryGetValue(caseTree.FilePath, out var after))
+        var (after, why) = rewrite(compilation, caseTree);
+        if (after == null)
         {
-            var reasons = result.Queue.Select(q => q.Reason);
-            outcome.Mismatches.Add(
-                "the rule left the case alone: " + string.Join("; ", reasons));
+            outcome.Mismatches.Add("the rule left the case alone: " + why);
             return outcome;
         }
         outcome.Rewritten = true;

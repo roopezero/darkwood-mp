@@ -3,6 +3,7 @@ using DarkwoodMP.Codemod.Check;
 using DarkwoodMP.Codemod.DiffTest;
 using DarkwoodMP.Codemod.Format;
 using DarkwoodMP.Codemod.Il;
+using DarkwoodMP.Codemod.Interpolated;
 using DarkwoodMP.Codemod.Rules;
 using DarkwoodMP.Codemod.SelfTest;
 using DarkwoodMP.Codemod.Stages;
@@ -33,6 +34,11 @@ static class Program
                                        queue.jsonl and sites.jsonl to DIR
         codemod ildiff <a.dll> <b.dll> [--manifest touched.json] [--list]
                                        did only the manifest's members change?
+        codemod interpolated --out DIR [--src DIR] [--dry-run]
+                                       stage 11: long interpolated strings
+                                       split into parts joined with +;
+                                       writes manifest.json, sites.jsonl and
+                                       queue.jsonl to DIR
         codemod difftest <rule>        runs a rule's differential cases
         codemod selftest [--show NAME] the golden cases and the tool's checks
         """;
@@ -74,6 +80,8 @@ static class Program
                 return RuleCommand.Run(rest);
             case "ildiff":
                 return IlDiffCommand.Run(rest);
+            case "interpolated":
+                return InterpolatedCommand.Run(rest);
             case "difftest":
                 return DiffTestCommand.Run(rest);
             case "selftest":

@@ -15,6 +15,9 @@ sealed class WrapLine
     public readonly string Text;
     public readonly int Indent;
 
+    /// Stage 11's rule for interpolated strings, or null in stage 10.
+    public IInterpolatedSplit Split;
+
     public WrapLine(SyntaxNode root, SourceText source, TextLine line)
     {
         Root = root;

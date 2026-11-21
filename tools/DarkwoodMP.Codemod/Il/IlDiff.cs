@@ -58,6 +58,59 @@ sealed class IlDiff
         return new IlDiff(first, second, manifest).Run(first, second);
     }
 
+    /// Per member of the manifest, the string constants the second build lost
+    /// and gained, as the diff counts them: for a stage whose own gate checks
+    /// the text the strings make (stage 11 cuts format strings in two).
+    /// Members whose strings are the same get no record.
+    public static List<StringChange> StringChanges(
+        byte[] a, byte[] b, Manifest manifest, string reason)
+    {
+        using var firstBytes = new MemoryStream(a);
+        using var secondBytes = new MemoryStream(b);
+        using var first = ModuleDefinition.ReadModule(firstBytes);
+        using var second = ModuleDefinition.ReadModule(secondBytes);
+        var diff = new IlDiff(first, second, manifest);
+        var before = diff.Strings(IlTools.AllTypes(first), diff._ownersA);
+        var after = diff.Strings(IlTools.AllTypes(second), diff._ownersB);
+        var changes = new List<StringChange>();
+        var members = before.Keys.Union(after.Keys)
+            .OrderBy(m => m, StringComparer.Ordinal)
+            .ToList();
+        // One record per key the diff checks, overload or name. Recorded
+        // takes the records of exactly that key when they match, so a
+        // name's record (an iterator's MoveNext credited to its name) and
+        // an overload's (its lambdas) don't count for each other.
+        foreach (var member in members)
+        {
+            before.TryGetValue(member, out var lost);
+            after.TryGetValue(member, out var gained);
+            Add(changes, member, Minus(lost, gained), Minus(gained, lost));
+        }
+        foreach (var change in changes)
+        {
+            change.Reason = reason;
+        }
+        return changes;
+    }
+
+    static void Add(
+        List<StringChange> changes,
+        string member,
+        List<string> removed,
+        List<string> added)
+    {
+        if (removed.Count + added.Count == 0)
+        {
+            return;
+        }
+        changes.Add(new StringChange
+        {
+            Member = member,
+            Removed = removed,
+            Added = added,
+        });
+    }
+
     /// The key of a method written in source, as the manifest spells it. A
     /// conversion operator also carries its return type, because two of them
     /// can differ in nothing else: "T::op_Implicit(T):System.Int32".
@@ -562,12 +615,30 @@ sealed class IlDiff
 
     /// True when the rule's records for this member, taken together, are
     /// exactly this change and each gives a reason. A rule records one change
-    /// per site, so a member with two rewritten strings has two records.
+    /// per site, so a member with two rewritten strings has two records. The
+    /// records of exactly this member are tried first: stage 11 records one
+    /// per member, for overloads and names alike, and an overload's record
+    /// would otherwise count for its name too.
     bool Recorded(string member, List<string> removed, List<string> added)
     {
+        var own = _manifest.StringChanges
+            .Where(change => change.Member == member)
+            .ToList();
+        if (own.Count > 0 && Matches(own, removed, added))
+        {
+            return true;
+        }
         var records = _manifest.StringChanges
             .Where(change => Covers(change.Member, member))
             .ToList();
+        return Matches(records, removed, added);
+    }
+
+    /// True when these records, taken together, are exactly this change and
+    /// each gives a reason.
+    static bool Matches(
+        List<StringChange> records, List<string> removed, List<string> added)
+    {
         if (records.Count == 0
             || records.Any(change => string.IsNullOrWhiteSpace(change.Reason)))
         {

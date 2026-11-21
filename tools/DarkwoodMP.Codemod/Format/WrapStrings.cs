@@ -21,6 +21,11 @@ static class WrapStrings
         }
         if (token.IsKind(SyntaxKind.InterpolatedStringEndToken))
         {
+            if (line.Split != null)
+            {
+                return line.Split.Plan(
+                    line, (InterpolatedStringExpressionSyntax)token.Parent);
+            }
             return line.Leave("an interpolated string (stage 11)");
         }
         if (!token.IsKind(SyntaxKind.StringLiteralToken)
@@ -157,7 +162,7 @@ static class WrapStrings
     /// True unless the literal's parent keeps "a" + "b" together as one
     /// operand. As the receiver of a member access, "a" + "b".Trim() would
     /// trim the second part only.
-    static bool NeedsParentheses(LiteralExpressionSyntax literal)
+    public static bool NeedsParentheses(ExpressionSyntax literal)
     {
         switch (literal.Parent)
         {
