@@ -73,7 +73,7 @@ namespace DarkwoodMP.World
             {
                 samples++;
                 var proxy = ClientProxy();
-                var ps = Sync.PlayerSync.Instance;
+                var ps = Plugin.Instance.Host.Players;
                 if (Core.isInLight(
                     armor.transform.position, mustBeWalkable: false))
                 {

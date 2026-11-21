@@ -120,6 +120,13 @@ namespace DarkwoodMP
         /// Notes, feeders, gasoline, vines and shadows, shared.
         public readonly World.ObjectActions Objects;
 
+        /// What our player sounds and looks like to the others beyond its
+        /// sprites: sounds, shots, blood and burning.
+        public readonly Sync.PlayerFx PlayerFx;
+
+        /// Logs what switches off our player's view (a black screen).
+        public readonly Sync.ViewWatch View;
+
         private readonly List<(MsgType type, Action<ulong, PacketReader> run)>
             _handlers = new List<(MsgType, Action<ulong, PacketReader>)>();
         private readonly List<Action> _unhooks = new List<Action>();
@@ -165,6 +172,8 @@ namespace DarkwoodMP
             EnemyFx = new Combat.EnemyFx(this);
             Breaks = new World.BreakActions(this);
             Objects = new World.ObjectActions(this);
+            PlayerFx = new Sync.PlayerFx(this);
+            View = new Sync.ViewWatch();
             // Hosting from the pause menu starts in a loaded world: give it
             // its WorldScope at once.
             WatchWorld();

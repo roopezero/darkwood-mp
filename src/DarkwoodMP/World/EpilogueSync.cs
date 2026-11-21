@@ -660,7 +660,7 @@ namespace DarkwoodMP.World
         {
             yield return new WaitForSecondsRealtime(0.5f);
             var p = Player.Instance;
-            var sync = Sync.PlayerSync.Instance;
+            var sync = Plugin.Instance.Host.Players;
             if (p == null || !p.inEpilogue || sync == null)
             {
                 yield break;

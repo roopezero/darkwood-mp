@@ -134,8 +134,8 @@ namespace DarkwoodMP.World
 
         public static IEnumerator Run()
         {
-            while (!WorldShare.InWorld || PlayerSync.Instance == null
-                || !PlayerSync.Instance.HasDummy)
+            while (!WorldShare.InWorld || Plugin.Instance.Host.Players == null
+                || !Plugin.Instance.Host.Players.HasDummy)
             {
                 yield return null;
             }
@@ -148,7 +148,8 @@ namespace DarkwoodMP.World
             }
 
             yield return Push();
-            var dummy = PlayerSync.Instance.Remotes[PlayerSync.DummyId];
+            var dummy =
+                Plugin.Instance.Host.Players.Remotes[PlayerSync.DummyId];
             var o = Singleton<OutsideLocations>.Instance;
             var grid = Singleton<WorldGrid>.Instance;
             if (o == null || grid == null || grid.currentGrid == null)

@@ -231,7 +231,7 @@ namespace DarkwoodMP.World
                 }
             }
 
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps != null)
             {
                 foreach (var rp in ps.Remotes.Values)

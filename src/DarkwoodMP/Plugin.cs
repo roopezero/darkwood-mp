@@ -54,8 +54,6 @@ namespace DarkwoodMP
         public static GUIStyle NameTagStyle;
 
         private Harmony _harmony;
-        private PlayerSync _playerSync;
-        private PlayerFx _playerFx;
         private ModHost _host;
         /// <summary>
         /// The Direct panel's server browser (the map test's "lan-search" uses
@@ -434,14 +432,13 @@ namespace DarkwoodMP
             new StartGameWindow();
             SaveBook.Register(_host.Session);
             OptionsWindow.Init();
-            _playerSync = new PlayerSync(_host.Session);
-            _playerFx = new PlayerFx(_host.Session);
+            _host.AddPlayers();
             _host.Session.OnPlayerJoined += n => Notice($"{n} joined");
             _host.Session.OnPlayerLeft += n => Notice($"{n} left");
             _host.Session.OnPlayerJoining += n => Notice($"{n} is joining...");
             _host.Session.OnPlayerStoppedJoining += n => Notice(
                 $"{n} stopped joining");
-            _playerSync.OnRemoteDied += n => Notice($"{n} died");
+            _host.Players.OnRemoteDied += n => Notice($"{n} died");
             _world = new WorldShare(_host.Session, this, Paths.CachePath);
             SaveRedirect.Init();
             WorldTeardown.Init();
@@ -1740,7 +1737,7 @@ namespace DarkwoodMP
             }
 
             yield return new WaitForSeconds(5f);
-            _playerSync.SpawnDummy(new Vector3(120f, 0f, 0f));
+            _host.Players.SpawnDummy(new Vector3(120f, 0f, 0f));
             Log.LogInfo("--dwmp-dummy: dummy left 120 units east of you");
             if (_spawnType == null)
             {
@@ -2164,7 +2161,12 @@ namespace DarkwoodMP
             }
 
             JoinScreen.LateUpdate();
-            Sync.ViewWatch.LateUpdate(_host.Session.Active);
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.View.LateUpdate(_host.Session.Active);
+            }
+
             CursorLock.LateUpdate(MenuWindows.AnyOpen);
             GameCursor.LateUpdate(
                 MenuWindows.AnyOpen || SkillsPanel.Open || DragTest.WindowOpen);
@@ -2246,11 +2248,16 @@ namespace DarkwoodMP
             ModProfiler.Mark("session");
             _host.Browser.Update();
             ModProfiler.Mark("browser");
-            _playerSync.Update();
+            _host.Players.Update();
             ModProfiler.Mark("players");
-            _playerFx.Update();
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.PlayerFx.Update();
+            }
+
             ModProfiler.Mark("player fx");
-            _host.Proxies.Update(_playerSync, _host.Session.IsHost);
+            _host.Proxies.Update(_host.Players, _host.Session.IsHost);
             ModProfiler.Mark("proxies");
             _enemies.Update();
             ModProfiler.Mark("enemies");
@@ -2514,7 +2521,7 @@ namespace DarkwoodMP
                 NameTagStyle.normal.textColor = new Color(0.9f, 0.85f, 0.7f);
             }
 
-            _playerSync.DrawNameTags();
+            _host.Players.DrawNameTags();
             TestWorld.DrawLabels();
             Spectator.DrawGui();
             Progression.OnGUI();

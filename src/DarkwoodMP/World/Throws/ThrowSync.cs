@@ -159,8 +159,9 @@ namespace DarkwoodMP.World
                 theirs.AddRange(proxy.GetComponentsInChildren<Collider>(true));
             }
 
-            if (PlayerSync.Instance != null
-                && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp)
+            Sync.PlayerSync players = Plugin.Instance.Host.Players;
+            if (players != null
+                && players.Remotes.TryGetValue(by, out var rp)
                 && rp.Root != null)
             {
                 theirs.AddRange(
@@ -283,8 +284,9 @@ namespace DarkwoodMP.World
             {
                 thrower = proxy.transform;
             }
-            else if (PlayerSync.Instance != null
-                && PlayerSync.Instance.Remotes.TryGetValue(by, out var rp)
+            else if (Plugin.Instance.Host.Players != null
+                && Plugin.Instance.Host.Players.Remotes.TryGetValue(
+                    by, out var rp)
                 && rp.Root != null)
             {
                 thrower = rp.Root.transform;

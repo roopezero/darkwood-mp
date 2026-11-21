@@ -349,7 +349,7 @@ namespace DarkwoodMP
                 return 0;
             }
 
-            var ps = Sync.PlayerSync.Instance;
+            var ps = Plugin.Instance.Host.Players;
             if (ps == null)
             {
                 return 0;

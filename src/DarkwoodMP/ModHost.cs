@@ -62,6 +62,14 @@ namespace DarkwoodMP
         /// alone (the test dummy is hurt with no session).
         internal readonly Combat.AreaSpawns Spawns = new Combat.AreaSpawns();
 
+        /// The sprite collections by name hash, for the puppets' looks; kept
+        /// as long as the game runs, as the game keeps them.
+        public readonly Sync.SpriteCollections Sprites =
+            new Sync.SpriteCollections();
+
+        /// Lights outside the pathfinding grid, also when playing alone.
+        public readonly Sync.LightGrid Lights = new Sync.LightGrid();
+
         /// <param name="opensPort">whether hosting asks the router to
         /// forward the port (Host.OpenPort)</param>
         public ModHost(Func<bool> opensPort)
@@ -93,6 +101,20 @@ namespace DarkwoodMP
         /// The Steam backend once Steam is up; null before that and on GOG.
         /// Typed as the interface: no Steamworks type may appear here.
         public INetBackend Steam { get; private set; }
+
+        /// <summary>
+        /// The other players' puppets, and our player's look sent to them.
+        /// Kept for the whole game: the tests' dummy (--dwmp-dummy) is a
+        /// puppet without a session. Made by Plugin.Load where it was made
+        /// before, so its handlers of the session's events run in the same
+        /// order.
+        /// </summary>
+        public Sync.PlayerSync Players { get; private set; }
+
+        public void AddPlayers()
+        {
+            Players = new Sync.PlayerSync(Session);
+        }
 
         public void AddSteam(INetBackend steam)
         {

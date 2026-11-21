@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Sync.Players;
 using UnityEngine;
 
 namespace DarkwoodMP.Sync
@@ -18,7 +19,7 @@ namespace DarkwoodMP.Sync
     /// screen there. This names it: every 0.25 s, in a co-op session, the same
     /// ray at our player, logged once per set of hits (again after 30 s).
     /// </summary>
-    public static class ViewWatch
+    public sealed class ViewWatch
     {
         /// <summary>
         /// The layers of Light2D.LateUpdate's ray (Default 0, Static 15,
@@ -50,8 +51,8 @@ namespace DarkwoodMP.Sync
             return (Vector3?)null;
         }
 
-        private static float _next, _loggedAt;
-        private static string _logged = "";
+        private Seconds _next;
+        private ViewLog _logged;
 
         /// <summary>
         /// What the game's ray at this position hits: each collider's path,
@@ -106,14 +107,15 @@ namespace DarkwoodMP.Sync
             return p;
         }
 
-        public static void LateUpdate(bool inSession)
+        public void LateUpdate(bool inSession)
         {
-            if (!inSession || Time.unscaledTime < _next)
+            var now = new Seconds(Time.unscaledTime);
+            if (!ViewWatchRules.Looks(inSession, now, _next))
             {
                 return;
             }
 
-            _next = Time.unscaledTime + 0.25f;
+            _next = ViewWatchRules.NextLook(now);
             var p = Player.Instance;
             if (p == null || !p.gameObject.activeInHierarchy || Core.mainMenu)
             {
@@ -129,18 +131,17 @@ namespace DarkwoodMP.Sync
             var pos = light.transform.position;
             if (!Hidden(pos))
             {
-                _logged = "";
+                _logged = ViewWatchRules.Clear(_logged);
                 return;
             }
 
             string set = string.Join("; ", Hiders(pos));
-            if (set == _logged && Time.unscaledTime - _loggedAt < 30f)
+            if (!ViewWatchRules.Logs(_logged, set, now))
             {
                 return;
             }
 
-            _logged = set;
-            _loggedAt = Time.unscaledTime;
+            _logged = ViewWatchRules.Logged(set, now);
             var r = light.GetComponent<Renderer>();
             Plugin.Log.LogInfo(
                 $"[view] our player's view is switched off at ({pos.x:0}, "

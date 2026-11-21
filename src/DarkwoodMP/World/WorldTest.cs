@@ -581,7 +581,7 @@ namespace DarkwoodMP.World
 
                 // A sprite from a collection not loaded here, from a player
                 // whose body uses libName: that loads it.
-                Sync.SpriteCollections.Get(
+                Plugin.Instance.Host.Sprites.Get(
                     Net.StableHash.Of("not loaded here"), libName);
                 var lib =
                     Resources.FindObjectsOfTypeAll<tk2dSpriteAnimation>()
@@ -621,8 +621,8 @@ namespace DarkwoodMP.World
                 }
 
                 int inLib = colls.Count(
-                    n => Sync.SpriteCollections.Get(Net.StableHash.Of(n))
-                        != null);
+                    n => Plugin.Instance.Host.Sprites.Get(
+                        Net.StableHash.Of(n)) != null);
                 string libState = "FAIL: not loaded";
                 if (lib != null)
                 {

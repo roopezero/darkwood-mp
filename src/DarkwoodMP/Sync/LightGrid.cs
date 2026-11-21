@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.Sync.Players;
 using HarmonyLib;
 using Pathfinding;
 using UnityEngine;
@@ -23,50 +24,36 @@ namespace DarkwoodMP.Sync
     /// lookup for it and clears the nodes it held, rather than let the game
     /// index outside the grid.
     /// </summary>
-    [HarmonyPatch(
-        typeof(Light2D), nameof(Light2D.populateAffectedNodes),
-        new[] { typeof(int) })]
-    static class LightGridPatch
+    public sealed class LightGrid
     {
-        private static readonly HashSet<int> Logged = new HashSet<int>();
+        // The lights already logged, by instance id.
+        private readonly HashSet<int> _logged = new HashSet<int>();
 
-        static bool Prefix(Light2D __instance, int _nodeLightRadius)
+        /// <summary>
+        /// Light2D.populateAffectedNodes: false skips the game's lookup for
+        /// a light outside the grid, after clearing its nodes.
+        /// </summary>
+        public bool Populates(Light2D light, int radius)
         {
             try
             {
-                var astar = AstarPath.active;
-                if (astar == null)
+                Vector3 pos = light.transform.position;
+                if (!LightGridRules.SkipsLookup(
+                    FactsOf(pos, radius)))
                 {
                     return true;
                 }
 
-                Vector3 pos = __instance.transform.position;
-                var g = astar.getNearestGraphFast(pos);
-                if (g == null || g.nodes == null || g.nodes.Length == 0
-                    || g.nodeSize <= 0f)
-                {
-                    return true; // the game returns at once
-                }
-
-                Vector3 d = pos - (Vector3)g.nodes[0].position;
-                int x = Mathf.RoundToInt(d.x / g.nodeSize),
-                    z = Mathf.RoundToInt(d.z / g.nodeSize);
-                int r = _nodeLightRadius;
-                if (x >= -r && x < g.Width + r && z >= -r && z < g.Depth + r)
-                {
-                    return true;
-                }
-
-                var nodes = __instance.affectedNodes;
+                var nodes = light.affectedNodes;
                 if (nodes != null)
                 {
                     Array.Clear(nodes, 0, nodes.Length);
                 }
 
-                if (Logged.Add(__instance.GetInstanceID()))
+                if (_logged.Add(light.GetInstanceID()))
                 {
                     Plugin.Log.LogInfo(
-                        $"[lights] {Path(__instance.transform)} at {pos} is "
+                        $"[lights] {Path(light.transform)} at {pos} is "
                             + "outside the pathfinding grid: it lights no "
                             + "nodes there");
                 }
@@ -79,6 +66,42 @@ namespace DarkwoodMP.Sync
             }
         }
 
+        // Without a grid or nodes the game returns at once.
+        private static LightGridFacts FactsOf(Vector3 pos, int radius)
+        {
+            var astar = AstarPath.active;
+            if (astar == null)
+            {
+                return default;
+            }
+
+            var g = astar.getNearestGraphFast(pos);
+            if (g == null || g.nodes == null)
+            {
+                return new LightGridFacts { Pathfinding = true };
+            }
+
+            Vec3 origin = default;
+            if (g.nodes.Length > 0)
+            {
+                var first = (Vector3)g.nodes[0].position;
+                origin = new Vec3(first.x, first.y, first.z);
+            }
+
+            return new LightGridFacts
+            {
+                Pathfinding = true,
+                Graph = true,
+                Nodes = g.nodes.Length,
+                NodeSize = g.nodeSize,
+                Width = g.Width,
+                Depth = g.Depth,
+                Light = new Vec3(pos.x, pos.y, pos.z),
+                Origin = origin,
+                Radius = radius,
+            };
+        }
+
         private static string Path(Transform t)
         {
             string s = t.name;
@@ -88,6 +111,21 @@ namespace DarkwoodMP.Sync
             }
 
             return s;
+        }
+    }
+
+    /// <summary>
+    /// Runs with or without a session (LightGrid.Populates).
+    /// </summary>
+    [HarmonyPatch(
+        typeof(Light2D), nameof(Light2D.populateAffectedNodes),
+        new[] { typeof(int) })]
+    static class LightGridPatch
+    {
+        static bool Prefix(Light2D __instance, int _nodeLightRadius)
+        {
+            return Plugin.Instance.Host.Lights.Populates(
+                __instance, _nodeLightRadius);
         }
     }
 }
