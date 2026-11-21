@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using DarkwoodMP.Menus;
 using DarkwoodMP.Net;
 using DarkwoodMP.World;
 using UnityEngine;
@@ -107,100 +108,77 @@ namespace DarkwoodMP
         private void Refresh()
         {
             _slots.Clear();
-            _problem = null;
             var sm = Singleton<SaveManager>.Instance;
-            MainMenu.SaveState state = null;
+            List<GameProfile> profiles = null;
             if (sm != null)
             {
-                state = sm.loadGameProfiles();
+                MainMenu.SaveState state = sm.loadGameProfiles();
+                if (state != null)
+                {
+                    profiles = state.profiles;
+                }
             }
 
-            bool any = state != null && state.profiles != null
-                && state.profiles.Any(p => p != null && p.Active);
-            if (!any && sm != null && sm.CheckIfWorldFilesExist())
+            var saves = new List<SaveFacts>();
+            if (profiles != null)
             {
-                _problem =
-                    "The game's list of saves is missing or damaged, but there "
-                        + "are save files. The game's own profiles screen can "
-                        + "restore it from a backup.";
+                saves = profiles.Select(FactsOf).ToList();
             }
+
+            bool files = sm != null && sm.CheckIfWorldFilesExist();
+            _problem = StartGameRules.Problem(saves, files);
 
             // Five slots, as the game always has; a slot that isn't active (or
             // whose character died for good) is free.
             _profiles = new List<GameProfile>();
-            int? profileCount = null;
-            if (state != null)
-            {
-                List<GameProfile> profiles = state.profiles;
-                if (profiles != null)
-                {
-                    profileCount = profiles.Count;
-                }
-            }
-
-            int known = 0;
-            if (profileCount.HasValue)
-            {
-                known = profileCount.Value;
-            }
-
-            int count = Math.Max(5, known);
+            int count = StartGameRules.SlotCount(saves.Count);
             for (int i = 0; i < count; i++)
             {
-                GameProfile p = null;
-                if (state != null && state.profiles != null
-                    && i < state.profiles.Count)
+                var slot = new Slot { Id = i + 1 };
+                if (i < saves.Count && StartGameRules.IsUsed(saves[i]))
                 {
-                    p = state.profiles[i];
-                }
-
-                bool used = p != null && p.Active && !p.dead;
-                if (used)
-                {
-                    _profiles.Add(p);
+                    _profiles.Add(profiles[i]);
+                    slot.Profile = profiles[i];
+                    slot.PlayedWith = SaveBook.PlayedWith(slot.Id);
                 }
                 else
                 {
                     _profiles.Add(new GameProfile(i + 1, _Active: false, 0));
                 }
 
-                var slot = new Slot { Id = i + 1 };
-                if (used)
-                {
-                    slot.Profile = p;
-                    slot.PlayedWith = SaveBook.PlayedWith(slot.Id);
-                }
-                else
-                {
-                    slot.Profile = null;
-                }
-
                 _slots.Add(slot);
             }
 
-            if (_choice != 0 && !_slots.Any(s => s.Id == _choice && !s.Free))
-            {
-                _choice = -1;
-            }
-
-            if (_choice < 0)
-            {
-                // The save played last, or New Game when there's none.
-                var last = _slots.Where(s => !s.Free)
-                    .OrderByDescending(s => SavedAt(s.Profile))
-                    .FirstOrDefault();
-                int choice = 0;
-                if (last != null)
-                {
-                    choice = last.Id;
-                }
-
-                _choice = choice;
-            }
-
+            _choice = StartGameRules.Choice(_choice, SlotsFacts());
             _overwrite = 0;
             LoadName();
         }
+
+        /// <summary>A profile from the game's list, for its slot.</summary>
+        private static SaveFacts FactsOf(GameProfile profile)
+        {
+            if (profile == null)
+            {
+                return default;
+            }
+
+            return new SaveFacts
+            {
+                Present = true,
+                Active = profile.Active,
+                Dead = profile.dead,
+            };
+        }
+
+        /// <summary>The slots listed, for the choice and a new game.</summary>
+        private List<SlotFacts> SlotsFacts() => _slots
+            .Select(slot => new SlotFacts
+            {
+                Id = slot.Id,
+                Used = !slot.Free,
+                Saved = SavedAt(slot.Profile),
+            })
+            .ToList();
 
         private static DateTime SavedAt(GameProfile p)
         {
@@ -231,24 +209,14 @@ namespace DarkwoodMP
             }
         }
 
-        private Slot FreeSlot => _slots.FirstOrDefault(s => s.Free);
         /// <summary>
         /// The slot a new game goes in: the first free one, or the one chosen
         /// to overwrite.
         /// </summary>
-        private int NewSlot
-        {
-            get
-            {
-                Slot freeSlot = FreeSlot;
-                if (freeSlot != null)
-                {
-                    return freeSlot.Id;
-                }
+        private int NewSlot =>
+            StartGameRules.NewSlot(SlotsFacts(), _overwrite);
 
-                return _overwrite;
-            }
-        }
+        private Slot FreeSlot => _slots.FirstOrDefault(s => s.Free);
 
         private void Choose(int choice)
         {
@@ -278,7 +246,7 @@ namespace DarkwoodMP
         /// </summary>
         private void CommitName()
         {
-            if (_nameFor > 0 && Chosen != null && _nameFor == _choice)
+            if (StartGameRules.CommitsName(_nameFor, _choice, Chosen != null))
             {
                 SaveBook.SetName(_nameFor, _name);
             }
@@ -708,7 +676,8 @@ namespace DarkwoodMP
             var plugin = Plugin.Instance;
             var cfg = Plugin.Cfg;
             bool steamUp = plugin.SteamAvailable;
-            bool steam = steamUp && cfg.HostWith.Value != "direct";
+            bool steam =
+                HostingRules.HostsWithSteam(steamUp, cfg.HostWith.Value);
             Fade(on, () =>
             {
                 var c = f.Row(Ui.RowH, 90, 0, 0);
@@ -739,7 +708,8 @@ namespace DarkwoodMP
                 var n = f.Row(Ui.RowH, 90, 0);
                 Ui.Label(n[0], "Your name");
                 string name = Ui.Field(n[1], plugin.Host.Session.LocalName, 32);
-                if (on && name != plugin.Host.Session.LocalName)
+                string local = plugin.Host.Session.LocalName;
+                if (NameRules.AppliesTypedName(on, name, local))
                 {
                     plugin.SetPlayerName(name);
                 }
@@ -752,15 +722,14 @@ namespace DarkwoodMP
                     Ui.Label(pm[0], "Port");
                     string port =
                         Ui.Field(pm[1], cfg.DirectPort.Value.ToString(), 5);
-                    if (int.TryParse(port, out int pn) && pn > 0 && pn <= 65535)
-                    {
-                        cfg.DirectPort.Value = pn;
-                    }
+                    cfg.DirectPort.Value =
+                        HostingRules.TypedPort(port, cfg.DirectPort.Value);
 
                     Ui.Label(
                         pm[3], "Max players", null, TextAnchor.MiddleRight);
-                    if (Ui.Button(
-                        pm[4], "-", on && !steam && cfg.MaxPlayers.Value > 2))
+                    int most = cfg.MaxPlayers.Value;
+                    bool fewer = HostingRules.MayRemovePlayer(most);
+                    if (Ui.Button(pm[4], "-", on && !steam && fewer))
                     {
                         cfg.MaxPlayers.Value--;
                     }
@@ -768,10 +737,8 @@ namespace DarkwoodMP
                     Ui.Label(
                         pm[5], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright,
                         TextAnchor.MiddleCenter);
-                    if (Ui.Button(
-                        pm[6], "+",
-                        on && !steam
-                            && cfg.MaxPlayers.Value < Protocol.MaxPlayers))
+                    bool more = HostingRules.MayAddPlayer(cfg.MaxPlayers.Value);
+                    if (Ui.Button(pm[6], "+", on && !steam && more))
                     {
                         cfg.MaxPlayers.Value++;
                     }
@@ -892,33 +859,29 @@ namespace DarkwoodMP
         /// <summary>Why Start is off, or null.</summary>
         private string CantStart()
         {
-            if (!WorldShare.MainMenuReady())
-            {
-                return "Wait for the main menu.";
-            }
-
-            if (_choice > 0)
-            {
-                Slot chosen = Chosen;
-                if (chosen == null || chosen.Profile == null)
-                {
-                    return "No save in that slot.";
-                }
-
-                if (Chosen.Profile.isCompatible == false)
-                {
-                    return "This save needs the game's profiles screen.";
-                }
-
-                return null;
-            }
-
-            if (NewSlot > 0)
+            Verdict verdict = StartGameRules.MayStart(StartOf());
+            if (!verdict.Refused)
             {
                 return null;
             }
 
-            return "Choose a save to overwrite.";
+            return Refusals.Text(verdict);
+        }
+
+        /// <summary>What Start looks at: the menu and the choice.</summary>
+        private StartFacts StartOf()
+        {
+            Slot chosen = Chosen;
+            bool used = chosen != null && chosen.Profile != null;
+            return new StartFacts
+            {
+                MenuReady = WorldShare.MainMenuReady(),
+                Choice = _choice,
+                ChosenUsed = used,
+                ChosenCompatible =
+                    used && chosen.Profile.isCompatible != false,
+                NewSlot = NewSlot,
+            };
         }
 
         // ---- starting -------------------------------------------------------
@@ -932,9 +895,10 @@ namespace DarkwoodMP
 
             CommitName();
             var plugin = Plugin.Instance;
-            bool host = _host && !plugin.Host.Session.Active;
-            bool steam =
-                plugin.SteamAvailable && Plugin.Cfg.HostWith.Value != "direct";
+            bool inGame = plugin.Host.Session.Active;
+            bool host = StartGameRules.HostsAfterStart(_host, inGame);
+            bool steam = HostingRules.HostsWithSteam(
+                plugin.SteamAvailable, Plugin.Cfg.HostWith.Value);
             string name = _name;
             Core.profiles = _profiles;
             var mm = Singleton<MainMenu>.Instance;
@@ -999,7 +963,7 @@ namespace DarkwoodMP
                 Close();
                 Singleton<UI>.Instance.StartCoroutine(
                     Singleton<UI>.Instance.initNewGame());
-                if (!string.IsNullOrWhiteSpace(name))
+                if (StartGameRules.StoresNewName(name))
                 {
                     SaveBook.SetName(id, name);
                 }

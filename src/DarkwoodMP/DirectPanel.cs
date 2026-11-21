@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using DarkwoodMP.Menus;
 using DarkwoodMP.Net;
 using UnityEngine;
 
@@ -28,8 +29,7 @@ namespace DarkwoodMP
         private bool _refreshedOnce;
         private float _lastClick;
         private string _lastClicked;
-        private int _sortColumn = 4; // ping
-        private bool _sortDown;
+        private readonly BrowserOrder _order = new BrowserOrder();
 
         private string _address = "", _addressPassword = "";
         private string _passwordFor, _password = "";
@@ -140,37 +140,38 @@ namespace DarkwoodMP
 
         public void Draw(Flow f)
         {
-            if (_session.Active && _session.Backend != _tcp)
+            DirectView view = DirectRules.View(FactsOf(_session));
+            if (view == DirectView.SteamHost)
             {
-                string text =
-                    "In a Steam game. Joining a server here leaves it.";
-                if (_session.IsHost)
-                {
-                    text = "In a Steam game.";
-                }
-
-                Ui.Text(f, text, MenuSkin.Dim);
-                if (!_session.IsHost)
-                {
-                    JoinButtons(f);
-                }
-
+                Ui.Text(f, "In a Steam game.", MenuSkin.Dim);
                 return;
             }
 
-            if (_tcp.InSession)
+            if (view == DirectView.SteamClient)
+            {
+                Ui.Text(
+                    f,
+                    "In a Steam game. Joining a server here leaves it.",
+                    MenuSkin.Dim);
+                JoinButtons(f);
+                return;
+            }
+
+            if (view == DirectView.DirectGame)
             {
                 DrawInSession(f);
                 return;
             }
 
-            if (_session.LastRefusal != null)
+            string refusal = _session.LastRefusal;
+            string line = DirectRules.IdleLine(refusal, _tcp.Status);
+            if (refusal != null)
             {
-                Ui.Text(f, $"Refused: {_session.LastRefusal}", MenuSkin.Warn);
+                Ui.Text(f, line, MenuSkin.Warn);
             }
-            else if (_tcp.Status != "Not connected")
+            else if (line != null)
             {
-                Ui.Text(f, _tcp.Status);
+                Ui.Text(f, line);
             }
 
             JoinButtons(f);
@@ -186,16 +187,15 @@ namespace DarkwoodMP
                 Ui.Field(f, "Server name", cfg.ServerName.Value, 48);
             string port =
                 Ui.Field(f, "Port", cfg.DirectPort.Value.ToString(), 5);
-            if (int.TryParse(port, out int p) && p > 0 && p <= 65535)
-            {
-                cfg.DirectPort.Value = p;
-            }
+            cfg.DirectPort.Value =
+                HostingRules.TypedPort(port, cfg.DirectPort.Value);
 
             cfg.Password.Value =
                 Ui.Field(f, "Password", cfg.Password.Value, 32, password: true);
             var m = f.Row(Ui.RowH, 90, 24, 30, 24, 0);
             Ui.Label(m[0], "Max players");
-            if (Ui.Button(m[1], "-", cfg.MaxPlayers.Value > 2))
+            bool fewer = HostingRules.MayRemovePlayer(cfg.MaxPlayers.Value);
+            if (Ui.Button(m[1], "-", fewer))
             {
                 cfg.MaxPlayers.Value--;
             }
@@ -203,8 +203,8 @@ namespace DarkwoodMP
             Ui.Label(
                 m[2], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright,
                 TextAnchor.MiddleCenter);
-            if (Ui.Button(
-                m[3], "+", cfg.MaxPlayers.Value < Protocol.MaxPlayers))
+            bool more = HostingRules.MayAddPlayer(cfg.MaxPlayers.Value);
+            if (Ui.Button(m[3], "+", more))
             {
                 cfg.MaxPlayers.Value++;
             }
@@ -239,22 +239,10 @@ namespace DarkwoodMP
                 }
 
                 var map = _tcp.Mapper;
-                if (map.Mapped && map.ExternalIp != null
-                    && !map.BehindAnotherNat)
+                InternetRow row = DirectRules.Internet(FactsOf(map));
+                if (row.Address != null)
                 {
-                    AddressRow(
-                        f, $"{map.ExternalIp}:{map.ExternalPort}", "internet");
-                }
-                else if (_publicIp != null)
-                {
-                    string address = $"{_publicIp}:{_tcp.Port}";
-                    string note = "internet: forward the port";
-                    if (map.Mapped)
-                    {
-                        note = "internet";
-                    }
-
-                    AddressRow(f, address, note);
+                    AddressRow(f, row.Address, row.Note);
                 }
                 else
                 {
@@ -287,7 +275,7 @@ namespace DarkwoodMP
                 }
             }
 
-            if (!_tcp.IsHost && _session.Connected
+            if (DirectRules.MayReload(_tcp.IsHost, _session.Connected)
                 && Ui.Button(
                     f, "Reload the host's world (if things look out of sync)"))
             {
@@ -470,21 +458,13 @@ namespace DarkwoodMP
                     cols[c].height);
                 if (GUI.Button(r, GUIContent.none, MenuSkin.Button))
                 {
-                    if (_sortColumn == c)
-                    {
-                        _sortDown = !_sortDown;
-                    }
-                    else
-                    {
-                        _sortColumn = c;
-                        _sortDown = false;
-                    }
+                    _order.Click(c);
                 }
 
                 string arrow = "";
-                if (_sortColumn == c && c > 0)
+                if (_order.Column == c && c > 0)
                 {
-                    if (_sortDown)
+                    if (_order.Down)
                     {
                         arrow = "  v";
                     }
@@ -561,8 +541,7 @@ namespace DarkwoodMP
                 if (ev.type == EventType.MouseDown && ev.button == 0
                     && row.Contains(ev.mousePosition))
                 {
-                    bool twice = _lastClicked == addr
-                        && Time.unscaledTime - _lastClick < 0.4f;
+                    bool twice = JoinRules.IsDoubleClick(ClickOf(addr));
                     _selected = addr;
                     _lastClicked = addr;
                     _lastClick = Time.unscaledTime;
@@ -691,16 +670,9 @@ namespace DarkwoodMP
 
             // Beside it, while no name is set (the Steam or OS user name is
             // used), where to set one.
-            string hint;
-            if (_session.Active
-                || !string.IsNullOrWhiteSpace(Plugin.Cfg.PlayerName.Value))
-            {
-                hint = null;
-            }
-            else
-            {
-                hint = $"You're {_session.LocalName}: set a name in Options";
-            }
+            string hint = NameRules.BrowserHint(
+                _session.Active, Plugin.Cfg.PlayerName.Value,
+                _session.LocalName);
 
             float hintW = 0f;
             if (hint != null)
@@ -755,75 +727,31 @@ namespace DarkwoodMP
 
         private List<string> Sorted(List<string> list)
         {
-            if (_sortColumn == 0 && !_sortDown && _tab != ServerBrowser.Tab.Lan)
+            var rows = list.Select(RowOf).ToList();
+            return _order.Sorted(rows, _tab == ServerBrowser.Tab.Lan);
+        }
+
+        /// <summary>The browser's entry for a server, for its sort.</summary>
+        private ServerRow RowOf(string address)
+        {
+            var entry = _browser.Get(address);
+            var info = entry.Info;
+            if (info == null)
             {
-                return list;
+                return new ServerRow { Address = address };
             }
 
-            IComparable Key(string a)
+            info.Fields.TryGetValue("world", out var world);
+            return new ServerRow
             {
-                var e = _browser.Get(a);
-                var i = e.Info;
-                switch (_sortColumn)
-                {
-                    case 0:
-                        if (i != null && i.Password)
-                        {
-                            return 1;
-                        }
-
-                        return 0;
-                    case 1:
-                        string name = null;
-                        if (i != null)
-                        {
-                            name = i.Name;
-                        }
-
-                        if (name == null)
-                        {
-                            name = a;
-                        }
-
-                        return name.ToLowerInvariant();
-                    case 2:
-                        int players = -1;
-                        if (i != null)
-                        {
-                            players = i.Players;
-                        }
-
-                        return players;
-                    case 3:
-                        if (i != null
-                            && i.Fields.TryGetValue("world", out var w))
-                        {
-                            return w;
-                        }
-
-                        return "";
-                    default:
-                        if (i != null)
-                        {
-                            return e.PingMs;
-                        }
-
-                        return int.MaxValue;
-                }
-            }
-
-            var sorted = list.OrderBy(Key);
-            IEnumerable<string> ordered;
-            if (_sortDown)
-            {
-                ordered = sorted.Reverse();
-            }
-            else
-            {
-                ordered = sorted;
-            }
-
-            return ordered.ToList();
+                Address = address,
+                Known = true,
+                Password = info.Password,
+                Name = info.Name,
+                Players = info.Players,
+                World = world,
+                Ping = entry.PingMs,
+            };
         }
 
         private void BrowserButtons(Rect r)
@@ -886,8 +814,58 @@ namespace DarkwoodMP
         private bool CanJoin(string addr)
         {
             var info = _browser.Get(addr).Info;
-            // unknown: let them try
-            return info == null || info.Incompatibility == null;
+            bool incompatible = info != null && info.Incompatibility != null;
+            return JoinRules.MayJoin(info != null, incompatible);
+        }
+
+        /// <summary>The session, for which Direct section shows.</summary>
+        private DirectFacts FactsOf(Session session) => new DirectFacts
+        {
+            Active = session.Active,
+            OnTcp = session.Backend == _tcp,
+            Host = session.IsHost,
+            TcpBusy = _tcp.InSession,
+        };
+
+        /// <summary>The router's mapping, for a host's internet row.</summary>
+        private InternetFacts FactsOf(PortMapper map) => new InternetFacts
+        {
+            Mapped = map.Mapped,
+            RouterIp = map.ExternalIp,
+            RouterPort = map.ExternalPort,
+            BehindAnotherNat = map.BehindAnotherNat,
+            PublicIp = _publicIp,
+            Port = _tcp.Port,
+        };
+
+        /// <summary>A click on a server's row, for the double click.</summary>
+        private ClickFacts ClickOf(string address) => new ClickFacts
+        {
+            Address = address,
+            Last = _lastClicked,
+            Now = new Seconds(Time.unscaledTime),
+            LastAt = new Seconds(_lastClick),
+        };
+
+        /// <summary>The server Connect joins, and the game we're in.</summary>
+        private ConnectFacts ConnectOf(string addr, string password)
+        {
+            ServerInfo info = null;
+            if (addr != null)
+            {
+                info = _browser.Get(addr).Info;
+            }
+
+            return new ConnectFacts
+            {
+                Address = addr,
+                Known = info != null,
+                Incompatible = info != null && info.Incompatibility != null,
+                NeedsPassword = info != null && info.Password,
+                PasswordGiven = password != null,
+                InGame = _session.Active,
+                Host = _session.IsHost,
+            };
         }
 
         /// <summary>
@@ -900,32 +878,24 @@ namespace DarkwoodMP
         /// </summary>
         private void Connect(string addr, string password = null)
         {
-            if (addr == null || !CanJoin(addr))
+            ConnectPlan plan = JoinRules.Connect(ConnectOf(addr, password));
+            if (plan.Step == ConnectStep.AskPassword)
             {
+                _passwordFor = addr;
+                _password = "";
+                _focusField = true;
+                _passwordWin.Show();
                 return;
-            }
-
-            if (password == null)
-            {
-                var info = _browser.Get(addr).Info;
-                if (info != null && info.Password)
-                {
-                    _passwordFor = addr;
-                    _password = "";
-                    _focusField = true;
-                    _passwordWin.Show();
-                    return;
-                }
             }
 
             // Joining leaves the game we're in (a joiner's, Steam or direct;
             // hosts get no join buttons while hosting).
-            if (_session.Active && _session.IsHost)
+            if (plan.Step != ConnectStep.Join)
             {
                 return;
             }
 
-            if (_session.Active)
+            if (plan.LeaveFirst)
             {
                 Plugin.Log.LogInfo(
                     $"Joining {addr}: leaving the game we're in first");

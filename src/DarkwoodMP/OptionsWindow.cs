@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using DarkwoodMP.Menus;
 using UnityEngine;
 using RW = Rewired;
 
@@ -94,7 +95,6 @@ namespace DarkwoodMP
         private static readonly string[] NewChars = { "fresh", "copy" };
         private static readonly string[] NewCharNames =
             { "Nothing, beside you", "A copy of your character" };
-        private static readonly int[] StackChoices = { 0, 10, 20, 50, 99 };
 
         private const float KeepSeconds = 15f;
 
@@ -895,16 +895,11 @@ namespace DarkwoodMP
                 shown = session.LocalName;
             }
 
-            string text;
-            if (inGame)
+            string text = NameRules.OthersSee(shown);
+            Verdict rename = NameRules.MayRename(inGame);
+            if (rename.Refused)
             {
-                text = "You can change it when you're in no game.";
-            }
-            else
-            {
-                text =
-                    $"Others see you as {shown}. Left empty, it's your Steam "
-                        + "name, or your computer's user name.";
+                text = Refusals.Text(rename);
             }
 
             Ui.Text(f, text, MenuSkin.Dim);
@@ -915,10 +910,8 @@ namespace DarkwoodMP
             c = Setting(f, "Port");
             string port = Ui.Field(
                 Ui.Split(c[1], 80, 0)[0], cfg.DirectPort.Value.ToString(), 5);
-            if (int.TryParse(port, out int p) && p > 0 && p <= 65535)
-            {
-                cfg.DirectPort.Value = p;
-            }
+            cfg.DirectPort.Value =
+                HostingRules.TypedPort(port, cfg.DirectPort.Value);
 
             c = Setting(f, "");
             cfg.OpenPort.Value = Ui.Check(
@@ -929,7 +922,8 @@ namespace DarkwoodMP
                 Ui.Field(c[1], cfg.Password.Value, 32, password: true);
             c = Setting(f, "Max players");
             var m = Ui.Split(c[1], 24, 30, 24, 0);
-            if (Ui.Button(m[0], "-", cfg.MaxPlayers.Value > 2))
+            bool fewer = HostingRules.MayRemovePlayer(cfg.MaxPlayers.Value);
+            if (Ui.Button(m[0], "-", fewer))
             {
                 cfg.MaxPlayers.Value--;
             }
@@ -937,8 +931,8 @@ namespace DarkwoodMP
             Ui.Label(
                 m[1], cfg.MaxPlayers.Value.ToString(), MenuSkin.Bright,
                 TextAnchor.MiddleCenter);
-            if (Ui.Button(
-                m[2], "+", cfg.MaxPlayers.Value < Net.Protocol.MaxPlayers))
+            bool more = HostingRules.MayAddPlayer(cfg.MaxPlayers.Value);
+            if (Ui.Button(m[2], "+", more))
             {
                 cfg.MaxPlayers.Value++;
             }
@@ -949,12 +943,7 @@ namespace DarkwoodMP
                 Array.IndexOf(NewChars, cfg.NewCharacters.Value),
                 i => cfg.NewCharacters.Value = NewChars[i]);
             c = Setting(f, "Stack size");
-            var sizes = new List<int>(StackChoices);
-            if (!sizes.Contains(cfg.StackSize.Value))
-            {
-                sizes.Add(cfg.StackSize.Value);
-                sizes.Sort();
-            }
+            var sizes = HostingRules.StackSizes(cfg.StackSize.Value);
 
             var sizeNames = sizes.ConvertAll(n =>
             {
