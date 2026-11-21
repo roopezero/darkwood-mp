@@ -532,7 +532,7 @@ namespace DarkwoodMP.Sync
         internal static bool IsOurs(Transform parent)
         {
             var p = Player.Instance;
-            if (p == null || WorldActions.Replaying)
+            if (p == null || Coop.Guards.Replaying)
             {
                 return false;
             }
@@ -546,7 +546,7 @@ namespace DarkwoodMP.Sync
             // gunshot, a reload, a swing, pain). Not while a shared world
             // action runs inside it: that thing's own sounds come from its
             // replay elsewhere.
-            return InPlayerCode > 0 && WorldActions.Depth == 0;
+            return InPlayerCode > 0 && Coop.Guards.Depth == 0;
         }
     }
 
@@ -728,7 +728,7 @@ namespace DarkwoodMP.Sync
             }
 
             var fx = PlayerFx.Instance;
-            if (fx != null && fx.Sharing && !WorldActions.Replaying)
+            if (fx != null && fx.Sharing && !Coop.Guards.Replaying)
             {
                 fx.OurBlood(prefab, __result);
             }

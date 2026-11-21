@@ -205,7 +205,7 @@ namespace DarkwoodMP.Combat
         internal static void SendPrefab(
             byte kind, string name, Vector3 pos, float rotY)
         {
-            if (!Hosting || WorldActions.Replaying)
+            if (!Hosting || Coop.Guards.Replaying)
             {
                 return;
             }
@@ -234,7 +234,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         internal static void SendEmitter(Character c, int toggle)
         {
-            if (!Hosting || WorldActions.Replaying)
+            if (!Hosting || Coop.Guards.Replaying)
             {
                 return;
             }
@@ -347,7 +347,7 @@ namespace DarkwoodMP.Combat
         /// </summary>
         private static bool Show(System.Action make)
         {
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 make();
@@ -362,7 +362,7 @@ namespace DarkwoodMP.Combat
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
 

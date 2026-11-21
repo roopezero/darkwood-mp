@@ -248,7 +248,7 @@ namespace DarkwoodMP.World
             out bool __state)
         {
             __state = false;
-            if (Construction.Confirming || !WorldActions.Sharing
+            if (Construction.Confirming || !Coop.Guards.Sharing
                 || !(manual || WorldActions.TestAsPlayer))
             {
                 return true;
@@ -306,14 +306,14 @@ namespace DarkwoodMP.World
             }
 
             __state = true;
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             return true;
         }
 
         static void Postfix(
             Constructible __instance, int forceOption, bool __state)
         {
-            if (!__state || !WorldActions.Outermost())
+            if (!__state || !Coop.Guards.Outermost())
             {
                 return;
             }

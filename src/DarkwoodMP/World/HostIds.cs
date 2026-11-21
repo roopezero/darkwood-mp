@@ -103,7 +103,7 @@ namespace DarkwoodMP.World
         }
 
         private static bool Hosting =>
-            _session != null && _session.IsHost && WorldActions.Sharing;
+            _session != null && _session.IsHost && Coop.Guards.Sharing;
         private static bool Joined => Combat.NetEnemies.ClientMode
             && WorldShare.InWorld && !WorldShare.Loading;
 
@@ -112,7 +112,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void Started(GameObject go)
         {
-            if (go == null || WorldActions.Replaying || Core.loadingGame)
+            if (go == null || Coop.Guards.Replaying || Core.loadingGame)
             {
                 return;
             }

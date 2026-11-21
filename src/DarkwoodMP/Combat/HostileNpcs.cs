@@ -420,7 +420,7 @@ namespace DarkwoodMP.Combat
 
             // Another player's event, run here too: the host sent its copy
             // after them already.
-            if (WorldActions.Replaying
+            if (Coop.Guards.Replaying
                 || ScriptedEvents.Current == ScriptedEvents.Part.SharedOnly)
             {
                 return true;

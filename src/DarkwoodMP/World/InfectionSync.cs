@@ -85,7 +85,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 _cleared.Clear();
                 return;
@@ -156,7 +156,7 @@ namespace DarkwoodMP.World
                     continue;
                 }
 
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     Clear(inf);
@@ -168,7 +168,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
 
                 done.Add(p);
@@ -311,7 +311,7 @@ namespace DarkwoodMP.World
                 parent = ObjRef.Resolve<Transform>(parentRef);
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 GameObject parentGO;
@@ -355,7 +355,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
     }
@@ -368,7 +368,7 @@ namespace DarkwoodMP.World
         static void Postfix(Infection __instance, bool __state)
         {
             if (!__state || __instance == null || !__instance.disappearing
-                || !WorldActions.Sharing)
+                || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -440,7 +440,7 @@ namespace DarkwoodMP.World
         {
             var s = Session.Instance;
             if (InfectionSync.Growing <= 0 || __instance == null || s == null
-                || !s.IsHost || !WorldActions.Sharing)
+                || !s.IsHost || !Coop.Guards.Sharing)
             {
                 return;
             }

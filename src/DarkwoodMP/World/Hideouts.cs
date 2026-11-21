@@ -66,7 +66,7 @@ namespace DarkwoodMP.World
 
         /// <summary>
         /// Playing together in a world (also while replaying another game's
-        /// change, unlike WorldActions.Sharing).
+        /// change, unlike Coop.Guards.Sharing).
         /// </summary>
         internal static bool Together
         {
@@ -116,7 +116,7 @@ namespace DarkwoodMP.World
                 // Our player's doing (our own part of the event): ask the host.
                 // Another player's: the host's result comes.
                 if (ScriptedEvents.Current != ScriptedEvents.Part.SharedOnly
-                    && !WorldActions.Replaying)
+                    && !Coop.Guards.Replaying)
                 {
                     var w = s.Begin(MsgType.PorterTransport);
                     w.W.Write((byte)src.hideoutId);
@@ -282,8 +282,8 @@ namespace DarkwoodMP.World
                     $"[world] got porter delivery from {fromName} to {toName}");
             }
 
-            bool was = WorldActions.Replaying;
-            WorldActions.Replaying = true;
+            bool was = Coop.Guards.Replaying;
+            Coop.Guards.Replaying = true;
             try
             {
                 // empties them as the host's did
@@ -321,7 +321,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = was;
+                Coop.Guards.Replaying = was;
             }
         }
 
@@ -381,7 +381,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static bool CallPorter(Location loc)
         {
-            if (!Together || WorldActions.Replaying
+            if (!Together || Coop.Guards.Replaying
                 || loc.porterPosition == null)
             {
                 return true;
@@ -543,15 +543,15 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            bool was = WorldActions.Replaying;
-            WorldActions.Replaying = true;
+            bool was = Coop.Guards.Replaying;
+            Coop.Guards.Replaying = true;
             try
             {
                 loc.spawnPorter();
             }
             finally
             {
-                WorldActions.Replaying = was;
+                Coop.Guards.Replaying = was;
             }
         }
 
@@ -625,15 +625,15 @@ namespace DarkwoodMP.World
                 }
             }
 
-            bool was = WorldActions.Replaying;
-            WorldActions.Replaying = true;
+            bool was = Coop.Guards.Replaying;
+            Coop.Guards.Replaying = true;
             try
             {
                 prev.disable();
             }
             finally
             {
-                WorldActions.Replaying = was;
+                Coop.Guards.Replaying = was;
             }
 
             return prev;
@@ -757,14 +757,14 @@ namespace DarkwoodMP.World
             if (other != null && other != lit && Player.Instance != null
                 && Player.Instance.experienceMachine != other)
             {
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     other.disable();
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             }
         }
@@ -782,15 +782,15 @@ namespace DarkwoodMP.World
                 mine = p.experienceMachine;
             }
 
-            bool was = WorldActions.Replaying;
-            WorldActions.Replaying = true;
+            bool was = Coop.Guards.Replaying;
+            Coop.Guards.Replaying = true;
             try
             {
                 lit.enable();
             }
             finally
             {
-                WorldActions.Replaying = was;
+                Coop.Guards.Replaying = was;
                 if (p != null)
                 {
                     p.experienceMachine = mine;
@@ -979,7 +979,7 @@ namespace DarkwoodMP.World
         static bool Prefix(
             Player __instance, ExperienceMachine machine, bool doEnable)
         {
-            if (machine == null || !doEnable || WorldActions.Replaying
+            if (machine == null || !doEnable || Coop.Guards.Replaying
                 || !Hideouts.Together)
             {
                 return true;

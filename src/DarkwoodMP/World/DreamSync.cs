@@ -143,7 +143,7 @@ namespace DarkwoodMP.World
         internal static void Ending(Dreams d)
         {
             if (Shared == null || d == null || !d.dreaming || _ended
-                || WorldActions.Replaying || S == null)
+                || Coop.Guards.Replaying || S == null)
             {
                 return;
             }
@@ -237,14 +237,14 @@ namespace DarkwoodMP.World
             }
 
             d.outcome = outcome;
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 d.initiateEndDreaming();
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
 

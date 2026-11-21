@@ -20,7 +20,7 @@ namespace DarkwoodMP.World
     /// - the fuel bar of the generator or saw under the cursor:
     ///   EnemyHealthBar.show with onlyRefresh.
     ///
-    /// These only redraw. They run with WorldActions.Replaying set, and none of
+    /// These only redraw. They run with Coop.Guards.Replaying set, and none of
     /// them changes a slot, so nothing goes back out from them. Nothing is done
     /// when the object's window isn't open.
     /// </summary>
@@ -123,8 +123,8 @@ namespace DarkwoodMP.World
 
         private static void Run(System.Action redraw, string what)
         {
-            bool was = WorldActions.Replaying;
-            WorldActions.Replaying = true;
+            bool was = Coop.Guards.Replaying;
+            Coop.Guards.Replaying = true;
             try
             {
                 redraw();
@@ -137,7 +137,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = was;
+                Coop.Guards.Replaying = was;
             }
         }
     }

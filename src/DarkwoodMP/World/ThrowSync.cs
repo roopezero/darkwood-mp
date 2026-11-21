@@ -73,7 +73,7 @@ namespace DarkwoodMP.World
         internal void Thrown(
             string type, GameObject go, Vector3 from, bool dropped = false)
         {
-            if (!WorldActions.Sharing || go == null
+            if (!Coop.Guards.Sharing || go == null
                 || string.IsNullOrEmpty(type))
             {
                 return;
@@ -276,14 +276,14 @@ namespace DarkwoodMP.World
             }
 
             GameObject go;
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 go = Core.AddPrefab(item.item, pos, rot, null);
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             if (go == null)

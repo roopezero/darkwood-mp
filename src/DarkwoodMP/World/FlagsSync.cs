@@ -1376,14 +1376,14 @@ namespace DarkwoodMP.World
 
                 Plugin.Log.LogInfo(
                     $"{name} was killed in another player's game");
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     c.die();
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             }
         }

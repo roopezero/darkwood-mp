@@ -542,7 +542,7 @@ namespace DarkwoodMP.World
                     return; // the host's stock came: that's what he has
                 }
 
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     foreach (var kv in gave)
@@ -562,7 +562,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             }, inventory: false);
         }
@@ -984,7 +984,7 @@ namespace DarkwoodMP.World
         {
             __state = default;
             if (__instance == null || __instance.npc == null
-                || WorldActions.Replaying)
+                || Coop.Guards.Replaying)
             {
                 return;
             }

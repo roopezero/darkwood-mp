@@ -306,7 +306,7 @@ namespace DarkwoodMP.Combat
 
             // Only the look: anything in it that could hurt counts as part of
             // an explosion (the host already dealt it).
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             ThrownHits.Depth++;
             try
             {
@@ -317,7 +317,7 @@ namespace DarkwoodMP.Combat
             finally
             {
                 ThrownHits.Depth--;
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
         }
 

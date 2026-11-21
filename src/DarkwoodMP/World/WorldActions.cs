@@ -125,38 +125,12 @@ namespace DarkwoodMP.World
             AccessTools.Method(typeof(Trigger), "OnAfterTrigger");
 
         /// <summary>
-        /// Coop.Guards.Replaying, until the callers read it there.
-        /// </summary>
-        public static bool Replaying
-        {
-            get => Coop.Guards.Replaying;
-            set => Coop.Guards.Replaying = value;
-        }
-
-        /// <summary>
         /// "--dwmp-debug-world": log every shared-world message sent and
         /// applied.
         /// </summary>
         public static bool Debug;
 
-        /// <summary>
-        /// Coop.Guards.Depth, until the callers read it there.
-        /// </summary>
-        public static int Depth
-        {
-            get => Coop.Guards.Depth;
-            set => Coop.Guards.Depth = value;
-        }
-
-        public static void ResetDepth() => Coop.Guards.ResetDepth();
-        public static bool Outermost() => Coop.Guards.Outermost();
-
         private static Session S => Session.Instance;
-
-        /// <summary>
-        /// Coop.Guards.Sharing, until the callers read it there.
-        /// </summary>
-        public static bool Sharing => Coop.Guards.Sharing;
 
         public static void Register(Session s)
         {
@@ -475,7 +449,7 @@ namespace DarkwoodMP.World
             var flame = ThrownHits.CurrentFlame;
             ThrownHits.Depth = 0;
             ThrownHits.CurrentFlame = null;
-            Replaying = true;
+            Coop.Guards.Replaying = true;
             var leftWas = ScriptedEvents.LeftToActor;
             if (byPlayer)
             {
@@ -818,7 +792,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                Replaying = false;
+                Coop.Guards.Replaying = false;
                 ScriptedEvents.LeftToActor = leftWas;
                 ThrownHits.Depth = thrownDepth;
                 ThrownHits.CurrentFlame = flame;
@@ -1643,7 +1617,7 @@ namespace DarkwoodMP.World
             var obj = ObjRef.Read(r);
             var kind = (Kind)r.R.ReadByte();
             var go = ObjRef.Resolve<Transform>(obj);
-            Replaying = true;
+            Coop.Guards.Replaying = true;
             // A rollback puts the thing as it is, it isn't anyone doing it: the
             // triggers it would set off aren't.
             var leftWas = ScriptedEvents.LeftToActor;
@@ -1906,7 +1880,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                Replaying = false;
+                Coop.Guards.Replaying = false;
                 ScriptedEvents.LeftToActor = leftWas;
             }
         }
@@ -1999,7 +1973,7 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
 
@@ -2007,7 +1981,7 @@ namespace DarkwoodMP.World
             Door __instance, Vector3 openerPosition, Transform openerTransform,
             WorldActions.DoorState __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 return;
@@ -2034,13 +2008,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
 
         static void Postfix(Door __instance, WorldActions.DoorState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2054,14 +2028,14 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
 
         static void Postfix(
             Door __instance, bool byPlayer, WorldActions.DoorState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2076,14 +2050,14 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
 
         static void Postfix(
             Door __instance, bool silent, WorldActions.DoorState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2098,14 +2072,14 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
 
         static void Postfix(
             Door __instance, bool silently, WorldActions.DoorState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2120,13 +2094,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
         }
 
         static void Postfix(Door __instance, WorldActions.DoorState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2152,7 +2126,7 @@ namespace DarkwoodMP.World
         /// </summary>
         static bool Prefix(Door __instance, out WorldActions.DoorState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.DoorState.Of(__instance);
             return !BreakSync.HostsHit();
         }
@@ -2161,7 +2135,7 @@ namespace DarkwoodMP.World
             Door __instance, int damage, bool normalHit, bool canDamageMetal,
             WorldActions.DoorState __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __state.Same(WorldActions.DoorState.Of(__instance)))
             {
                 return;
@@ -2177,10 +2151,10 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.lockMe))]
     static class DoorLockPatch
     {
-        static void Prefix() => WorldActions.Depth++;
+        static void Prefix() => Coop.Guards.Depth++;
         static void Postfix(Door __instance, string keyType)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing)
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
             {
                 WorldActions.Send(
                     WorldActions.Action.DoorLock, __instance.gameObject,
@@ -2192,10 +2166,10 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Door), nameof(Door.unlock))]
     static class DoorUnlockPatch
     {
-        static void Prefix() => WorldActions.Depth++;
+        static void Prefix() => Coop.Guards.Depth++;
         static void Postfix(Door __instance)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing)
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
             {
                 WorldActions.Send(
                     WorldActions.Action.DoorUnlock, __instance.gameObject);
@@ -2276,8 +2250,8 @@ namespace DarkwoodMP.World
         {
             bool was = door.blocked;
             door.unblock();
-            if (was && !door.blocked && WorldActions.Depth == 0
-                && WorldActions.Sharing)
+            if (was && !door.blocked && Coop.Guards.Depth == 0
+                && Coop.Guards.Sharing)
             {
                 WorldActions.Send(
                     WorldActions.Action.DoorUnblock, door.gameObject);
@@ -2291,7 +2265,7 @@ namespace DarkwoodMP.World
         static void Prefix(
             Window __instance, out WorldActions.WindowState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.WindowState.Of(__instance);
         }
 
@@ -2299,7 +2273,7 @@ namespace DarkwoodMP.World
             Window __instance, int destHealth, bool byPlayer,
             WorldActions.WindowState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.WindowState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2315,14 +2289,14 @@ namespace DarkwoodMP.World
         static void Prefix(
             Window __instance, out WorldActions.WindowState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.WindowState.Of(__instance);
         }
 
         static void Postfix(
             Window __instance, bool silent, WorldActions.WindowState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.WindowState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2344,7 +2318,7 @@ namespace DarkwoodMP.World
         static bool Prefix(
             Window __instance, out WorldActions.WindowState __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = WorldActions.WindowState.Of(__instance);
             return !BreakSync.HostsHit();
         }
@@ -2353,7 +2327,7 @@ namespace DarkwoodMP.World
             Window __instance, int damage, bool normalHit,
             WorldActions.WindowState __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && !__state.Same(WorldActions.WindowState.Of(__instance)))
             {
                 WorldActions.Send(
@@ -2420,9 +2394,9 @@ namespace DarkwoodMP.World
         static void Prefix(
             Trigger __instance, Collider other, out UnityEngine.Object __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = null;
-            if (WorldActions.Depth != 1 || !WorldActions.Sharing
+            if (Coop.Guards.Depth != 1 || !Coop.Guards.Sharing
                 || !Net.Session.Instance.IsClient || __instance.loadedFromSave)
             {
                 return;
@@ -2451,7 +2425,7 @@ namespace DarkwoodMP.World
 
             float healthBefore = HealthBefore;
             HealthBefore = -1f;
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __instance == null)
             {
                 return;
@@ -2721,10 +2695,10 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Item), nameof(Item.switchTriggerState))]
     static class TrapSwitchedPatch
     {
-        static void Prefix() => WorldActions.Depth++;
+        static void Prefix() => Coop.Guards.Depth++;
         static void Postfix(Item __instance)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing
                 && __instance != null
                 && __instance.GetComponent<Trigger>() != null)
             {
@@ -2740,10 +2714,10 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Item), nameof(Item.turnOn))]
     static class ItemOnPatch
     {
-        static void Prefix() => WorldActions.Depth++;
+        static void Prefix() => Coop.Guards.Depth++;
         static void Postfix(Item __instance)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing)
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
             {
                 WorldActions.Send(
                     WorldActions.Action.ItemOn, __instance.gameObject);
@@ -2754,10 +2728,10 @@ namespace DarkwoodMP.World
     [HarmonyPatch(typeof(Item), nameof(Item.turnOff))]
     static class ItemOffPatch
     {
-        static void Prefix() => WorldActions.Depth++;
+        static void Prefix() => Coop.Guards.Depth++;
         static void Postfix(Item __instance)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing)
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing)
             {
                 WorldActions.Send(
                     WorldActions.Action.ItemOff, __instance.gameObject);
@@ -2780,7 +2754,7 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Character __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.alive;
         }
 
@@ -2792,7 +2766,7 @@ namespace DarkwoodMP.World
                 Combat.HostileNpcs.Died(__instance); // a replayed death too
             }
 
-            if (!WorldActions.Outermost() || !WorldActions.Sharing
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing
                 || __instance == null || __instance.npc == null || !__state)
             {
                 return;
@@ -2821,7 +2795,7 @@ namespace DarkwoodMP.World
     {
         static bool Prefix()
         {
-            if (!WorldActions.Replaying)
+            if (!Coop.Guards.Replaying)
             {
                 return true;
             }
@@ -2855,7 +2829,7 @@ namespace DarkwoodMP.World
         static void Prefix(Player __instance)
         {
             if (!__instance.disarmingTrap || !NetEnemies.ClientMode
-                || !WorldActions.Sharing)
+                || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -2899,7 +2873,7 @@ namespace DarkwoodMP.World
                     return;
                 }
 
-                WorldActions.Replaying = true;
+                Coop.Guards.Replaying = true;
                 try
                 {
                     if (ok && result == "1")
@@ -2921,7 +2895,7 @@ namespace DarkwoodMP.World
                 }
                 finally
                 {
-                    WorldActions.Replaying = false;
+                    Coop.Guards.Replaying = false;
                 }
             });
         }
@@ -2982,13 +2956,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Locked __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.locked;
         }
 
         static void Postfix(Locked __instance, bool __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing && __state
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing && __state
                 && !__instance.locked)
             {
                 LockShare.Send(__instance, 0f);
@@ -3001,13 +2975,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Locked __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.locked;
         }
 
         static void Postfix(Locked __instance, bool __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing && __state
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing && __state
                 && !__instance.locked)
             {
                 LockShare.Send(__instance, 1f);
@@ -3020,13 +2994,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Locked __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.locked;
         }
 
         static void Postfix(Locked __instance, bool __state)
         {
-            if (WorldActions.Outermost() && WorldActions.Sharing && __state
+            if (Coop.Guards.Outermost() && Coop.Guards.Sharing && __state
                 && !__instance.locked)
             {
                 LockShare.Send(__instance, 2f);
@@ -3055,7 +3029,7 @@ namespace DarkwoodMP.World
                 return;
             }
 
-            if (WorldActions.Depth == 0 && WorldActions.Sharing
+            if (Coop.Guards.Depth == 0 && Coop.Guards.Sharing
                 && Session.Instance.IsHost)
             {
                 WorldActions.Send(
@@ -3082,7 +3056,7 @@ namespace DarkwoodMP.World
         static void Postfix(Item __instance, bool __state)
         {
             if (__instance == null || __state || !__instance.searched
-                || !WorldActions.Sharing)
+                || !Coop.Guards.Sharing)
             {
                 return;
             }
@@ -3107,13 +3081,13 @@ namespace DarkwoodMP.World
     {
         static void Prefix(Padlock __instance, out bool __state)
         {
-            WorldActions.Depth++;
+            Coop.Guards.Depth++;
             __state = __instance.locked;
         }
 
         static void Postfix(Padlock __instance, bool manually, bool __state)
         {
-            if (!WorldActions.Outermost() || !WorldActions.Sharing || !__state
+            if (!Coop.Guards.Outermost() || !Coop.Guards.Sharing || !__state
                 || __instance.locked)
             {
                 return;

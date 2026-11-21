@@ -373,7 +373,7 @@ namespace DarkwoodMP.World
         /// Core.AddPrefab while Core.loadingGame is set, and keeps
         /// dontFireTriggers set until 2 s after it ends. Nothing made or
         /// changed then is a player's doing, so none of it is shared
-        /// (WorldActions.Sharing).
+        /// (Coop.Guards.Sharing).
         /// </summary>
         public static bool Loading =>
             Core.loadingGame || !Core.worldGenFinished()

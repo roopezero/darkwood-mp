@@ -83,7 +83,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal void Poured(Component c, float delta)
         {
-            if (!WorldActions.Sharing || WorldActions.Replaying
+            if (!Coop.Guards.Sharing || Coop.Guards.Replaying
                 || Mathf.Abs(delta) < 0.0001f)
             {
                 return;
@@ -112,7 +112,7 @@ namespace DarkwoodMP.World
 
         public void Update()
         {
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 _pending.Clear();
                 return;
@@ -548,7 +548,7 @@ namespace DarkwoodMP.World
                 fuel = Mathf.Clamp(fuel, 0f, max);
             }
 
-            WorldActions.Replaying = true;
+            Coop.Guards.Replaying = true;
             try
             {
                 if (g != null)
@@ -581,7 +581,7 @@ namespace DarkwoodMP.World
             }
             finally
             {
-                WorldActions.Replaying = false;
+                Coop.Guards.Replaying = false;
             }
 
             // an open saw's "Fuel" label, the fuel bar under the cursor
@@ -695,7 +695,7 @@ namespace DarkwoodMP.World
         [HarmonyPriority(Priority.First)]
         static void Prefix()
         {
-            if (WorldActions.Sharing && !WorldActions.Replaying)
+            if (Coop.Guards.Sharing && !Coop.Guards.Replaying)
             {
                 FuelSync instance = FuelSync.Instance;
                 if (instance != null)
@@ -732,7 +732,7 @@ namespace DarkwoodMP.World
             __state = null;
             var s = Session.Instance;
             var p = Player.Instance;
-            if (s != null && s.IsClient && p != null && WorldActions.Sharing)
+            if (s != null && s.IsClient && p != null && Coop.Guards.Sharing)
             {
                 __state = p.electricityModifier;
                 p.electricityModifier = 0f;

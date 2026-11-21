@@ -346,7 +346,7 @@ namespace DarkwoodMP.World
 
         public static void Update()
         {
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 if (_watched.Count > 0)
                 {
@@ -495,7 +495,7 @@ namespace DarkwoodMP.World
         /// </summary>
         internal static void Opened(Door d)
         {
-            if (!WorldActions.Sharing || WorldActions.Replaying || d == null
+            if (!Coop.Guards.Sharing || Coop.Guards.Replaying || d == null
                 || d.body == null || !d.opened || d.destroyed)
             {
                 return;

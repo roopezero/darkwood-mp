@@ -215,7 +215,7 @@ namespace DarkwoodMP.World
         public void Update()
         {
             ShowOthers();
-            if (!WorldActions.Sharing)
+            if (!Coop.Guards.Sharing)
             {
                 _dragging = null;
                 _claimed = false;
@@ -1883,7 +1883,7 @@ namespace DarkwoodMP.World
         private static bool Prefix(Item __instance)
         {
             var d = DragSync.Instance;
-            if (d == null || !WorldActions.Sharing || __instance == null)
+            if (d == null || !Coop.Guards.Sharing || __instance == null)
             {
                 return true;
             }
