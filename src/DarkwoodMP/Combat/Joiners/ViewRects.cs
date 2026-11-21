@@ -50,22 +50,21 @@ namespace DarkwoodMP.Combat
         }
 
         /// <summary>
-        /// Host: the half width and height to keep entered round this player;
-        /// the host's own with no session or none known.
+        /// Host: the half width and height to keep entered round this player,
+        /// if it told us (false: none known).
         /// </summary>
-        public static void For(ulong peer, out int dx, out int dy)
+        public bool TryGet(ulong peer, out int dx, out int dy)
         {
-            CoopSession coop = Coop.Current;
-            if (coop != null
-                && coop.Views._rects.TryGet(peer, out ViewRect rect))
+            if (_rects.TryGet(peer, out ViewRect rect))
             {
                 dx = rect.Dx;
                 dy = rect.Dy;
+                return true;
             }
-            else
-            {
-                World.Culling.SharedCulling.Distances(out dx, out dy);
-            }
+
+            dx = 0;
+            dy = 0;
+            return false;
         }
 
         private static RectSendFacts FactsOf(Session s)

@@ -352,11 +352,17 @@ namespace DarkwoodMP.World.Culling
 
         /// <summary>
         /// Another player's centre, with the rect their own game keeps running
-        /// (ViewRects).
+        /// (ViewRects); the host's own with no session or none known.
         /// </summary>
         private static Centre Of(NetPlayerProxy p)
         {
-            ViewRects.For(p.Owner, out int dx, out int dy);
+            CoopSession coop = Coop.Current;
+            if (coop == null
+                || !coop.Views.TryGet(p.Owner, out int dx, out int dy))
+            {
+                Distances(out dx, out dy);
+            }
+
             return CentreAt(p.transform.position, dx, dy);
         }
 
