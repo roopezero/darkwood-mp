@@ -16,9 +16,7 @@ the running session; helpers that keep no state (such as `TestWorld`,
 instance on `ModHost` because transpilers call them (`MenuSkin`, `PixelFont`,
 `MenuWindows`, parts of `Threat`); the map test steps' own fields, which are
 test-only; and the Harmony patch classes, which Harmony requires to be
-static. The in-game test run that checks the whole
-refactor is still to do; [MIGRATION_PLAN.md](MIGRATION_PLAN.md) has what is
-left.
+static.
 
 ## The idea: a core of rules, and a thin shell around the game
 
