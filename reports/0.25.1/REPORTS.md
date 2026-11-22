@@ -56,4 +56,3 @@ Go through every story progression trigger, not just the ones that are known to 
 ### R10. Bug: Player names show through cutscenes and menus
 
 Player name labels are drawn on top of cutscenes and menus. They should be hidden while a cutscene or menu is showing.
-

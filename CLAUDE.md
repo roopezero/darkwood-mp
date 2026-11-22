@@ -36,7 +36,7 @@ src/DarkwoodMP.Core/Net/        Session (handshake, relay), TcpBackend + PortMap
                                 Protocol (Version), PacketWriter/PacketReader, ServerBrowser/ServerInfo, PlayerKey, Steam/ (rules)
 src/DarkwoodMP.MapTests/        the in-game map test steps (World/MapScenario*), a second plugin that needs --dwmp-test-control;
                                 deployed to the test game folders only, never in the zips
-src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0007
+src/DarkwoodMP.Analyzers/       the build's formatting rules, DW0001 to DW0008
 src/GameReferences.props        the game's paths and DLL references
 tests/DarkwoodMP.Core.Tests/    unit tests of the core (net8.0, xUnit, Shouldly)
 tests/DarkwoodMP.Analyzers.Tests/ unit tests of the formatting rules on small pieces of code (net8.0, xUnit, Shouldly)
@@ -90,7 +90,7 @@ docs/                          GUIDE, TECHNICAL, DEVELOPMENT, INTERACTIONS (gaps
 - **Game quirks:** the game has its own global `RandomNumberGenerator` and `Button` types that shadow .NET's (qualify them). Darkwood counts a new day at dawn, not midnight. `Player` is a 9000-line singleton, so don't instantiate it.
 - **Comments and docs:** plain, concrete sentences that say what happens and why; no hype.
 - **Naming and size (`docs/ARCHITECTURE.md`):** short real words for variables and parameters (single letters only in short scopes); the type carries the unit (`Vec2`, `Seconds`) and the class says whose; say which version of a value it is (`Reported`, `Accepted`, never `Good`); at most three parameters, more become a facts struct; no `bool` that switches behaviour (split the method); a call that needs named arguments means the method should change; `PascalCase` public members, `_camelCase` private fields; files about 600 lines at most, one main type each.
-- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); a blank line after a statement, member or accessor that holds a `{ }` pair spread over lines, anywhere in it (so after `});`, `};` and `}).Max();` too, but a `{ }` on one line doesn't count), unless a `}` or the end of the file comes next; a comment or directive line isn't blank, so the blank line goes before it; at most 80 columns, comments included; no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in every project.
+- **Formatting (`docs/ARCHITECTURE.md`, enforced by the build):** braces on every `if`/`else`/loop, even around one statement, on their own lines (C# style); no one-line blocks (`=>` lambdas and expression-bodied members are allowed); a blank line after a statement, member or accessor that holds a `{ }` pair spread over lines, anywhere in it (so after `});`, `};` and `}).Max();` too, but a `{ }` on one line doesn't count), unless a `}` or the end of the file comes next; a comment or directive line isn't blank, so the blank line goes before it; at most 80 columns, comments included; every file ends with one line break, no blank line after it (DW0008; `tools/check-file-ends.sh` for non-C# files); no ternary `?:`, no `??`, `??=` or `?.` (use an `if`; on Unity objects they skip Unity's destroyed check). Errors in every project.
 
 ## Docs
 

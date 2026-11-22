@@ -658,6 +658,8 @@ unit_tests() (
   dotnet test "$ROOT/tests/DarkwoodMP.Core.Tests" -c Release --nologo -v:q \
     --blame-hang-timeout 60s --blame-hang-dump-type none
 )
+echo "=== file ends"
+"$ROOT/tools/check-file-ends.sh" || exit 1
 echo "=== unit tests"
 unit_tests || { echo "FAIL: the unit tests failed, so the game wasn't started"; exit 1; }
 # The games are started with setsid, so they outlive this script if it is killed (a time-out, a stopped task),

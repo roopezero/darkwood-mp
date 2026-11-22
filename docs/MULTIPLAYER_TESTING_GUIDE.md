@@ -135,4 +135,3 @@ Every test runs on localhost, where messages arrive at once. `DWMP_LAG_MS=N` in 
 (the games inherit it) holds every message a game gets for N ms before handling it, in order (`Net/Session.cs`), as an
 internet link does: `DWMP_LAG_MS=120 MAP_SCENARIO=map4_push tools/run-test.sh map4`. Without it, a client's own push
 coming back from the host a moment later (P01 in `reports/0.27.0/TRIAGE.md`) never showed.
-

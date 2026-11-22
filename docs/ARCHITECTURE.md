@@ -418,12 +418,16 @@ sealed class PlayerMovement
   shorthand, on Unity objects these are wrong: Unity reports a destroyed
   object as `== null`, but `??` and `?.` skip that check and use the
   destroyed object anyway.
+- **Every file ends with one line break**: the last line has one, and no
+  blank line follows it.
 
 The build enforces these. `.editorconfig` makes a missing brace and a brace
 at the end of a line errors (with `EnforceCodeStyleInBuild`), and
 `src/DarkwoodMP.Analyzers` fails the build on a one-line block, a missing
-blank line after a block, a line over 80 columns, `?:`, `??`, `??=` and `?.`
-(rules DW0001 to DW0007). They are errors in every project, the plugin
+blank line after a block, a line over 80 columns, `?:`, `??`, `??=`, `?.`
+and a file that doesn't end with one line break (rules DW0001 to DW0008).
+`tools/check-file-ends.sh` checks the ends of every other file
+(docs, scripts, Python tests), and `tools/run-test.sh` runs it first. They are errors in every project, the plugin
 included: one formatting pass has been over all of its code. `tests/DarkwoodMP.Analyzers.Tests` runs each rule on small pieces of
 code, with a case that fires and one that stays quiet.
 

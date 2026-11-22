@@ -537,4 +537,3 @@ namespace DarkwoodMP.World.Hideout
         }
     }
 }
-

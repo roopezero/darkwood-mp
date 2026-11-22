@@ -80,6 +80,15 @@ namespace DarkwoodMP.Analyzers
                 DiagnosticSeverity.Warning,
                 true);
 
+        static readonly DiagnosticDescriptor FileEnd =
+            new DiagnosticDescriptor(
+                "DW0008",
+                "File doesn't end with one line break",
+                "End the file with one line break: {0}",
+                Category,
+                DiagnosticSeverity.Warning,
+                true);
+
         public override ImmutableArray<DiagnosticDescriptor>
             SupportedDiagnostics =>
                 ImmutableArray.Create(
@@ -89,7 +98,8 @@ namespace DarkwoodMP.Analyzers
                     Coalesce,
                     CoalesceAssign,
                     NullConditional,
-                    BlankLine);
+                    BlankLine,
+                    FileEnd);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -99,6 +109,7 @@ namespace DarkwoodMP.Analyzers
 
             context.RegisterSyntaxTreeAction(CheckLines);
             context.RegisterSyntaxTreeAction(CheckBlankLines);
+            context.RegisterSyntaxTreeAction(CheckFileEnd);
             context.RegisterSyntaxNodeAction(
                 CheckBraces,
                 SyntaxKind.Block,
@@ -151,6 +162,57 @@ namespace DarkwoodMP.Analyzers
                 context.ReportDiagnostic(
                     Diagnostic.Create(BlankLine, last.GetLocation()));
             }
+        }
+
+        /// A file ends with one line break: the last line has one, and no
+        /// blank line follows it. Without one, tools that read line by line
+        /// drop or join the last line, and the next line added to the file
+        /// changes two lines in the diff.
+        static void CheckFileEnd(SyntaxTreeAnalysisContext context)
+        {
+            var text = context.Tree.GetText(context.CancellationToken);
+            if (text.Length == 0)
+            {
+                return;
+            }
+
+            // A file that ends with a line break has an empty last line in
+            // text.Lines, after that break.
+            var lines = text.Lines;
+            var last = lines[lines.Count - 1];
+            if (last.Span.Length != 0)
+            {
+                var end = TextSpan.FromBounds(last.Start, last.End);
+                Report(context, end, "the last line has none");
+                return;
+            }
+
+            var blank = lines.Count - 1;
+            while (blank > 0 && IsBlank(lines[blank - 1]))
+            {
+                blank -= 1;
+            }
+
+            if (blank == lines.Count - 1)
+            {
+                return;
+            }
+
+            var extra = TextSpan.FromBounds(lines[blank].Start, text.Length);
+            Report(context, extra, "blank lines follow the last one");
+        }
+
+        static bool IsBlank(TextLine line) =>
+            string.IsNullOrWhiteSpace(line.ToString());
+
+        static void Report(
+            SyntaxTreeAnalysisContext context,
+            TextSpan span,
+            string problem)
+        {
+            var place = Location.Create(context.Tree, span);
+            context.ReportDiagnostic(
+                Diagnostic.Create(FileEnd, place, problem));
         }
 
         static void CheckBraces(SyntaxNodeAnalysisContext context)
