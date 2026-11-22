@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <!-- The compiler loads analyzers as netstandard2.0. -->
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <!-- Bans APIs an analyzer must not use, such as file IO (RS1035). -->
+    <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
+    <!-- RS1001 (a missing [DiagnosticAnalyzer]) is the only sign that every
+         rule has gone quiet, so this project's warnings stop its build. -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- These rules are private to this repo and never ship as a package. -->
+    <NoWarn>$(NoWarn);RS2008</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- 4.8.0 is the compiler of the first 8.0 SDK, so every 8.0 SDK can
+         load this analyzer. Newer than the running compiler means CS9057
+         and no rules at all. -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp"
+                      Version="4.8.0"
+                      PrivateAssets="all" />
+  </ItemGroup>
+</Project>

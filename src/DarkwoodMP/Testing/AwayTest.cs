@@ -1,0 +1,266 @@
+using System.Collections;
+using System.Collections.Generic;
+
+using DarkwoodMP.Combat;
+using DarkwoodMP.Sync;
+using DarkwoodMP.Sync.Players;
+using UnityEngine;
+
+namespace DarkwoodMP.World
+{
+    /// <summary>
+    /// "--dwmp-test-away" (host, with --dwmp-dummy): once the dummy is in the
+    /// world, the host's own player is away for a few seconds, as in a separate
+    /// location (the world's grid is left and an empty stand-in grid is
+    /// current), and comes back. Logs how many enemies near the dummy are
+    /// active before and while the host is away (the world's grid is kept
+    /// entered around other players, SharedCulling), and whether the
+    /// dummy's puppet is hidden while the host is away (a player in the main
+    /// world isn't shown in a location). Before that, once another player has
+    /// joined, the draggable object nearest the host's player is knocked away
+    /// (its rigidbody given a speed, as a kick or a blast would), and the push
+    /// sent when it comes to rest is logged. At the end it waits for the
+    /// location the observer asked about (LocationAsk) to be loaded here, where
+    /// it was promised (World.Places.Locations logs the spot and turn it got
+    /// next to the ones promised).
+    /// </summary>
+    public static class AwayTest
+    {
+        /// <summary>
+        /// Host: a location promised to a joiner is still to load, or none has
+        /// loaded yet.
+        /// </summary>
+        private static bool LoadingForOthers()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return false;
+            }
+
+            var locations = coop.Locations;
+            return locations.Busy || locations.LoadedForOthers == 0;
+        }
+
+        private static int ActiveNear(Vector3 at)
+        {
+            int n = 0;
+            foreach (var c in Object.FindObjectsOfType<Character>())
+            {
+                if (NetEnemies.Eligible(c) && c.alive
+                    && c.gameObject.activeInHierarchy
+                    && (c.transform.position - at).sqrMagnitude < 1500f * 1500f)
+                {
+                    n++;
+                }
+            }
+
+            return n;
+        }
+
+        private static IEnumerator Push()
+        {
+            var me = Player.Instance.transform.position;
+            Item best = null;
+            float bestD = 500f * 500f;
+            foreach (var it in Object.FindObjectsOfType<Item>())
+            {
+                if (!it.draggable || it.isDroppedItem
+                    || !it.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                var b = it.GetComponent<Rigidbody>();
+                if (b == null || b.isKinematic)
+                {
+                    continue;
+                }
+
+                float d = (it.transform.position - me).sqrMagnitude;
+                if (d < bestD)
+                {
+                    bestD = d;
+                    best = it;
+                }
+            }
+
+            if (best == null)
+            {
+                Plugin.Log.LogInfo(
+                    "--dwmp-test-away: no draggable object near the player to "
+                        + "push");
+                yield break;
+            }
+
+            int sent = PushesSent();
+            var from = best.transform.position;
+            var body = best.GetComponent<Rigidbody>();
+            var dir = from - me;
+            dir.y = 0f;
+            body.WakeUp();
+            Vector3 heading;
+            if (dir.sqrMagnitude > 1f)
+            {
+                heading = dir.normalized;
+            }
+            else
+            {
+                heading = Vector3.right;
+            }
+
+            body.velocity = heading * 150f;
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-away: knocked {best.name} at "
+                    + $"{from.x:0},{from.z:0} (sharing "
+                    + $"{Coop.Guards.Sharing})");
+            yield return new WaitForSeconds(4f);
+            Vector3 to;
+            if (best != null)
+            {
+                to = best.transform.position;
+            }
+            else
+            {
+                to = from;
+            }
+
+            string movedName = "it";
+            if (best != null)
+            {
+                movedName = best.name;
+            }
+
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-away: {movedName} moved "
+                    + $"{(to - from).magnitude:0} units to {to.x:0},{to.z:0}; "
+                    + $"pushes sent: {PushesSent() - sent}");
+        }
+
+        /// Pushes this game sent this session (none without one).
+        private static int PushesSent()
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return 0;
+            }
+
+            return coop.Drags.PushesSent;
+        }
+
+        public static IEnumerator Run()
+        {
+            while (!WorldShare.InWorld || Plugin.Instance.Host.Players == null
+                || !Plugin.Instance.Host.Players.HasDummy)
+            {
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(6f);
+            float wait = Time.realtimeSinceStartup + 30f;
+            while (!Coop.Guards.Sharing && Time.realtimeSinceStartup < wait)
+            {
+                yield return null;
+            }
+
+            yield return Push();
+            var dummy =
+                Plugin.Instance.Host.Players.Remotes[PlayerSync.DummyId];
+            var o = Singleton<OutsideLocations>.Instance;
+            var grid = Singleton<WorldGrid>.Instance;
+            if (o == null || grid == null || grid.currentGrid == null)
+            {
+                Plugin.Log.LogInfo("--dwmp-test-away: no world grid");
+                yield break;
+            }
+
+            Vector3 at;
+            if (dummy.Root != null)
+            {
+                at = dummy.Root.transform.position;
+            }
+            else
+            {
+                at = Vector3.zero;
+            }
+
+            int before = ActiveNear(at);
+            // What OutsideLocations.transportToLocation does to the world
+            // (leave every node of the world's grid, switch to the location's
+            // grid, refresh) and to the player's state, on an empty stand-in
+            // grid: a real location loads a scene and may start its story.
+            var world = grid.currentGrid;
+            var stand = new WorldGrid.Grid(
+                "dwmp-test-away", WorldGrid.Grid.Type.outsideLocation);
+            grid.grids.Add(stand);
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-away: {before} enemies active near the dummy; "
+                    + "the host goes away");
+            world.leave();
+            grid.setGrid(stand.name);
+            o.playerInOutsideLocation = true;
+            grid.refreshPosition(
+                Player.Instance.transform.position, instant: true, force: true);
+            yield return new WaitForSeconds(4f);
+            int during = ActiveNear(at);
+            bool shown = dummy.Root != null && dummy.Root.activeSelf;
+            WorldGrid.Grid currentGrid = grid.currentGrid;
+            string name = null;
+            if (currentGrid != null)
+            {
+                name = currentGrid.name;
+            }
+
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-away: in {name} (away "
+                    + $"{PlayerCapture.LocalAway()}): " +
+                               $"{during} enemies active near the dummy; its "
+                    + $"puppet shown: {shown}");
+            stand.leave();
+            o.playerInOutsideLocation = false;
+            grid.setGrid(world.name);
+            grid.grids.Remove(stand);
+            grid.refreshPosition(
+                Player.Instance.transform.position, instant: true, force: true);
+            yield return new WaitForSeconds(1f);
+            // The observer (worldobs.py --ask-location) asked where a location
+            // stands: it's loaded here too, without going there.
+            wait = Time.realtimeSinceStartup + 60f;
+            while (LoadingForOthers() && Time.realtimeSinceStartup < wait)
+            {
+                yield return null;
+            }
+
+            int loaded = 0;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                loaded = coop.Locations.LoadedForOthers;
+            }
+
+            string place = "the world";
+            if (PlayerCapture.LocalAway())
+            {
+                place = Places.Whereabouts.Current();
+            }
+
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-away: locations loaded for the others: {loaded}; "
+                    + $"our player is in {place}");
+            WorldGrid.Grid current = grid.currentGrid;
+            string gridName = null;
+            if (current != null)
+            {
+                gridName = current.name;
+            }
+
+            Plugin.Log.LogInfo(
+                $"--dwmp-test-away: back in {gridName} (away "
+                    + $"{PlayerCapture.LocalAway()}); {ActiveNear(at)} enemies "
+                    + "active near the dummy; " +
+                               "its puppet shown: "
+                    + $"{dummy.Root != null && dummy.Root.activeSelf}; done");
+        }
+    }
+}

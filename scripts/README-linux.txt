@@ -3,6 +3,11 @@ DarkwoodMP - online co-op for Darkwood
 
 Everyone who plays together needs the same version of the mod.
 
+To update, extract the new zip over the old install in the same way. The
+mod is two files in BepInEx/plugins/DarkwoodMP/ (DarkwoodMP.dll and
+DarkwoodMP.Core.dll); both must come from the same zip, or the mod won't
+start.
+
 
 INSTALL (Linux, native build)
 -----------------------------

@@ -1,0 +1,36 @@
+using DarkwoodMP.World;
+using UnityEngine;
+
+namespace DarkwoodMP.Menus
+{
+    /// <summary>
+    /// The game confines the mouse to its window from the start (Core.Start,
+    /// MainMenu, Controller on a screen change) and never lets it go, so on a
+    /// second monitor the mouse can't leave the main menu either. The mouse is
+    /// confined only while playing: in a world, with no menu (the main or pause
+    /// menu, the co-op panel) open and nothing loading. Set each frame after
+    /// the game's own code, which sets it back now and then.
+    /// </summary>
+    public static class CursorLock
+    {
+        public static void LateUpdate(bool panelOpen)
+        {
+            bool playing = WorldShare.InWorld && !Core.mainMenu
+                && !Core.loadingGame && !panelOpen;
+            CursorLockMode want;
+            if (playing)
+            {
+                want = CursorLockMode.Confined;
+            }
+            else
+            {
+                want = CursorLockMode.None;
+            }
+
+            if (UnityEngine.Cursor.lockState != want)
+            {
+                UnityEngine.Cursor.lockState = want;
+            }
+        }
+    }
+}

@@ -15,23 +15,24 @@ Work files go in `.cache/review/` (git-ignored): `part-*.txt` (the slices), `rev
 python3 .claude/skills/darkwood-review/partition.py .cache/review
 ```
 
-Slices: `prod*` (the mod), `test*` (MapScenario*, WorldTest and other in-game test code), `tools*` (Python peers, run-test.sh, pack.sh, launchers). Start from a clean `git status`, so every phase's changes can be seen with `git diff`.
+Slices: `prod*` (the mod, the core and the analyzers), `test*` (the unit tests, the map tests project, the plugin's `Testing/` folder and other in-game test code), `tools*` (Python peers, run-test.sh, pack.sh, launchers). Start from a clean `git status`, so every phase's changes can be seen with `git diff`.
 
 ## Rules every agent gets (paste them into each prompt)
 
-- Read `CLAUDE.md` first: its "Rules the code depends on" bind every change.
+- Read `CLAUDE.md` first: its "Rules the code depends on" bind every change, and the code follows `docs/ARCHITECTURE.md` (decisions as rules in `src/DarkwoodMP.Core`, state on `CoopSession` or `ModHost` with no new statics, thin patches that check `Coop.Current`), so a change keeps to it.
 - **Don't change behaviour that other code or the tests depend on by name or text:**
   - wire bytes (`MsgType` payloads, `Protocol.Version`): a simplification never touches them;
   - log line text: `tools/run-test.sh` and the Python tests wait on and grep the game's log lines, so keep every `Plugin.Log` message exactly as it is (search `tools/` for a line before thinking of changing it);
-  - `--dwmp-*` arguments, test-control commands (`TestControl.cs`), `MapScenario.Add` step names, `StateDump` section names and keys;
+  - `--dwmp-*` arguments, test-control commands (`src/DarkwoodMP/Testing/TestControl.cs`), `MapScenario.Add` step names, `StateDump` section names and keys;
   - Harmony patches: the patch method's parameter names (`__instance`, `__result`, `___field`, and the original's argument names), the patched method names and argument types, `[HarmonyPatch]` targets, and anything found by reflection or by name (`AccessTools.Method(..., "Name")`, `Traverse`);
   - public members used from another slice: if you change one, grep the whole of `src/` and `tools/` first.
 - No `Steamworks` type outside `SteamBackend`, `Lobby`, `SteamTransport` (the build checks this).
 - **Recursive deletes must be guarded.** No bare `rm -rf "$x"`, `rm -rf "$dir/"*`, `Directory.Delete(path, true)` or `shutil.rmtree(p)` on a path built from a variable. Shell: use the `safe_rm` helper in `tools/lib.sh` (it refuses an empty path, `/`, `$HOME`, and anything that doesn't resolve under one of the allowed roots it's given), with `set -u` on. C#: `WorldFiles.DeleteTree(path)` (refuses anything outside the mod's cache and save-redirect folders). Python: the same check before `rmtree`. A `mktemp -d` directory is removed with a check that it's still under the temp directory.
 - Comments: plain, concrete sentences (see CLAUDE.md). Don't add comments that narrate the change.
 - **Building:** builds share `obj/`, so serialize them with a lock and don't deploy:
-  `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:$PATH; flock -o .cache/review/build.lock dotnet build src/DarkwoodMP -c Release -p:DeployToGame=false -nodeReuse:false -p:UseSharedCompilation=false 2>&1 | grep -E "error|warn|Build succeeded" | sort -u | head -40`.
-  (`-o` and no node reuse or compiler server matter: a leftover compiler server inherits the lock otherwise and every later build waits for ever.) Other agents edit other files at the same time: an error in a file outside your slice isn't yours; build again a minute later if it blocks you. Python: `python3 -m py_compile FILE`. Shell: `bash -n FILE` (and `shellcheck` if it is installed).
+  `export DOTNET_ROOT=~/.dotnet PATH=~/.dotnet:$PATH; flock -o .cache/review/build.lock dotnet build src/DarkwoodMP -c Release -p:DeployToGame=false -nodeReuse:false -p:UseSharedCompilation=false -clp:ErrorsOnly 2>&1 | grep -E "error|Build succeeded" | sort -u | head -40`.
+  (`-o` and no node reuse or compiler server matter: a leftover compiler server inherits the lock otherwise and every later build waits for ever. `-clp:ErrorsOnly` keeps the output short.) Other agents edit other files at the same time: an error in a file outside your slice isn't yours; build again a minute later if it blocks you. Python: `python3 -m py_compile FILE`. Shell: `bash -n FILE` (and `shellcheck` if it is installed).
+- **Unit tests:** `dotnet test tests/DarkwoodMP.Core.Tests -c Release --blame-hang-timeout 60s --blame-hang-dump-type none`, through the same lock. They need no game, so run them after any change to `src/DarkwoodMP.Core`. `dotnet test tests/DarkwoodMP.Analyzers.Tests` with the same options tests the formatting rules; run it after any change to `src/DarkwoodMP.Analyzers`.
 - **Never** launch the game or `tools/run-test.sh`: one game per machine, and the main session runs the tests at the end.
 - Don't commit, don't touch `git` state (no stash, checkout, reset).
 
@@ -69,7 +70,7 @@ The simplify pass can break things the compiler doesn't catch (one run left a lo
 
 ## 4. Build, test, report
 
-1. `dotnet build src/DarkwoodMP -c Release` (deploys): no errors, no new warnings.
+1. The release check from the `darkwood-release` skill (it deploys): no errors and no warnings.
 2. Tests, in the background, one run at a time (see `darkwood-test`): `tools/run-test.sh all`, then `tools/run-test.sh map` if the fixes touched sync. Every item must end with `no exceptions` and `your saves: unchanged`. A failure: read its log, check it against `git stash`-free reasoning (compare with the last release's behaviour in the CHANGELOG), and fix it or dispatch an agent to.
 3. Docs: if behaviour players see changed, update `docs/` and `CHANGELOG.md` (see CLAUDE.md "Docs"); keep `docs/DEVELOPMENT.md` true for any tool that changed.
 4. Report to the user: the majors fixed (one line each), the ones left and why, lines removed by the simplify pass (`git diff --stat | tail -1`), and the test results. Don't commit unless asked (or the `darkwood-release` skill is run).

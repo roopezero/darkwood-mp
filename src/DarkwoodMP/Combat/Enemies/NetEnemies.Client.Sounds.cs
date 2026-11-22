@@ -1,0 +1,493 @@
+using System.Collections.Generic;
+using System.Linq;
+using DarkwoodMP.Combat.Enemies;
+using DarkwoodMP.Net;
+using DarkwoodMP.Sync;
+using DarkwoodMP.World;
+using UnityEngine;
+
+namespace DarkwoodMP.Combat
+{
+    /// <summary>
+    /// The client side: animation, despawns and sounds. See
+    /// NetEnemies.cs.
+    /// </summary>
+    internal sealed partial class NetEnemies
+    {
+        /// <summary>
+        /// Client: Character.setDeathCollider stopped part way on a copy (it
+        /// threw). Its first step, the Item that makes the corpse searchable,
+        /// is done by then; the rest is done here, each part only if what it
+        /// needs is there: the body becomes a trigger (or our player bumps into
+        /// a corpse the host's player walks through), takes the death collider
+        /// of the clip it ended on, stops counting as active, and lies at a
+        /// corpse's height. An NPC's death (its flags, its death inventory)
+        /// comes from the host.
+        /// </summary>
+        private static void DeathColliderRest(Character c, System.Exception why)
+        {
+            try
+            {
+                if (c.GetComponent<Item>() == null)
+                {
+                    c.gameObject.AddComponent<Item>().name =
+                        c.name.ToLower() + "_corpse";
+                }
+
+                if (!c.dontSwitchColliderTriggerOnDeath && c.collider != null)
+                {
+                    c.collider.isTrigger = true;
+                }
+
+                var a = c.GetComponent<tk2dSpriteAnimator>();
+                string clip = null;
+                if (a != null && a.CurrentClip != null)
+                {
+                    clip = a.CurrentClip.name;
+                }
+
+                if (clip != null && c.capsuleCollider != null
+                    && c.deathColliders != null)
+                {
+                    foreach (var dc in c.deathColliders)
+                    {
+                        if (dc != null && dc.identifier == clip)
+                        {
+                            c.capsuleCollider.center = dc.center;
+                            c.capsuleCollider.radius = dc.radius;
+                            c.capsuleCollider.height = dc.height;
+                        }
+                    }
+                }
+
+                c.isActive = false;
+                System.Reflection.MethodInfo yPosAfterDeath = YPosAfterDeath;
+                if (yPosAfterDeath != null)
+                {
+                    yPosAfterDeath.Invoke(c, null);
+                }
+
+                string text = "none";
+                if (a != null)
+                {
+                    text = "there";
+                }
+
+                string colliderState = "none";
+                if (c.collider != null)
+                {
+                    colliderState = "there";
+                }
+
+                string capsuleState = "none";
+                if (c.capsuleCollider != null)
+                {
+                    capsuleState = "there";
+                }
+
+                string shownClip = clip;
+                if (shownClip == null)
+                {
+                    shownClip = "none";
+                }
+
+                List<ColliderInfo> deathColliders = c.deathColliders;
+                int count = -1;
+                if (deathColliders != null)
+                {
+                    count = deathColliders.Count;
+                }
+
+                string stackTrace = why.StackTrace;
+                string trimmedLine = null;
+                if (stackTrace != null)
+                {
+                    string line = stackTrace.Split('\n')[0];
+                    if (line != null)
+                    {
+                        trimmedLine = line.Trim();
+                    }
+                }
+
+                Plugin.Log.LogInfo(
+                    $"{c.name}'s corpse settled here by the mod: the game's "
+                        + $"setDeathCollider stopped ({why.Message}; " +
+                                   $"animator {text}, clip {shownClip}, "
+                        + $"collider {colliderState}, " +
+                                   $"capsule {capsuleState}, death colliders "
+                        + $"{count}; at {trimmedLine}); trigger now "
+                        + $"{(c.collider != null && c.collider.isTrigger)}");
+            }
+            catch (System.Exception e)
+            {
+                System.Exception innerException = e.InnerException;
+                string message = null;
+                if (innerException != null)
+                {
+                    message = innerException.Message;
+                }
+
+                if (message == null)
+                {
+                    message = e.Message;
+                }
+
+                Plugin.Log.LogWarning(
+                    $"Couldn't settle {c.name}'s corpse: {message}");
+            }
+        }
+
+        private static void ApplyAnim(
+            tk2dSpriteAnimator a, int clipHash, int frame, bool playing)
+        {
+            // never let a puppet's frames act (attack, sound) here
+            a.AnimationEventTriggered = CopyFrameEvent;
+            a.AnimationCompleted = null;
+            var cur = a.CurrentClip;
+            var step = CopyStateRules.Clip(ClipOf(a, clipHash, frame));
+            if (step == ClipStep.Skip)
+            {
+                return;
+            }
+
+            if (step == ClipStep.Switch)
+            {
+                foreach (var clip in a.Library.clips)
+                {
+                    if (clip != null && StableHash.Of(clip.name) == clipHash)
+                    {
+                        a.PlayFromFrame(
+                            clip,
+                            CopyStateRules.StartFrame(
+                                frame, clip.frames.Length));
+                        break;
+                    }
+                }
+            }
+            // More than 2 frames off: move the copy's clip time to the host's
+            // frame. (SetFrame would change only the sprite shown; the next
+            // animator update goes back to the copy's own clip time, so the
+            // copy flicked to the host's frame and back on every update and
+            // stayed off, as a world rabbit did 3 frames ahead.)
+            else if (step == ClipStep.Replay)
+            {
+                a.PlayFromFrame(cur, frame);
+            }
+
+            var play = CopyStateRules.Play(playing, a.Playing, a.Paused);
+            if (play == PlayStep.Pause)
+            {
+                a.Pause();
+            }
+            else if (play == PlayStep.Resume)
+            {
+                a.Resume();
+            }
+        }
+
+        /// <summary>
+        /// The animator and the host's clip and frame as
+        /// CopyStateRules.Clip sees them.
+        /// </summary>
+        private static ClipFacts ClipOf(
+            tk2dSpriteAnimator a,
+            int clipHash,
+            int frame)
+        {
+            var cur = a.CurrentClip;
+            bool same = cur != null && StableHash.Of(cur.name) == clipHash;
+            bool frames = same && cur.frames != null;
+            int count = 0;
+            if (frames)
+            {
+                count = cur.frames.Length;
+            }
+
+            // read only for the clip it plays, as before
+            int current = 0;
+            if (same)
+            {
+                current = a.CurrentFrame;
+            }
+
+            return new ClipFacts
+            {
+                Clip = clipHash,
+                Frame = frame,
+                Library = a.Library != null,
+                Same = same,
+                Current = current,
+                HasFrames = frames,
+                Frames = count,
+            };
+        }
+
+        /// <summary>
+        /// Client: a copy's animation events. Of what Character.OnAniEvent
+        /// does, only "TweenShadows" (fading the character's extra shadows out
+        /// or in with the animation) is played here: it changes how the copy
+        /// looks and nothing else. Attacks, sounds and the rest are the host's.
+        /// </summary>
+        private static void CopyFrameEvent(
+            tk2dSpriteAnimator a, tk2dSpriteAnimationClip clip, int frame)
+        {
+            try
+            {
+                tk2dSpriteAnimationFrame f = null;
+                if (clip != null)
+                {
+                    f = clip.GetFrame(frame);
+                }
+
+                if (f == null || !CopyStateRules.PlaysEvent(f.eventInfo))
+                {
+                    return;
+                }
+
+                Character c = null;
+                if (a != null)
+                {
+                    c = a.GetComponentInParent<Character>();
+                }
+
+                if (c != null)
+                {
+                    c.tweenShadows(
+                        hide: CopyStateRules.HidesShadows(f.eventInt));
+                }
+            }
+            catch (System.Exception e)
+            {
+                Plugin.Log.LogWarning(
+                    $"Couldn't play a copy's TweenShadows: {e.Message}");
+            }
+        }
+
+        private void OnDespawn(ulong from, PacketReader r)
+        {
+            if (from != _session.HostId)
+            {
+                return;
+            }
+
+            var mark = EnemyMarkMessage.Read(r);
+            uint id = mark.Id;
+            bool keepCorpse = mark.On;
+            bool copy = _puppets.TryGetValue(id, out var p);
+            Puppet corpse = null;
+            bool kept = !copy && _corpses.TryGetValue(id, out corpse);
+            if (kept)
+            {
+                p = corpse;
+            }
+
+            var step = CopyRules.Despawn(new DespawnFacts
+            {
+                Copy = copy,
+                Corpse = kept,
+                KeepCorpse = keepCorpse,
+                Exists = p != null && p.C != null,
+            });
+
+            if (step == DespawnStep.Ignore)
+            {
+                return;
+            }
+
+            if (step == DespawnStep.ForgetCorpse
+                || step == DespawnStep.DestroyCorpse)
+            {
+                // The host's corpse is gone (it was destroyed there): so is
+                // ours.
+                _corpses.Remove(id);
+                if (step == DespawnStep.ForgetCorpse)
+                {
+                    return;
+                }
+
+                _corpseIds.Remove(p.C);
+                Plugin.Log.LogInfo(
+                    $"The host's corpse #{id} ({p.C.name}) is gone there: "
+                        + "removed here");
+                // Destroyed, our copy from the save too: the host's is out of
+                // its world for good, and a hidden copy would still be in ours
+                // (its body searchable by name, saved with our world).
+                World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
+                Object.Destroy(p.C.gameObject);
+                return;
+            }
+
+            _puppets.Remove(id);
+            if (step == DespawnStep.ForgetCopy)
+            {
+                return;
+            }
+
+            _byChar.Remove(p.C);
+            if (step == DespawnStep.KeepCorpse) // stays where it fell
+            {
+                if (!p.Settled)
+                {
+                    Settle(p);
+                }
+
+                _corpses[id] = p;
+                _corpseIds[p.C] = id;
+                Recull(p);
+                return;
+            }
+
+            StopSounds(p.C, keepDeathSound: false);
+            // An NPC the host calmed down (or one out of our range): our copy
+            // of it is ours to run again.
+            if (p.C.npc != null
+                && _coop.Hostiles.ClientStopped(p.C, id, ours: p.Ours))
+            {
+                Recull(p);
+                return;
+            }
+
+            // its window, if our player has its corpse open: gone or hidden, it
+            // is gone for us
+            World.Inventories.Containers.CloseIfOpen(p.C.gameObject);
+            if (CopyRules.Release(p.Ours) == ReleaseStep.Destroy)
+            {
+                Object.Destroy(p.C.gameObject);
+            }
+            else
+            {
+                Hide(p.C);
+                Recull(p);
+            }
+        }
+
+        private void OnSound(ulong from, PacketReader r)
+        {
+            if (from != _session.HostId)
+            {
+                return;
+            }
+
+            var sound = EnemySoundMessage.Read(r);
+            uint id = sound.Id;
+            string audio = sound.Audio;
+            float volume = sound.Volume;
+            _puppets.TryGetValue(id, out var p);
+            // Once it's dead here, only its death cry still plays (it can
+            // arrive just after the state that said so); a bark or a loop from
+            // before the host's die2, arriving late, would go on over the
+            // corpse. One of its loops (CharacterSounds.playIdleLoop: idle,
+            // aggressive while it chases, defensive, sleeping, escaping) takes
+            // the place of the copy's loop, as on the host. Played as a sound
+            // it would go on beside the copy's idle loop, and nothing would
+            // stop it. "" is the host's loop stopping
+            // (CharacterSoundsPlayIdleLoopStop).
+            var step = CopyRules.Sound(SoundOf(p, audio));
+            if (step == SoundStep.Ignore)
+            {
+                return;
+            }
+
+            var snd = p.C.sounds;
+            if (step == SoundStep.StopLoop)
+            {
+                try
+                {
+                    snd.playIdleLoop("");
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning(
+                        $"Couldn't stop {p.C.name}'s loop: {e.Message}");
+                }
+
+                return;
+            }
+
+            if (step == SoundStep.Loop)
+            {
+                try
+                {
+                    snd.playIdleLoop(audio);
+                }
+                catch (System.Exception e)
+                {
+                    Plugin.Log.LogWarning(
+                        $"Couldn't play {p.C.name}'s loop {audio}: "
+                            + $"{e.Message}");
+                }
+
+                return;
+            }
+
+            AudioController.Play(audio, p.C.transform, volume);
+        }
+
+        /// <summary>
+        /// An EnemySound's facts for the copy it names (none for null).
+        /// </summary>
+        private static SoundFacts SoundOf(Puppet p, string audio)
+        {
+            if (p == null || p.C == null)
+            {
+                return new SoundFacts { Copy = false };
+            }
+
+            var snd = p.C.sounds;
+            return new SoundFacts
+            {
+                Copy = true,
+                Dead = p.DiedAt >= 0f,
+                Sounds = snd != null,
+                DeathCry = snd != null && audio == snd.death,
+                Empty = string.IsNullOrEmpty(audio),
+                IsLoop = IsLoop(snd, audio),
+            };
+        }
+
+        // ---- shared helpers -------------------------------------------------
+
+        private static void Animators(
+            Transform root, out List<tk2dSpriteAnimator> list,
+            out List<int> paths)
+        {
+            list = new List<tk2dSpriteAnimator>();
+            paths = new List<int>();
+            foreach (var a in root.GetComponentsInChildren<tk2dSpriteAnimator>(
+                true))
+            {
+                string p;
+                if (a.transform == root)
+                {
+                    p = ".";
+                }
+                else
+                {
+                    p = a.name;
+                }
+
+                if (a.transform != root)
+                {
+                    for (var t = a.transform.parent; t != null
+                        && t != root; t = t.parent)
+                    {
+                        p = t.name + "/" + p;
+                    }
+                }
+
+                list.Add(a);
+                paths.Add(StableHash.Of(p));
+            }
+        }
+
+        private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
+
+        private static Vector3 VectorOf(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
+
+        private static Quat QuatOf(Quaternion q) =>
+            new Quat(q.x, q.y, q.z, q.w);
+
+        private static Quaternion QuaternionOf(Quat q) =>
+            new Quaternion(q.X, q.Y, q.Z, q.W);
+    }
+}

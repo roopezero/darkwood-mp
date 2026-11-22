@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>DarkwoodMP.Core</AssemblyName>
+    <!-- Not DarkwoodMP.Core: a namespace of that name hides the game's
+         global class Core from the plugin's code. -->
+    <RootNamespace>DarkwoodMP</RootNamespace>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <PathMap>$(MSBuildProjectDirectory)=/_/src/DarkwoodMP.Core</PathMap>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="DarkwoodMP.Core.Tests" />
+  </ItemGroup>
+</Project>

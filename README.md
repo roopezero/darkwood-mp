@@ -28,6 +28,8 @@ See [docs/GUIDE.md](docs/GUIDE.md) for everything the mod does, in detail.
 
 Download the zip for your system from the [Releases page](https://github.com/roopezero/darkwood-mp/releases). **Everyone who plays together needs the same version** of the mod.
 
+To update, extract the new zip over the old install in the same way. The mod is two files in `BepInEx/plugins/DarkwoodMP/` (`DarkwoodMP.dll` and `DarkwoodMP.Core.dll`); both must come from the same zip, or the mod won't start.
+
 ### Windows (Steam or GOG)
 
 1. Open the game folder. In Steam: right-click Darkwood, then *Manage*, then *Browse local files*. For GOG, it's where you installed the game, for example `C:\GOG Games\Darkwood`.

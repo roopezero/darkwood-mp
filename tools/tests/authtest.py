@@ -240,7 +240,7 @@ while time.time() < end2:  # Asker2 reads too, or what queued up for it hides th
         while True: r2.msg(0.01)
     except socket.timeout: pass
 request2("Asker2: talk to the oven now", talk(OVEN, 1))
-# Fuel (World.FuelSync): two players pour into the same generator at the same moment; the host adds both.
+# Fuel (World.Fuel): two players pour into the same generator at the same moment; the host adds both.
 # A pour is the amount added (not the level the client has now), so both count.
 def fuel(amount, oid=GENERATOR):
     return bytes([44, SAVED]) + struct.pack("<q", oid) + bytes([1]) + struct.pack("<f", amount) + bytes([0])

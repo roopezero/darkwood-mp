@@ -12,7 +12,7 @@ new session, so you don't repeat an investigation that's already done. Status wo
   The "40+ minutes" is `all` + the full `map`. `all` can't be combined with other test names (known).
 - Known flaky part of the full `map`: an awake save dog (Dog#14) patrols near the test centre and sometimes kills
   the client at the rot wardrobe / egg station (test-world artifact, seen on 0.19.0 code too).
-- Save transfer is already packed: `SaveOffer` packing 1 = raw Deflate (`World/WorldFiles.cs`), "about a quarter".
+- Save transfer is already packed: `SaveOffer` packing 1 = raw Deflate (`World/Saves/WorldFiles.cs`), "about a quarter".
   So Task F is about measuring it, not adding compression.
 - Nothing in the code, the git history or the GitHub issues mentions savages. In the game, the "savages" are the
   `Villager*` kinds (and possibly `Redneck*`); `map_scenario_enemies.py` fights each kind once.
@@ -28,7 +28,7 @@ its own `WORK` folder. MsgType numbers handed out: A 222-228, B 243-248, C 91-99
 | Id | Task | Owner | Owns (files) | Status |
 |---|---|---|---|---|
 | A | Open UI windows kept up to date (workbench, containers, generator, saw, ...) | agent A, A2 | new `World/UiRefresh*.cs`, its map steps; minimal hooks in SlotShare/Containers/FuelSync | merged, map:ui PASS |
-| B | Savage attack/animation sync, compared with dogs | agent B | `Combat/NetEnemies.cs` and enemy anim code, its map steps | merged; stuck loop not reproduced; copy catch-up fixed |
+| B | Savage attack/animation sync, compared with dogs | agent B | `Combat/Enemies/NetEnemies.cs` and enemy anim code, its map steps | merged; stuck loop not reproduced; copy catch-up fixed |
 | C | Determinism audit | agent C | `docs/MULTIPLAYER_DETERMINISM_AUDIT.md`; fixes only outside A's and B's files | merged; knocked items sent to G |
 | D | Test batteries: run any part alone, in any order, timed | agent D | `tools/run-test.sh`, `tools/tests/mapdriver.py`, battery list, `docs/MULTIPLAYER_TESTING_GUIDE.md` | merged (D, D2); verified in game |
 | E | Entity and mechanic coverage audit | agent E | `docs/MULTIPLAYER_TEST_COVERAGE.md` (read-only otherwise) | merged |

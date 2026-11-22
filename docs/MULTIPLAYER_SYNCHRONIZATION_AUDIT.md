@@ -50,7 +50,7 @@ shows at once, without the viewer closing it, hovering, moving the mouse or clic
 - After a remote slot change is applied to an inventory that is open here (`SlotShare.OnSlots`, `OnRefused`,
   `Merge`; `Containers.ApplyOpen`), `UiRefresh.Changed` calls the game's own `Player.refreshRecipes` (recipes, upgrade
   button, upgrade menu, backpack, hotbar) and `Saw.refresh` for an open saw. After a remote fuel change
-  (`FuelSync.OnFuel`), `UiRefresh.FuelChanged` calls `Saw.refresh` for an open saw and refreshes the fuel bar if it
+  (`Fuel.OnFuel`), `UiRefresh.FuelChanged` calls `Saw.refresh` for an open saw and refreshes the fuel bar if it
   shows that object. Nothing runs when the window isn't open.
 - `Containers.Apply` no longer closes an open container: when the slot count matches, it loads the contents into the
   open window (`ApplyOpen`). On a client that watches it slot by slot, the contents go through `SlotShare.MergeOpen`
@@ -58,7 +58,7 @@ shows at once, without the viewer closing it, hovering, moving the mouse or clic
   otherwise), so a stale local view can't overwrite the host and nothing is lost or doubled. On the host, what our
   player changed since the last look is sent first, and the loaded contents become the watchers' starting point, so
   they aren't sent back. A different slot count still closes the window, as before.
-- The redraws only redraw; they run with `WorldActions.Replaying` set and change no slot, so nothing is sent from
+- The redraws only redraw; they run with `Coop.Guards.Replaying` set and change no slot, so nothing is sent from
   them. No message or byte changed.
 
 ### Results (two real games, 2026-11-11)
@@ -79,7 +79,7 @@ shows at once, without the viewer closing it, hovering, moving the mouse or clic
 ### Open
 
 - **Fixed**: opening a container the game's way (`Item.openInventory`) set `Item.searched` (and `Character.searched` on
-  a corpse) only in the opener's game. It's now sent as the WorldAction `ItemSearched` (`OpenSearchedPatch`); a
+  a corpse) only in the opener's game. It's now sent as the WorldAction `ItemSearched` (the `OpenInventory` patch, LockShare); a
   client's goes to the host as a request, checked for reach and refused for a crate that isn't picked open yet.
   `map:ui` afterwards: every step passed, `dumps: SAME` (`items: 43 matched, 0 differences`), 145 s.
 - Not shared, likely harmless: `Item.openInventory` also sets `inventory.RefreshingItems`, which makes the opener's
@@ -120,7 +120,7 @@ kinds stand still and never attack. `Redneck*` are the other human-shaped enemie
   about 1.1 s; a dog shows its 18-frame `Idle`. So a savage between attacks holds one pose by the game's design (in
   single player too); that isn't the bug, but it is the likeliest thing a player would describe as "stuck".
 
-### How the mod copies it (Combat/NetEnemies.cs)
+### How the mod copies it (Combat/Enemies/NetEnemies.cs)
 
 - Host, every 0.05 s (`StateInterval`): per enemy, up to 8 animators by path hash, each with clip name hash,
   `CurrentFrame` and `Playing` (`WriteState`).

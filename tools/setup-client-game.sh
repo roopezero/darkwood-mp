@@ -51,7 +51,7 @@ mkdir -p "$C/BepInEx/config" "$C/BepInEx/plugins/DarkwoodMP" "$C/BepInEx/patcher
 for d in core patchers; do
   [ -d "$GAME_DIR/BepInEx/$d" ] && cp -a "$GAME_DIR/BepInEx/$d/." "$C/BepInEx/$d/"
 done
-# The mod: the build deploys there too (DarkwoodMP.csproj), and this copies the game's current one in any case.
+# The mod and the map tests: the builds deploy there too (DarkwoodMP.csproj, DarkwoodMP.MapTests.csproj), and this copies the game folder's current ones in any case.
 cp -a "$GAME_DIR/BepInEx/plugins/." "$C/BepInEx/plugins/"
 [ -f "$C/BepInEx/config/BepInEx.cfg" ] || cp "$GAME_DIR/BepInEx/config/BepInEx.cfg" "$C/BepInEx/config/" 2>/dev/null || true
 

@@ -30,14 +30,14 @@ are under "In-game probe results" below.
 | Lightning flashes, rain drops | `Lightning.cs`, `Rain.cs:569-595` | look only | each game | no | b | |
 | Enemy AI (dodge, running away, waypoints, attack choice, projectile spread, cut in half, banshee babies) | `Character.cs` (34 rolls) | enemies | host only. Client copies are frozen (`NetEnemies`) | states sent 20 times a second | a | |
 | Enemy spawns, respawns, night spawns, worms, ShadowArmor | `CharacterSpawner`, `CharacterSpawnPoint`, `WorldChunk.spawnFreeRoamingCharacters`, `NightSpawns.cs:126` | which enemies exist | host. A client's own enemies are frozen and hidden | yes | a | |
-| A player's damage to enemies | the player's own game (bullet spread at `Player.cs:6307`) | enemy health | the client predicts; the host applies the hit, capped by `NetEnemies.DamageCap` and rate-limited | yes | a | Whether the hit lands is decided in the shooter's game |
+| A player's damage to enemies | the player's own game (bullet spread at `Player.cs:6307`) | enemy health | the client predicts; the host applies the hit, capped by `WeaponRules.DamageCap` and rate-limited | yes | a | Whether the hit lands is decided in the shooter's game |
 | Enemy damage to players | the host's enemy hits the player's proxy | player health | host, sent as `PlayerDamage` | yes | a | |
 | Durability, rot, drain and recharge of items in containers | `Inventory.refreshItems` | durability | each game, by its own clock. `SlotShare` allows it as `Drift`, and the client takes the host's durability when it opens the container | partly | a/b | small drift until the container is opened |
 | A player's own items wearing out; which items go into their death bag (`Player.cs:7589`) | the player's game | their own items | the player's own game. The bag is sent as `ObjSpawn` with its contents | yes | a | |
-| Infection spread | `Infection.cs:73`, `Infection.spread` | ground that hurts | host. A client's infection never spreads (`InfectionSync`) | yes | a | |
-| Fire | `Burn`, `Flame`, `Liquid` delays | damage, breaking | the host's fire counts. A client's fire only shows (`FireSync`) | yes | a | |
-| What thrown items leave (a molotov's gasoline) | `Explodes.spawnObjects` (`Explodes.cs:173`) | gasoline puddles | host, for thrown items (`ThrownLeavesPatch`) | yes | a | |
-| Non-thrown explosions that spawn objects | `Explodes.spawnObjects` on a barrel or canister that goes off in every game (`BreakSync` Explode) | puddles at random spots | **each game** | no | c/d | `ThrownLeavesPatch` (`World/ObjectActions.cs:308`) returns early for anything not thrown. The `dice-events` step logs whether any level object has a `spawnObject` |
+| Infection spread | `Infection.cs:73`, `Infection.spread` | ground that hurts | host. A client's infection never spreads (`Infections`) | yes | a | |
+| Fire | `Burn`, `Flame`, `Liquid` delays | damage, breaking | the host's fire counts. A client's fire only shows (`World/Fire`) | yes | a | |
+| What thrown items leave (a molotov's gasoline) | `Explodes.spawnObjects` (`Explodes.cs:173`) | gasoline puddles | host, for thrown items (`ObjectActions.BeforeSpawn`) | yes | a | |
+| Non-thrown explosions that spawn objects | `Explodes.spawnObjects` on a barrel or canister that goes off in every game (`BreakSync` Explode) | puddles at random spots | **each game** | no | c/d | `ObjectActions.BeforeSpawn` (`World/Objects/ObjectActions.Sends.cs`) returns early for anything not thrown. The `dice-events` step logs whether any level object has a `spawnObject` |
 | Location set variants | `Location.Awake` (`Location.cs:679-689`) keeps one of `sets` at random and destroys the rest. The choice isn't saved | which furniture, containers and doors a location has | **each game, every time it loads** | no | c/d | high if a set holds saveable things: save ids would then name objects only one game has. The `dice-sets` step compares the host's and the client's choices |
 | Targets of scripted-event steps | `Location.GetObject.returnObjects` / `returnObject` (`Location.cs:329,359`) pick at random unless `getAll` or `getClosest` is set. `getClosestToPlayer` uses each game's own `Player.Instance`. `GameEvent.fire` falls back to the own player's location | the object a shared step shows, hides, moves, removes or animates | **each game**, for steps in the shared part (`ScriptedEvents`) | no | c/d | The `dice-events` step counts these steps in the loaded world |
 | `runFunction` steps (SendMessage) in the shared part | e.g. `Location.wolfmanStealEvent` (`Location.cs:856`: 10 random items from the workbench) | containers, objects | **each game** | containers heal when opened | c/d | Containers fix themselves when opened. Other effects are unknown. `dice-events` lists the method names |
@@ -50,8 +50,8 @@ are under "In-game probe results" below.
 | Crafting | workbench recipes | items made | no rolls found | n/a | b | |
 | Item modifiers | `InvItemClass.addRandomModifiers` | weapon modifiers | nothing in the decompile calls it | n/a | b | |
 | `QuestRandomizer`, `UniqueItemSpawner`, `RandomSpawnArea`, `Shooter` | prototypes, or only used without random generation | | | | d | not seen in use in the real game |
-| The mod's `FindObjectsOfType` lookups | `TraderSync`, `Hideouts`, `WorldActions.DyingNpc`, `FlagsSync.KillNpc`, `ObjRef.NearestPlaced` | which copy of an object is meant | the copy nearest a sent position, or the one with the save id; never "the first found" | | a | `ObjRef.NearestPlaced` (`World/ObjRef.cs:168`) keeps the last of equal distances (`<=`), so two objects with the same name within about a unit of the key's spot could resolve differently in two games |
-| The mod's own `System.Random` | `HostIds`, `Containers`, `Hideouts`, `NightObjects`, `InfectionSync`, `EnemyLandings`, `WorldEvents` | new ids | the game that makes the thing; the id is sent | yes | a | |
+| The mod's `FindObjectsOfType` lookups | `TraderSync`, `Hideouts`, `NpcDeaths.Dying`, `FlagsSync.KillNpc`, `ObjRef.NearestPlaced` | which copy of an object is meant | the copy nearest a sent position, or the one with the save id; never "the first found" | | a | `ObjRef.NearestPlaced` (`World/ObjRef.cs:168`) keeps the last of equal distances (`<=`), so two objects with the same name within about a unit of the key's spot could resolve differently in two games |
+| The mod's own `System.Random` | `HostIds`, `Containers`, `Hideouts`, `NightObjects`, `Infections`, `EnemyLandings`, `WorldEvents` | new ids | the game that makes the thing; the id is sent | yes | a | |
 
 ## What protects the shared world
 
@@ -59,14 +59,14 @@ are under "In-game probe results" below.
 - **Enemies and everything they do** run on the host only (`NetEnemies`, frozen client copies).
 - **The clock and everything that depends on it** (night scenario, events, weather, random objects, restocks) is the host's (`TimeSync`, `WorldEvents`, `TraderSync`).
 - **Chance in a player's action** (trap disarm, lockpick) is rolled on the host and sent as `Authority.Result`.
-- **Damage from fire, infection and explosions:** the host's copy counts (`FireSync`, `InfectionSync`, `BreakSync`, `ThrowSync`).
+- **Damage from fire, infection and explosions:** the host's copy counts (`Fire`, `Infections`, `BreakSync`, `ThrowSync`).
 - **The world itself:** everyone loads the host's save, so worldgen, padlock codes and saved loot match.
 
 ## Fixes made
 
 No change to game behaviour yet. Only the probe was added:
 
-- `src/DarkwoodMP/World/MapScenarioDice.cs` adds two map steps:
+- `src/DarkwoodMP.MapTests/World/MapScenarioDice.cs` adds two map steps:
   - `dice-sets`: a Harmony patch on `Location.Awake` notes which set each location kept. The reply is a count and an FNV digest, and every choice is logged as `[dice] set ...`.
   - `dice-events`: scans the loaded world's `GameEvents` for shared-part steps that pick a random object, or the object nearest the own player, out of 2 or more. It also lists the method names of shared `runFunction` steps, and non-thrown `Explodes` that spawn objects.
 - `ScriptedEvents.IsHostStep`: a new one-line public method, used by the scan.
@@ -88,7 +88,7 @@ So risks 1 to 3 below were not seen in the test world. They stay listed because 
 
 1. **Location sets (`Location.Awake`)**, suspected high. If `dice-sets` shows different choices, the fix: the host sends its choices (name and position -> name of the set it kept) before the joiner loads, as a new message in 91-99 next to the save offer, and with `LocationSlot` for locations loaded later. A `Location.Awake` prefix on the client destroys the other sets itself and leaves only the host's choice in `sets`, so the game's own code keeps that one.
 2. **Random targets of shared scripted-event steps**, suspected. If `dice-events` finds any, the fix is in `ScriptedEvents`: the host notes each choice made by `returnObjects`/`returnObject` while a shared part runs, and sends it with the step as ObjRefs. The joiner uses the host's choice (its step waits for it, or runs once it arrives). `getClosestToPlayer` should mean the player who set the event off, which is that player's proxy on the host.
-3. **Non-thrown explosions that spawn objects:** if any exist, extend `ThrownLeavesPatch` (`World/ObjectActions.cs:308`) from thrown items to every `Explodes` that the host also sets off.
+3. **Non-thrown explosions that spawn objects:** if any exist, extend `ObjectActions.BeforeSpawn` (`World/Objects/ObjectActions.Sends.cs`) from thrown items to every `Explodes` that the host also sets off.
 4. **A location the host hasn't loaded yet:** the client's own loot roll shows until its first change is refused. It heals itself after one refused take.
 5. **`ObjRef.NearestPlaced` ties** (`<=`): see the table.
 6. **Not audited line by line:** `Dictionary` and `HashSet` order where it feeds a message. Sets keyed by instance id have a different order in each game, but no decision was found that takes "the first" item of one.
@@ -103,7 +103,7 @@ So risks 1 to 3 below were not seen in the test world. They stay listed because 
 ## Physics: knocked objects
 
 - **Who moves loose things.** Every loose object (an `Item` with a rigidbody: furniture, placed objects, dropped
-  items) is watched by `World/DragSync.cs` in every game. The host sends where one came to rest (ObjMove, last),
+  items) is watched by `World/Dragging/DragSync.cs` in every game. The host sends where one came to rest (ObjMove, last),
   whatever moved it. A client sends only what its own player pushed and puts its copy of anything else back, so the
   host's rest position is the last word. Drags send their end, and again once settled.
 - **Dropped items don't get knocked.** They are on layer 25, which players' and enemies' bodies don't collide with.

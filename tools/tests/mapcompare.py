@@ -15,7 +15,10 @@ SECTION_POS_TOL = {"enemies": 60.0, "enemylooks": 60.0,  # enemies move: the cli
 FIELD_TOL = {"hour": 0.26, "durability": 0.051, "fuel": 1.01,
              "yaw": 2.01,  # a loose thing's turn: DragSync sends a turn of 2 degrees or more (PushMinTurn)
              "leaf": 4.01}  # an open door's leaf: DoorPush sends a turn of more than 4 degrees (MinChange)
-DEFAULT_REQUIRED = ["doors", "containers", "items", "story", "time"]
+# Turns in degrees that go round the circle: Unity's eulerAngles are 0 to 360, and rounded to a degree a turn of
+# 359.6 is dumped as 360 while one of 0.2 is 0, so they're compared by the shorter way round.
+ANGLE_FIELDS = {"yaw"}
+DEFAULT_REQUIRED =["doors", "containers", "items", "story", "time"]
 # The host sends a client only the enemies within NetEnemies.RelevantRange (3000) of that client's player, so an enemy
 # only in the host's dump, this far or more from the client's player (its dump's local player pos), isn't missing.
 # The margin covers an enemy that left the range while its EnemyDespawn was on the way.
@@ -45,7 +48,11 @@ def diff(a, b, path, pos_tol, out):
             for i, (x, y) in enumerate(zip(a, b)):
                 diff(x, y, f"{path}[{i}]", pos_tol, out)
     elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
-        if abs(a - b) > FIELD_TOL.get(field, 1e-6):
+        d = abs(a - b)
+        if field in ANGLE_FIELDS:
+            d = d % 360.0
+            d = min(d, 360.0 - d)
+        if d > FIELD_TOL.get(field, 1e-6):
             out.append(f"{path}: host {a} client {b}")
     elif a != b:
         out.append(f"{path}: host {a!r} client {b!r}")

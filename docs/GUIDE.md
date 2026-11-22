@@ -52,7 +52,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 ```
 
 **Joining:**
-- You get the host's world **as it is now**. The host's game saves a snapshot for you, and its own save is left alone. Only the part of the save that changes while you play (`sav.dat`) is saved for it; the map's layout (`savs.dat`, about 9 MB) is copied from the host's own save, as the game itself does when it saves. Reading, hashing and packing (Deflate, which shrinks the save to about a quarter) run on a worker thread. So does writing `sav.dat`: the host's game reads the world into the game's save states in one frame, as its own save does, and a worker thread writes them out as the game would (`World/SnapshotSave.cs`). The host's game stops only for that reading: 132 ms in the map test, where the game's own save stopped it for 245 to 490 ms. If the worker's write fails, or the map's layout has to be saved too (a new location was added since your last save), the game's own save makes the snapshot, as before; `SnapshotOffThread = false` in the config always uses it.
+- You get the host's world **as it is now**. The host's game saves a snapshot for you, and its own save is left alone. Only the part of the save that changes while you play (`sav.dat`) is saved for it; the map's layout (`savs.dat`, about 9 MB) is copied from the host's own save, as the game itself does when it saves. Reading, hashing and packing (Deflate, which shrinks the save to about a quarter) run on a worker thread. So does writing `sav.dat`: the host's game reads the world into the game's save states in one frame, as its own save does, and a worker thread writes them out as the game would (`World/Saves/SnapshotSave.cs`). The host's game stops only for that reading: 132 ms in the map test, where the game's own save stopped it for 245 to 490 ms. If the worker's write fails, or the map's layout has to be saved too (a new location was added since your last save), the game's own save makes the snapshot, as before; `SnapshotOffThread = false` in the config always uses it.
 - Everyone in the game sees "*name* is joining..." as soon as the host lets a joiner's Hello in, then "*name* joined" (or "stopped joining").
 - A join can't wait for ever: a download that gets nothing for 10 s asks again for what's missing, and gives up after three tries; a joiner that hears nothing from the host for 60 s stops. Either way the screen goes and the panel says why.
 - If you're in a game of your own, you leave it, so save first.
@@ -142,6 +142,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 
 | File | |
 |---|---|
+| `BepInEx/plugins/DarkwoodMP/` | The mod: `DarkwoodMP.dll` and `DarkwoodMP.Core.dll`. Both must be from the same version, so update by extracting the whole zip. |
 | `BepInEx/config/DarkwoodMP.player.key` | Your player key: there are no accounts, and hosts know you by it. Keep it secret; copy it to another PC to be the same player there. |
 | `BepInEx/config/DarkwoodMP.servers.ini` | The browser's Favorites and History, in goasis's format |
 | `BepInEx/cache/DarkwoodMP/worlds/<hash>/` | Hosts' worlds you've joined (the last three) |
@@ -153,7 +154,7 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 ## Troubleshooting
 
 - **Linux: the game doesn't start from Steam.** Check the launch options say `./darkwood_mp.sh %command%`.
-- **The main menu has no Join Game (it shows the game's own entries).** Look in `BepInEx/LogOutput.log` for `DarkwoodMP ... loaded`. If it says some patches were skipped, the game build differs from the one the mod was made for (a game update, or the GOG build); what those patches do won't be shared.
+- **The main menu has no Join Game (it shows the game's own entries).** Look in `BepInEx/LogOutput.log` for `DarkwoodMP ... loaded`. If it says some patches were skipped, the game build differs from the one the mod was made for (a game update, or the GOG build); what those patches do won't be shared. If the log says "DarkwoodMP can't start", `DarkwoodMP.Core.dll` is missing or from another version: extract the whole zip over the game folder again.
 - **"No answer" when joining by address.** The host's router must forward the port (TCP and UDP), and its firewall must allow it. On a LAN, check the host's firewall first. Over the internet, read what the host's Multiplayer window says about the router (see *Opening the port on the router*).
 - **Refused: "different DarkwoodMP version".** Everyone needs a mod version with the same protocol (see the release notes).
 - **A Steam join stops partway through the world download.** Fixed in 0.11.1: only the host needs it.

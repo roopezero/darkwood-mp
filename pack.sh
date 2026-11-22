@@ -10,7 +10,7 @@ trap '[ -z "$stage" ] || safe_rm "$TMPROOT" "$stage"' EXIT
 export DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
 export PATH="$DOTNET_ROOT:$PATH" DOTNET_CLI_TELEMETRY_OPTOUT=1
 
-dotnet build "$ROOT/src/DarkwoodMP" -c Release -p:DeployToGame=false
+dotnet build "$ROOT/src/DarkwoodMP" -c Release -p:DeployToGame=false -clp:ErrorsOnly
 DLL="$ROOT/src/DarkwoodMP/bin/Release/DarkwoodMP.dll"
 
 CACHE="$ROOT/.cache"; mkdir -p "$CACHE" "$ROOT/dist"
@@ -24,7 +24,8 @@ for plat in win_x64 win_x86 linux_x64; do
   stage="$(mktemp -d "$TMPROOT/darkwoodmp-pack.XXXXXX")"
   unzip -q "$zip" -d "$stage"
   mkdir -p "$stage/BepInEx/plugins/DarkwoodMP"
-  cp "$DLL" "$stage/BepInEx/plugins/DarkwoodMP/"
+  cp "$DLL" "$(dirname "$DLL")/DarkwoodMP.Core.dll" \
+    "$stage/BepInEx/plugins/DarkwoodMP/"
   if [ "$plat" = linux_x64 ]; then
     sed -i 's/^executable_name=""/executable_name="Darkwood.x86_64"/' "$stage/run_bepinex.sh"
     chmod +x "$stage/run_bepinex.sh"
@@ -41,6 +42,18 @@ for plat in win_x64 win_x86 linux_x64; do
   done
   out="$ROOT/dist/DarkwoodMP-${plat%_x64}.zip"
   rm -f "$out"; (cd "$stage" && zip -qr "$out" .)
+  # Read the list first: pack.sh runs with pipefail, and `unzip -l | grep -q`
+  # fails at random when grep stops reading early.
+  files="$(unzip -Z1 "$out")"
+  for f in DarkwoodMP.dll DarkwoodMP.Core.dll; do
+    grep -qxF "BepInEx/plugins/DarkwoodMP/$f" <<<"$files" \
+      || { echo "$f is missing from $out"; exit 1; }
+  done
+  # DarkwoodMP.MapTests.dll (the map test steps) goes to the test game folders
+  # only, never to players.
+  if grep -q MapTests <<<"$files"; then
+    echo "the map tests (DarkwoodMP.MapTests.dll) are in $out"; exit 1
+  fi
   safe_rm "$TMPROOT" "$stage"; stage=""
   echo "Built $out"
 done

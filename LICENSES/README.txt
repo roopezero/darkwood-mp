@@ -1,8 +1,9 @@
 Licenses of the software in the DarkwoodMP zips
 ================================================
 
-DarkwoodMP itself (BepInEx/plugins/DarkwoodMP/DarkwoodMP.dll) is under the
-MIT license: DarkwoodMP.txt. Source: https://github.com/roopezero/darkwood-mp
+DarkwoodMP itself (DarkwoodMP.dll and DarkwoodMP.Core.dll in
+BepInEx/plugins/DarkwoodMP/) is under the MIT license: DarkwoodMP.txt.
+Source: https://github.com/roopezero/darkwood-mp
 
 The zips also contain BepInEx 5.4.23.2 as released at
 https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.2

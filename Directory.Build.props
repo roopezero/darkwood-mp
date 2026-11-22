@@ -1,0 +1,40 @@
+<Project>
+  <PropertyGroup>
+    <!-- The mod's version, for both DLLs. Bump it here for a release. -->
+    <Version>0.28.0</Version>
+    <LangVersion>12.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <!-- The same source gives the same DLL, whatever the commit or folder. -->
+    <Deterministic>true</Deterministic>
+    <EnableSourceLink>false</EnableSourceLink>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <!-- Runs IDE0011 and IDE0055 on build. Off by default in every SDK. -->
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- An analyzer that can't load, holds no rules or crashes only warns by
+         default, and the build then passes with its rules switched off. -->
+    <WarningsAsErrors>$(WarningsAsErrors);CS8032;CS8033;CS8034;CS9057;AD0001</WarningsAsErrors>
+    <!-- Package audit results depend on the network and on the day. -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1900;NU1901;NU1902;NU1903;NU1904</WarningsNotAsErrors>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(MSBuildProjectName)' != 'DarkwoodMP.Analyzers'">
+    <ProjectReference
+      Include="$(MSBuildThisFileDirectory)src/DarkwoodMP.Analyzers/DarkwoodMP.Analyzers.csproj"
+      OutputItemType="Analyzer"
+      ReferenceOutputAssembly="false"
+      PrivateAssets="all" />
+  </ItemGroup>
+  <!-- A reference above that points at a missing project, or lost its
+       OutputItemType, doesn't fail the build: the compiler just gets no
+       analyzer, and every formatting rule is off without a word. -->
+  <Target Name="RequireFormattingRules"
+          BeforeTargets="CoreCompile"
+          Condition="'$(MSBuildProjectName)' != 'DarkwoodMP.Analyzers' And '$(RunAnalyzers)' != 'false'">
+    <ItemGroup>
+      <_FormattingRules Include="@(Analyzer)"
+                        Condition="'%(Filename)' == 'DarkwoodMP.Analyzers'" />
+    </ItemGroup>
+    <Error Condition="'@(_FormattingRules)' == ''"
+           Text="The formatting analyzer (src/DarkwoodMP.Analyzers) did not reach the compiler, so its rules would be off." />
+  </Target>
+</Project>

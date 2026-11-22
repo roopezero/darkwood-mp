@@ -1,0 +1,39 @@
+root = true
+
+# Every file ends with one line break (rule DW0008 for C#,
+# tools/check-file-ends.sh for the rest).
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+# Other projects' licence texts, kept as they came.
+[LICENSES/**]
+end_of_line = unset
+insert_final_newline = unset
+
+[*.cs]
+indent_style = space
+indent_size = 4
+tab_width = 4
+trim_trailing_whitespace = true
+max_line_length = 80
+
+# IDE0011: every if, else, loop, using and lock has braces.
+csharp_prefer_braces = true
+
+# IDE0055: braces go on their own lines.
+csharp_new_line_before_open_brace = all
+csharp_new_line_before_else = true
+csharp_new_line_before_catch = true
+csharp_new_line_before_finally = true
+
+# true keeps "public bool X { get; init; }" on one line; DW0002 forbids the
+# one-line blocks this leaves open. false wraps "if (x) { return; }" and
+# "a(); b();".
+csharp_preserve_single_line_blocks = true
+csharp_preserve_single_line_statements = false
+
+# Errors everywhere: the plugin, the core, the tests and the map tests.
+dotnet_diagnostic.IDE0011.severity = error
+dotnet_diagnostic.IDE0055.severity = error
+dotnet_analyzer_diagnostic.category-DarkwoodFormatting.severity = error
