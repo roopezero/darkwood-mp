@@ -18,6 +18,11 @@
   <Import Project="../GameReferences.props" />
 
   <ItemGroup>
+    <!-- EncodeToJPG, for the clips' frames (MapScenarioClips). -->
+    <Reference Include="UnityEngine.ImageConversionModule"><HintPath>$(Managed)/UnityEngine.ImageConversionModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="../DarkwoodMP/DarkwoodMP.csproj" />
     <ProjectReference Include="../DarkwoodMP.Core/DarkwoodMP.Core.csproj" />
   </ItemGroup>

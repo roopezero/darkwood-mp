@@ -39,6 +39,8 @@ the client joins it in the forest; `FINAL_AROUND_HOST = True` takes the final du
 In the forest each player in turn takes the house door's key from the wardrobe and the other unlocks and opens the
 door with it (the key is a dream entry, shared because the forest is dreamt together); the key must be in both
 journals until the prologue ends and in neither after it. About 6.5 minutes.
+The `showcase_*` batteries (`IN_MAPS = False`) record the docs' clips rather than test anything new; see "Clips for
+the docs" in `docs/DEVELOPMENT.md`.
 `map_scenario_core.py` holds the scenario's first steps (door, take and drop, clock), which used to live only in
 `map_scenario.py`; the full scenario is unchanged (same PRE_JOIN, STEPS, POST and REQUIRE, checked by hash).
 

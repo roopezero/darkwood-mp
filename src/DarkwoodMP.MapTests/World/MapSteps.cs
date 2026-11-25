@@ -23,6 +23,7 @@ namespace DarkwoodMP.World
             MapScenarioEnemies.TraceSpawns = false;
             MapScenarioFarEvents.WatchSteps = false;
             MapScenarioDogWatch.On = false;
+            MapScenarioClips.Stop();
         }
 
         public void ResetCentre()

@@ -22,6 +22,10 @@ DarkwoodMP is a mod that lets you play [Darkwood](https://store.steampowered.com
 - **A new menu.** A cleaner main and pause menu, a Start Game window that shows who you've played each save with, and a full Options window with key rebinding.
 - **Quality of life, also when playing alone:** each workbench upgrade adds a row of storage, a *Sort & Stack* button at the workbench, bigger stacks (50 of every stackable item by default, the host's setting), faster world loading, better framing on ultrawide screens, the mouse is free to leave the window in menus, and descriptions for the items and map locations the game left without one.
 
+![Two players' screens side by side: a dog comes out of the dark at the friend, bites them and is beaten off, and the host, standing beside them, sees the same fight](docs/media/combat.webp)
+
+*The host's screen on the left, a friend's on the right, at the same moment: a dog the host's game runs goes for the friend.* More clips are in the guide.
+
 See [docs/GUIDE.md](docs/GUIDE.md) for everything the mod does, in detail.
 
 ## Install

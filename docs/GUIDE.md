@@ -84,6 +84,17 @@ sudo firewall-cmd --permanent --add-port=27720/tcp --add-port=27720/udp && sudo 
 
 ## What's shared
 
+In these clips the host's screen is on the left and a friend's on the right, recorded at the same moment from two games on one computer, with the game's camera zoomed in. Scripted test players act them out in the mod's test world, so they move like test players, not people.
+
+| | |
+|---|---|
+| ![A dog goes for the friend and is beaten off; the host sees the fight](media/combat.webp) | ![The friend opens and closes a door; it swings in both games](media/doors.webp) |
+| **Enemies:** the host's game runs the dog; it goes for the friend, and the friend's hits reach it. | **Doors:** the friend opens and closes a door, and it opens and closes in the host's game. |
+| ![A molotov thrown by the friend and a flare thrown by the host burn on the same spot in both games](media/fire.webp) | ![The friend drags a crate; it moves in the host's game too](media/drag.webp) |
+| **Thrown things and fire:** the friend's molotov and the host's flare land and burn in both games. | **Dragging:** the friend drags a crate, and the host sees it move. |
+| ![The workbench storage open in both games; items put in by either player appear in both](media/workbench.webp) | ![The friend goes back to the main menu, picks the host in the server browser and loads in beside the host](media/join.webp) |
+| **Workbench:** its storage open in both games; what either player puts in or takes out shows in both windows. | **Joining:** the friend leaves to the main menu, joins from *Join Game* and loads the host's world. |
+
 | | |
 |---|---|
 | **Players** | Everyone sees everyone, with their look, weapon, clothes and animations (each sprite mirrored), and a name tag with their health (hidden under the pause menu and the mod's menus, in cutscenes, dialogue, the journal and the game's other full-screen menus, but not with just the backpack or a container open). Players in the main world are marked on your map, with their names; a player in a separate location or a dream isn't shown while you're elsewhere. You hear the others (steps, shots, reloads, hammering, pain) where they are, and see their muzzle flashes, their blood when they are hurt and their flames when they burn. A weapon's or torch's frames that your own player never used are loaded when someone else uses them, so their attacks show. A torch or lamp in their hand lights them up, with its flames on the item in their hand (the game moves them for each animation frame and facing; their game sends where), and so does a flashlight's beam (as far and as bright as in their game, which works it out from where their mouse is). A lantern worn on the hotbar lights the area around them in everyone's game, so the host's enemies and shadows see them as lit (`Core.isInLight`). |

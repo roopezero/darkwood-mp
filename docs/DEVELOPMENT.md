@@ -23,6 +23,27 @@
 
 For trying out what's shared without touching your own saves. It's a tool for testing the mod, so the panel only shows it when the game was started with a `--dwmp-test...` argument (as `tools/run-test.sh` does) or `--dwmp-testworld`. Then, in the main menu, the panel's *Test world* section has *Make and start a test world* (later *Start the test world*) and *Reset it*. It copies your saves into `BepInEx/cache/DarkwoodMP/testworld` and plays that copy through the same save redirect a joiner uses, so your own saves are never written; *Reset it* makes a fresh copy. The first time it loads, the game builds a test area of 21 labelled things around your character, out of the game's own pieces: containers and crates (one locked), a workbench, furniture to drag, a generator with two lamps on it, the saw, candles, a radio, a stove, traps, an exploding barrel, a gas bottle, broken glass, a larva egg, a patch of infection and the night trader. Each has a label over it saying what to try. Doors and windows aren't separate pieces in the game, so use the hideout's own. You get a kit (gasoline, matches, molotovs, flares, a torch, a lantern, a flashlight, a pitchfork, a shotgun and shells, planks and nails, traps, bandages), and in the world the host's panel can give it again, set the clock to dawn, noon, dusk or night, and spawn enemies near you (dogs, chompers, a centipede, a kamikaze, a human spider). Save the world after the area is built: if none of it is there on the next load, it's built again. Host it and friends join it as any hosted world. It has been built and checked by the host only, not yet played by two people, and some things can land inside walls.
 
+## Clips for the docs
+
+The side-by-side clips in `docs/media/` (in the README and the guide) are recorded from the two-game map test. Each `tools/tests/map_scenario_showcase_NAME.py` (`combat`, `world`, `share`, `join`; `scout` records a second at points around the test area, for finding spots) is a battery kept out of `maps` that plays a scene and has both games record their screens. They have no verdict of their own beyond the usual dumps:
+
+```
+CLIP_DIR=/tmp/clips tools/run-test.sh map:showcase_world
+tools/make-clips.py /tmp/clips/drag docs/media/drag.webp --zoom 2.5
+```
+
+The map test steps that do it are in `src/DarkwoodMP.MapTests/World/MapScenarioClips.cs`:
+- `rec-start DIR [FPS [WIDTH]]` and `rec-stop` save each game's screen as JPG frames, named by the machine's clock, into `DIR/host` and `DIR/c1`.
+- `clip-overlays off|on` hides the test world's labels and the test's title.
+- `clip-face DX DZ|off` points a player's mouse at a spot, so it faces there.
+- `clip-watch [DIST [SIDE]]` walks up to the other player and keeps facing them.
+- `clip-panel` opens the Multiplayer window from the pause menu.
+- `clip-join ADDRESS` takes a client back to the main menu and joins from *Join Game*'s server browser.
+
+`tools/make-clips.py` pairs the two games' frames by time, puts them side by side with "Host" and "Friend" captions and writes an animated WebP of at most 2 MB. Its `--zoom`, `--focus` and `--cut` options crop it and choose the seconds to keep, and `--preview` writes a contact sheet of one pair a second for choosing them. It needs Pillow, for example in a virtual environment (`python3 -m venv VENV && VENV/bin/pip install pillow`).
+
+Before recording, set the host game's `PlayerName` to something neutral, such as `Host`: the host's name shows in the friend's game and in the Multiplayer window. Check the frames for names and addresses before committing a clip.
+
 ## Reading the game's code
 
 `ilspycmd -p -o <dir> <game>/Darkwood_Data/Managed/Assembly-CSharp.dll`, run with `DOTNET_ROLL_FORWARD=Major` for ilspycmd 8.2. Never commit decompiled code.

@@ -561,6 +561,7 @@ namespace DarkwoodMP.World
             MapScenarioDive.Register();
             MapScenarioStory.Register();
             MapScenarioStory2.Register();
+            MapScenarioClips.Register();
         }
 
         internal static IEnumerator None()
