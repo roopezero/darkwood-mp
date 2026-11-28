@@ -52,7 +52,8 @@ namespace DarkwoodMP.World
             panel.SetPanel(true);
             yield return new WaitForSecondsRealtime(1.5f);
             Directory.CreateDirectory(a[0]);
-            string path = Path.Combine(a[0], "epilogue-start-panel.png");
+            string path =
+                System.IO.Path.Combine(a[0], "epilogue-start-panel.png");
             ScreenCapture.CaptureScreenshot(path);
             yield return new WaitForSecondsRealtime(1f);
             Plugin.Log.LogInfo($"[shots] {path}");
