@@ -20,6 +20,25 @@ namespace DarkwoodMP.World.Story
     }
 
     /// <summary>
+    /// Petting the flat's dog holds our player still until its clip ends;
+    /// it doesn't start without the clip.
+    /// </summary>
+    [HarmonyPatch(typeof(Player), nameof(Player.special_petDog))]
+    static class PlayerSpecialPetDog
+    {
+        static bool Prefix(Player __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Epilogue.MayPetDog(__instance);
+        }
+    }
+
+    /// <summary>
     /// The game's pan over the burning forest waits for the others.
     /// </summary>
     [HarmonyPatch(

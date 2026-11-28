@@ -345,6 +345,22 @@ namespace DarkwoodMP.Tests.World.Story
             }
         }
 
+        public class MayPetDog
+        {
+            [Theory]
+            [InlineData(true, true, true)]
+            [InlineData(true, false, false)]
+            [InlineData(false, false, true)]
+            [InlineData(false, true, true)]
+            public void Pets_only_with_the_clip_in_a_session(
+                bool inSession,
+                bool hasClip,
+                bool pets)
+            {
+                EpilogueRules.MayPetDog(inSession, hasClip).ShouldBe(pets);
+            }
+        }
+
         public class SendsOutcomes
         {
             [Theory]

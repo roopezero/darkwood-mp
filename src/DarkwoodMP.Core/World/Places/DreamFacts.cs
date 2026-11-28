@@ -18,5 +18,9 @@ namespace DarkwoodMP.World.Places
 
         /// Its name.
         public string Preset { get; init; }
+
+        /// The epilogue is played together (EpilogueSync.Playing): Shared
+        /// stays its first part's name while the parts move on.
+        public bool Epilogue { get; init; }
     }
 }

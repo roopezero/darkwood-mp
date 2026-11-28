@@ -217,6 +217,38 @@ namespace DarkwoodMP.World.Places
             return null;
         }
 
+        /// <summary>
+        /// The dream location our player is in when it is a later part of the
+        /// epilogue played together (PlaceRules.IsLaterPart), else null. What
+        /// a player does there stays in their own game, the host's included.
+        /// </summary>
+        public static Location LaterPart()
+        {
+            var d = Singleton<Dreams>.Instance;
+            CoopSession coop = Coop.Current;
+            if (d == null || coop == null)
+            {
+                return null;
+            }
+
+            var dream = new DreamFacts
+            {
+                Dreaming = d.dreaming,
+                HasLocation = d.dreamLocation != null,
+                Shared = coop.Dreaming.Shared,
+                HasPreset = d.preset != null,
+                Preset = PresetName(d),
+                Epilogue = coop.Epilogue.Playing,
+            };
+
+            if (PlaceRules.IsLaterPart(dream))
+            {
+                return d.dreamLocation;
+            }
+
+            return null;
+        }
+
         private static string PresetName(Dreams d)
         {
             if (d.preset == null)

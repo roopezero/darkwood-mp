@@ -135,12 +135,24 @@ namespace DarkwoodMP.World
         /// refused: our player's doing there runs here alone (Part.All), as in
         /// single player, and isn't sent. A shared dream's things (the level
         /// dream, a prologue stage) are the host's to decide, as the world's
-        /// are. Null: only where our player is counts.
+        /// are. Null: only where our player is counts. On the host too: a
+        /// thing in a later part of the epilogue (InLaterPart), whose doings
+        /// stay in each game.
         /// </summary>
         public static bool OursAlone(GameObject go)
         {
             var s = S;
-            if (s == null || !s.IsClient)
+            if (s == null)
+            {
+                return false;
+            }
+
+            if (go != null && InLaterPart(go))
+            {
+                return true;
+            }
+
+            if (!s.IsClient)
             {
                 return false;
             }
@@ -167,6 +179,28 @@ namespace DarkwoodMP.World
             }
 
             return NetEnemies.LocalOnly(go) || InOwnArea();
+        }
+
+        /// <summary>
+        /// This thing is in the later part of the epilogue our player is in
+        /// (Whereabouts.LaterPart), in any game. Null: our player is in one.
+        /// Each game builds such a part for itself; what is done there isn't
+        /// sent, and the world's own triggers there run in each game.
+        /// </summary>
+        public static bool InLaterPart(GameObject go)
+        {
+            var part = Places.Whereabouts.LaterPart();
+            if (part == null)
+            {
+                return false;
+            }
+
+            if (go == null)
+            {
+                return true;
+            }
+
+            return go.transform.IsChildOf(part.transform);
         }
 
         public static void Send(

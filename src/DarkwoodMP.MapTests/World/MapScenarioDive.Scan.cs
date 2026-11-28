@@ -20,7 +20,7 @@ namespace DarkwoodMP.World
             return o.name;
         }
 
-        private static string Req(EventTriggerRequirement q)
+        internal static string Req(EventTriggerRequirement q)
         {
             string state = "";
             if (q.type == EventTriggerRequirement.Type.playerState)
@@ -33,7 +33,7 @@ namespace DarkwoodMP.World
                 + $"dest={Name(q.destTransform)}";
         }
 
-        private static string Ev(GameEvent e)
+        internal static string Ev(GameEvent e)
         {
             string head =
                 $"{e.type} '{e.Value}' '{e.Value2}' "

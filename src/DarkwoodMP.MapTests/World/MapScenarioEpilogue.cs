@@ -89,6 +89,11 @@ namespace DarkwoodMP.World
             Add("epilogue-credits", Credits, timeout: 120f);
             Add("epilogue-menu", Menu, timeout: 120f);
             RegisterStart();
+            Add("epiapt-dump", AptDump, timeout: 30f);
+            Add("epiapt-clothes", AptClothes, timeout: 30f);
+            Add("epiapt-puppet-clothes", AptPuppetClothes, timeout: 30f);
+            Add("epiapt-room", AptRoom, timeout: 60f);
+            Add("epiapt-pet", AptPet, timeout: 60f);
         }
 
         private static string Where()

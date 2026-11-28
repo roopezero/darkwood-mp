@@ -18,6 +18,38 @@ namespace DarkwoodMP.World.Story
         /// </summary>
         internal bool WorldEventFired(string type)
         {
+            return PanMayRun(type);
+        }
+
+        /// <summary>
+        /// Player.special_petDog, the flat's dog petted: our player stands
+        /// still until the body's PetDog clip ends, so it starts only if the
+        /// body has that clip (EpilogueRules.MayPetDog). False skips it.
+        /// </summary>
+        internal bool MayPetDog(Player p)
+        {
+            bool hasClip = false;
+            if (p != null && p.torsoAnimator != null
+                && p.torsoAnimator.Library != null)
+            {
+                hasClip = p.torsoAnimator.Library.GetClipByName(
+                    EpilogueRules.PetDogClip) != null;
+            }
+
+            bool pets = EpilogueRules.MayPetDog(S != null && S.Active, hasClip);
+            if (!pets)
+            {
+                Plugin.Log.LogInfo(
+                    "[epilogue] our player's body has no "
+                        + $"{EpilogueRules.PetDogClip} clip: not petting the "
+                        + "dog, which would hold them still for good");
+            }
+
+            return pets;
+        }
+
+        private bool PanMayRun(string type)
+        {
             var facts = new PanEventFacts
             {
                 Playing = Playing,
