@@ -16,7 +16,7 @@ DarkwoodMP is a mod that lets you play [Darkwood](https://store.steampowered.com
 - **Your character is yours.** The host keeps each friend's character (items, health, skills) and gives it back when they rejoin.
 - **Shared levels, your own skills.** Everyone cooks into one shared essence bar and gets the same levels, but each player picks their own skills, on a new **Skills panel** (press **K**). The level dreams are dreamt together.
 - **The prologue together.** Start a new game and your friends join you in the prologue once its opening film is over.
-- **Jump straight to the ending.** The Start Game window can start a new game at the epilogue (with the Talking Tree burned or standing), so a group can play the ending together without the whole game first.
+- **Jump straight to the ending.** The Start Game window can start a new game right in the epilogue (with the Talking Tree burned or standing), so a group can play the ending together without the whole game first. Friends can join while it plays.
 - **The world keeps going.** With others in the game, the pause menu, map and journal don't pause the world.
 - **Dying for good** (Nightmare, or Hard with no lives left) lets you watch your friends until the game is over.
 - **Your saves are safe.** When you join someone's game, your own saves aren't touched.
@@ -93,7 +93,7 @@ If things ever look out of sync, open the Multiplayer window (Escape, *Multiplay
 - **"Different DarkwoodMP version".** Everyone needs the same mod version.
 - **"No answer" when joining by address.** The host's router must forward port 27720 (TCP and UDP), and the host's firewall must allow it. The host's Multiplayer window says whether the router opened the port. If it says the router's internet address is a shared one, your internet provider shares one address between many homes, and forwarding can't help: use Steam or a VPN.
 - **"The host is watching the prologue's intro"** (or "in a dream"). Wait: you join by yourself when they're out of it.
-- **"The host is playing the ending".** Nobody can join during the epilogue; join after it. A save that is already in the epilogue can't be hosted.
+- **"The host's game is at the very end of the epilogue".** You can join during the epilogue (you land in the part the host is in), but not once the host has reached its last screen; the game is about to end.
 - **The LAN tab finds nothing.** The host's firewall must allow UDP port 27720.
 
 More in [docs/GUIDE.md](docs/GUIDE.md#troubleshooting). When reporting a bug, attach `BepInEx/LogOutput.log` from the game folder.

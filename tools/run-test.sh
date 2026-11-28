@@ -522,7 +522,7 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       mod_log "[Cc]hapter|authority\\]|world changed|character" | grep -v "chapter test" ;;
     host-end)
       host --dwmp-test-end 5 --dwmp-test-quick-end; world_ready
-      $PY "$T/combattest.py" 27720 6057 350 120 "end start,late refused,end" | grep -E "GameEnd|HostAway|closed|played|DreamEnd|late Hello|FAIL"
+      $PY "$T/combattest.py" 27720 6057 350 120 "end start,late let in,end" | grep -E "GameEnd|HostAway|closed|played|DreamEnd|late Hello|FAIL"
       sleep 3
       server_up
       mod_log "test-end|game's end|server|epilogue\\]|Refused"

@@ -163,7 +163,7 @@ while time.time() - t0 < SECS and not stop and not (UNTIL and UNTIL <= seen):
         kind = ({1: 'the epilogue', 2: 'the end screen'}).get(m[1], m[1]); phase = m[2] if len(m) > 2 else -1
         if phase == 0:
             # The shared epilogue: a game stays connected. A made-up dream end must not move the host's epilogue on,
-            # and a new player can't join while it plays.
+            # and a new player isn't refused while it plays: told to wait between its parts, or offered the world.
             print(f"GameEnd from the host: {kind}, phase 0 (played together); staying connected", flush=True)
             seen.add("end start")
             dream_end_at = time.time() + 10  # once the host is in the epilogue's first part
@@ -171,8 +171,9 @@ while time.time() - t0 < SECS and not stop and not (UNTIL and UNTIL <= seen):
                 from worldtest import Reader, hello
                 s2 = socket.create_connection(("127.0.0.1", PORT), timeout=10); r2 = Reader(s2)
                 s2.sendall(hello(key="d" * 64, name="LateBot")); a = r2.msg(10)
-                print(f"a late Hello: message {a[0]}" + (f" (Refused: {rstr(a, 1)[0]})" if a[0] == 3 else ""), flush=True)
-                if a[0] == 3: seen.add("late refused")
+                said = {3: "Refused", 34: "JoinWait"}.get(a[0])
+                print(f"a late Hello: message {a[0]}" + (f" ({said}: {rstr(a, 1)[0]})" if said else ""), flush=True)
+                if a[0] in (4, 34): seen.add("late let in")
                 s2.close()
             except Exception as e:
                 print(f"a late Hello: {type(e).__name__} {e}", flush=True)
