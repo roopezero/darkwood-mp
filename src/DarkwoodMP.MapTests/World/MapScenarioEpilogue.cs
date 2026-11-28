@@ -90,6 +90,7 @@ namespace DarkwoodMP.World
             Add("epilogue-menu", Menu, timeout: 120f);
             RegisterStart();
             Add("epilogue-tags", Tags, timeout: 30f);
+            RegisterDialog();
             Add("epiapt-dump", AptDump, timeout: 30f);
             Add("epiapt-clothes", AptClothes, timeout: 30f);
             Add("epiapt-puppet-clothes", AptPuppetClothes, timeout: 30f);

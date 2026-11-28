@@ -18,6 +18,10 @@ namespace DarkwoodMP.World.Dreaming
         /// How long after it began the held-player check gives up.
         public static readonly Seconds InputsGiveUp = new Seconds(40f);
 
+        /// How long a replayed end waits for a dialogue that is opening or
+        /// closing (its fades take about a second).
+        public static readonly Seconds ReplayWait = new Seconds(2f);
+
         /// Whether the game is in a dream or on its way into one.
         public static bool InDream(in DreamFacts dream)
         {
@@ -317,6 +321,38 @@ namespace DarkwoodMP.World.Dreaming
                 && !dream.Dreaming
                 && !dream.Switching
                 && !share.EpiloguePlaying;
+        }
+
+        /// Until when a replayed end waits for a dialogue that is opening or
+        /// closing (DreamSync.Replay).
+        public static Seconds ReplayBy(Seconds now)
+        {
+            return new Seconds(now.Value + ReplayWait.Value);
+        }
+
+        /// <summary>
+        /// Another game's end of the shared dream, replayed here. The game
+        /// never ends a dream with a dialogue open: its transition then runs
+        /// under the dialogue, which keeps the main camera off, and the next
+        /// part takes the dialogue's hold off the player but leaves its
+        /// window up and the camera off (a black screen). So our
+        /// dialogue (and the map or the journal) is closed first, at once; a
+        /// dialogue still opening or closing is waited for, up to ReplayBy,
+        /// as its own fades would undo the close.
+        /// </summary>
+        public static ReplayStep Replay(in ReplayFacts replay)
+        {
+            if (replay.DialogueTweening && replay.Now < replay.WaitBy)
+            {
+                return ReplayStep.Wait;
+            }
+
+            if (replay.DialogueOpen || replay.MenuOpen)
+            {
+                return ReplayStep.CloseFirst;
+            }
+
+            return ReplayStep.End;
         }
 
         static JoinStep Step(JoinAction action, Seconds at)

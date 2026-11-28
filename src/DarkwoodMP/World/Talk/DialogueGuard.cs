@@ -329,6 +329,7 @@ namespace DarkwoodMP.World.Talk
             return DialogueRules.RunsFinishedLine(line);
         }
 
+
         /// <summary>
         /// DialogueWindow.closeTrade and close without the NPC (which is gone).
         /// </summary>
@@ -343,6 +344,64 @@ namespace DarkwoodMP.World.Talk
             Plugin.Log.LogInfo(
                 $"[world] the dialogue's NPC is {why}: closing the dialogue "
                     + "without them");
+            Clear(w, p);
+            try
+            {
+                p.halt();
+                Core.forbidInputsFor(1.2f);
+                Singleton<UI>.Instance.tweenBlackScreenTop(
+                    new Color(0f, 0f, 0f, 1f), 0.5f);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
+            }
+
+            // onTweenClose gives the controls back (inDialogue,
+            // performingAction, the pause, the camera).
+            Singleton<Controller>.Instance.Invoke(
+                () => RunTweenClose(w, p), 0.5f, timeScaleDependent: false);
+            TalkClosed();
+        }
+
+        /// <summary>
+        /// Close the dialogue (and its trade) at once, without its fades or
+        /// the NPC's goodbye, as the shared dream's part changes under it
+        /// (DreamSync.Replay): the window goes, the main camera comes back on
+        /// and the black screen under the window fades, before the part's
+        /// transition starts. The NPC's onCloseDialogue triggers don't run:
+        /// the part they belong to is ending.
+        /// </summary>
+        internal void CloseNow(DialogueWindow w, string why)
+        {
+            var p = Player.Instance;
+            if (w == null || p == null)
+            {
+                return;
+            }
+
+            Plugin.Log.LogInfo($"[world] {why}: closing our dialogue at once");
+            Clear(w, p);
+            try
+            {
+                p.halt();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
+            }
+
+            RunTweenClose(w, p);
+            TalkClosed();
+        }
+
+        /// <summary>
+        /// close()'s and closeTrade()'s own steps before the fade: what our
+        /// player put on the table comes back, the trader's window goes, and
+        /// the window forgets its NPC.
+        /// </summary>
+        private void Clear(DialogueWindow w, Player p)
+        {
             _watch = default;
             try
             {
@@ -350,50 +409,7 @@ namespace DarkwoodMP.World.Talk
                     && w.trading.gameObject.activeSelf;
                 if (DialogueRules.UndoesTrade(p.inShop, trading))
                 {
-                    InventoryController instance =
-                        Singleton<InventoryController>.Instance;
-                    if (instance != null)
-                    {
-                        ItemPopup itemPopup = instance.itemPopup;
-                        if (itemPopup != null)
-                        {
-                            itemPopup.hide();
-                        }
-                    }
-
-                    if (w.trading != null)
-                    {
-                        w.trading.gameObject.SetActive(false);
-                    }
-
-                    if (w.options != null)
-                    {
-                        w.options.gameObject.SetActive(true);
-                    }
-
-                    p.inShop = false;
-                    p.talkedToNPC = null;
-                    p.Hotbar.refresh();
-                    p.Inventory.hide();
-                    if (_shopUI != null)
-                    {
-                        UnityEngine.Object.Destroy(_shopUI);
-                    }
-
-                    // what our player put on the table
-                    w.exchangePlayer.transferAllItemsToPlayer();
-                    w.exchangePlayer.hide();
-                    // his things went with him
-                    w.exchangeTrader.clear();
-                    w.exchangeTrader.hide();
-                    p.Hotbar.thisUI.transform.localPosition = p.Hotbar.position;
-                    var pos = p.Hotbar.thisUI.GetComponent<PositionMe>();
-                    if (pos != null)
-                    {
-                        pos.offset = new Vector2(
-                            p.Hotbar.position.x, p.Hotbar.position.z);
-                        pos.init();
-                    }
+                    UndoTrade(w, p);
                 }
             }
             catch (Exception e)
@@ -411,44 +427,86 @@ namespace DarkwoodMP.World.Talk
             w.currentDialogue = null;
             w.currentBoardElements.Clear();
             w.npc = null;
+        }
+
+        private void UndoTrade(DialogueWindow w, Player p)
+        {
+            InventoryController instance =
+                Singleton<InventoryController>.Instance;
+            if (instance != null)
+            {
+                ItemPopup itemPopup = instance.itemPopup;
+                if (itemPopup != null)
+                {
+                    itemPopup.hide();
+                }
+            }
+
+            if (w.trading != null)
+            {
+                w.trading.gameObject.SetActive(false);
+            }
+
+            if (w.options != null)
+            {
+                w.options.gameObject.SetActive(true);
+            }
+
+            p.inShop = false;
+            p.talkedToNPC = null;
+            p.Hotbar.refresh();
+            p.Inventory.hide();
+            if (_shopUI != null)
+            {
+                UnityEngine.Object.Destroy(_shopUI);
+            }
+
+            // what our player put on the table
+            w.exchangePlayer.transferAllItemsToPlayer();
+            w.exchangePlayer.hide();
+            // his things went with him
+            w.exchangeTrader.clear();
+            w.exchangeTrader.hide();
+            p.Hotbar.thisUI.transform.localPosition = p.Hotbar.position;
+            var pos = p.Hotbar.thisUI.GetComponent<PositionMe>();
+            if (pos != null)
+            {
+                pos.offset = new Vector2(
+                    p.Hotbar.position.x, p.Hotbar.position.z);
+                pos.init();
+            }
+        }
+
+        /// <summary>
+        /// The game's onTweenClose: the controls back (inDialogue,
+        /// performingAction, the pause), the camera on, the window off.
+        /// </summary>
+        private static void RunTweenClose(DialogueWindow w, Player p)
+        {
             try
             {
-                p.halt();
-                Core.forbidInputsFor(1.2f);
-                Singleton<UI>.Instance.tweenBlackScreenTop(
-                    new Color(0f, 0f, 0f, 1f), 0.5f);
+                TweenClose(w);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
+                w.tweening = false;
+                w.gameObject.SetActive(false);
+                if (Singleton<CamMain>.Instance != null)
+                {
+                    Singleton<CamMain>.Instance.gameObject.SetActive(true);
+                }
+
+                p.inDialogue = false;
+                p.performingAction = false;
+                p.talkedToNPC = null;
+                Core.unpause(1f);
             }
+        }
 
-            // onTweenClose gives the controls back (inDialogue,
-            // performingAction, the pause, the camera).
-            Singleton<Controller>.Instance.Invoke(() =>
-            {
-                try
-                {
-                    TweenClose(w);
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning($"Closing the dialogue: {e.Message}");
-                    w.tweening = false;
-                    w.gameObject.SetActive(false);
-                    if (Singleton<CamMain>.Instance != null)
-                    {
-                        Singleton<CamMain>.Instance.gameObject.SetActive(true);
-                    }
-
-                    p.inDialogue = false;
-                    p.performingAction = false;
-                    p.talkedToNPC = null;
-                    Core.unpause(1f);
-                }
-            }, 0.5f, timeScaleDependent: false);
-
-            // a dialogue the talk lock holds is only ever a session's
+        /// A dialogue the talk lock holds is only ever a session's.
+        private static void TalkClosed()
+        {
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
