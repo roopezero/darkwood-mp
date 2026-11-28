@@ -102,12 +102,13 @@ namespace DarkwoodMP.World
         /// own (not the shared one, DreamSync.Shared), also while going into
         /// it, or a separate location the host didn't place
         /// (Whereabouts.HostRunsHere). What happens there is ours alone, as in
-        /// single player.
+        /// single player. Not a later part of the epilogue: the host is in
+        /// it too (InLaterPart).
         /// </summary>
         public static bool InOwnArea()
         {
             var s = S;
-            if (s == null || !s.IsClient)
+            if (s == null || !s.IsClient || InLaterPart(null))
             {
                 return false;
             }
@@ -135,9 +136,8 @@ namespace DarkwoodMP.World
         /// refused: our player's doing there runs here alone (Part.All), as in
         /// single player, and isn't sent. A shared dream's things (the level
         /// dream, a prologue stage) are the host's to decide, as the world's
-        /// are. Null: only where our player is counts. On the host too: a
-        /// thing in a later part of the epilogue (InLaterPart), whose doings
-        /// stay in each game.
+        /// are, and so are a later part of the epilogue's (InLaterPart). Null:
+        /// only where our player is counts.
         /// </summary>
         public static bool OursAlone(GameObject go)
         {
@@ -147,9 +147,12 @@ namespace DarkwoodMP.World
                 return false;
             }
 
-            if (go != null && InLaterPart(go))
+            // A later part of the epilogue is the host's to decide, as the
+            // shared dream is: breaks, doors, drags and pickups there reach
+            // every game (its scripted events don't: PlayerOwn).
+            if (InLaterPart(go))
             {
-                return true;
+                return false;
             }
 
             if (!s.IsClient)
@@ -182,10 +185,25 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// This thing's scripted events (its triggers, a dialogue's world
+        /// events) are our player's own: OursAlone, or in a later part of the
+        /// epilogue (InLaterPart), where each player goes through the
+        /// once-only events (the flat's clothes, its rooms, the dog) for
+        /// themselves. There each runs whole in the doer's game, and the
+        /// others run only its shared steps, leaving it unfired
+        /// (ScriptedEvents.SendOwn). Its world actions are still shared.
+        /// </summary>
+        public static bool PlayerOwn(GameObject go)
+        {
+            return OursAlone(go) || InLaterPart(go);
+        }
+
+        /// <summary>
         /// This thing is in the later part of the epilogue our player is in
         /// (Whereabouts.LaterPart), in any game. Null: our player is in one.
-        /// Each game builds such a part for itself; what is done there isn't
-        /// sent, and the world's own triggers there run in each game.
+        /// Each game builds such a part for itself, and every player is in
+        /// it: the host decides its world actions, and its scripted events
+        /// are each player's own (PlayerOwn).
         /// </summary>
         public static bool InLaterPart(GameObject go)
         {

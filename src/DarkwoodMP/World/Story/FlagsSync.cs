@@ -419,6 +419,20 @@ namespace DarkwoodMP.World.Story
         private bool Take(ulong from, string key, string value)
         {
             bool host = Net.IsHost;
+            if (key.StartsWith(StoryKeys.Dialogue)
+                && !StoryRules.TakesDialogue(
+                    Places.Whereabouts.LaterPart() != null))
+            {
+                // Not taken, so our baseline keeps our own state: taking
+                // theirs as the baseline would send ours back at every look,
+                // and theirs again, for good.
+                Plugin.Log.LogInfo(
+                    $"[story] {key}: our player is in a later part of the "
+                        + "epilogue, where dialogues are each player's own; "
+                        + "not taken");
+                return false;
+            }
+
             switch (StoryRules.Route(key, host))
             {
                 case StoryRoute.Reward:

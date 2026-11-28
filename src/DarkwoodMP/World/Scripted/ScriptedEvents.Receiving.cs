@@ -43,6 +43,12 @@ namespace DarkwoodMP.World.Scripted
                 }
             }
 
+            if (FiredEventRules.IsOwn(kind))
+            {
+                OnOwn(from, fired);
+                return;
+            }
+
             if (kind == EventKind.WorldTrigger
                 || kind == EventKind.WorldTriggerCaused)
             {

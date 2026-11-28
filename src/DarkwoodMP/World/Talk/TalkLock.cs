@@ -302,7 +302,7 @@ namespace DarkwoodMP.World.Talk
             return new TalkOpenFacts
             {
                 Sharing = true,
-                OursAlone = WorldActions.OursAlone(npc.gameObject),
+                OursAlone = WorldActions.PlayerOwn(npc.gameObject),
                 RefValid = r.Valid,
                 IsHost = _session.IsHost,
             };

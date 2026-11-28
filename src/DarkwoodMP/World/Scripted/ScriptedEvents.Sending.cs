@@ -30,13 +30,20 @@ namespace DarkwoodMP.World.Scripted
                 return false;
             }
 
-            if (WorldActions.OursAlone(et.gameObject))
+            if (WorldActions.PlayerOwn(et.gameObject))
             {
                 if (Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] event {et.name} #{index}: ours alone, run "
                             + "here");
+                }
+
+                // A later part of the epilogue's: its shared steps run in
+                // the others' games too (SendOwnTrigger).
+                if (!world && WorldActions.InLaterPart(et.gameObject))
+                {
+                    SendOwnTrigger(et, index);
                 }
 
                 return false;
@@ -94,9 +101,9 @@ namespace DarkwoodMP.World.Scripted
         /// </summary>
         internal void SendExit(EventTriggers et, int index)
         {
-            if (WorldActions.OursAlone(et.gameObject))
+            if (WorldActions.PlayerOwn(et.gameObject))
             {
-                return; // nobody else has it
+                return; // nobody else has it, or it's our player's own
             }
 
             var r = ObjRef.Of(et.gameObject);
@@ -479,14 +486,21 @@ namespace DarkwoodMP.World.Scripted
             // A dream NPC's outcome in a dream of our own, or anything in a
             // later part of the epilogue (each game builds its own): it stays
             // ours alone, as in single player.
-            bool ownArea = WorldActions.InOwnArea()
-                || WorldActions.InLaterPart(null);
+            bool later = WorldActions.InLaterPart(null);
+            bool ownArea = WorldActions.InOwnArea() || later;
             if (!WorldEventRules.Sends(ours, ownArea))
             {
                 if (WorldActions.Debug)
                 {
                     Plugin.Log.LogInfo(
                         $"[world] world event {name}: ours alone, run here");
+                }
+
+                // A later part's: its shared steps run in the others' games
+                // too, left unfired there (SendOwnWorldEvent).
+                if (later && ge != null)
+                {
+                    SendOwnWorldEvent(name);
                 }
 
                 return true;

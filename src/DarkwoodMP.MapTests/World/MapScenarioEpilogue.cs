@@ -96,6 +96,13 @@ namespace DarkwoodMP.World
             Add("epiapt-puppet-clothes", AptPuppetClothes, timeout: 30f);
             Add("epiapt-room", AptRoom, timeout: 60f);
             Add("epiapt-pet", AptPet, timeout: 60f);
+            Add("epiapt-wardrobe", AptWardrobe, timeout: 30f);
+            Add("epiapt-wall-gone", AptWallGone, timeout: 30f);
+            Add("epiapt-bed-ready", AptBedReady, timeout: 30f);
+            Add("epiapt-bed-moved", AptBedMoved, timeout: 30f);
+            Add("epiapt-floor-ready", AptFloorReady, timeout: 30f);
+            Add("epiapt-floor", AptFloor, timeout: 40f);
+            Add("epiapt-floor-broken", AptFloorBroken, timeout: 30f);
             Add("epilogue-layout", Layout, timeout: 120f);
             Add("epilogue-flag", SetFlag, timeout: 30f);
             Add("epilogue-events", RunEvents, timeout: 30f);

@@ -16,6 +16,34 @@ namespace DarkwoodMP.World.Scripted
         /// looks for: too far away is asked again next time.
         public const string ReachWords = "(reach";
 
+        /// Kinds 7 and 8: a player's own event in a later part of the
+        /// epilogue, which ran whole in their game.
+        public static bool IsOwn(EventKind kind)
+        {
+            return kind == EventKind.OwnTrigger
+                || kind == EventKind.OwnWorldEvent;
+        }
+
+        /// The steps a game runs of another player's own event (kinds 7
+        /// and 8), when its own player is in that part and it has the event:
+        /// the host its own and the shared ones (its doors reach everyone),
+        /// a client the shared ones. None (null) otherwise. It's left unfired
+        /// either way, so our player still gets all of it.
+        public static EventPart? OwnPart(in OwnEventFacts f)
+        {
+            if (!f.Known || !f.InOurPart)
+            {
+                return null;
+            }
+
+            if (f.Host)
+            {
+                return EventPart.HostAndShared;
+            }
+
+            return EventPart.SharedOnly;
+        }
+
         /// Host: the world's own triggers come only from the host, so a
         /// client's kind 3 or 6 is refused (outside a request, so nothing
         /// is sent back).

@@ -128,13 +128,14 @@ namespace DarkwoodMP.World.Places
 
         /// Whether our player is in a later part of the epilogue played
         /// together (its flat, its crater: any part after the first, which
-        /// the host runs). Every game builds each part for itself, and what
-        /// a player does there stays in their own game, the host's too: the
-        /// joiners' triggers there were already their own, and the host's
-        /// that reached them used up the once-only events of their flat
-        /// (its clothes, its rooms' lights), so a joiner who came second
-        /// had none of it and froze petting the dog. The parts still move
-        /// on together (DreamSync).
+        /// the host runs). Every game builds each part for itself and every
+        /// player is in it (the parts move on together: DreamSync). The host
+        /// decides its world actions (breaks, doors, drags, pickups), but its
+        /// scripted events are each player's own: the host's once used up
+        /// the once-only events of a joiner's flat (its clothes, its rooms'
+        /// lights), so a joiner who came second had none of it. Each runs
+        /// whole in the doer's game; the others run only its shared steps
+        /// and leave it unfired.
         public static bool IsLaterPart(in DreamFacts dream)
         {
             if (!dream.Epilogue || !dream.Dreaming || !dream.HasLocation
