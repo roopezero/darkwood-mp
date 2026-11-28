@@ -11,12 +11,12 @@ namespace DarkwoodMP.World.Dreaming
     /// The game never ends a dream with a dialogue open. A dialogue turns
     /// the main camera off and puts the black screen up under its window
     /// (DialogueWindow.SetDialogue, onTweenOpen); the part's transition then
-    /// ran under it, the next part's start took the dialogue's hold off the
-    /// player (startDreaming's resetState: inDialogue false) and destroyed
-    /// its NPC with the old part, and the window stayed, over a black
-    /// screen. Closing it there left the camera off or the black screen up
-    /// (onTweenClose leaves the black screen while Dreams.wantToDream is
-    /// set, as it is while the part changes), so the player saw nothing.
+    /// ran under it, and the next part's start took the dialogue's hold off
+    /// the player (startDreaming's resetState: inDialogue false) but left
+    /// the window up and the main camera off (seen in map:epidialog before
+    /// the fix). Escape reaches the dialogue only while inDialogue is set
+    /// (InputScript), and the NPC of a dialogue in the part went with the
+    /// old part, so the player was left with nothing of the world drawn.
     ///
     /// So our dialogue is closed first, at once (DialogueGuard.CloseNow: the
     /// game's onTweenClose, without the fades), and the map and the journal
