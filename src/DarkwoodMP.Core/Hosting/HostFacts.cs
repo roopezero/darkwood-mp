@@ -9,9 +9,5 @@ namespace DarkwoodMP.Hosting
         /// The world is the player's copy of another host's world
         /// (ModHost.Share.PlayingHostCopy; false without a WorldShare).
         public bool HostsCopy { get; init; }
-
-        /// The world is in the epilogue, with nobody else in it
-        /// (EpilogueSync.InEpilogueAlone()).
-        public bool InEpilogue { get; init; }
     }
 }

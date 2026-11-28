@@ -23,5 +23,9 @@ namespace DarkwoodMP.World.Story
 
         /// A joiner: the host's layout of a part (ApplyLayout).
         Layout,
+
+        /// A new joiner: the host's epilogue is on, in this part
+        /// (JoinPart).
+        JoinPart,
     }
 }

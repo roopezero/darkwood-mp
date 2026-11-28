@@ -67,41 +67,13 @@ namespace DarkwoodMP.Tests.Hosting
             }
 
             [Fact]
-            public void Refuses_a_world_in_the_epilogue()
+            public void Puts_no_world_before_a_copy()
             {
-                var host = InOwnWorld with { InEpilogue = true };
-
-                var verdict = HostRules.MayHost(host);
-
-                verdict.Reason.ShouldBe(Refusal.EpilogueBegun);
-            }
-
-            [Fact]
-            public void Puts_no_world_before_a_copy_and_the_epilogue()
-            {
-                var host = new HostFacts
-                {
-                    HostsCopy = true,
-                    InEpilogue = true,
-                };
+                var host = new HostFacts { HostsCopy = true };
 
                 var verdict = HostRules.MayHost(host);
 
                 verdict.Reason.ShouldBe(Refusal.LoadWorldToHost);
-            }
-
-            [Fact]
-            public void Puts_a_copy_before_the_epilogue()
-            {
-                var host = InOwnWorld with
-                {
-                    HostsCopy = true,
-                    InEpilogue = true,
-                };
-
-                var verdict = HostRules.MayHost(host);
-
-                verdict.Reason.ShouldBe(Refusal.HostsCopy);
             }
         }
 
@@ -233,12 +205,12 @@ namespace DarkwoodMP.Tests.Hosting
             {
                 var facts = Ready with
                 {
-                    Host = InOwnWorld with { InEpilogue = true },
+                    Host = InOwnWorld with { HostsCopy = true },
                 };
 
                 var begin = HostRules.Begin(facts);
 
-                begin.Why.Reason.ShouldBe(Refusal.EpilogueBegun);
+                begin.Why.Reason.ShouldBe(Refusal.HostsCopy);
             }
 
             [Fact]

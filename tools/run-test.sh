@@ -375,6 +375,12 @@ new_game_up() { # new_game_up: the host starts a new game (prologue not skipped 
   ctl args --dwmp-test-start-window --dwmp-sandbox "$WORK/sandbox" --dwmp-start new --dwmp-start-host direct --dwmp-debug-world $extra
   wait_log "hosting with Direct" 600 || die "the new game wasn't hosted"
   echo "  phase: host's new game made, its intro film over and hosting in $(( $(date +%s) - t0 )) s"
+  # PRE_JOIN in the module: steps in the host's game before the client joins (map_scenario_epilogue_late.py).
+  if grep -q '^PRE_JOIN' "$T/$MAP_SCENARIO.py"; then
+    t0=$(date +%s)
+    $PY "$T/mapdriver.py" pre $CTL || echo "  FAIL: a pre-join step failed"
+    echo "  phase: pre-join steps in $(( $(date +%s) - t0 )) s"
+  fi
 }
 leave_worlds() { # leave_worlds N: client games 1..N, then the host, back to their main menus, as players leave
   # Before the reports, so what each game throws while its world is torn down (Character.OnDestroy and the

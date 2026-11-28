@@ -4,9 +4,9 @@ using System.Collections.Generic;
 namespace DarkwoodMP.World.Story
 {
     /// A new game started at the epilogue, for trying the ending together:
-    /// it starts as chapter 1 with the prologue skipped, and the host starts
-    /// the epilogue with a button once the others have joined (nobody can
-    /// join once it plays).
+    /// it starts as chapter 1 with the prologue skipped, and goes into the
+    /// epilogue by itself a moment after its world has loaded. The others
+    /// join it there (EpilogueSync's late join).
     public static class EpilogueStartRules
     {
         /// The story flag of the Talking Tree burned (Flags.cs).
@@ -56,10 +56,23 @@ namespace DarkwoodMP.World.Story
             return TreeFate.Standing;
         }
 
-        /// Whether the Multiplayer window shows the button: in a game started
-        /// at the epilogue, not a joiner's, until the epilogue plays.
-        public static bool Shows(in EpilogueStartFacts game) =>
-            game.AtEpilogue && !game.Joiner && !game.InEpilogue;
+        /// Seconds (realtime) the world has been ready before the epilogue
+        /// starts by itself: hosting begins as the world is ready
+        /// (HostStart), so the epilogue starts with the session up.
+        public const float StartAfter = 3f;
+
+        /// Whether the epilogue starts by itself now: it may, it wasn't
+        /// started in this world yet, and the world has been ready for
+        /// StartAfter.
+        public static bool StartsNow(in EpilogueStartFacts game)
+        {
+            if (game.Started || game.ReadyFor.Value < StartAfter)
+            {
+                return false;
+            }
+
+            return !MayStart(game).Refused;
+        }
 
         /// Whether the epilogue may start now.
         public static Verdict MayStart(in EpilogueStartFacts game)
@@ -76,7 +89,7 @@ namespace DarkwoodMP.World.Story
 
             if (game.InEpilogue)
             {
-                return Verdict.Refuse(Refusal.PlayingEnding);
+                return Verdict.Refuse(Refusal.EpilogueStarted);
             }
 
             if (!game.InWorld)

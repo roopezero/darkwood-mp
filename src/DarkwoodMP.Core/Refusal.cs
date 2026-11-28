@@ -530,7 +530,8 @@ namespace DarkwoodMP
         /// A player joined while the host isn't in a saved game.
         NoSavedGame,
 
-        /// A player joined while the host plays the ending.
+        /// A player joined while the host's epilogue is at its end (the
+        /// outcomes screen or the credits).
         PlayingEnding,
 
         // Containers' slots and the workbench's level: the host logs these
@@ -650,10 +651,6 @@ namespace DarkwoodMP
         /// are still in after leaving that host's game.
         HostsCopy,
 
-        /// The world is in the epilogue, which can't be shared once it has
-        /// begun.
-        EpilogueBegun,
-
         // Steam: lobbies, P2P sessions, and messages too long or too many.
 
         /// The Steam lobby's host runs another protocol version. The detail is
@@ -692,8 +689,11 @@ namespace DarkwoodMP
         /// The game wasn't started at the epilogue (Start Game's "Start at").
         NotAnEpilogueStart,
 
-        /// A joiner pressed "Start the epilogue": only the host starts it.
+        /// A joiner's game: only the host starts the epilogue.
         HostStartsEpilogue,
+
+        /// The epilogue has already started.
+        EpilogueStarted,
 
         /// The world hasn't loaded yet.
         WorldNotLoaded,

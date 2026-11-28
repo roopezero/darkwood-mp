@@ -20,6 +20,9 @@ namespace DarkwoodMP.World.Joining
                 case JoinWait.Away:
                     return "The host is away in another place. You'll join"
                         + " when they're back.";
+                case JoinWait.BetweenEpilogueParts:
+                    return "The host is between parts of the epilogue."
+                        + " You'll join them in a moment.";
                 case JoinWait.Loading:
                     return "The host's world is loading.";
                 case JoinWait.Preparing:

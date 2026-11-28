@@ -44,6 +44,28 @@ namespace DarkwoodMP.World.Joining
         public static bool Reuses(string stamp, string made, bool sameScene) =>
             stamp.Length > 0 && made == stamp && sameScene;
 
+        /// Where the world offered to joiners comes from (PrepareWorld): a
+        /// live snapshot with LiveWorld on, else the last save. In the
+        /// shared epilogue always the last save: the game saves only at the
+        /// epilogue's start, on its way into the first part, and a joiner's
+        /// game loading that save goes into the dream by itself (then into
+        /// the host's part, EpilogueRules.LoadedPart). A live snapshot
+        /// would put the joiner in a dream's place with no dream.
+        public static WorldSource Source(bool liveWorld, bool epilogue)
+        {
+            if (epilogue)
+            {
+                return WorldSource.EpilogueSave;
+            }
+
+            if (liveWorld)
+            {
+                return WorldSource.Live;
+            }
+
+            return WorldSource.LastSave;
+        }
+
         /// The world is sent packed (Pack) only when that is smaller.
         public static bool SendsPacked(int packed, int raw) => packed < raw;
     }

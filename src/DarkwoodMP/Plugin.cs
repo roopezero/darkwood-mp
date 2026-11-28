@@ -297,6 +297,7 @@ namespace DarkwoodMP
             _host.MenuEntry.Update();
             _host.LoadProfiler.Frame();
             _host.Control.Update();
+            _host.EpilogueStart.Update();
             _host.Panel.HoldGameButtons();
             // After the buttons are let go: an answered question's action, then
             // the menu's list (and a click on it).
@@ -432,6 +433,12 @@ namespace DarkwoodMP
             if (coop != null)
             {
                 coop.Dreaming.Update();
+            }
+
+            coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.Update();
             }
 
             coop = Coop.Current;

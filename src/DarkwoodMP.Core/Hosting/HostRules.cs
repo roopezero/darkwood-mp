@@ -12,8 +12,7 @@ namespace DarkwoodMP.Hosting
         /// Why the player can't host the world they're in, or Allow. A host
         /// shares the world it's in, so hosting starts from inside a world:
         /// from the main menu a server would only turn joiners away. Not in
-        /// a world wins, then a copy of another host's world, then the
-        /// epilogue.
+        /// a world wins, then a copy of another host's world.
         public static Verdict MayHost(in HostFacts host)
         {
             if (!host.InWorld)
@@ -24,11 +23,6 @@ namespace DarkwoodMP.Hosting
             if (host.HostsCopy)
             {
                 return Verdict.Refuse(Refusal.HostsCopy);
-            }
-
-            if (host.InEpilogue)
-            {
-                return Verdict.Refuse(Refusal.EpilogueBegun);
             }
 
             return Verdict.Allow;

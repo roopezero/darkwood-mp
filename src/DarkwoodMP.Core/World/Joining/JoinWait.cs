@@ -25,5 +25,8 @@ namespace DarkwoodMP.World.Joining
 
         /// The joiner asked for a piece of a world it isn't offered.
         WorldChanged,
+
+        /// Between two parts of the shared epilogue.
+        BetweenEpilogueParts,
     }
 }

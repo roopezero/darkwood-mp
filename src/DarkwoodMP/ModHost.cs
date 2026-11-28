@@ -260,8 +260,8 @@ namespace DarkwoodMP
         /// real one while it's set (UiWindow).
         public Func<UnityEngine.Vector2> TestMouse;
 
-        /// A new game started at the epilogue: the host's "Start the
-        /// epilogue" (World.Story.EpilogueStart).
+        /// A new game started at the epilogue: it goes into the epilogue
+        /// once its world is ready (World.Story.EpilogueStart).
         internal readonly World.Story.EpilogueStart EpilogueStart =
             new World.Story.EpilogueStart();
 

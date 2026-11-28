@@ -464,7 +464,8 @@ namespace DarkwoodMP.Tests
                 {
                     Refusal.PlayingEnding,
                     null,
-                    "The host is playing the ending."
+                    "The host's game is at the very end of the epilogue,"
+                        + " about to go to the credits."
                 },
                 { Refusal.HasItOpen, "Player 2", "Player 2 has it open" },
                 {
@@ -581,13 +582,6 @@ namespace DarkwoodMP.Tests
                         + " back to the main menu and load your own world."
                 },
                 {
-                    Refusal.EpilogueBegun,
-                    null,
-                    "This world is in the epilogue, which can't be shared once"
-                        + " it has begun. Host from a save before the end of"
-                        + " the game."
-                },
-                {
                     Refusal.OtherModVersion,
                     "0.28.0",
                     "Host runs a different DarkwoodMP version (0.28.0)"
@@ -623,6 +617,11 @@ namespace DarkwoodMP.Tests
                     Refusal.HostStartsEpilogue,
                     null,
                     "only the host starts the epilogue"
+                },
+                {
+                    Refusal.EpilogueStarted,
+                    null,
+                    "the epilogue has started"
                 },
                 {
                     Refusal.WorldNotLoaded,

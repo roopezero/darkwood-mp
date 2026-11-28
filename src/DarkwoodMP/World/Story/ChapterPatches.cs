@@ -23,15 +23,17 @@ namespace DarkwoodMP.World.Story
         }
     }
 
-    /// The epilogue's dream on the host ends the game for everyone.
+    /// The epilogue's dream on the host ends the game for everyone. A
+    /// joiner's save going back into the epilogue goes into the host's part.
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.prepareDream))]
     static class DreamsPrepareDream
     {
-        static void Prefix(string presetName)
+        static void Prefix(Dreams __instance, ref string presetName)
         {
             CoopSession coop = Coop.Current;
             if (coop != null)
             {
+                presetName = coop.Epilogue.LoadedPart(__instance, presetName);
                 coop.Chapters.OnPrepareDream(presetName);
             }
         }

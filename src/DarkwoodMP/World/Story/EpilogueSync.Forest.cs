@@ -315,10 +315,11 @@ namespace DarkwoodMP.World.Story
 
         /// <summary>
         /// EpilogueOutcomes.Start: the host sends its outcomes; a joiner's
-        /// screen takes the host's.
+        /// screen takes the host's. New joiners are refused from now on.
         /// </summary>
         internal void OutcomesStart(EpilogueOutcomes o)
         {
+            _atEnd = true;
             switch (EpilogueRules.OutcomesStart(OutcomesOf(o)))
             {
                 case OutcomeStep.Send:

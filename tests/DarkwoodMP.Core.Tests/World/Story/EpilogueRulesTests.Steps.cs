@@ -27,6 +27,7 @@ namespace DarkwoodMP.Tests.World.Story
             [InlineData(EpilogueStep.Pan, StepHandling.Ignore)]
             [InlineData(EpilogueStep.LayoutAsk, StepHandling.LayoutAsk)]
             [InlineData(EpilogueStep.Layout, StepHandling.Ignore)]
+            [InlineData(EpilogueStep.JoinPart, StepHandling.Ignore)]
             [InlineData(EpilogueStep.Outcomes, StepHandling.Ignore)]
             [InlineData(EpilogueStep.None, StepHandling.Ignore)]
             public void Takes_a_peers_crawl_and_fire_on_the_host(
@@ -53,6 +54,7 @@ namespace DarkwoodMP.Tests.World.Story
             [InlineData(EpilogueStep.Crawled, StepHandling.Ignore)]
             [InlineData(EpilogueStep.Layout, StepHandling.Layout)]
             [InlineData(EpilogueStep.LayoutAsk, StepHandling.Ignore)]
+            [InlineData(EpilogueStep.JoinPart, StepHandling.JoinPart)]
             [InlineData(EpilogueStep.None, StepHandling.Ignore)]
             public void Takes_the_hosts_pan_outcomes_and_fire_on_a_joiner(
                 EpilogueStep step,
@@ -75,6 +77,32 @@ namespace DarkwoodMP.Tests.World.Story
             public void Ignores_everything_when_not_playing()
             {
                 var facts = FromJoiner with { Playing = false };
+
+                EpilogueRules.OnStep(facts).ShouldBe(StepHandling.Ignore);
+            }
+
+            [Fact]
+            public void Takes_the_hosts_part_on_a_joiner_not_playing_yet()
+            {
+                var facts = FromHost with
+                {
+                    Playing = false,
+                    Step = EpilogueStep.JoinPart,
+                };
+
+                EpilogueRules.OnStep(facts).ShouldBe(StepHandling.JoinPart);
+            }
+
+            [Fact]
+            public void Ignores_a_part_from_anyone_but_the_host()
+            {
+                var facts = FromHost with
+                {
+                    Playing = false,
+                    FromHost = false,
+                    FromPeer = true,
+                    Step = EpilogueStep.JoinPart,
+                };
 
                 EpilogueRules.OnStep(facts).ShouldBe(StepHandling.Ignore);
             }

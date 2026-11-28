@@ -26,8 +26,16 @@ namespace DarkwoodMP.World.Story
     /// step does, and the epilogue is a shared dream (DreamSync.Shared): any
     /// player's endDream moves everyone on to the same next part, and the host
     /// takes a joiner's only for an outcome the current part has. The flags are
-    /// the host's (FlagsSync), so the outcomes are the same. Nobody new can
-    /// join while it plays.
+    /// the host's (FlagsSync), so the outcomes are the same.
+    ///
+    /// A player can join while it plays (EpilogueSync.Join.cs): the host
+    /// offers the save its game made on its way into the first part, and
+    /// tells the joiner the part it is in (EpilogueStep 7) as it lets it
+    /// in; the joiner's game goes into that part as the save loads. Only
+    /// between two parts does a joiner wait, and from the outcomes screen
+    /// on it is refused. A host whose world went into the epilogue alone
+    /// (a save made in it, or started before hosting) shares it from then
+    /// on (Update).
     ///
     /// The burning forest (in the crater, after the Being is set on fire): a
     /// player's first death there starts their crawl, the second ends it, and
@@ -55,6 +63,8 @@ namespace DarkwoodMP.World.Story
             coop.Handle(MsgType.EpilogueStep, OnStep);
             coop.Net.OnPeerDisconnected += OnPeerLeft;
             coop.Hook(() => coop.Net.OnPeerDisconnected -= OnPeerLeft);
+            coop.Net.OnPeerConnected += OnPeerJoined;
+            coop.Hook(() => coop.Net.OnPeerConnected -= OnPeerJoined);
             coop.Hook(Ended);
         }
 
@@ -74,6 +84,20 @@ namespace DarkwoodMP.World.Story
         /// </summary>
         public bool Playing { get; private set; }
         private bool _ownPan, _toMenu, _panGo, _ownDeath, _burnShared;
+        /// <summary>
+        /// The outcomes screen came on (the credits follow): joiners are
+        /// refused from then on.
+        /// </summary>
+        private bool _atEnd;
+        /// <summary>
+        /// The epilogue went to the credits in this session: it isn't taken
+        /// up again (Update).
+        /// </summary>
+        private bool _over;
+        /// <summary>
+        /// Joiner: the host's part we're joining (null: none).
+        /// </summary>
+        private string _joinPart;
         /// <summary>
         /// Where our player crawled to their death (the pan starts there).
         /// </summary>
@@ -108,12 +132,13 @@ namespace DarkwoodMP.World.Story
         private void Ended()
         {
             Playing = false;
+            _joinPart = null;
             Reset();
         }
 
         private void Reset()
         {
-            _ownPan = _panGo = _ownDeath = _burnShared = false;
+            _ownPan = _panGo = _ownDeath = _burnShared = _atEnd = false;
             _crawled.Reset();
             _hostBurned = HostBurned.Unheard;
             _coop.Spectator.EndWatch();
@@ -121,8 +146,7 @@ namespace DarkwoodMP.World.Story
 
         /// <summary>
         /// Our world is in the epilogue on its own (a save made at its start,
-        /// or played into it before hosting): it can't be shared then, as
-        /// joiners go into it only with the host, at its start.
+        /// or played into it before hosting): a host shares it then (Update).
         /// </summary>
         internal static bool InEpilogueAlone()
         {
@@ -145,8 +169,14 @@ namespace DarkwoodMP.World.Story
         /// </summary>
         internal string JoinRefusal()
         {
-            bool host = S != null && S.IsHost;
-            Verdict verdict = EpilogueRules.JoinRefusal(Playing, host);
+            var facts = new EpilogueJoinFacts
+            {
+                Playing = Playing,
+                Host = S != null && S.IsHost,
+                AtEnd = _atEnd,
+            };
+
+            Verdict verdict = EpilogueRules.JoinRefusal(facts);
             if (!verdict.Refused)
             {
                 return null;
@@ -178,6 +208,8 @@ namespace DarkwoodMP.World.Story
             Playing = true;
             Reset();
             _coop.Dreaming.Share(StoryRequestRules.EpilogueDream);
+            // the story as the save on the way into the first part has it
+            _coop.Story.NoteSnapshot();
 
             Plugin.Log.LogInfo(
                 "[epilogue] the host starts the epilogue: the players in its "
@@ -272,6 +304,7 @@ namespace DarkwoodMP.World.Story
             }
 
             Playing = false;
+            _over = true;
             if (step == CreditsStep.HostStops)
             {
                 Plugin.Log.LogInfo(
@@ -383,6 +416,9 @@ namespace DarkwoodMP.World.Story
                     return;
                 case StepHandling.Layout:
                     ApplyLayout(note.Value, r);
+                    return;
+                case StepHandling.JoinPart:
+                    JoinPart(note.Value);
                     return;
                 default:
                     return;

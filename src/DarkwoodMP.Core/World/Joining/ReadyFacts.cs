@@ -24,5 +24,11 @@ namespace DarkwoodMP.World.Joining
         public bool Dreaming { get; init; }
 
         public bool Away { get; init; }
+
+        /// The shared epilogue is on (EpilogueSync.Playing), and our game
+        /// is between two of its parts (EpilogueRules.BetweenParts).
+        public bool Epilogue { get; init; }
+
+        public bool BetweenParts { get; init; }
     }
 }

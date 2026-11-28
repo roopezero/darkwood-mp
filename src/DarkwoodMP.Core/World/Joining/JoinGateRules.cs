@@ -13,7 +13,8 @@ namespace DarkwoodMP.World.Joining
 
         /// Why a joiner must wait, first that applies; None when it needn't
         /// (and when the host isn't in a world, which Admit refuses). In the
-        /// prologue the checks after it are skipped.
+        /// prologue and the shared epilogue the checks after them are
+        /// skipped.
         public static JoinWait NotReady(in ReadyFacts facts)
         {
             if (!facts.InWorld)
@@ -31,6 +32,17 @@ namespace DarkwoodMP.World.Joining
                 if (facts.PrologueWaits)
                 {
                     return JoinWait.BetweenPrologueParts;
+                }
+
+                return JoinWait.None;
+            }
+
+            // the shared epilogue is a dream a joiner goes into
+            if (facts.Epilogue)
+            {
+                if (facts.BetweenParts)
+                {
+                    return JoinWait.BetweenEpilogueParts;
                 }
 
                 return JoinWait.None;
