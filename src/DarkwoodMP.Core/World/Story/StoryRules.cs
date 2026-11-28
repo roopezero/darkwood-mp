@@ -67,6 +67,17 @@ namespace DarkwoodMP.World.Story
             return sharedDream || !inDream;
         }
 
+        /// Whether a dialogue's state ("d:") from another game is taken here.
+        /// Not while our player is in a later part of the epilogue, where
+        /// each player talks for themselves: the flat's wardrobe is a
+        /// dialogue, and its state from the player who used it first (shown
+        /// already) skipped its outcomes for the next one, whose clothes
+        /// never changed and whose kitchen stayed walled off.
+        public static bool TakesDialogue(bool inLaterPart)
+        {
+            return !inLaterPart;
+        }
+
         /// What a game does with a key another game sent, in this order: a
         /// reward, a reputation, karma at the host, an NPC's state at the
         /// host, anything else.

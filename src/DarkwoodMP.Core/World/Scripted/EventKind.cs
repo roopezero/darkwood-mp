@@ -20,5 +20,13 @@ namespace DarkwoodMP.World.Scripted
 
         /// A world trigger a client caused: its player part is theirs.
         WorldTriggerCaused = 6,
+
+        /// In a later part of the epilogue, a player's own trigger ran whole
+        /// in their game: the others run its shared steps, leaving it
+        /// unfired for their own player.
+        OwnTrigger = 7,
+
+        /// As OwnTrigger, for a world event by name (a dialogue's outcome).
+        OwnWorldEvent = 8,
     }
 }

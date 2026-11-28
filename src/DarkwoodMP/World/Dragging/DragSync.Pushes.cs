@@ -66,7 +66,8 @@ namespace DarkwoodMP.World
             // wherever the host runs our area too (a separate location it
             // placed, the shared dream): only in an area that's ours alone does
             // what our player knocks over stay ours.
-            bool hostRunsHere = Places.Whereabouts.HostRunsHere();
+            bool hostRunsHere = Places.Whereabouts.HostRunsHere()
+                || WorldActions.InLaterPart(null);
             List<Rigidbody> gone = null;
             foreach (var kv in _loose)
             {

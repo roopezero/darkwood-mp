@@ -432,8 +432,13 @@ namespace DarkwoodMP.Net
         /// ScriptedEvents.LaterStep). Not passed on. Kind 6, only from the host
         /// to the one client that caused a world trigger (killed the NPC, broke
         /// the item, switched on the machine): as kind 3, but that client runs
-        /// its own and the shared steps (the others get kind 3). See
-        /// World.ScriptedEvents.
+        /// its own and the shared steps (the others get kind 3). Kinds 7 (a
+        /// trigger, str "") and 8 (a world event, ObjRef none), either way and
+        /// not a request: in a later part of the epilogue the sender's player
+        /// ran this whole in their own game; the host passes it on, and every
+        /// game whose player is in that part runs its shared steps (the host
+        /// also its own) without marking it fired, so each player still gets
+        /// all of it when they set it off. See World.ScriptedEvents.
         /// </summary>
         EventFired = 67,
         /// <summary>

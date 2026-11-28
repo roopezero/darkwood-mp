@@ -160,7 +160,7 @@ namespace DarkwoodMP.World.Owed
             }
 
             EventTriggers et = t.thisEventTriggers;
-            bool alone = et != null && WorldActions.OursAlone(et.gameObject);
+            bool alone = et != null && WorldActions.PlayerOwn(et.gameObject);
             bool had = false;
             if (et != null && !alone)
             {

@@ -31,6 +31,56 @@ namespace DarkwoodMP.Tests.World.Scripted
             }
         }
 
+        public class IsOwn
+        {
+            [Theory]
+            [InlineData(EventKind.OwnTrigger, true)]
+            [InlineData(EventKind.OwnWorldEvent, true)]
+            [InlineData(EventKind.Trigger, false)]
+            [InlineData(EventKind.WorldEvent, false)]
+            public void Picks_the_later_part_kinds(EventKind kind, bool own)
+            {
+                FiredEventRules.IsOwn(kind).ShouldBe(own);
+            }
+        }
+
+        public class OwnPart
+        {
+            [Fact]
+            public void Runs_the_host_and_shared_steps_on_the_host()
+            {
+                var f = new OwnEventFacts
+                {
+                    Host = true,
+                    Known = true,
+                    InOurPart = true,
+                };
+
+                FiredEventRules.OwnPart(f).ShouldBe(EventPart.HostAndShared);
+            }
+
+            [Fact]
+            public void Runs_only_the_shared_steps_on_a_client()
+            {
+                var f = new OwnEventFacts { Known = true, InOurPart = true };
+                FiredEventRules.OwnPart(f).ShouldBe(EventPart.SharedOnly);
+            }
+
+            [Fact]
+            public void Runs_nothing_where_our_player_is_not_in_that_part()
+            {
+                var f = new OwnEventFacts { Host = true, Known = true };
+                FiredEventRules.OwnPart(f).ShouldBeNull();
+            }
+
+            [Fact]
+            public void Runs_nothing_without_the_event()
+            {
+                var f = new OwnEventFacts { InOurPart = true };
+                FiredEventRules.OwnPart(f).ShouldBeNull();
+            }
+        }
+
         public class HostTakes
         {
             [Theory]

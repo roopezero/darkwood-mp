@@ -190,6 +190,21 @@ namespace DarkwoodMP.Tests.World.Story
             }
         }
 
+        public class TakesDialogue
+        {
+            [Fact]
+            public void Takes_a_dialogue_state_in_the_world()
+            {
+                StoryRules.TakesDialogue(false).ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Refuses_a_dialogue_state_in_a_later_epilogue_part()
+            {
+                StoryRules.TakesDialogue(true).ShouldBeFalse();
+            }
+        }
+
         public class KeepsDreamEntry
         {
             [Theory]

@@ -76,6 +76,16 @@ namespace DarkwoodMP.World.Story
                     RefreshReputation(name);
                     break;
                 case StoryKey.Dialogue:
+                    bool later = Places.Whereabouts.LaterPart() != null;
+                    if (!StoryRules.TakesDialogue(later))
+                    {
+                        Plugin.Log.LogInfo(
+                            $"[story] {name}'s dialogue state: our player is "
+                                + "in a later part of the epilogue, where "
+                                + "dialogues are each player's own; not taken");
+                        break;
+                    }
+
                     var dialogue = f.getDialogue(name);
                     if (dialogue != null)
                     {

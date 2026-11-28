@@ -59,8 +59,14 @@ namespace DarkwoodMP.World.Places
             if (kind == PlaceKind.Dream)
             {
                 // The shared level dream, when our player dreams it too: it is
-                // ours to run, as a location is.
+                // ours to run, as a location is. So is a later part of the
+                // epilogue, which every player is in.
                 loc = SharedDream();
+                if (loc == null)
+                {
+                    loc = LaterPart();
+                }
+
                 if (!PlaceRules.RunsDream(loc != null, place, Current()))
                 {
                     return null;
