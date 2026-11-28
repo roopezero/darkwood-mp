@@ -21,6 +21,10 @@ namespace DarkwoodMP.World.Dreaming
         /// Host: the pending start is a joiner's story dream we follow.
         private bool _hostFollows;
 
+        /// Client: the story dream we asked the host to share (asked once,
+        /// as its transition starts or as it is drawn).
+        private string _asked;
+
         private StoryDreamFacts StoryOf(Dreams d, string name)
         {
             bool inDream = false;
@@ -50,12 +54,30 @@ namespace DarkwoodMP.World.Dreaming
         /// </summary>
         private void StoryDrawn(DreamPreset preset)
         {
-            if (preset == null)
+            if (preset != null)
             {
-                return;
+                StoryStarts(preset.name);
             }
+        }
 
-            string name = preset.name;
+        /// <summary>
+        /// Our game's dream transition starts (DreamTransition.transition on
+        /// Dreams.startTransition: the cellar's dive goes in through it).
+        /// Sending the dream now, rather than once the game draws it after
+        /// the transition, lets every game's transition play at the same
+        /// time.
+        /// </summary>
+        public void TransitionStarts(DreamTransition t)
+        {
+            var d = Singleton<Dreams>.Instance;
+            if (d != null && t != null && t == d.startTransition)
+            {
+                StoryStarts(t.dreamToTransitionTo);
+            }
+        }
+
+        private void StoryStarts(string name)
+        {
             var d = Singleton<Dreams>.Instance;
             StoryStep step = StoryDreamRules.Drawn(StoryOf(d, name));
             var w = S.Begin(MsgType.DreamStart);
@@ -68,8 +90,9 @@ namespace DarkwoodMP.World.Dreaming
                 Plugin.Log.LogInfo(
                     $"[dream] story dream {name}: everyone goes in");
             }
-            else if (step == StoryStep.Ask)
+            else if (step == StoryStep.Ask && _asked != name)
             {
+                _asked = name;
                 S.SendToHost(w, Channel.Control, reliable: true);
                 Plugin.Log.LogInfo(
                     $"[dream] story dream {name}: we go in, the host shares "

@@ -22,7 +22,9 @@ namespace DarkwoodMP.World.Dreaming
             var share = ShareOf() with
             {
                 FromHost = from == S.HostId,
-                SameDream = PresetOf(d) == name,
+                // the one we asked the host to share (not drawn yet while
+                // its transition plays), or the one we're in
+                SameDream = _asked == name || PresetOf(d) == name,
             };
 
             StartStep step = DreamRules.Start(DreamOf(d), share);
@@ -40,7 +42,7 @@ namespace DarkwoodMP.World.Dreaming
             if (step == StartStep.AlreadyIn)
             {
                 Plugin.Log.LogInfo(
-                    $"[dream] the host's level dream {name}: we're in a dream "
+                    $"[dream] the host's dream {name}: we're in a dream "
                         + "already");
                 return;
             }

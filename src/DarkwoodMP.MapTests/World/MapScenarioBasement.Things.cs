@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using UnityEngine;
@@ -41,7 +42,7 @@ namespace DarkwoodMP.World
         private static IEnumerator Scan(string[] a, Result r)
         {
             var sb = new StringBuilder();
-            var doors = InDream<Door>();
+            var doors = Doors();
             for (int i = 0; i < doors.Count; i++)
             {
                 sb.Append($"\n  door {i}: {DoorInfo(doors[i])}");
@@ -52,6 +53,7 @@ namespace DarkwoodMP.World
             for (int i = 0; i < ets.Count; i++)
             {
                 var et = ets[i];
+                _listed.Add(et.name);
                 sb.Append(
                     $"\n  triggers {i}: {et.name} at "
                         + $"{Fmt(et.transform.position)} "
@@ -78,9 +80,18 @@ namespace DarkwoodMP.World
             yield break;
         }
 
+        /// The dream's doors a player can use (each room also has an
+        /// inactive copy of its door).
+        private static List<Door> Doors()
+        {
+            return InDream<Door>()
+                .Where(d => d.gameObject.activeInHierarchy)
+                .ToList();
+        }
+
         private static Door DoorAt(string[] a, Result r)
         {
-            var doors = InDream<Door>();
+            var doors = Doors();
             int i = int.Parse(a[0]);
             if (i >= doors.Count)
             {
@@ -92,7 +103,8 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "basement-door N" (either): our player opens the dream's door N,
+        /// "basement-door N" (either): our player opens the dream's door N (of
+        /// the active ones),
         /// and it stays open (the host's refusal would close it).
         /// </summary>
         private static IEnumerator OpenDoor(string[] a, Result r)
@@ -146,51 +158,69 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static (EventTriggers et, global::EventTrigger t) TriggerAt(
-            string[] a, Result r)
+        /// The trigger names basement-scan listed.
+        private static readonly HashSet<string> _listed =
+            new HashSet<string>();
+
+        /// "NAME" or "NAME#K": the K-th trigger of that name in the dream
+        /// (null: none).
+        private static EventTriggers TriggerAt(string at)
         {
-            var ets = InDream<EventTriggers>();
-            int i = int.Parse(a[0]);
-            if (i >= ets.Count)
+            string[] parts = at.Split('#');
+            int k = 0;
+            if (parts.Length > 1)
             {
-                r.Fail($"no trigger {i} ({ets.Count} in the dream)");
-                return (null, null);
+                k = int.Parse(parts[1]);
             }
 
-            var et = ets[i];
-            var t = et.eventTriggers.FirstOrDefault(x => x != null);
-            if (t == null)
+            var ets = InDream<EventTriggers>()
+                .Where(x => x.name == parts[0])
+                .ToList();
+            if (k >= ets.Count)
             {
-                r.Fail($"{et.name} has no trigger");
+                return null;
             }
 
-            return (et, t);
+            return ets[k];
+        }
+
+        private static global::EventTrigger FirstOf(EventTriggers et)
+        {
+            return et.eventTriggers.FirstOrDefault(x => x != null);
         }
 
         /// <summary>
-        /// "basement-fire N" (either): our player sets off the dream's
-        /// trigger N (its first trigger) beside it.
+        /// "basement-fire NAME[#K]" (either): our player sets off the
+        /// dream's trigger NAME (the K-th of that name; its first trigger)
+        /// beside it. A once-only area trigger may go as our player lands
+        /// beside it, and remove itself once fired.
         /// </summary>
         private static IEnumerator Fire(string[] a, Result r)
         {
-            var (et, t) = TriggerAt(a, r);
-            if (t == null)
+            var et = TriggerAt(a[0]);
+            if (et == null || FirstOf(et) == null)
             {
+                r.Fail($"no trigger {a[0]} in the dream");
                 yield break;
             }
 
+            var t = FirstOf(et);
             Place(et.transform.position + new Vector3(40f, 0f, 0f));
             yield return new WaitForSeconds(1f);
             var type = t.type;
-            AsPlayer(() => et.fireEventTrigger(type));
+            if (et != null && !t.fired)
+            {
+                AsPlayer(() => et.fireEventTrigger(type));
+            }
+
             float until = Time.realtimeSinceStartup + 10f;
             while (!t.fired && Time.realtimeSinceStartup < until)
             {
                 yield return new WaitForSeconds(0.3f);
             }
 
-            r.Info = $"{et.name} ({type}): fired {t.fired}; "
-                + $"{Steps(t.gameEvents)}";
+            r.Info = $"{a[0]} ({type}): fired {t.fired}, still there "
+                + $"{et != null}";
             if (!t.fired)
             {
                 r.Fail($"it didn't fire: {r.Info}");
@@ -198,25 +228,36 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "basement-fired N" (either): the dream's trigger N fired here too
-        /// (another player set it off).
+        /// "basement-fired NAME[#K]" (either): that trigger fired here too
+        /// (another player set it off), or it is gone: it was listed and
+        /// removed itself once fired.
         /// </summary>
         private static IEnumerator Fired(string[] a, Result r)
         {
-            var (et, t) = TriggerAt(a, r);
-            if (t == null)
+            float until = Time.realtimeSinceStartup + 15f;
+            var et = TriggerAt(a[0]);
+            while (et != null && !FirstOf(et).fired
+                && Time.realtimeSinceStartup < until)
             {
+                yield return new WaitForSeconds(0.3f);
+                et = TriggerAt(a[0]);
+            }
+
+            string name = a[0].Split('#')[0];
+            if (et == null)
+            {
+                r.Info = $"{a[0]}: gone (removed once fired)";
+                if (!_listed.Contains(name))
+                {
+                    r.Fail($"no trigger {a[0]}, and the scan didn't list it");
+                }
+
                 yield break;
             }
 
-            float until = Time.realtimeSinceStartup + 15f;
-            while (!t.fired && Time.realtimeSinceStartup < until)
-            {
-                yield return new WaitForSeconds(0.3f);
-            }
-
-            r.Info = $"{et.name} ({t.type}): fired {t.fired}";
-            if (!t.fired)
+            bool fired = FirstOf(et).fired;
+            r.Info = $"{a[0]}: fired {fired}";
+            if (!fired)
             {
                 r.Fail($"it didn't fire here: {r.Info}");
             }

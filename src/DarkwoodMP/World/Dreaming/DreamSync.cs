@@ -294,6 +294,7 @@ namespace DarkwoodMP.World.Dreaming
 
         public void AfterEnd(Dreams d)
         {
+            _asked = null;
             if (DreamRules.Over(DreamOf(d), ShareOf()))
             {
                 Plugin.Log.LogInfo($"[dream] back from {Shared}");

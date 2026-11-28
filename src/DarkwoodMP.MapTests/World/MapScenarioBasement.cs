@@ -25,6 +25,7 @@ namespace DarkwoodMP.World
             Add("basement-presets", Presets);
             Add("basement-steps", DreamSteps);
             Add("basement-tank", Tank);
+            Add("basement-start", Start);
             Add("basement-in", In, timeout: 120f);
             Add("basement-scan", Scan, timeout: 30f);
             Add("basement-door", OpenDoor, timeout: 30f);
@@ -110,6 +111,28 @@ namespace DarkwoodMP.World
             bag.addItemTypeToPlayer(SharedTank.Item, 1, dropIfNoRoom: true);
             yield return new WaitForSeconds(1f);
             r.Info = $"carried {MapScenarioWorld.CarriedOf(SharedTank.Item)}";
+        }
+
+        /// <summary>
+        /// "basement-start" (either): our game runs the dive's dream step
+        /// itself (startDream dream_village_cellar through the transition),
+        /// as the cellar's first dive does; its once-only events have run
+        /// already.
+        /// </summary>
+        private static IEnumerator Start(string[] a, Result r)
+        {
+            var step = new GameEvent
+            {
+                type = GameEvent.Type.startDream,
+                Value = StoryDreamRules.CellarDream,
+                activeModifier = true,
+                eventAmount = 1,
+            };
+
+            Singleton<Controller>.Instance.StartCoroutine(
+                step.fire(Player.Instance.gameObject));
+            yield return new WaitForSeconds(1f);
+            r.Info = $"wantToDream {D.wantToDream}";
         }
 
         private static string PresetName()
