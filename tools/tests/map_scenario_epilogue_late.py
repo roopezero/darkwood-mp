@@ -25,9 +25,16 @@ STEPS = [
 ]
 
 POST = [
-    # The flat together: each walks into the kitchen after the host, and pets the dog.
+    # The flat together, as in map_scenario_epiapt2.py: each changes clothes, walks into the kitchen and the living room
+    # after the host, and pets the dog.
+    ("host", "epiapt-clothes", {"settle": 0}),
+    ("client", "epiapt-clothes", {"settle": 0}),
+    ("host", "epiapt-puppet-clothes"),
+    ("client", "epiapt-puppet-clothes"),
     ("host", "epiapt-room", "kuchnia"),
     ("client", "epiapt-room", "kuchnia"),
+    ("host", "epiapt-room", "dpokoj"),
+    ("client", "epiapt-room", "dpokoj"),
     ("host", "epiapt-pet"),
     ("client", "epiapt-pet"),
     # On to the crater (the client ends each part; the host follows), then the ending without the fire: back to the
