@@ -207,12 +207,6 @@ namespace DarkwoodMP.World
 
             Plugin.Log.LogInfo(
                 "Back to the main menu: leaving the host's game");
-            CoopSession coop = Coop.Current;
-            if (coop != null)
-            {
-                coop.Epilogue.PlayerLeaves();
-            }
-
             _session.Backend.Leave();
         }
 

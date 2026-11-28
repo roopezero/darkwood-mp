@@ -101,33 +101,12 @@ namespace DarkwoodMP.World.Story
 
         /// <summary>
         /// The session's end. If the host went away in the middle of the
-        /// epilogue (it left, or its last word didn't reach us), our game goes
-        /// to the credits and the main menu, as the host's end would have
-        /// taken it: the parts ahead are the host's to start, and a part left
-        /// half-way (a move to the next one never coming, the host's puppet
-        /// gone) can't be played on alone.
+        /// epilogue (it left, or its last word didn't reach us), leaving the
+        /// host's world takes our game to the main menu (WorldShare): the
+        /// parts ahead are the host's to start, so it isn't played on alone.
         /// </summary>
         private void Ended()
         {
-            bool client = S != null && S.IsClient;
-            bool credits = SceneManager.GetActiveScene().name == "credits";
-            if (EndingRules.CreditsWhenHostGone(Playing, client, credits))
-            {
-                Plugin.Log.LogInfo(
-                    "[epilogue] the host left during the epilogue: to the "
-                        + "credits and the main menu");
-                Plugin.Notice("The host left. The game has ended.");
-                WorldShare instance = Plugin.Instance.Host.Share;
-                if (instance != null)
-                {
-                    instance.SetLoadStatus(
-                        "The host left during the ending.");
-                }
-
-                Chapters.ToCredits();
-                Plugin.Instance.StartCoroutine(Chapters.ToMenuAfterEnding());
-            }
-
             Playing = false;
             Reset();
         }
@@ -138,15 +117,6 @@ namespace DarkwoodMP.World.Story
             _crawled.Reset();
             _hostBurned = HostBurned.Unheard;
             _coop.Spectator.EndWatch();
-        }
-
-        /// <summary>
-        /// Our player goes back to the main menu by choice: the session's end
-        /// that follows isn't the host leaving.
-        /// </summary>
-        internal void PlayerLeaves()
-        {
-            Playing = false;
         }
 
         /// <summary>

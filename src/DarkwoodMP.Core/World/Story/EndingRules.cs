@@ -154,16 +154,6 @@ namespace DarkwoodMP.World.Story
             return EndingWait.Waiting;
         }
 
-        /// Whether a joiner whose session ended in the middle of the shared
-        /// epilogue (the host left, or its last word was lost) goes to the
-        /// credits and the main menu, as the host's end would have taken it:
-        /// only while it plays the epilogue and isn't at the credits yet.
-        public static bool CreditsWhenHostGone(
-            bool playing, bool client, bool atCredits)
-        {
-            return playing && client && !atCredits;
-        }
-
         /// Whether a joiner that lost its host leaves the host's world for
         /// the main menu at once (WorldShare): not while an ending takes it
         /// through the credits there.

@@ -138,7 +138,7 @@ namespace DarkwoodMP.World
 
             session.Backend.Leave();
             yield return new WaitForSeconds(1f);
-            r.Info = $"session {session.Active}: {Where()}";
+            r.Info = $"session {session.Active}";
         }
 
         /// <summary>
@@ -200,7 +200,12 @@ namespace DarkwoodMP.World
             r.Info = $"main menu {WorldShare.MainMenuReady()} (credits seen "
                 + $"{credits}); inputs forbidden {Core.forbidInputs}; "
                 + $"session {Plugin.Instance.Host.Session.Active}; {check}";
-            if (!WorldShare.MainMenuReady() || !shown || !entries
+            bool wantCredits = a.Length == 0 || a[0] != "direct";
+            if (wantCredits && !credits)
+            {
+                r.Fail($"no credits: {r.Info}");
+            }
+            else if (!WorldShare.MainMenuReady() || !shown || !entries
                 || Core.forbidInputs || Plugin.Instance.Host.Session.Active)
             {
                 r.Fail($"the main menu doesn't work: {r.Info}");

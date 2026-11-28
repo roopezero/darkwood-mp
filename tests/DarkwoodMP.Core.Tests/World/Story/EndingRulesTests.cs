@@ -341,24 +341,6 @@ namespace DarkwoodMP.Tests.World.Story
             }
         }
 
-        public class CreditsWhenHostGone
-        {
-            [Theory]
-            [InlineData(true, true, false, true)]
-            [InlineData(false, true, false, false)]
-            [InlineData(true, false, false, false)]
-            [InlineData(true, true, true, false)]
-            public void Goes_to_the_credits_only_mid_epilogue_on_a_joiner(
-                bool playing,
-                bool client,
-                bool atCredits,
-                bool goes)
-            {
-                EndingRules.CreditsWhenHostGone(playing, client, atCredits)
-                    .ShouldBe(goes);
-            }
-        }
-
         public class LeavesForMenu
         {
             [Fact]

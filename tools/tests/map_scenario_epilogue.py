@@ -27,11 +27,11 @@ POST += [
     ("host", "epilogue-at", "crater"),
 ]
 if END == "drop":
-    # The host's server goes away in the crater with no last word: the client goes to the credits and gets back to a
-    # main menu that works.
+    # The host's server goes away in the crater with no last word: the client leaves the host's world for a main menu
+    # that works (no credits).
     POST += [
         ("host", "epilogue-drop", {"settle": 0}),
-        ("client", "epilogue-menu-works", {"timeout": 220}),
+        ("client", "epilogue-menu-works", "direct", {"timeout": 220}),
     ]
 elif END == "sleep":
     # The other ending: back to the room (the client's end of the crater takes both), where the host's outcomes screen
