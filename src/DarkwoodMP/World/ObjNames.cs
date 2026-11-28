@@ -240,10 +240,10 @@ namespace DarkwoodMP.World
             uint eid = 0;
             bool enemy = false;
             var c = go.GetComponent<Character>();
-            NetEnemies enemies = _coop.Enemies;
-            if (c != null && enemies != null)
+            // no session's enemies when playing alone (Host.AloneNames)
+            if (c != null && _coop != null && _coop.Enemies != null)
             {
-                enemy = enemies.NetIdOf(c, out eid);
+                enemy = _coop.Enemies.NetIdOf(c, out eid);
             }
 
             int saveId = 0;
