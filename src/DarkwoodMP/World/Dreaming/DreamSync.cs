@@ -261,6 +261,7 @@ namespace DarkwoodMP.World.Dreaming
         public void Started()
         {
             _ended = false;
+            AfterReplay();
             EnteredAt =
                 System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() / 1000.0;
         }
@@ -310,16 +311,9 @@ namespace DarkwoodMP.World.Dreaming
                 _inputsFrom = DreamRules.InputsFrom(Now);
             }
 
-            d.outcome = outcome;
-            _coop.Guards.Replaying = true;
-            try
-            {
-                d.initiateEndDreaming();
-            }
-            finally
-            {
-                _coop.Guards.Replaying = false;
-            }
+            _replay = outcome;
+            _replayBy = DreamRules.ReplayBy(Now);
+            Replay(d);
         }
 
         private void OnEnd(ulong from, PacketReader r)

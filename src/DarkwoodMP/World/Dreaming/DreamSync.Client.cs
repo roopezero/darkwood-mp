@@ -123,6 +123,11 @@ namespace DarkwoodMP.World.Dreaming
         {
             var d = Singleton<Dreams>.Instance;
             CheckInputs(d);
+            if (_replay != null)
+            {
+                Replay(d);
+            }
+
             DreamFacts dream = DreamOf(d);
             PendingEnd end =
                 DreamRules.OnPendingEnd(dream, _pendingEnd != null, _ended);
