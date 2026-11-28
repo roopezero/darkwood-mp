@@ -13,6 +13,7 @@ using DarkwoodMP.Net;
 using DarkwoodMP.Sync;
 using DarkwoodMP.Sync.Players;
 using DarkwoodMP.World;
+using DarkwoodMP.World.Story;
 using HarmonyLib;
 using Chapters = DarkwoodMP.World.Story.Chapters;
 using UnityEngine;
@@ -272,10 +273,18 @@ namespace DarkwoodMP
             // "--dwmp-test-start-window": open the Start Game window from the
             // main menu (see StartGameWindow.Test for --dwmp-sandbox,
             // --dwmp-screen, --dwmp-shots, --dwmp-start, --dwmp-start-host,
-            // --dwmp-start-name).
+            // --dwmp-start-name; "--dwmp-start-epilogue standing|burned"
+            // chooses "Start at: Epilogue" with the Talking Tree so).
             StartTest window = TestArgRules.WindowTest(args);
             if (window == Testing.StartTest.StartWindow)
             {
+                string tree = Arg("--dwmp-start-epilogue");
+                if (tree != null)
+                {
+                    _host.StartGame.StartAtEpilogue(
+                        EpilogueStartRules.TreeNamed(tree));
+                }
+
                 StartTest(
                     StartGameWindow.Test(
                         Arg("--dwmp-sandbox"), Arg("--dwmp-screen"),

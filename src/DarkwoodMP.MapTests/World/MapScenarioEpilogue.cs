@@ -88,6 +88,7 @@ namespace DarkwoodMP.World
             Add("epilogue-pan", PanStep, timeout: 150f);
             Add("epilogue-credits", Credits, timeout: 120f);
             Add("epilogue-menu", Menu, timeout: 120f);
+            RegisterStart();
         }
 
         private static string Where()
@@ -142,20 +143,30 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "epilogue-start" (host): the game's last step starts the epilogue;
-        /// wait until we're in its first part.
+        /// "epilogue-start [button]" (host): the game's last step starts the
+        /// epilogue (with "button", as the Multiplayer window's "Start the
+        /// epilogue" does in a game started at the epilogue); wait until
+        /// we're in its first part.
         /// </summary>
         private static IEnumerator Start(string[] a, Result r)
         {
-            var step = new GameEvent
+            if (a.Length > 0 && a[0] == "button")
             {
-                type = GameEvent.Type.startDream,
-                Value = Chapters.EpilogueDream,
-                eventAmount = 1
-            };
+                Verdict verdict = Plugin.Instance.Host.EpilogueStart.Start();
+                if (verdict.Refused)
+                {
+                    r.Fail("refused: " + Refusals.Text(verdict));
+                    yield break;
+                }
+            }
+            else
+            {
+                GameEvent step =
+                    Chapters.StepFor(StoryKind.Epilogue, 0);
+                Singleton<Controller>.Instance.StartCoroutine(
+                    step.fire(P.gameObject));
+            }
 
-            Singleton<Controller>.Instance.StartCoroutine(
-                step.fire(P.gameObject));
             while (!InPart(Chapters.EpilogueDream))
             {
                 yield return new WaitForSeconds(0.5f);

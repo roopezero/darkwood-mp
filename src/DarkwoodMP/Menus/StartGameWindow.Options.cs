@@ -1,6 +1,7 @@
 using System;
 using DarkwoodMP.Net;
 using DarkwoodMP.World;
+using DarkwoodMP.World.Story;
 using UnityEngine;
 
 namespace DarkwoodMP.Menus
@@ -29,14 +30,13 @@ namespace DarkwoodMP.Menus
                 diff = p.difficulty;
             }
 
-            bool skip;
-            if (on || p == null)
+            StoryStart story = _story;
+            TreeFate tree = _tree;
+            if (!on && p != null)
             {
-                skip = _skipPrologue;
-            }
-            else
-            {
-                skip = p.skippedPrologue;
+                bool marked = SaveBook.AtEpilogue(chosen.Id);
+                story = EpilogueStartRules.StartOf(p.skippedPrologue, marked);
+                tree = SaveBook.TreeAt(chosen.Id);
             }
 
             bool backer;
@@ -79,15 +79,60 @@ namespace DarkwoodMP.Menus
                 }
 
                 Ui.Text(f, about, MenuSkin.Dim);
-                var k = f.Row(Ui.RowH, 0, 0);
-                bool ns = Check(k[0], skip, "Skip the prologue", on);
-                bool nb = Check(k[1], backer, "Backer content", on);
+                DrawStoryStart(f, story, tree, on);
+                bool nb = Check(f.Next(Ui.RowH), backer, "Backer content", on);
                 if (on)
                 {
-                    _skipPrologue = ns;
                     _backer = nb;
                 }
             });
+        }
+
+        /// <summary>
+        /// "Start at": the prologue, chapter 1 (the prologue skipped), or the
+        /// epilogue for trying it together, with what became of the Tree.
+        /// </summary>
+        private void DrawStoryStart(
+            Flow f, StoryStart story, TreeFate tree, bool on)
+        {
+            var c = f.Row(Ui.RowH, 90, 0, 0, 0);
+            Ui.Label(c[0], "Start at");
+            foreach (var (i, s, text) in new[]
+            {
+                (1, StoryStart.Prologue, "Prologue"),
+                (2, StoryStart.ChapterOne, "Chapter 1"),
+                (3, StoryStart.Epilogue, "Epilogue")
+            })
+            {
+                if (Choice(c[i], text, story == s, on))
+                {
+                    _story = s;
+                }
+            }
+
+            if (story != StoryStart.Epilogue)
+            {
+                return;
+            }
+
+            var t = f.Row(Ui.RowH, 90, 0, 0);
+            Ui.Label(t[0], "The Tree");
+            if (Choice(t[1], "Standing", tree == TreeFate.Standing, on))
+            {
+                _tree = TreeFate.Standing;
+            }
+
+            if (Choice(t[2], "Burned", tree == TreeFate.Burned, on))
+            {
+                _tree = TreeFate.Burned;
+            }
+
+            Ui.Text(
+                f,
+                "For trying the ending together: you start in chapter 1. "
+                    + "Once everyone has joined, press \"Start the "
+                    + "epilogue\" in the Multiplayer window.",
+                MenuSkin.Dim);
         }
 
         private void DrawHost(Flow f, bool on)

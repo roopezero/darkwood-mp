@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Net;
 using DarkwoodMP.World;
+using DarkwoodMP.World.Story;
 using UnityEngine;
 
 namespace DarkwoodMP.Menus
@@ -68,8 +69,8 @@ namespace DarkwoodMP.Menus
 
                 Plugin.Log.LogInfo(
                     $"[start game] new game in slot {id} "
-                        + $"({Difficulty(_difficulty)}, skip prologue "
-                        + $"{_skipPrologue}, backer content "
+                        + $"({Difficulty(_difficulty)}, start at "
+                        + $"{_story}, backer content "
                         + $"{_backer}){hosting}");
                 // As the profiles screen does for a free slot
                 // (MainMenu.displayProfile), then its Play
@@ -85,13 +86,19 @@ namespace DarkwoodMP.Menus
                 };
 
                 Core.currentProfile = p;
-                Singleton<Controller>.Instance.skipTutorial = _skipPrologue;
+                Singleton<Controller>.Instance.skipTutorial =
+                    EpilogueStartRules.SkipsPrologue(_story);
                 Close();
                 Singleton<UI>.Instance.StartCoroutine(
                     Singleton<UI>.Instance.initNewGame());
                 if (StartGameRules.StoresNewName(name))
                 {
                     SaveBook.SetName(id, name);
+                }
+
+                if (_story == StoryStart.Epilogue)
+                {
+                    SaveBook.MarkEpilogue(id, _tree);
                 }
             }
 
@@ -102,6 +109,16 @@ namespace DarkwoodMP.Menus
         }
 
         // ---- the test -------------------------------------------------------
+
+        /// <summary>
+        /// "--dwmp-start-epilogue standing|burned": New Game's "Start at:
+        /// Epilogue", with the Talking Tree so.
+        /// </summary>
+        internal void StartAtEpilogue(TreeFate tree)
+        {
+            _story = StoryStart.Epilogue;
+            _tree = tree;
+        }
 
         /// <summary>
         /// "--dwmp-test-start-window": Start Game in the main menu's list opens

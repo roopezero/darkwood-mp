@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using DarkwoodMP.Net;
 using DarkwoodMP.World;
+using DarkwoodMP.World.Story;
 using UnityEngine;
 
 namespace DarkwoodMP.Menus
@@ -58,7 +59,8 @@ namespace DarkwoodMP.Menus
 
         private GameProfile.Difficulty _difficulty =
             GameProfile.Difficulty.normal;
-        private bool _skipPrologue;
+        private StoryStart _story = StoryStart.Prologue;
+        private TreeFate _tree = TreeFate.Standing;
         private bool _backer = true;
         private bool _host;
 
