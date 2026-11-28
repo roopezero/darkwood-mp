@@ -5,24 +5,44 @@ using UnityEngine;
 namespace DarkwoodMP.World.Dreaming
 {
     /// DreamSync on a client: following the host into its dream, and the
-    /// tests' own dreams.
+    /// tests' own dreams. The host follows a joiner into a story dream the
+    /// same way (DreamSync.Story).
     internal sealed partial class DreamSync
     {
         private void OnStart(ulong from, PacketReader r)
         {
             string name = DreamStart.Read(r);
+            if (S.IsHost)
+            {
+                OnStoryAsked(from, name);
+                return;
+            }
+
             var d = Singleton<Dreams>.Instance;
-            var share = ShareOf() with { FromHost = from == S.HostId };
+            var share = ShareOf() with
+            {
+                FromHost = from == S.HostId,
+                // the one we asked the host to share (not drawn yet while
+                // its transition plays), or the one we're in
+                SameDream = _asked == name || PresetOf(d) == name,
+            };
+
             StartStep step = DreamRules.Start(DreamOf(d), share);
             if (step == StartStep.Drop)
             {
                 return;
             }
 
+            if (step == StartStep.Adopt)
+            {
+                Adopt(name);
+                return;
+            }
+
             if (step == StartStep.AlreadyIn)
             {
                 Plugin.Log.LogInfo(
-                    $"[dream] the host's level dream {name}: we're in a dream "
+                    $"[dream] the host's dream {name}: we're in a dream "
                         + "already");
                 return;
             }
@@ -133,15 +153,17 @@ namespace DarkwoodMP.World.Dreaming
             if (step.Action == JoinAction.Drop)
             {
                 _pendingStart = null;
+                _hostFollows = false;
                 return;
             }
 
             if (step.Action == JoinAction.GiveUp)
             {
                 Plugin.Log.LogWarning(
-                    "[dream] couldn't go into the host's dream "
+                    "[dream] couldn't go into the shared dream "
                         + $"{_pendingStart} (busy)");
                 _pendingStart = null;
+                _hostFollows = false;
                 return;
             }
 
@@ -168,6 +190,7 @@ namespace DarkwoodMP.World.Dreaming
             var facts = new JoinFacts
             {
                 ClientMode = NetEnemies.ClientMode,
+                HostFollows = _hostFollows,
                 InWorld = WorldShare.InWorld,
                 HasDreams = d != null,
                 HasPlayer = p != null,
@@ -176,7 +199,8 @@ namespace DarkwoodMP.World.Dreaming
                 StartAt = _startAt,
             };
 
-            if (!facts.ClientMode || !facts.InWorld || d == null || p == null)
+            bool follows = facts.ClientMode || facts.HostFollows;
+            if (!follows || !facts.InWorld || d == null || p == null)
             {
                 return facts;
             }
@@ -207,6 +231,7 @@ namespace DarkwoodMP.World.Dreaming
         {
             string name = _pendingStart;
             _pendingStart = null;
+            _hostFollows = false;
             try
             {
                 // as the host's draw took it

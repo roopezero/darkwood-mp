@@ -130,10 +130,18 @@ namespace DarkwoodMP.World.Scripted
             StepRules.LaterStep(Parts.FactsOf(e, null));
 
         /// <summary>
-        /// Whether a later player would get anything of these events.
+        /// Whether a later player would get anything of these events. Not
+        /// of events that start a dream every player dreams together (the
+        /// village cellar's, StoryDreamRules.Together): everyone was in it,
+        /// so its dive and its dream aren't owed again.
         /// </summary>
         internal static bool HasLaterSteps(GameEvents ge) =>
-            ge != null && ge.events.Exists(LaterStep);
+            ge != null && !ge.events.Exists(StartsDreamTogether)
+                && ge.events.Exists(LaterStep);
+
+        private static bool StartsDreamTogether(GameEvent e) =>
+            e != null && e.type == GameEvent.Type.startDream
+                && Dreaming.StoryDreamRules.Together(e.Value);
 
         /// <summary>
         /// Whether this trigger runs its events only once: it fires once, or it

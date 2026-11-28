@@ -17,6 +17,17 @@ namespace DarkwoodMP.Tests.World.Dreaming
             };
 
             [Fact]
+            public void Lets_the_host_follow_a_joiners_story_dream()
+            {
+                var join =
+                    Ready with { ClientMode = false, HostFollows = true };
+
+                var step = DreamRules.Join(join);
+
+                step.Action.ShouldBe(JoinAction.Go);
+            }
+
+            [Fact]
             public void Goes_in_when_nothing_holds_it()
             {
                 var step = DreamRules.Join(Ready);

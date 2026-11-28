@@ -7,6 +7,10 @@ namespace DarkwoodMP.World.Dreaming
         /// NetEnemies.ClientMode.
         public bool ClientMode { get; init; }
 
+        /// Host: we follow a joiner into a story dream every player dreams
+        /// together (StoryStep.Follow).
+        public bool HostFollows { get; init; }
+
         /// WorldShare.InWorld.
         public bool InWorld { get; init; }
 

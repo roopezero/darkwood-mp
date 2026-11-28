@@ -388,6 +388,16 @@ namespace DarkwoodMP.Tests.World.Dreaming
                 step.ShouldBe(StartStep.AlreadyIn);
             }
 
+            [Fact]
+            public void Adopts_the_dream_we_went_into_first()
+            {
+                var share = FromHost with { SameDream = true };
+
+                var step = DreamRules.Start(Dreaming, share);
+
+                step.ShouldBe(StartStep.Adopt);
+            }
+
             public static TheoryData<DreamFacts, DreamShareFacts> Dropped =>
                 new TheoryData<DreamFacts, DreamShareFacts>
                 {

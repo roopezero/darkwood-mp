@@ -66,6 +66,21 @@ namespace DarkwoodMP.World.Dreaming
         }
     }
 
+    /// Our game's dream transition starts: a story dream every player
+    /// dreams together is sent at once.
+    [HarmonyPatch(typeof(DreamTransition), nameof(DreamTransition.transition))]
+    static class DreamTransitionTransition
+    {
+        static void Prefix(DreamTransition __instance)
+        {
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Dreaming.TransitionStarts(__instance);
+            }
+        }
+    }
+
     /// Our game started dreaming.
     [HarmonyPatch(typeof(Dreams), nameof(Dreams.startDreaming))]
     static class DreamsStartDreaming
