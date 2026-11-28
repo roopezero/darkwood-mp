@@ -73,7 +73,18 @@ namespace DarkwoodMP.World.Scripted
                 return;
             }
 
-            S.SendToHost(w, Channel.Control, reliable: true);
+            // The host takes a client's EventFired only as a Request (sent
+            // bare, it was dropped, so a joiner's wardrobe never opened the
+            // host's kitchen). It already ran here, so a refusal has nothing
+            // to roll back.
+            _coop.Authority.Request(w, what, (ok, reason, _) =>
+            {
+                if (!ok)
+                {
+                    Plugin.Log.LogInfo(
+                        $"[world] the host didn't take {what} ({reason})");
+                }
+            }, inventory: false);
         }
 
         /// <summary>
