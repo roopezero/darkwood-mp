@@ -101,16 +101,12 @@ namespace DarkwoodMP.World.Story
 
         /// <summary>
         /// The session's end. If the host went away in the middle of the
-        /// epilogue, our game plays it to the end on its own, and the co-op
-        /// panel opens at the main menu after the credits.
+        /// epilogue (it left, or its last word didn't reach us), leaving the
+        /// host's world takes our game to the main menu (WorldShare): the
+        /// parts ahead are the host's to start, so it isn't played on alone.
         /// </summary>
         private void Ended()
         {
-            if (Playing && S != null && S.IsClient)
-            {
-                Plugin.Instance.StartCoroutine(PanelAfterCredits());
-            }
-
             Playing = false;
             Reset();
         }
@@ -121,42 +117,6 @@ namespace DarkwoodMP.World.Story
             _crawled.Reset();
             _hostBurned = HostBurned.Unheard;
             _coop.Spectator.EndWatch();
-        }
-
-        /// <summary>
-        /// A joiner whose host left mid-epilogue: once the game's own credits
-        /// are over, the co-op panel.
-        /// </summary>
-        private IEnumerator PanelAfterCredits()
-        {
-            Plugin.Log.LogInfo(
-                "[epilogue] the host left during the epilogue: we finish it "
-                    + "alone, then the co-op panel");
-            Plugin.Notice(
-                "The host left. The ending goes on in your game alone.");
-            bool credits = false;
-            while (true)
-            {
-                if (Plugin.Instance.Host.Session.Active)
-                {
-                    yield break; // joined someone meanwhile
-                }
-
-                if (SceneManager.GetActiveScene().name == "credits")
-                {
-                    credits = true;
-                }
-                else if (credits && WorldShare.MainMenuReady())
-                {
-                    break;
-                }
-
-                yield return new WaitForSecondsRealtime(1f);
-            }
-
-            yield return new WaitForSecondsRealtime(1f);
-            Plugin.Log.LogInfo("[epilogue] after the credits: the co-op panel");
-            Plugin.Instance.OpenPanel();
         }
 
         /// <summary>
@@ -417,6 +377,12 @@ namespace DarkwoodMP.World.Story
                         "[epilogue] the host says the camera pans over the "
                             + "burning forest: ours too");
                     RunPan();
+                    return;
+                case StepHandling.LayoutAsk:
+                    SendLayout(from, note.Value);
+                    return;
+                case StepHandling.Layout:
+                    ApplyLayout(note.Value, r);
                     return;
                 default:
                     return;

@@ -133,6 +133,11 @@ namespace DarkwoodMP
         /// credits as soon as they start, also after leaving the session.
         public bool TestQuickEnd;
 
+        /// The game is on its way from the ending (the credits) to the main
+        /// menu (Chapters.ToCredits until Chapters.ToMenuAfterEnding gets
+        /// there): leaving the host's world mustn't load the menu over it.
+        public bool Ending;
+
         /// "--dwmp-debug-world": log every shared-world message sent and
         /// applied (WorldActions.Debug).
         public bool DebugWorld;

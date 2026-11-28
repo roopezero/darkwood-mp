@@ -6,7 +6,7 @@ namespace DarkwoodMP.Net
         /// Bump whenever the wire format changes; a host refuses other
         /// versions.
         /// </summary>
-        public const ushort Version = 29;
+        public const ushort Version = 30;
         public const string Game = "darkwood";
         /// <summary>
         /// Most players in one game, the host included: the host and four

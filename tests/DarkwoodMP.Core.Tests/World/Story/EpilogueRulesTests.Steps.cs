@@ -25,6 +25,8 @@ namespace DarkwoodMP.Tests.World.Story
             [InlineData(EpilogueStep.Crawled, StepHandling.Crawled)]
             [InlineData(EpilogueStep.Burn, StepHandling.Burned)]
             [InlineData(EpilogueStep.Pan, StepHandling.Ignore)]
+            [InlineData(EpilogueStep.LayoutAsk, StepHandling.LayoutAsk)]
+            [InlineData(EpilogueStep.Layout, StepHandling.Ignore)]
             [InlineData(EpilogueStep.Outcomes, StepHandling.Ignore)]
             [InlineData(EpilogueStep.None, StepHandling.Ignore)]
             public void Takes_a_peers_crawl_and_fire_on_the_host(
@@ -49,6 +51,8 @@ namespace DarkwoodMP.Tests.World.Story
             [InlineData(EpilogueStep.Outcomes, StepHandling.Outcomes)]
             [InlineData(EpilogueStep.Burn, StepHandling.Burned)]
             [InlineData(EpilogueStep.Crawled, StepHandling.Ignore)]
+            [InlineData(EpilogueStep.Layout, StepHandling.Layout)]
+            [InlineData(EpilogueStep.LayoutAsk, StepHandling.Ignore)]
             [InlineData(EpilogueStep.None, StepHandling.Ignore)]
             public void Takes_the_hosts_pan_outcomes_and_fire_on_a_joiner(
                 EpilogueStep step,

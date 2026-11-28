@@ -307,5 +307,53 @@ namespace DarkwoodMP.Tests.World.Story
                 EndingRules.JoinEnds(playing, inEpilogue).ShouldBe(end);
             }
         }
+
+        public class AfterEnding
+        {
+            [Fact]
+            public void Is_done_at_the_main_menu()
+            {
+                EndingRules.AfterEnding(false, true, new Seconds(99f))
+                    .ShouldBe(EndingWait.AtMenu);
+            }
+
+            [Fact]
+            public void Waits_for_the_credits_a_while()
+            {
+                EndingRules.AfterEnding(false, false, new Seconds(10f))
+                    .ShouldBe(EndingWait.Waiting);
+            }
+
+            [Fact]
+            public void Loads_the_menu_when_the_credits_never_came()
+            {
+                var waited = new Seconds(EndingRules.CreditsWithin + 1f);
+
+                EndingRules.AfterEnding(false, false, waited)
+                    .ShouldBe(EndingWait.ForceMenu);
+            }
+
+            [Fact]
+            public void Leaves_rolling_credits_to_end_by_themselves()
+            {
+                EndingRules.AfterEnding(true, false, new Seconds(300f))
+                    .ShouldBe(EndingWait.Waiting);
+            }
+        }
+
+        public class LeavesForMenu
+        {
+            [Fact]
+            public void Leaves_the_world_when_no_ending_is_on()
+            {
+                EndingRules.LeavesForMenu(false).ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Leaves_it_to_the_ending_through_the_credits()
+            {
+                EndingRules.LeavesForMenu(true).ShouldBeFalse();
+            }
+        }
     }
 }

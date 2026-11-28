@@ -13,7 +13,7 @@ A step's options: "settle" (seconds to wait after it), "may_fail", "timeout" (se
 Dumps go to WORKDIR: host.json and client.json with one client, host.json and c1.json.. with more; mid-way ones are
 midN-host.json, midN-client.json / midN-c1.json... Exits 1 if a step fails, a wait times out or the dumps differ.
 """
-import importlib, os, subprocess, sys, threading, time
+import importlib, os, re, subprocess, sys, threading, time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -94,13 +94,23 @@ def compare(ctls, around, tag, require, work):
     return "done dumps SAME" if not bad else f"fail dumps DIFFER ({', '.join(bad)} against the host)"
 
 
+def word_of(last, who, n):
+    """The Nth word of WHO's last reply, or "?" if there's none."""
+    words = last.get(who, "").split()
+    return words[n] if n < len(words) else "?"
+
+
 def run_steps(ctls, steps, work=None, prefix="mid"):
     failed = 0
     mids = 0  # mid-way compares so far, for their dump names
+    last = {}  # each game's last reply
     for n_step, step in enumerate(steps, 1):
         opts = step[-1] if isinstance(step[-1], dict) else {}
         words = [str(w) for w in (step[:-1] if opts else step)]
         who, name, args = words[0], words[1], words[2:]
+        # "{WHO:N}" in an argument: the Nth word of WHO's last reply ("done" is word 0), to check one game against
+        # another's (e.g. the epilogue's layout).
+        args = [re.sub(r"\{(\w+):(\d+)\}", lambda m: word_of(last, m.group(1), int(m.group(2))), w) for w in args]
         t0 = time.time()
         if who in ("both", "all") and name == "compare":
             # ("all", "compare", WHO, SECTIONS): every game's dump there and then, around WHO's player, compared.
@@ -139,6 +149,7 @@ def run_steps(ctls, steps, work=None, prefix="mid"):
         else:
             reply = ctls[who].cmd("do", name, *args, timeout=float(opts.get("timeout", 180)))
             ok = good(reply)
+        last[who] = reply
         log(f"{who:6} {name} {' '.join(args)} -> {reply} ({time.time() - t0:.1f} s)")
         if not ok and not opts.get("may_fail"):
             failed += 1

@@ -28,7 +28,7 @@ namespace DarkwoodMP.World
             foreach (var et in root.GetComponentsInChildren<EventTriggers>(
                 true))
             {
-                sb.Append($"\n{Path(et.transform)} at "
+                sb.Append($"\n{PathOf(et.transform)} at "
                     + $"{Fmt(et.transform.position)} "
                     + $"active={et.gameObject.activeInHierarchy}");
                 foreach (var q in et.eventRequirements)
@@ -59,13 +59,13 @@ namespace DarkwoodMP.World
             {
                 if (g.GetComponent<EventTriggers>() == null)
                 {
-                    AppendEvents(sb, "events " + Path(g.transform), g);
+                    AppendEvents(sb, "events " + PathOf(g.transform), g);
                 }
             }
 
             foreach (var l in root.GetComponentsInChildren<Light>(true))
             {
-                sb.Append($"\nlight {Path(l.transform)} "
+                sb.Append($"\nlight {PathOf(l.transform)} "
                     + $"on={l.enabled && l.gameObject.activeInHierarchy}");
             }
 
@@ -74,7 +74,7 @@ namespace DarkwoodMP.World
                 if (t.name.ToLowerInvariant().Contains("dog")
                     || t.name.ToLowerInvariant().Contains("pies"))
                 {
-                    sb.Append($"\nnamed {Path(t)} at {Fmt(t.position)} "
+                    sb.Append($"\nnamed {PathOf(t)} at {Fmt(t.position)} "
                         + $"active={t.gameObject.activeInHierarchy}");
                 }
             }
@@ -324,7 +324,7 @@ namespace DarkwoodMP.World
             }
         }
 
-        private static string Path(Transform t)
+        private static string PathOf(Transform t)
         {
             string path = t.name;
             var at = t.parent;
