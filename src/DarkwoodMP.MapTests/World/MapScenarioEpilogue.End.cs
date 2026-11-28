@@ -27,18 +27,30 @@ namespace DarkwoodMP.World
             }
 
             GameEvents found = null;
-            foreach (var ge in Object.FindObjectsOfType<GameEvents>(true))
+            var kinds = new System.Collections.Generic.List<string>();
+            foreach (var t in Object.FindObjectsOfType<Transform>(true))
             {
-                if (ge != null && ge.name == name)
+                if (t == null || t.name != name)
                 {
-                    found = ge;
+                    continue;
+                }
+
+                foreach (var c in t.GetComponents<Component>())
+                {
+                    kinds.Add(c.GetType().Name);
+                }
+
+                found = t.GetComponentInChildren<GameEvents>(true);
+                if (found != null)
+                {
                     break;
                 }
             }
 
             if (found == null)
             {
-                r.Fail($"no {name} here: {Where()}");
+                r.Fail($"no GameEvents in {name} ({string.Join(",", kinds)})"
+                    + $": {Where()}");
                 yield break;
             }
 

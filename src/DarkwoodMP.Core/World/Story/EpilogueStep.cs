@@ -18,5 +18,11 @@ namespace DarkwoodMP.World.Story
 
         /// Someone set the Being on fire.
         Burn = 4,
+
+        /// A joiner asks for the layout of the part it is in.
+        LayoutAsk = 5,
+
+        /// The host's layout of a part: where its pieces stand.
+        Layout = 6,
     }
 }

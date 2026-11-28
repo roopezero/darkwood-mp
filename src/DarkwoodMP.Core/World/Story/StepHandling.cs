@@ -17,5 +17,11 @@ namespace DarkwoodMP.World.Story
 
         /// A joiner: the host released the pan (RunPan).
         Pan,
+
+        /// The host: a joiner asks for its part's layout (SendLayout).
+        LayoutAsk,
+
+        /// A joiner: the host's layout of a part (ApplyLayout).
+        Layout,
     }
 }

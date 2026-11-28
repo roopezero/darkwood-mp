@@ -408,6 +408,12 @@ namespace DarkwoodMP.World.Story
                             + "burning forest: ours too");
                     RunPan();
                     return;
+                case StepHandling.LayoutAsk:
+                    SendLayout(from, note.Value);
+                    return;
+                case StepHandling.Layout:
+                    ApplyLayout(note.Value, r);
+                    return;
                 default:
                     return;
             }

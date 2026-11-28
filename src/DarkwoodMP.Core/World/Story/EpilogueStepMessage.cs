@@ -46,6 +46,12 @@ namespace DarkwoodMP.World.Story
             w.W.Write(who);
         }
 
+        /// Joiner: the layout of this part, please (value: its preset name).
+        public static void WriteLayoutAsk(PacketWriter w, string part)
+        {
+            Write(w, EpilogueStep.LayoutAsk, part);
+        }
+
         /// The step and its value. A host's Burn is followed by ReadWho.
         public static EpilogueNote Read(PacketReader r)
         {

@@ -112,6 +112,32 @@ namespace DarkwoodMP.World
                         + $"{loc.transform.eulerAngles.y}",
                 };
 
+                Vector3 me = loc.transform.InverseTransformPoint(
+                    P.transform.position);
+                lines.Add($"player {Round(me.x)} {Round(me.z)}");
+                foreach (Transform t in loc.transform)
+                {
+                    Vector3 p = t.localPosition;
+                    lines.Add($"child {t.name} {Round(p.x)} {Round(p.z)} "
+                        + $"{t.gameObject.activeSelf}");
+                    foreach (Transform u in t)
+                    {
+                        Vector3 l = loc.transform.InverseTransformPoint(
+                            u.position);
+                        lines.Add($"  sub {u.name} {Round(l.x)} {Round(l.z)} "
+                            + $"{u.gameObject.activeSelf}");
+                    }
+                }
+
+                var all = loc.GetComponentsInChildren<GameEvents>(true);
+                foreach (var ge in all)
+                {
+                    if (ge.fired)
+                    {
+                        lines.Add($"fired {ge.name}");
+                    }
+                }
+
                 lines.AddRange(local.Distinct());
                 File.WriteAllLines(path, lines);
             }

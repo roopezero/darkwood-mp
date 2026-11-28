@@ -239,6 +239,8 @@ namespace DarkwoodMP.World.Story
                     return StepHandling.Burned;
                 case EpilogueStep.Pan:
                     return StepHandling.Pan;
+                case EpilogueStep.Layout:
+                    return StepHandling.Layout;
                 default:
                     return StepHandling.Ignore;
             }
@@ -259,6 +261,11 @@ namespace DarkwoodMP.World.Story
             if (facts.Step == EpilogueStep.Crawled)
             {
                 return StepHandling.Crawled;
+            }
+
+            if (facts.Step == EpilogueStep.LayoutAsk)
+            {
+                return StepHandling.LayoutAsk;
             }
 
             return StepHandling.Ignore;

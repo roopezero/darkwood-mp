@@ -530,6 +530,12 @@ namespace DarkwoodMP.Net
         /// GameEvents, Istota_lv1_events), which chooses the burned-forest
         /// ending: client -> host as is; host -> client followed by u64 the
         /// player who did it. The other games run the same events.
+        /// client -> host, 5 the layout of our part, please (value: its
+        /// preset name).
+        /// host -> client, 6 the host's layout of a part (value: its preset
+        /// name), followed by u16 n, then n times: str a piece's name (a
+        /// direct child of the part's location), f32 x, f32 z where it stands
+        /// in the location; the joiner moves its pieces there (PartLayout).
         /// </summary>
         EpilogueStep = 89,
         /// <summary>

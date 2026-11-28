@@ -27,6 +27,7 @@ namespace DarkwoodMP.World.Story
             }
 
             Plugin.Instance.StartCoroutine(OffsetSoon());
+            Plugin.Instance.StartCoroutine(AskLayoutSoon());
         }
 
         private IEnumerator OffsetSoon()

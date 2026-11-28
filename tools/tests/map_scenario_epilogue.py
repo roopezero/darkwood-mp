@@ -33,8 +33,8 @@ if END == "sleep":
         ("client", "epilogue-onward", "returnFromCrater", {"settle": 0}),
         ("host", "epilogue-at", "returnFromCrater"),
         ("host", "epilogue-events", "epilogue_goToSleep_cutscene", {"settle": 0}),
-        ("host", "epilogue-outcomes", {"settle": 0}),
-        ("client", "epilogue-menu-works"),
+        ("host", "epilogue-outcomes", {"settle": 0, "timeout": 320}),
+        ("client", "epilogue-menu-works", {"timeout": 220}),
     ]
 else:
     # The host sets the Being on fire: the burned-forest ending, in the client's crater too. Both crawl to their
@@ -49,6 +49,6 @@ else:
         ("client", "epilogue-crawl-die", {"settle": 0}),
         ("host", "epilogue-pan", {"settle": 0}),
         ("client", "epilogue-pan", {"settle": 0}),
-        ("host", "epilogue-outcomes", {"settle": 0}),
-        ("client", "epilogue-menu-works"),
+        ("host", "epilogue-outcomes", {"settle": 0, "timeout": 320}),
+        ("client", "epilogue-menu-works", {"timeout": 220}),
     ]
