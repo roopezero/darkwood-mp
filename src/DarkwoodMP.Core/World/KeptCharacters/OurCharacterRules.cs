@@ -51,6 +51,22 @@ namespace DarkwoodMP.World.KeptCharacters
                 && facts.InWorld
                 && !facts.Prologue;
 
+        /// The state we send as our character. In a dream the game has put
+        /// the player's real bags, place and effects away and gives them
+        /// back at the dream's end; a character kept from the dream's state
+        /// lost them for good when the client left in the dream. So in a
+        /// dream whose start put them away, those are sent: the character
+        /// comes back as the dream's end would leave it.
+        public static SentState Sent(in SentFacts facts)
+        {
+            if (facts.Dreaming && facts.Copied)
+            {
+                return SentState.BeforeDream;
+            }
+
+            return SentState.Current;
+        }
+
         /// What to do with a CharacterLoad (OnLoad), first that applies.
         public static LoadStep Take(in LoadFacts facts)
         {

@@ -181,6 +181,43 @@ namespace DarkwoodMP.Tests.World.KeptCharacters
             }
         }
 
+        public class Sent
+        {
+            [Fact]
+            public void Sends_the_bags_put_away_in_a_dream()
+            {
+                var sent = OurCharacterRules.Sent(new SentFacts
+                {
+                    Dreaming = true,
+                    Copied = true,
+                });
+
+                sent.ShouldBe(SentState.BeforeDream);
+            }
+
+            [Fact]
+            public void Sends_the_player_as_it_is_out_of_a_dream()
+            {
+                var sent = OurCharacterRules.Sent(new SentFacts
+                {
+                    Copied = true,
+                });
+
+                sent.ShouldBe(SentState.Current);
+            }
+
+            [Fact]
+            public void Sends_the_player_as_it_is_when_nothing_was_put_away()
+            {
+                var sent = OurCharacterRules.Sent(new SentFacts
+                {
+                    Dreaming = true,
+                });
+
+                sent.ShouldBe(SentState.Current);
+            }
+        }
+
         public class Take
         {
             [Fact]

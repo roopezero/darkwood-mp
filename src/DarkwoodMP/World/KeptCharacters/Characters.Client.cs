@@ -1,9 +1,7 @@
 using System;
 using DarkwoodMP.Combat;
 using DarkwoodMP.Net;
-using Newtonsoft.Json;
 using UnityEngine;
-using Chapters = DarkwoodMP.World.Story.Chapters;
 using Prologue = DarkwoodMP.World.Story.Prologue;
 
 namespace DarkwoodMP.World.KeptCharacters
@@ -140,21 +138,7 @@ namespace DarkwoodMP.World.KeptCharacters
             try
             {
                 var w = _session.Begin(MsgType.CharacterSave);
-                CharacterSave.Write(
-                    w,
-                    new CharacterSaveBody
-                    {
-                        Player = JsonConvert.SerializeObject(
-                            new Player.SaveState(p)),
-                        Inventory = JsonConvert.SerializeObject(
-                            new Inventory.SaveState(p.Inventory)),
-                        Hotbar = JsonConvert.SerializeObject(
-                            new Inventory.SaveState(p.Hotbar)),
-                        // the chapter of the world we're in (the host's,
-                        // until it moves on)
-                        Chapter = Chapters.HostChapter,
-                    });
-
+                CharacterSave.Write(w, BodyOf(p));
                 _session.SendToHost(w, Channel.Control, reliable: true);
             }
             catch (Exception e)

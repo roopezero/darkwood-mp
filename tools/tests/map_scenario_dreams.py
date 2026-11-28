@@ -34,6 +34,30 @@ def home(knocker, opener):
     ]
 
 
+def rejoin(early):
+    """The client's game leaves in the host's dream and joins again: after the dream is over, or (early) while it runs,
+    when it waits until the host wakes. Either way it comes back with its own bags from before the dream, out of any
+    dream, where it began dreaming: what it had wasn't lost with the dream's bags."""
+    steps = [
+        ("client", "dream-bags"),
+        ("host", "level-dream", DREAM, {"settle": 0}),
+        ("client", "in-host-dream", DREAM),
+        ("client", "dream-leave", {"settle": 0}),
+    ]
+    if early:
+        steps += [
+            ("client", "dream-join", {"settle": 0}),
+            ("client", "dream-waiting", {"settle": 0}),
+            ("host", "end-level-dream", {"settle": 0}),
+        ]
+    else:
+        steps += [
+            ("host", "end-level-dream", {"settle": 0}),
+            ("client", "dream-join", {"settle": 0}),
+        ]
+    return steps + [("client", "dream-joined", {"timeout": 420})]
+
+
 POST = [
     # The host sent the shared essence and level with the character; our bar shows it.
     ("client", "progress-shared"),
@@ -69,4 +93,4 @@ POST = [
     ("client", "own-dream-use"),
     ("client", "dream-clear", {"settle": 0}),
     ("client", "heal"),
-]
+] + rejoin(False) + rejoin(True)

@@ -39,6 +39,7 @@ namespace DarkwoodMP.World
             Add("home-open", HomeOpen, timeout: 30f);
             Add("own-dream", OwnDream, timeout: 90f);
             Add("own-dream-use", OwnDreamUse, timeout: 60f);
+            RegisterRejoin();
         }
 
         /// <summary>
