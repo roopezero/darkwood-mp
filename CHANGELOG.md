@@ -2,6 +2,14 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## 0.28.2
+
+*Protocol 29, unchanged: plays with 0.28.1 and 0.28.0.*
+
+- **The workbench's Sort & Stack button is back on screen.** When the workbench's storage was too tall for the screen (an upgraded workbench, or a smaller screen) and was drawn smaller to fit, the button was put where it belongs under the full-size window, below the bottom of the screen. It's now added before the window is drawn smaller, and shrinks with it.
+
+How it was tested: the build, the unit tests, the release's scripted-peer tests (`capture`, `handshake`, `host-combat`, `client-enemies`, `client-chars`) and the workbench map battery (`map:wbrows`). Before the fix, `map:wbrows` found the button off the screen with the workbench at its top level (96 slots); with the fix that check passes, and the log shows the button added before the window is drawn smaller. The battery's world comparison still finds one trap that went off in the client's game but not the host's, which this change doesn't touch. Nobody has played this build yet.
+
 ## 0.28.1
 
 *Protocol 29, unchanged: plays with 0.28.0.*

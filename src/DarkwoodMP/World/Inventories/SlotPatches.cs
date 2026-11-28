@@ -1,3 +1,4 @@
+using DarkwoodMP.World.Workbenches;
 using HarmonyLib;
 
 namespace DarkwoodMP.World.Inventories
@@ -86,8 +87,12 @@ namespace DarkwoodMP.World.Inventories
     }
 
     /// <summary>
-    /// A workbench's storage was drawn: Sort &amp; Stack under it, also
-    /// without co-op (SlotShare.Shown).
+    /// A workbench's storage was drawn: Sort &amp; Stack under it
+    /// (SlotShare.Shown), then the window drawn smaller if it would run off
+    /// the screen (WorkbenchStorage.FitToScreen). One postfix, so the button
+    /// is always there before the window shrinks and shrinks with it; as two
+    /// postfixes the shrink could run first and leave the button below the
+    /// screen. Also without co-op.
     /// </summary>
     [HarmonyPatch(typeof(Inventory), nameof(Inventory.show))]
     static class InventoryShow
@@ -95,6 +100,7 @@ namespace DarkwoodMP.World.Inventories
         static void Postfix(Inventory __instance)
         {
             SlotShare.Shown(__instance);
+            WorkbenchStorage.FitToScreen(__instance);
         }
     }
 }
