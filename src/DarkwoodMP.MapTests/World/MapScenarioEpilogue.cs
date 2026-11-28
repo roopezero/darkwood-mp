@@ -93,6 +93,7 @@ namespace DarkwoodMP.World
             Add("epilogue-events", RunEvents, timeout: 30f);
             Add("epilogue-outcomes", Outcomes, timeout: 300f);
             Add("epilogue-menu-works", MenuWorks, timeout: 200f);
+            Add("epilogue-drop", Drop, timeout: 30f);
         }
 
         private static string Where()

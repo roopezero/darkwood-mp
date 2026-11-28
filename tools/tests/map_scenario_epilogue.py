@@ -7,7 +7,8 @@ import os
 PART1 = "epilog_part1a_dream"
 # EPILOGUE_TREE=0: the host's world hasn't burned the talking tree (chapter 2's choice) before the epilogue.
 TREE = os.environ.get("EPILOGUE_TREE", "1") != "0"
-# EPILOGUE_END=sleep: the ending without the fire (back to the room, to sleep); else the burned forest.
+# EPILOGUE_END=sleep: the ending without the fire (back to the room, to sleep); drop: the host goes away in the
+# crater; else the burned forest.
 END = os.environ.get("EPILOGUE_END", "burn")
 
 POST = [("host", "epilogue-flag", "talkingTree_burnt", {"settle": 3})] if TREE else []
@@ -25,7 +26,14 @@ POST += [
     ("client", "epilogue-onward", "crater", {"settle": 0}),
     ("host", "epilogue-at", "crater"),
 ]
-if END == "sleep":
+if END == "drop":
+    # The host's server goes away in the crater with no last word: the client goes to the credits and gets back to a
+    # main menu that works.
+    POST += [
+        ("host", "epilogue-drop", {"settle": 0}),
+        ("client", "epilogue-menu-works", {"timeout": 220}),
+    ]
+elif END == "sleep":
     # The other ending: back to the room (the client's end of the crater takes both), where the host's outcomes screen
     # comes on (as at the end of its sleep) and ends in the credits by itself (the game's goToCredits). The client, in
     # the room, follows to the credits and gets back to a main menu that works.

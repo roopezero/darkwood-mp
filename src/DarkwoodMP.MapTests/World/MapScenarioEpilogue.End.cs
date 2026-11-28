@@ -124,6 +124,24 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
+        /// "epilogue-drop" (host): our server goes away mid-epilogue with no
+        /// last word, as a crash or a lost connection would.
+        /// </summary>
+        private static IEnumerator Drop(string[] a, Result r)
+        {
+            Net.Session session = Plugin.Instance.Host.Session;
+            if (session == null || !session.Active)
+            {
+                r.Fail("no session");
+                yield break;
+            }
+
+            session.Backend.Leave();
+            yield return new WaitForSeconds(1f);
+            r.Info = $"session {session.Active}: {Where()}";
+        }
+
+        /// <summary>
         /// The part's own outcomes screen turned on, as the end of the sleep
         /// does (its Start shows the outcomes; their end is goToCredits).
         /// </summary>
