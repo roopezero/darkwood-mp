@@ -109,8 +109,9 @@ namespace DarkwoodMP.World
         /// <summary>
         /// "epidialog-after [DIR]" (any): the other player's end of the part
         /// took us on to the next one while our dialogue was open; close it
-        /// if it still is (its leave button: close()) and check that the
-        /// screen and the controls came back. With DIR, a screenshot
+        /// if it still is (its leave button: close()) and check that it
+        /// wasn't left over the next part and that the screen and the
+        /// controls came back. With DIR, a screenshot
         /// DIR/epidialog-ROLE.png.
         /// </summary>
         private static IEnumerator AfterDialog(string[] a, Result r)
@@ -126,6 +127,10 @@ namespace DarkwoodMP.World
             yield return new WaitForSecondsRealtime(5f);
             string before = Screen();
             bool open = Window.gameObject.activeInHierarchy;
+            // A window left on screen with the dialogue's hold gone (the next
+            // part's resetState) has the main camera off and can't be shut
+            // with Escape, which only reaches a dialogue in inDialogue.
+            bool stale = (open && !P.inDialogue) || (!open && !CamOn());
             if (open)
             {
                 Window.close();
@@ -153,6 +158,10 @@ namespace DarkwoodMP.World
             if (D.preset == null || D.preset.name == _dialogPart)
             {
                 r.Fail($"we didn't go on: {r.Info}");
+            }
+            else if (stale)
+            {
+                r.Fail($"the dialogue was left over the next part: {r.Info}");
             }
             else if (!ScreenBack())
             {
