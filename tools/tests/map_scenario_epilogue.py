@@ -26,14 +26,13 @@ POST += [
     ("host", "epilogue-at", "crater"),
 ]
 if END == "sleep":
-    # The other ending: back to the room (the client's end of the crater takes both), where the host goes to sleep
-    # as its bed does; the host's outcomes end in the credits by themselves (the game's goToCredits). The client, in
+    # The other ending: back to the room (the client's end of the crater takes both), where the host's outcomes screen
+    # comes on (as at the end of its sleep) and ends in the credits by itself (the game's goToCredits). The client, in
     # the room, follows to the credits and gets back to a main menu that works.
     POST += [
         ("client", "epilogue-onward", "returnFromCrater", {"settle": 0}),
         ("host", "epilogue-at", "returnFromCrater"),
-        ("host", "epilogue-events", "epilogue_goToSleep_cutscene", {"settle": 0}),
-        ("host", "epilogue-outcomes", {"settle": 0, "timeout": 320}),
+        ("host", "epilogue-outcomes", "start", {"settle": 0, "timeout": 320}),
         ("client", "epilogue-menu-works", {"timeout": 220}),
     ]
 else:

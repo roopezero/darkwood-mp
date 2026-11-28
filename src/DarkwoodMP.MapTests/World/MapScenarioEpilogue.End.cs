@@ -74,6 +74,11 @@ namespace DarkwoodMP.World
         /// </summary>
         private static IEnumerator Outcomes(string[] a, Result r)
         {
+            if (a.Length > 0 && a[0] == "start")
+            {
+                ShowOutcomes(r);
+            }
+
             float until = Time.realtimeSinceStartup + 240f;
             bool seen = false;
             while (Time.realtimeSinceStartup < until
@@ -106,6 +111,37 @@ namespace DarkwoodMP.World
             }
 
             yield return ExitCredits();
+        }
+
+        /// <summary>
+        /// The part's own outcomes screen turned on, as the end of the sleep
+        /// does (its Start shows the outcomes; their end is goToCredits).
+        /// </summary>
+        private static void ShowOutcomes(Result r)
+        {
+            Location loc = null;
+            if (D != null)
+            {
+                loc = D.dreamLocation;
+            }
+
+            if (loc == null)
+            {
+                return;
+            }
+
+            var all = loc.GetComponentsInChildren<EpilogueOutcomes>(true);
+            if (all.Length == 0)
+            {
+                r.Info = $"no outcomes screen in {loc.name}";
+                return;
+            }
+
+            for (Transform t = all[0].transform; t != null
+                && t != loc.transform; t = t.parent)
+            {
+                t.gameObject.SetActive(true);
+            }
         }
 
         /// <summary>
