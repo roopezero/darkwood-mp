@@ -7,6 +7,9 @@ dive. It's now the player's own. O1 (each time): the client sets it off, only th
 the host. O2 (once): the client first; the host, as a later player, still gets its own part, and the shared step ran
 once in each game.
 
+S1: the cellar's dives play their sound at the listener (no target), as loud wherever the player is; as a shared step
+every player heard one player's dive wherever they were. Now only the diver's game plays it.
+
 T1: the cellar's dive is a short scripted trip (transportPlayerToObject); the host's movement check took such a jump
 for a speed hack and put the client back. The host now expects a trip it agreed to.
 
@@ -20,12 +23,20 @@ CELLAR = "outside_village_ch2_cellar_01"
 
 STEPS = [
     *[(who, "own-setup", *t) for t in [("O1", "300", "-300", "multi"), ("O2", "-300", "-300", "once")] for who in ("host", "client")],
+    # S1: the dive's sound plays at the listener, so only the diver's game plays it (each own-setup trigger plays it
+    # as the cellar's dives do).
+    ("host", "dive-sounds-zero"),
+    ("client", "dive-sounds-zero"),
     ("client", "own-fire", "O1", "2"),
     ("host", "own-count", "O1", "0", "1"),
     ("client", "own-count", "O1", "2", "1"),
+    ("host", "dive-sounds", "0"),
+    ("client", "dive-sounds", "1"),
     ("host", "own-fire", "O1", "2"),
     ("client", "own-count", "O1", "2", "2"),
     ("host", "own-count", "O1", "2", "2"),
+    ("host", "dive-sounds", "1"),
+    ("client", "dive-sounds", "1"),
     ("client", "own-fire", "O2", "2"),
     ("host", "own-count", "O2", "0", "1"),
     ("host", "own-fire", "O2", "2"),

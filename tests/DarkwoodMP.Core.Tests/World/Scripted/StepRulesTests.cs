@@ -53,6 +53,22 @@ namespace DarkwoodMP.Tests.World.Scripted
                 runs.ShouldBeFalse();
             }
 
+            [Theory]
+            [InlineData(EventPart.All, true)]
+            [InlineData(EventPart.PlayerAndShared, true)]
+            [InlineData(EventPart.HostAndShared, false)]
+            [InlineData(EventPart.SharedOnly, false)]
+            [InlineData(EventPart.PlayerOnly, true)]
+            [InlineData(EventPart.SharedAndMessages, true)]
+            public void Plays_a_sound_at_the_listener_for_the_player_only(
+                EventPart part,
+                bool runs)
+            {
+                var step = Shared with { ListenerSound = true };
+
+                StepRules.Runs(part, step).ShouldBe(runs);
+            }
+
             [Fact]
             public void Counts_an_area_look_as_the_players()
             {
@@ -139,6 +155,14 @@ namespace DarkwoodMP.Tests.World.Scripted
             public void Gives_a_later_player_a_step_on_the_player()
             {
                 var step = Shared with { TargetsPlayer = true };
+
+                StepRules.LaterStep(step).ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Gives_a_later_player_a_sound_at_the_listener()
+            {
+                var step = Shared with { ListenerSound = true };
 
                 StepRules.LaterStep(step).ShouldBeTrue();
             }

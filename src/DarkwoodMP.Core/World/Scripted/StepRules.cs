@@ -6,7 +6,11 @@ namespace DarkwoodMP.World.Scripted
     {
         /// Whether this step runs in the part being run now. A later
         /// player's part runs only the steps a later player gets; a move
-        /// between world containers is the host's, not the player's.
+        /// between world containers is the host's, not the player's. A
+        /// sound played at the listener is the player's own (run in every
+        /// game, every player heard one player's dive wherever they were),
+        /// and goes with the messages to a player near the host's world's
+        /// own event.
         public static bool Runs(EventPart current, in StepFacts step)
         {
             if (current == EventPart.LaterPlayer)
@@ -19,14 +23,15 @@ namespace DarkwoodMP.World.Scripted
             if (!step.WorldMove)
             {
                 player = step.PlayerType || step.AreaLook
-                    || step.TargetsPlayer;
+                    || step.TargetsPlayer || step.ListenerSound;
                 host = step.HostType;
             }
 
             switch (current)
             {
                 case EventPart.SharedAndMessages:
-                    return !host && (!player || step.Message);
+                    return !host
+                        && (!player || step.Message || step.ListenerSound);
                 case EventPart.PlayerAndShared:
                     return !host;
                 case EventPart.HostAndShared:
@@ -43,8 +48,9 @@ namespace DarkwoodMP.World.Scripted
         /// Whether a later player gets this step of a once-only trigger
         /// that fired for someone else: trips, what goes with them on the
         /// screen, the player's own records, ordinary items added to the
-        /// player's own inventory, and any other step that acts on the
-        /// player. Never a dialogue, a move into a container or the end.
+        /// player's own inventory, sounds played at the listener, and any
+        /// other step that acts on the player. Never a dialogue, a move
+        /// into a container or the end.
         public static bool LaterStep(in StepFacts step)
         {
             if (!step.Exists || step.Disabled)
@@ -69,7 +75,7 @@ namespace DarkwoodMP.World.Scripted
                 case StepType.NotLater:
                     return false;
                 default:
-                    return step.TargetsPlayer;
+                    return step.TargetsPlayer || step.ListenerSound;
             }
         }
     }

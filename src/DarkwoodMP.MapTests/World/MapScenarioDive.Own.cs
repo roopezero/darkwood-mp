@@ -35,7 +35,7 @@ namespace DarkwoodMP.World
         /// trigger ID at the centre plus (DX, DZ) with three runFunction steps:
         /// one on the unique object "player", one on our player's own object
         /// (each counts on our player, by ID), and a shared one on a counter
-        /// beside it.
+        /// beside it; and the dive's sound, played at the listener.
         /// </summary>
         private static IEnumerator OwnSetup(string[] a, Result r)
         {
@@ -88,6 +88,9 @@ namespace DarkwoodMP.World
                 targetGameObjects = new List<GameObject> { m.C.gameObject },
                 eventAmount = 1
             });
+
+            // the dive's sound, at the listener (MapScenarioDive.Sound)
+            ge.events.Add(ListenerSound());
 
             m.Et = go.AddComponent<EventTriggers>();
             m.T = new global::EventTrigger

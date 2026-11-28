@@ -246,6 +246,39 @@ namespace DarkwoodMP.World.Scripted
             return false;
         }
 
+        /// <summary>
+        /// Whether a step plays a sound with no target: GameEvent.fire plays
+        /// a sound step (or the old playSound) with no targets at the
+        /// listener (AudioController.Play without a parent, or
+        /// RandomWorldSounds.playGlobalSound), as loud wherever the player
+        /// is. The cellar's dives play water_teleport_01B so. Stopping a
+        /// sound isn't one: it stops what plays in that game, if anything.
+        /// </summary>
+        internal static bool IsListenerSound(GameEvent ge)
+        {
+            bool play = ge.type == GameEvent.Type.playSound_NIEUZYWAJ
+                || (ge.type == GameEvent.Type.sound
+                    && ge.soundModifyType == GameEvent.SoundModify.play);
+            if (!play || ge.getTargetGameObjectsFromParent)
+            {
+                return false;
+            }
+
+            if (ge.targetGameObjects != null
+                && ge.targetGameObjects.Exists(go => go != null))
+            {
+                return false;
+            }
+
+            if (ge.targetUniqueObjects != null
+                && ge.targetUniqueObjects.Count > 0)
+            {
+                return false;
+            }
+
+            return ge.locationObjects == null || ge.locationObjects.Count == 0;
+        }
+
         private static bool IsPlayersObject(GameObject go, Player p) =>
             go == p.gameObject || go.transform.IsChildOf(p.transform);
 

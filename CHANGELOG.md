@@ -2,6 +2,15 @@
 
 Newest first. "Protocol N" is the network version: players can only play together when their mod versions have the same protocol. Each entry says how the change was tested; unless it says real players tried it, it was tested with scripted players and the two-game map test only.
 
+## 0.28.3
+
+*Protocol 29, unchanged: plays with 0.28.2, 0.28.1, 0.28.0 and 0.27.0.*
+
+- **A generator switched off after a night goes quiet.** The morning after a night switches on again everything the hideout's generator powers, the generator among it (twice, in a joiner's game), and each time the game started another running sound and forgot the last one. Switching the generator off then stopped only the newest, and the others hummed on for good. Now a generator (or anything else) that is switched on while its sound plays keeps that sound.
+- **Only the diver hears the dive.** The village cellar's dives play their splash at the listener, as loud wherever you are, and every player heard it, wherever they were. Now only the diver's game plays it, and the same goes for any scripted sound that plays at the listener (a player near an event the host's world sets off by itself still hears it).
+
+How it was tested: the build, the core's unit tests (7,588, with new ones for both rules), the release's scripted-peer tests (`capture`, `handshake`, `host-combat`, `client-enemies`, `client-chars`) and two-game map batteries, on Linux only; nobody has played this build yet. A new battery, `map:generator`, runs a generator on and off with a morning (the game's own `enableAllLights`) in each game: without the fix, after one morning the joiner's game had three generator sounds playing and the host's two, and after the joiner switched it off two and one played on; with the fix there is one while it runs and none once it's off, in both games. `map:dive` gained a dive sound check (each test trigger plays the cellar's `water_teleport_01B` the same way): without the fix the host heard the joiner's dive and the joiner the host's; with it only the diver's game plays it. `map:story`, `map:story2`, `map:later`, `map:whispers` and `map:world` pass with both fixes (`map:whispers` failed once when the host's scripted walk out of the area went back into it; it passed on two reruns, with and without the change).
+
 ## 0.28.2
 
 *Protocol 29, unchanged: plays with 0.28.1 and 0.28.0.*

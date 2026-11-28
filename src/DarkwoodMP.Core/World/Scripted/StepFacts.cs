@@ -44,5 +44,11 @@ namespace DarkwoodMP.World.Scripted
 
         /// Its type is displayMessage.
         public bool Message { get; init; }
+
+        /// It plays a sound with no target: the game plays it at the
+        /// listener, as loud wherever the player is
+        /// (ScriptedEvents.IsListenerSound). The cellar's dives play
+        /// water_teleport_01B so.
+        public bool ListenerSound { get; init; }
     }
 }

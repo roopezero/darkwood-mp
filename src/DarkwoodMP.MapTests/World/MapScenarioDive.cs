@@ -44,6 +44,8 @@ namespace DarkwoodMP.World
             Add("own-setup", OwnSetup);
             Add("own-fire", OwnFire, timeout: 30f);
             Add("own-count", OwnCount, timeout: 15f);
+            Add("dive-sounds-zero", DiveSoundsZero);
+            Add("dive-sounds", DiveSounds, timeout: 15f);
             Add("trip-setup", TripSetup);
             Add("trip-go", TripGo, timeout: 40f);
             Add("tank-setup", TankSetup);

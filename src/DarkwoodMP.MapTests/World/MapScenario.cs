@@ -558,6 +558,7 @@ namespace DarkwoodMP.World
             MapScenarioCorpse.Register();
             MapScenarioChapter.Register();
             MapScenarioLater.Register();
+            MapScenarioGenerator.Register();
             MapScenarioDive.Register();
             MapScenarioStory.Register();
             MapScenarioStory2.Register();
