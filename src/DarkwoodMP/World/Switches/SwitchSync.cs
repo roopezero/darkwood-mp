@@ -1,4 +1,5 @@
 using DarkwoodMP.World.Switches;
+using UnityEngine;
 using Action = DarkwoodMP.World.WorldActions.Action;
 
 namespace DarkwoodMP.World
@@ -70,6 +71,47 @@ namespace DarkwoodMP.World
             }
 
             return true;
+        }
+
+        /// <summary>
+        /// ItemSounds.playStart: whether the item's start and loop sounds
+        /// start (ItemSoundRules.Starts). False keeps the ones playing, so
+        /// no loop is left that a switch-off can't stop.
+        /// </summary>
+        public bool StartsSounds(ItemSounds sounds)
+        {
+            var facts = new ItemSoundFacts
+            {
+                LoopPlays = Plays(
+                    sounds.loopSoundAO, sounds.loopSound, sounds.transform),
+                StartPlays = Plays(
+                    sounds.startSoundAO, sounds.startSound, sounds.transform),
+            };
+
+            bool starts = ItemSoundRules.Starts(facts);
+            if (!starts)
+            {
+                Plugin.Log.LogInfo(
+                    $"[world] {sounds.name}: its sound plays already, "
+                        + "not started again");
+            }
+
+            return starts;
+        }
+
+        /// <summary>
+        /// The audio object plays that sound under that item. The game's
+        /// audio objects are pooled: one the item still names may have
+        /// been stopped and handed to another sound.
+        /// </summary>
+        private static bool Plays(AudioObject o, string id, Transform under)
+        {
+            if (o == null || string.IsNullOrEmpty(id) || o.audioID != id)
+            {
+                return false;
+            }
+
+            return o.IsPlaying() && o.transform.IsChildOf(under);
         }
 
         /// <summary>

@@ -299,6 +299,7 @@ namespace DarkwoodMP.World.Scripted
                 HostType = ScriptedEvents.IsHostStep(ge.type),
                 WorldMove = Hideouts.IsWorldMove(ge),
                 Message = ge.type == GameEvent.Type.displayMessage,
+                ListenerSound = ScriptedEvents.IsListenerSound(ge),
             };
         }
 

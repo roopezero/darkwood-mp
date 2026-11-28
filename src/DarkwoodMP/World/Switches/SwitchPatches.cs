@@ -59,4 +59,23 @@ namespace DarkwoodMP.World
             coop.Switches.AfterTurn(__instance, Action.ItemOff);
         }
     }
+
+    /// <summary>
+    /// An item's start and loop sounds started (from Item.turnOn): not
+    /// again while they play (SwitchSync.StartsSounds).
+    /// </summary>
+    [HarmonyPatch(typeof(ItemSounds), nameof(ItemSounds.playStart))]
+    static class ItemSoundsPlayStart
+    {
+        static bool Prefix(ItemSounds __instance)
+        {
+            var coop = Coop.Current;
+            if (coop == null)
+            {
+                return true;
+            }
+
+            return coop.Switches.StartsSounds(__instance);
+        }
+    }
 }
