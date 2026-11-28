@@ -16,6 +16,7 @@ DarkwoodMP is a mod that lets you play [Darkwood](https://store.steampowered.com
 - **Your character is yours.** The host keeps each friend's character (items, health, skills) and gives it back when they rejoin.
 - **Shared levels, your own skills.** Everyone cooks into one shared essence bar and gets the same levels, but each player picks their own skills, on a new **Skills panel** (press **K**). The level dreams are dreamt together.
 - **The prologue together.** Start a new game and your friends join you in the prologue once its opening film is over.
+- **Jump straight to the ending.** The Start Game window can start a new game at the epilogue (with the Talking Tree burned or standing), so a group can play the ending together without the whole game first.
 - **The world keeps going.** With others in the game, the pause menu, map and journal don't pause the world.
 - **Dying for good** (Nightmare, or Hard with no lives left) lets you watch your friends until the game is over.
 - **Your saves are safe.** When you join someone's game, your own saves aren't touched.
