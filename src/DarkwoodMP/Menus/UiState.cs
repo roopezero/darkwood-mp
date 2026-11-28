@@ -11,7 +11,7 @@ namespace DarkwoodMP.Menus
     /// Hidden under the pause menu in a world, the mod's own menu windows,
     /// cutscenes (Controller.playingCutscene, Core.HideUI), the video overlay,
     /// the loading screen, the chapter text, a black screen faded in, entering
-    /// a dream, the epilogue, and the game's full-screen menus (dialogue,
+    /// a dream, and the game's full-screen menus (dialogue,
     /// journal, a note, the skills and leveling menus, the construction menu,
     /// the padlock). Not hidden while just the backpack or a container is open
     /// (or an item's context menu in it): the world is still in view then. The
@@ -57,8 +57,10 @@ namespace DarkwoodMP.Menus
                 // after the epilogue or the credits (hideVisibleUI) it stays
                 // true into the next save loaded in the same session, with the
                 // HUD back on. So it counts only while hideVisibleUI's bars are
-                // actually off.
-                if (Core.HideUI && BarsOff())
+                // actually off. The epilogue keeps the HUD off all the way
+                // through, but it is played together, so the other players'
+                // names stay over them there.
+                if (Core.HideUI && BarsOff() && !InEpilogue())
                 {
                     return "UI hidden";
                 }
@@ -83,11 +85,6 @@ namespace DarkwoodMP.Menus
                 var p = Player.Instance;
                 if (p != null)
                 {
-                    if (p.inEpilogue)
-                    {
-                        return "epilogue";
-                    }
-
                     if (InFullMenu(p))
                     {
                         return "game menu";
@@ -124,6 +121,12 @@ namespace DarkwoodMP.Menus
 
                 return null;
             }
+        }
+
+        private static bool InEpilogue()
+        {
+            var p = Player.Instance;
+            return p != null && p.inEpilogue;
         }
 
         private static bool BarsOff()

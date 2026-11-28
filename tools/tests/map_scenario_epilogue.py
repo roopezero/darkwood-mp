@@ -19,6 +19,9 @@ POST += [
     # Both games built the same first part: the same solid things in the same places (world and in the location).
     ("host", "epilogue-layout", {"settle": 0}),
     ("client", "epilogue-layout", "{host:1}", "{host:2}"),
+    # The other players' name tags are drawn in the epilogue (the game hides its HUD there).
+    ("host", "epilogue-tags"),
+    ("client", "epilogue-tags"),
     # The client's end of the first part (as its endDream step does) takes both games on to the next part.
     ("client", "epilogue-next", {"settle": 0}),
     ("host", "epilogue-moved", PART1),
