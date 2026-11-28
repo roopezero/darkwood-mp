@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.Joining;
+using DarkwoodMP.World.Story;
 using Newtonsoft.Json;
 using UnityEngine;
 
@@ -206,6 +207,12 @@ namespace DarkwoodMP.World
 
             Plugin.Log.LogInfo(
                 "Back to the main menu: leaving the host's game");
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                coop.Epilogue.PlayerLeaves();
+            }
+
             _session.Backend.Leave();
         }
 
@@ -262,6 +269,13 @@ namespace DarkwoodMP.World
         /// </summary>
         private void LeaveHostWorld(string why)
         {
+            if (!EndingRules.LeavesForMenu(Plugin.Instance.Host.Ending))
+            {
+                // the ending (EpilogueSync) takes us through the credits
+                Plugin.Log.LogInfo($"{why} (the ending goes on to the menu)");
+                return;
+            }
+
             LoadStatus = why;
             Plugin.Log.LogInfo(why);
             if (Plugin.Instance.Host.SaveFolders.Active)

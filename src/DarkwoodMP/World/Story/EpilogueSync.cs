@@ -101,14 +101,31 @@ namespace DarkwoodMP.World.Story
 
         /// <summary>
         /// The session's end. If the host went away in the middle of the
-        /// epilogue, our game plays it to the end on its own, and the co-op
-        /// panel opens at the main menu after the credits.
+        /// epilogue (it left, or its last word didn't reach us), our game goes
+        /// to the credits and the main menu, as the host's end would have
+        /// taken it: the parts ahead are the host's to start, and a part left
+        /// half-way (a move to the next one never coming, the host's puppet
+        /// gone) can't be played on alone.
         /// </summary>
         private void Ended()
         {
-            if (Playing && S != null && S.IsClient)
+            bool client = S != null && S.IsClient;
+            bool credits = SceneManager.GetActiveScene().name == "credits";
+            if (EndingRules.CreditsWhenHostGone(Playing, client, credits))
             {
-                Plugin.Instance.StartCoroutine(PanelAfterCredits());
+                Plugin.Log.LogInfo(
+                    "[epilogue] the host left during the epilogue: to the "
+                        + "credits and the main menu");
+                Plugin.Notice("The host left. The game has ended.");
+                WorldShare instance = Plugin.Instance.Host.Share;
+                if (instance != null)
+                {
+                    instance.SetLoadStatus(
+                        "The host left during the ending.");
+                }
+
+                Chapters.ToCredits();
+                Plugin.Instance.StartCoroutine(Chapters.ToMenuAfterEnding());
             }
 
             Playing = false;
@@ -124,39 +141,12 @@ namespace DarkwoodMP.World.Story
         }
 
         /// <summary>
-        /// A joiner whose host left mid-epilogue: once the game's own credits
-        /// are over, the co-op panel.
+        /// Our player goes back to the main menu by choice: the session's end
+        /// that follows isn't the host leaving.
         /// </summary>
-        private IEnumerator PanelAfterCredits()
+        internal void PlayerLeaves()
         {
-            Plugin.Log.LogInfo(
-                "[epilogue] the host left during the epilogue: we finish it "
-                    + "alone, then the co-op panel");
-            Plugin.Notice(
-                "The host left. The ending goes on in your game alone.");
-            bool credits = false;
-            while (true)
-            {
-                if (Plugin.Instance.Host.Session.Active)
-                {
-                    yield break; // joined someone meanwhile
-                }
-
-                if (SceneManager.GetActiveScene().name == "credits")
-                {
-                    credits = true;
-                }
-                else if (credits && WorldShare.MainMenuReady())
-                {
-                    break;
-                }
-
-                yield return new WaitForSecondsRealtime(1f);
-            }
-
-            yield return new WaitForSecondsRealtime(1f);
-            Plugin.Log.LogInfo("[epilogue] after the credits: the co-op panel");
-            Plugin.Instance.OpenPanel();
+            Playing = false;
         }
 
         /// <summary>

@@ -193,6 +193,7 @@ namespace DarkwoodMP.World.Story
             Core.coreStarted = false;
             Core.loadingGame = false;
             Core.loadedGame = false;
+            Plugin.Instance.Host.Ending = true;
             Plugin.Instance.StartCoroutine(CreditsSoon());
         }
 
@@ -203,10 +204,18 @@ namespace DarkwoodMP.World.Story
             SceneManager.LoadScene("credits");
         }
 
+        /// <summary>
+        /// From the ending to the main menu: the credits' own end takes the
+        /// game there. If the credits never come (their scene didn't load,
+        /// the game's UI stuck mid-way), the main menu is loaded anyway, so
+        /// the game is never left in a world with inputs off and an empty
+        /// pause menu.
+        /// </summary>
         internal static IEnumerator ToMenuAfterEnding()
         {
             bool credits = false;
-            while (!WorldShare.MainMenuReady())
+            float from = Time.realtimeSinceStartup;
+            while (true)
             {
                 if (!credits && SceneManager.GetActiveScene().name == "credits")
                 {
@@ -218,9 +227,26 @@ namespace DarkwoodMP.World.Story
                     }
                 }
 
+                var waited = new Seconds(Time.realtimeSinceStartup - from);
+                EndingWait step = EndingRules.AfterEnding(
+                    credits, WorldShare.MainMenuReady(), waited);
+                if (step == EndingWait.AtMenu)
+                {
+                    break;
+                }
+
+                if (step == EndingWait.ForceMenu)
+                {
+                    Plugin.Log.LogWarning(
+                        "The credits didn't come: to the main menu instead");
+                    credits = true; // asked once
+                    Core.returnToMainMenu();
+                }
+
                 yield return null;
             }
 
+            Plugin.Instance.Host.Ending = false;
             Plugin.Log.LogInfo("Back at the main menu after the ending");
             Plugin.Instance.OpenPanel(); // it says why (LoadStatus)
         }

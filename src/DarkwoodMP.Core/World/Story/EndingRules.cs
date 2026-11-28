@@ -128,5 +128,48 @@ namespace DarkwoodMP.World.Story
 
             return JoinEnd.Fallback;
         }
+
+        /// How long the way to the credits may take before the main menu is
+        /// loaded instead (Chapters.ToMenuAfterEnding), realtime: the credits
+        /// come 3.5 s after Chapters.ToCredits, 10 s after the game's own
+        /// goToCredits.
+        public const float CreditsWithin = 30f;
+
+        /// While a game goes from its ending to the main menu: wait, it is
+        /// there, or the credits never came and it goes to the main menu
+        /// itself. Once the credits are on, their own end takes it there.
+        public static EndingWait AfterEnding(
+            bool credits, bool menu, Seconds waited)
+        {
+            if (menu)
+            {
+                return EndingWait.AtMenu;
+            }
+
+            if (!credits && waited.Value > CreditsWithin)
+            {
+                return EndingWait.ForceMenu;
+            }
+
+            return EndingWait.Waiting;
+        }
+
+        /// Whether a joiner whose session ended in the middle of the shared
+        /// epilogue (the host left, or its last word was lost) goes to the
+        /// credits and the main menu, as the host's end would have taken it:
+        /// only while it plays the epilogue and isn't at the credits yet.
+        public static bool CreditsWhenHostGone(
+            bool playing, bool client, bool atCredits)
+        {
+            return playing && client && !atCredits;
+        }
+
+        /// Whether a joiner that lost its host leaves the host's world for
+        /// the main menu at once (WorldShare): not while an ending takes it
+        /// through the credits there.
+        public static bool LeavesForMenu(bool ending)
+        {
+            return !ending;
+        }
     }
 }
