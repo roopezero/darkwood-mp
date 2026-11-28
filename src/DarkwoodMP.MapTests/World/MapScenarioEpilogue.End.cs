@@ -27,31 +27,39 @@ namespace DarkwoodMP.World
             }
 
             GameEvents found = null;
-            var kinds = new System.Collections.Generic.List<string>();
-            foreach (var t in Object.FindObjectsOfType<Transform>(true))
+            Location loc = null;
+            if (D != null)
             {
-                if (t == null || t.name != name)
-                {
-                    continue;
-                }
+                loc = D.dreamLocation;
+            }
 
-                foreach (var c in t.GetComponents<Component>())
-                {
-                    kinds.Add(c.GetType().Name);
-                }
+            if (loc == null)
+            {
+                r.Fail($"no part: {Where()}");
+                yield break;
+            }
 
-                found = t.GetComponentInChildren<GameEvents>(true);
-                if (found != null)
+            // the part's own, an active one first
+            foreach (var ge in loc.GetComponentsInChildren<GameEvents>(true))
+            {
+                if (ge.name == name
+                    && (found == null || ge.gameObject.activeInHierarchy))
                 {
-                    break;
+                    found = ge;
                 }
             }
 
             if (found == null)
             {
-                r.Fail($"no GameEvents in {name} ({string.Join(",", kinds)})"
-                    + $": {Where()}");
+                r.Fail($"no {name} in {loc.name}: {Where()}");
                 yield break;
+            }
+
+            // its coroutines need it active (the bed's use turns it on)
+            for (Transform t = found.transform; t != null
+                && t != loc.transform; t = t.parent)
+            {
+                t.gameObject.SetActive(true);
             }
 
             AsPlayer(() => found.fire());
