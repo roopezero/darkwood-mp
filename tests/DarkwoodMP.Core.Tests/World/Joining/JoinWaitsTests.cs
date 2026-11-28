@@ -24,6 +24,10 @@ namespace DarkwoodMP.Tests.World.Joining
                     + " back.")]
             [InlineData(JoinWait.Loading, "The host's world is loading.")]
             [InlineData(
+                JoinWait.BetweenEpilogueParts,
+                "The host is between parts of the epilogue. You'll join them"
+                    + " in a moment.")]
+            [InlineData(
                 JoinWait.Preparing,
                 "The host is saving its world for you...")]
             [InlineData(

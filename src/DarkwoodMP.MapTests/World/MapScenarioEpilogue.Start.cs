@@ -1,5 +1,4 @@
 using System.Collections;
-using System.IO;
 using DarkwoodMP.World.Story;
 using UnityEngine;
 using static DarkwoodMP.World.MapScenario;
@@ -14,50 +13,38 @@ namespace DarkwoodMP.World
     {
         private static void RegisterStart()
         {
-            Add("epilogue-offered", Offered, timeout: 30f);
+            Add("epilogue-started", Started, timeout: 120f);
             Add("epilogue-tree", Tree, timeout: 30f);
         }
 
         /// <summary>
-        /// "epilogue-offered [DIR]" (host): the game was started at the
-        /// epilogue, and the Multiplayer window shows "Start the epilogue",
-        /// which may be pressed now; with DIR, a screenshot of the window
-        /// DIR/epilogue-start-panel.png.
+        /// "epilogue-started" (host): the game started at the epilogue went
+        /// into its first part by itself once its world was ready (no step
+        /// of ours ran), and it is the shared epilogue, which others join.
         /// </summary>
-        private static IEnumerator Offered(string[] a, Result r)
+        private static IEnumerator Started(string[] a, Result r)
         {
-            var start = Plugin.Instance.Host.EpilogueStart;
-            Verdict may = start.MayStart();
+            float until = Time.realtimeSinceStartup + 110f;
+            while (Time.realtimeSinceStartup < until
+                && !InPart(Chapters.EpilogueDream))
+            {
+                yield return new WaitForSeconds(0.5f);
+            }
+
+            yield return new WaitForSeconds(2f);
+            Verdict may = Plugin.Instance.Host.EpilogueStart.MayStart();
             r.Info =
-                $"shown {start.Shown}, may start: "
-                    + $"{Refusals.Text(may)} (slot "
+                $"{Where()}; may start again: {Refusals.Text(may)} (slot "
                     + $"{Core.currentProfile.id}, the Tree "
                     + $"{SaveBook.TreeAt(Core.currentProfile.id)})";
-            if (!start.Shown)
+            if (!InPart(Chapters.EpilogueDream))
             {
-                r.Fail("the button isn't shown");
+                r.Fail($"not in the epilogue: {r.Info}");
             }
-
-            if (may.Refused)
+            else if (!Playing() || Coop.Current.Dreaming.Shared == null)
             {
-                r.Fail("it may not start: " + Refusals.Text(may));
+                r.Fail($"the epilogue isn't shared: {r.Info}");
             }
-
-            if (a.Length == 0)
-            {
-                yield break;
-            }
-
-            var panel = Plugin.Instance.Host.Panel;
-            panel.SetPanel(true);
-            yield return new WaitForSecondsRealtime(1.5f);
-            Directory.CreateDirectory(a[0]);
-            string path =
-                Path.Combine(a[0], "epilogue-start-panel.png");
-            ScreenCapture.CaptureScreenshot(path);
-            yield return new WaitForSecondsRealtime(1f);
-            Plugin.Log.LogInfo($"[shots] {path}");
-            panel.SetPanel(false);
         }
 
         /// <summary>

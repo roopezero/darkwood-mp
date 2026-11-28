@@ -43,8 +43,8 @@ namespace DarkwoodMP.World
             public string Started = "";
             public List<Player> Players = new List<Player>();
 
-            // Start Game's "Start at: Epilogue": the host's Multiplayer
-            // window offers "Start the epilogue" (World.Story.EpilogueStart)
+            // Start Game's "Start at: Epilogue": the game goes into the
+            // epilogue once its world is ready (World.Story.EpilogueStart)
             public bool AtEpilogue;
 
             // and the Talking Tree burned as it starts

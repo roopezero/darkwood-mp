@@ -193,5 +193,25 @@ namespace DarkwoodMP.Tests.World.Joining
                 SnapshotRules.SendsPacked(packed, raw).ShouldBe(does);
             }
         }
+
+        public class Source
+        {
+            [Theory]
+            [InlineData(true, WorldSource.Live)]
+            [InlineData(false, WorldSource.LastSave)]
+            public void Follows_the_setting(bool live, WorldSource source)
+            {
+                SnapshotRules.Source(live, false).ShouldBe(source);
+            }
+
+            [Theory]
+            [InlineData(true)]
+            [InlineData(false)]
+            public void Offers_the_epilogues_save_in_the_epilogue(bool live)
+            {
+                SnapshotRules.Source(live, true)
+                    .ShouldBe(WorldSource.EpilogueSave);
+            }
+        }
     }
 }

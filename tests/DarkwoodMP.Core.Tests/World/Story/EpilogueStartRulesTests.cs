@@ -101,44 +101,64 @@ namespace DarkwoodMP.Tests.World.Story
             }
         }
 
-        public class Shows
+        public class StartsNow
         {
-            [Fact]
-            public void Shows_the_button_to_the_host()
+            /// Ready for long enough, not started yet.
+            static readonly EpilogueStartFacts Due = Ready with
             {
-                var shows = EpilogueStartRules.Shows(Ready);
+                ReadyFor = new Seconds(EpilogueStartRules.StartAfter),
+            };
 
-                shows.ShouldBeTrue();
+            [Fact]
+            public void Starts_the_epilogue_once_the_world_has_been_ready()
+            {
+                EpilogueStartRules.StartsNow(Due).ShouldBeTrue();
             }
 
             [Fact]
-            public void Hides_it_from_a_joiner()
+            public void Waits_a_moment_after_the_world_is_ready()
             {
-                var game = Ready with { Joiner = true };
+                var game = Due with { ReadyFor = new Seconds(1f) };
 
-                var shows = EpilogueStartRules.Shows(game);
-
-                shows.ShouldBeFalse();
+                EpilogueStartRules.StartsNow(game).ShouldBeFalse();
             }
 
             [Fact]
-            public void Hides_it_once_the_epilogue_plays()
+            public void Starts_it_once_per_world()
             {
-                var game = Ready with { InEpilogue = true };
+                var game = Due with { Started = true };
 
-                var shows = EpilogueStartRules.Shows(game);
-
-                shows.ShouldBeFalse();
+                EpilogueStartRules.StartsNow(game).ShouldBeFalse();
             }
 
             [Fact]
-            public void Hides_it_in_a_game_not_started_there()
+            public void Leaves_a_save_that_went_back_into_the_epilogue()
             {
-                var game = Ready with { AtEpilogue = false };
+                var game = Due with { Dreaming = true };
 
-                var shows = EpilogueStartRules.Shows(game);
+                EpilogueStartRules.StartsNow(game).ShouldBeFalse();
+            }
 
-                shows.ShouldBeFalse();
+            [Fact]
+            public void Leaves_a_joiners_game()
+            {
+                var game = Due with { Joiner = true };
+
+                EpilogueStartRules.StartsNow(game).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Leaves_a_game_not_started_there()
+            {
+                var game = Due with { AtEpilogue = false };
+
+                EpilogueStartRules.StartsNow(game).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Pins_the_wait()
+            {
+                EpilogueStartRules.StartAfter.ShouldBe(3f);
             }
         }
 
@@ -179,7 +199,7 @@ namespace DarkwoodMP.Tests.World.Story
 
                 var verdict = EpilogueStartRules.MayStart(game);
 
-                verdict.Reason.ShouldBe(Refusal.PlayingEnding);
+                verdict.Reason.ShouldBe(Refusal.EpilogueStarted);
             }
 
             [Fact]

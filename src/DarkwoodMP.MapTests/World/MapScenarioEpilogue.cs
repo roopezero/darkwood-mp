@@ -134,6 +134,16 @@ namespace DarkwoodMP.World
                 + $"shared {shared} playing {Playing()}";
         }
 
+        private static bool InEntered(string[] a)
+        {
+            if (a.Length > 0)
+            {
+                return InPartLike(a[0]);
+            }
+
+            return InPart(Chapters.EpilogueDream);
+        }
+
         private static bool InPart(string name) => P != null && P.inEpilogue
             && D != null && D.dreaming && !D.switchingDream
             && D.preset != null && D.preset.name == name;
@@ -156,29 +166,14 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "epilogue-start [button]" (host): the game's last step starts the
-        /// epilogue (with "button", as the Multiplayer window's "Start the
-        /// epilogue" does in a game started at the epilogue); wait until
-        /// we're in its first part.
+        /// "epilogue-start" (host): the game's last step starts the epilogue;
+        /// wait until we're in its first part.
         /// </summary>
         private static IEnumerator Start(string[] a, Result r)
         {
-            if (a.Length > 0 && a[0] == "button")
-            {
-                Verdict verdict = Plugin.Instance.Host.EpilogueStart.Start();
-                if (verdict.Refused)
-                {
-                    r.Fail("refused: " + Refusals.Text(verdict));
-                    yield break;
-                }
-            }
-            else
-            {
-                GameEvent step =
-                    Chapters.StepFor(StoryKind.Epilogue, 0);
-                Singleton<Controller>.Instance.StartCoroutine(
-                    step.fire(P.gameObject));
-            }
+            GameEvent step = Chapters.StepFor(StoryKind.Epilogue, 0);
+            Singleton<Controller>.Instance.StartCoroutine(
+                step.fire(P.gameObject));
 
             while (!InPart(Chapters.EpilogueDream))
             {
@@ -194,12 +189,13 @@ namespace DarkwoodMP.World
         }
 
         /// <summary>
-        /// "epilogue-in" (client): we went into the host's epilogue by
-        /// ourselves, still connected.
+        /// "epilogue-in [PART]" (client): we went into the host's epilogue by
+        /// ourselves, still connected: its first part, or with PART the part
+        /// whose name has it (a late join).
         /// </summary>
         private static IEnumerator In(string[] a, Result r)
         {
-            while (!InPart(Chapters.EpilogueDream))
+            while (!InEntered(a))
             {
                 yield return new WaitForSeconds(0.5f);
             }

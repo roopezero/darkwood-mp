@@ -52,6 +52,13 @@ namespace DarkwoodMP.World.Story
             Write(w, EpilogueStep.LayoutAsk, part);
         }
 
+        /// Host, to a joiner it let in: our epilogue is on, in this part
+        /// (value: its preset name).
+        public static void WriteJoinPart(PacketWriter w, string part)
+        {
+            Write(w, EpilogueStep.JoinPart, part);
+        }
+
         /// The step and its value. A host's Burn is followed by ReadWho.
         public static EpilogueNote Read(PacketReader r)
         {

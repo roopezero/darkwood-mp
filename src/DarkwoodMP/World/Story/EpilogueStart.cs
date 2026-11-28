@@ -1,26 +1,57 @@
+using UnityEngine;
+
 namespace DarkwoodMP.World.Story
 {
     /// <summary>
     /// A new game started at the epilogue (Start Game's "Start at:
     /// Epilogue"), for trying the ending together without playing the whole
     /// game. The game starts as chapter 1 with the prologue skipped, and its
-    /// SaveBook record is marked. The host's Multiplayer window then offers
-    /// "Start the epilogue": the others join first (nobody can join once the
-    /// epilogue plays), and the button sets the chosen story flags (the
-    /// Talking Tree burned or not), sends them to the joiners at once
-    /// (FlagsSync.FlushNow) and runs the game's own last step, startDream
-    /// into the epilogue, which takes every joiner in (EpilogueSync).
-    /// Rules: EpilogueStartRules.
+    /// SaveBook record is marked. A moment after its world is ready (so the
+    /// hosting that Start Game asked for is up), Update sets the chosen story
+    /// flags (the Talking Tree burned or not), sends them to any joiners at
+    /// once (FlagsSync.FlushNow) and runs the game's own last step,
+    /// startDream into the epilogue. The game saves on its way into the
+    /// first part, so continuing that save goes back into the epilogue by
+    /// itself. The others join the epilogue while it plays (EpilogueSync's
+    /// late join). Rules: EpilogueStartRules.
     /// </summary>
     internal sealed class EpilogueStart
     {
-        /// Whether the Multiplayer window shows the button.
-        public bool Shown => EpilogueStartRules.Shows(FactsOf());
+        /// When the world was first seen ready (realtime; below 0: it isn't).
+        private float _readyAt = -1f;
+
+        /// The epilogue was started in this world.
+        private bool _started;
 
         /// Whether the epilogue may start now, or why not.
         public Verdict MayStart() => EpilogueStartRules.MayStart(FactsOf());
 
-        /// "Start the epilogue": sets the flags and runs the step, if it may.
+        /// Each frame (Plugin.Update): the epilogue starts by itself once the
+        /// rules say so, once per world.
+        public void Update()
+        {
+            if (!WorldShare.WorldReady)
+            {
+                _readyAt = -1f;
+                _started = false;
+                return;
+            }
+
+            if (_readyAt < 0f)
+            {
+                _readyAt = Time.realtimeSinceStartup;
+            }
+
+            if (!EpilogueStartRules.StartsNow(FactsOf()))
+            {
+                return;
+            }
+
+            _started = true;
+            Start();
+        }
+
+        /// Sets the flags and runs the step, if it may.
         public Verdict Start()
         {
             Verdict verdict = MayStart();
@@ -57,7 +88,7 @@ namespace DarkwoodMP.World.Story
             return verdict;
         }
 
-        private static EpilogueStartFacts FactsOf()
+        private EpilogueStartFacts FactsOf()
         {
             bool atEpilogue = false;
             if (Core.currentProfile != null && WorldShare.InWorld)
@@ -85,6 +116,12 @@ namespace DarkwoodMP.World.Story
                 inEpilogue = true;
             }
 
+            float readyFor = 0f;
+            if (_readyAt >= 0f)
+            {
+                readyFor = Time.realtimeSinceStartup - _readyAt;
+            }
+
             return new EpilogueStartFacts
             {
                 AtEpilogue = atEpilogue,
@@ -92,6 +129,8 @@ namespace DarkwoodMP.World.Story
                 InWorld = WorldShare.WorldReady,
                 Dreaming = dreaming,
                 InEpilogue = inEpilogue,
+                Started = _started,
+                ReadyFor = new Seconds(readyFor),
             };
         }
     }

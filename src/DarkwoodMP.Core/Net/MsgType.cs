@@ -536,6 +536,10 @@ namespace DarkwoodMP.Net
         /// name), followed by u16 n, then n times: str a piece's name (a
         /// direct child of the part's location), f32 x, f32 z where it stands
         /// in the location; the joiner moves its pieces there (PartLayout).
+        /// host -> client, 7 our epilogue is on, in this part (value: its
+        /// preset name): sent to a joiner as it is let in while the host
+        /// plays the epilogue; the joiner goes into that part (its loading
+        /// save's dream, or the startDream way) instead of the first.
         /// </summary>
         EpilogueStep = 89,
         /// <summary>

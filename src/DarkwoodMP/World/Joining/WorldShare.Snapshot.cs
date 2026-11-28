@@ -409,7 +409,7 @@ namespace DarkwoodMP.World
         private static FreshFacts FactsOf(Snapshot made)
         {
             int scene = ActiveScene;
-            bool live = Plugin.Cfg.LiveWorld.Value;
+            bool live = SourceNow() == WorldSource.Live;
             var sm = Singleton<SaveManager>.Instance;
             bool saves = sm != null && Core.currentProfile != null;
             if (made == null)

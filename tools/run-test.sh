@@ -375,6 +375,12 @@ new_game_up() { # new_game_up: the host starts a new game (prologue not skipped 
   ctl args --dwmp-test-start-window --dwmp-sandbox "$WORK/sandbox" --dwmp-start new --dwmp-start-host direct --dwmp-debug-world $extra
   wait_log "hosting with Direct" 600 || die "the new game wasn't hosted"
   echo "  phase: host's new game made, its intro film over and hosting in $(( $(date +%s) - t0 )) s"
+  # PRE_JOIN in the module: steps in the host's game before the client joins (map_scenario_epilogue_late.py).
+  if grep -q '^PRE_JOIN' "$T/$MAP_SCENARIO.py"; then
+    t0=$(date +%s)
+    $PY "$T/mapdriver.py" pre $CTL || echo "  FAIL: a pre-join step failed"
+    echo "  phase: pre-join steps in $(( $(date +%s) - t0 )) s"
+  fi
 }
 leave_worlds() { # leave_worlds N: client games 1..N, then the host, back to their main menus, as players leave
   # Before the reports, so what each game throws while its world is torn down (Character.OnDestroy and the
@@ -516,7 +522,7 @@ run_body() { # run_body ITEM: one test (in a subshell: a "die" ends this test, n
       mod_log "[Cc]hapter|authority\\]|world changed|character" | grep -v "chapter test" ;;
     host-end)
       host --dwmp-test-end 5 --dwmp-test-quick-end; world_ready
-      $PY "$T/combattest.py" 27720 6057 350 120 "end start,late refused,end" | grep -E "GameEnd|HostAway|closed|played|DreamEnd|late Hello|FAIL"
+      $PY "$T/combattest.py" 27720 6057 350 120 "end start,late let in,end" | grep -E "GameEnd|HostAway|closed|played|DreamEnd|late Hello|FAIL"
       sleep 3
       server_up
       mod_log "test-end|game's end|server|epilogue\\]|Refused"

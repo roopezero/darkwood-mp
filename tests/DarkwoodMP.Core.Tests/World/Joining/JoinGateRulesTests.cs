@@ -42,6 +42,31 @@ namespace DarkwoodMP.Tests.World.Joining
             }
 
             [Fact]
+            public void Lets_a_joiner_into_the_hosts_epilogue_dream()
+            {
+                var why = JoinGateRules.NotReady(Ready with
+                {
+                    Epilogue = true,
+                    Dreaming = true,
+                    Away = true,
+                });
+
+                why.ShouldBe(JoinWait.None);
+            }
+
+            [Fact]
+            public void Waits_between_the_epilogues_parts()
+            {
+                var why = JoinGateRules.NotReady(Ready with
+                {
+                    Epilogue = true,
+                    BetweenParts = true,
+                });
+
+                why.ShouldBe(JoinWait.BetweenEpilogueParts);
+            }
+
+            [Fact]
             public void Leaves_the_main_menu_to_the_refusal()
             {
                 var why = JoinGateRules.NotReady(Ready with

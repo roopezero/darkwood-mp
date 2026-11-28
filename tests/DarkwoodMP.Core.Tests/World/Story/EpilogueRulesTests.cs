@@ -121,28 +121,6 @@ namespace DarkwoodMP.Tests.World.Story
             }
         }
 
-        public class JoinRefusal
-        {
-            [Fact]
-            public void Refuses_a_joiner_while_the_host_plays_the_ending()
-            {
-                var verdict = EpilogueRules.JoinRefusal(true, true);
-
-                verdict.Reason.ShouldBe(Refusal.PlayingEnding);
-                Refusals.Text(verdict)
-                    .ShouldBe("The host is playing the ending.");
-            }
-
-            [Theory]
-            [InlineData(false, true)]
-            [InlineData(true, false)]
-            public void Allows_a_joiner_otherwise(bool playing, bool host)
-            {
-                EpilogueRules.JoinRefusal(playing, host)
-                    .ShouldBe(Verdict.Allow);
-            }
-        }
-
         public class OutcomeAllowed
         {
             static readonly string[] Outcomes = { "sleep", "burn" };

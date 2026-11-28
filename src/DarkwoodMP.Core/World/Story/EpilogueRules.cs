@@ -46,15 +46,69 @@ namespace DarkwoodMP.World.Story
         }
 
         /// Host: whether a new player may join now
-        /// (EpilogueSync.JoinRefusal): not while the host plays the ending.
-        public static Verdict JoinRefusal(bool playing, bool host)
+        /// (EpilogueSync.JoinRefusal): not once the host's epilogue is at
+        /// its end (the outcomes screen, then the credits). Before that a
+        /// joiner goes into the host's part (PartToJoin).
+        public static Verdict JoinRefusal(in EpilogueJoinFacts facts)
         {
-            if (playing && host)
+            if (facts.Playing && facts.Host && facts.AtEnd)
             {
                 return Verdict.Refuse(Refusal.PlayingEnding);
             }
 
             return Verdict.Allow;
+        }
+
+        /// Host: a joiner waits while our game is between two parts of the
+        /// epilogue: a dream on its way (wantToDream), one part switching to
+        /// the next, or a location loading.
+        public static bool BetweenParts(in DreamFacts dreams, bool loading)
+        {
+            return loading || dreams.Wanted || dreams.Switching;
+        }
+
+        /// Host: the part a joiner goes into: our dream's preset when it is
+        /// an epilogue's, else the first part.
+        public static string PartToJoin(in DreamFacts dreams)
+        {
+            if (dreams.Exists
+                && dreams.HasPreset
+                && dreams.Preset != null
+                && dreams.Preset.StartsWith(DreamPrefix))
+            {
+                return dreams.Preset;
+            }
+
+            return StoryRequestRules.EpilogueDream;
+        }
+
+        /// Joiner: the dream a save goes back into as it loads
+        /// (Dreams.prepareDream with loadingSaveGameInDream): the host's
+        /// part (joining; null when we aren't joining the host's
+        /// epilogue) in place of an epilogue's, else the save's own.
+        public static string LoadedPart(
+            string joining,
+            string preset,
+            bool loadingInDream)
+        {
+            if (joining == null
+                || !loadingInDream
+                || preset == null
+                || !preset.StartsWith(DreamPrefix))
+            {
+                return preset;
+            }
+
+            return joining;
+        }
+
+        /// Host: our world went into the epilogue with no shared one on (a
+        /// save made in it was loaded, or it began before hosting): it
+        /// becomes the shared epilogue, which others then join. Not once
+        /// this session's epilogue went to the credits.
+        public static bool Adopts(bool host, bool alone, bool over)
+        {
+            return host && alone && !over;
         }
 
         /// Whether a dream's end counts (EpilogueSync.OutcomeAllowed):
@@ -226,12 +280,21 @@ namespace DarkwoodMP.World.Story
             return !(x * x + y * y + z * z < 1f);
         }
 
-        /// What an EpilogueStep message does (EpilogueSync.OnStep). Nothing
-        /// while not Playing. The host takes Burn and Crawled from a peer;
+        /// What an EpilogueStep message does (EpilogueSync.OnStep). A joiner
+        /// takes JoinPart from the host at any time; nothing else while not
+        /// Playing. The host takes Burn and Crawled from a peer;
         /// a joiner takes Outcomes, Burn and Pan from the host. Nothing else
         /// is checked.
         public static StepHandling OnStep(in EpilogueStepFacts facts)
         {
+            // the host's word to a new joiner, which isn't Playing yet
+            if (!facts.IsHost
+                && facts.FromHost
+                && facts.Step == EpilogueStep.JoinPart)
+            {
+                return StepHandling.JoinPart;
+            }
+
             if (!facts.Playing)
             {
                 return StepHandling.Ignore;

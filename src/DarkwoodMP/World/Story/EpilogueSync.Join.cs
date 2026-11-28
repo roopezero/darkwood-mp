@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using DarkwoodMP.Net;
 using DarkwoodMP.World.Dreaming;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -69,7 +70,121 @@ namespace DarkwoodMP.World.Story
 
         private static Vec3 VecOf(Vector3 v) => new Vec3(v.x, v.y, v.z);
 
+        // ---- host: late joiners --------------------------------------------
+
+        /// <summary>
+        /// Each frame (Plugin.Update), host: a world in the epilogue alone
+        /// becomes the shared epilogue.
+        /// </summary>
+        internal void Update()
+        {
+            var s = S;
+            bool host = s != null && s.IsHost;
+            if (!EpilogueRules.Adopts(host, InEpilogueAlone(), _over))
+            {
+                return;
+            }
+
+            Playing = true;
+            Reset();
+            _coop.Dreaming.Share(StoryRequestRules.EpilogueDream);
+            // our last save is the one on the way into the first part
+            _coop.Story.NoteSnapshot();
+            Plugin.Log.LogInfo(
+                "[epilogue] our world is in the epilogue: it is shared, and "
+                    + "players who join go into it");
+        }
+
+        /// <summary>
+        /// Host: a player was let in while we play the epilogue: tell them
+        /// the part we're in, which their game goes into.
+        /// </summary>
+        private void OnPeerJoined(ulong peer)
+        {
+            var s = S;
+            if (!Playing || s == null || !s.IsHost)
+            {
+                return;
+            }
+
+            string part = EpilogueRules.PartToJoin(
+                Prologue.DreamsOf(Singleton<Dreams>.Instance));
+            Plugin.Log.LogInfo(
+                $"[epilogue] {s.NameOf(peer)} joins the epilogue, in {part}");
+            var w = s.Begin(MsgType.EpilogueStep);
+            EpilogueStepMessage.WriteJoinPart(w, part);
+            s.SendTo(peer, w, Channel.Control, reliable: true);
+        }
+
         // ---- joiner ---------------------------------------------------------
+
+        /// <summary>
+        /// Joiner: the host plays the epilogue, in this part. We play it too:
+        /// the save we load goes back into the epilogue's dream as it loads
+        /// (LoadedPart puts the host's part in place of its first), or, if
+        /// our world isn't in it, we go in the way the startDream step does.
+        /// </summary>
+        private void JoinPart(string part)
+        {
+            Plugin.Log.LogInfo(
+                $"[epilogue] the host is playing the epilogue, in {part}: we "
+                    + "join them there");
+            Playing = true;
+            Reset();
+            _joinPart = part;
+            _coop.Dreaming.Share(StoryRequestRules.EpilogueDream);
+            Plugin.Notice(
+                "The host is playing the epilogue: you join them in it");
+            Plugin.Instance.StartCoroutine(LateJoin(part));
+        }
+
+        /// <summary>
+        /// Dreams.prepareDream is about to run with this preset: the one to
+        /// run instead (the host's part, when a save we load goes back into
+        /// the epilogue as we join it).
+        /// </summary>
+        internal string LoadedPart(Dreams d, string preset)
+        {
+            bool loading = d != null && d.loadingSaveGameInDream;
+            string part = EpilogueRules.LoadedPart(_joinPart, preset, loading);
+            if (part != preset)
+            {
+                Plugin.Log.LogInfo(
+                    $"[epilogue] the save goes back into {preset}: into the "
+                        + $"host's {part} instead");
+            }
+
+            return part;
+        }
+
+        /// <summary>
+        /// Joiner, let in while the host plays the epilogue: once our world
+        /// has loaded (or its save took us into the dream), into the host's
+        /// part.
+        /// </summary>
+        private IEnumerator LateJoin(string part)
+        {
+            float until = Time.realtimeSinceStartup + LoadFor;
+            while (Playing && Time.realtimeSinceStartup < until
+                && !WorldShare.WorldReady && !InEpilogueNow())
+            {
+                yield return null;
+            }
+
+            yield return JoinEpilogue(part);
+            _joinPart = null;
+        }
+
+        /// <summary>
+        /// How long a late joiner waits for the host's world to load.
+        /// </summary>
+        private const float LoadFor = 300f;
+
+        private static bool InEpilogueNow()
+        {
+            var p = Player.Instance;
+            return p != null && p.inEpilogue;
+        }
 
         /// <summary>
         /// GameEnd from the host. Returns false if it isn't the shared
@@ -111,7 +226,8 @@ namespace DarkwoodMP.World.Story
                         + "begins");
                 if (step == GameEndStep.JoinEpilogue)
                 {
-                    Plugin.Instance.StartCoroutine(JoinEpilogue());
+                    Plugin.Instance.StartCoroutine(
+                        JoinEpilogue(StoryRequestRules.EpilogueDream));
                 }
 
                 return true;
@@ -130,19 +246,21 @@ namespace DarkwoodMP.World.Story
         }
 
         /// <summary>
-        /// Joiner: into the host's epilogue, once our game can (not mid-dream,
-        /// not loading).
+        /// Joiner: into the host's epilogue part, once our game can (not
+        /// mid-dream, not loading). A game already going into it by itself
+        /// (a save loading in its dream) isn't started again.
         /// </summary>
-        private IEnumerator JoinEpilogue()
+        private IEnumerator JoinEpilogue(string part)
         {
             yield return new WaitForSecondsRealtime(1f); // the notice
             float until = Time.realtimeSinceStartup + EndingRules.TryFor;
             bool started = false;
-            while (!started && Playing && Time.realtimeSinceStartup < until)
+            while (!started && Playing && Time.realtimeSinceStartup < until
+                && !InEpilogueNow())
             {
                 try
                 {
-                    started = StartHere();
+                    started = StartHere(part);
                 }
                 catch (Exception e)
                 {
@@ -161,7 +279,7 @@ namespace DarkwoodMP.World.Story
                 yield break;
             }
 
-            if (started)
+            if (started || InEpilogueNow())
             {
                 until = Time.realtimeSinceStartup + EndingRules.EnterFor;
                 while (Time.realtimeSinceStartup < until && Playing
@@ -193,9 +311,9 @@ namespace DarkwoodMP.World.Story
 
         /// <summary>
         /// As the epilogue's startDream step does it: inputs off, a black
-        /// screen, then the epilogue dream.
+        /// screen, then the epilogue dream (this part of it).
         /// </summary>
-        private bool StartHere()
+        private bool StartHere(string part)
         {
             var dreams = Singleton<Dreams>.Instance;
             var p = Player.Instance;
@@ -210,7 +328,7 @@ namespace DarkwoodMP.World.Story
             p.halt();
             dreams.wantToDream = true;
             Singleton<UI>.Instance.tweenBlackScreenTop(Color.black, 2f);
-            Plugin.Instance.StartCoroutine(PrepareSoon(dreams));
+            Plugin.Instance.StartCoroutine(PrepareSoon(dreams, part));
             return true;
         }
 
@@ -230,7 +348,7 @@ namespace DarkwoodMP.World.Story
             };
         }
 
-        private IEnumerator PrepareSoon(Dreams dreams)
+        private IEnumerator PrepareSoon(Dreams dreams, string part)
         {
             yield return new WaitForSecondsRealtime(2.1f);
             var o = Singleton<OutsideLocations>.Instance;
@@ -244,8 +362,7 @@ namespace DarkwoodMP.World.Story
 
             yield return null;
             yield return null;
-            dreams.StartCoroutine(
-                dreams.prepareDream(StoryRequestRules.EpilogueDream));
+            dreams.StartCoroutine(dreams.prepareDream(part));
         }
     }
 }

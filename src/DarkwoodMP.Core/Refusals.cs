@@ -356,7 +356,8 @@ namespace DarkwoodMP
                     return "The host isn't in a saved game yet. Join once"
                         + " they've loaded their world.";
                 case Refusal.PlayingEnding:
-                    return "The host is playing the ending.";
+                    return "The host's game is at the very end of the"
+                        + " epilogue, about to go to the credits.";
                 case Refusal.HasItOpen:
                     return detail + " has it open";
                 case Refusal.SlotChanged:
@@ -430,10 +431,6 @@ namespace DarkwoodMP
                     return "This is your copy of another host's world. To"
                         + " host, go back to the main menu and load your own"
                         + " world.";
-                case Refusal.EpilogueBegun:
-                    return "This world is in the epilogue, which can't be"
-                        + " shared once it has begun. Host from a save before"
-                        + " the end of the game.";
                 case Refusal.OtherModVersion:
                     return "Host runs a different DarkwoodMP version ("
                         + detail
@@ -457,6 +454,8 @@ namespace DarkwoodMP
                     return "this game wasn't started at the epilogue";
                 case Refusal.HostStartsEpilogue:
                     return "only the host starts the epilogue";
+                case Refusal.EpilogueStarted:
+                    return "the epilogue has started";
                 case Refusal.WorldNotLoaded:
                     return "the world hasn't loaded yet";
                 case Refusal.WaitForDream:

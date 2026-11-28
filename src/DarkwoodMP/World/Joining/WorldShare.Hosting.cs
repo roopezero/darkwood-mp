@@ -29,17 +29,21 @@ namespace DarkwoodMP.World
                 if (InWorld && sm != null)
                 {
                     string snapDir = null;
-                    if (Plugin.Cfg.LiveWorld.Value)
+                    WorldSource source = SourceNow();
+                    CoopSession coop = Coop.Current;
+                    if (source == WorldSource.Live)
                     {
                         yield return SaveSnapshot();
                         snapDir = _snapshotDir;
                     }
-                    else // the last save: what was where then isn't known
+                    else if (coop != null)
                     {
-                        CoopSession coop = Coop.Current;
-                        if (coop != null)
+                        // the last save: what was where then isn't known
+                        coop.Drags.ForgetSnapshot();
+                        // the epilogue's save: its story was noted as it
+                        // began (EpilogueSync)
+                        if (source == WorldSource.LastSave)
                         {
-                            coop.Drags.ForgetSnapshot();
                             coop.Story.ForgetSnapshot();
                         }
                     }
@@ -356,6 +360,23 @@ namespace DarkwoodMP.World
 
             var outside = Singleton<OutsideLocations>.Instance;
             var dreams = Singleton<Dreams>.Instance;
+            // The shared epilogue is a chain of dreams a joiner goes into
+            // (EpilogueSync), except between two of its parts.
+            bool epilogue = false;
+            CoopSession current = Coop.Current;
+            if (current != null)
+            {
+                epilogue = current.Epilogue.Playing;
+            }
+
+            bool between = false;
+            if (epilogue)
+            {
+                between = World.Story.EpilogueRules.BetweenParts(
+                    World.Story.Prologue.DreamsOf(dreams),
+                    outside != null && outside.loading);
+            }
+
             // A separate location is loaded only in the host's game, and the
             // joiner would be put beside the host there (Characters), on the
             // world's grid of a game that hasn't loaded it. The snapshot would
@@ -370,7 +391,24 @@ namespace DarkwoodMP.World
                 PrologueWaits = waits,
                 Dreaming = dreams != null && dreams.dreaming,
                 Away = outside != null && outside.playerInOutsideLocation,
+                Epilogue = epilogue,
+                BetweenParts = between,
             };
+        }
+
+        /// <summary>
+        /// Where the world offered to joiners comes from now.
+        /// </summary>
+        private static WorldSource SourceNow()
+        {
+            bool epilogue = false;
+            CoopSession coop = Coop.Current;
+            if (coop != null)
+            {
+                epilogue = coop.Epilogue.Playing;
+            }
+
+            return SnapshotRules.Source(Plugin.Cfg.LiveWorld.Value, epilogue);
         }
 
         private static readonly string NotInWorld =

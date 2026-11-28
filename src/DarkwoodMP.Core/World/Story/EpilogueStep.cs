@@ -24,5 +24,9 @@ namespace DarkwoodMP.World.Story
 
         /// The host's layout of a part: where its pieces stand.
         Layout = 6,
+
+        /// Host, to a joiner it let in: its epilogue is on, in this part
+        /// (the value: the part's preset name).
+        JoinPart = 7,
     }
 }

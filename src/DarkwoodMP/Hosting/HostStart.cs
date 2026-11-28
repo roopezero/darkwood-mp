@@ -53,11 +53,7 @@ namespace DarkwoodMP.Hosting
                 return new HostFacts { InWorld = true, HostsCopy = true };
             }
 
-            return new HostFacts
-            {
-                InWorld = true,
-                InEpilogue = World.Story.EpilogueSync.InEpilogueAlone(),
-            };
+            return new HostFacts { InWorld = true };
         }
 
         /// <summary>

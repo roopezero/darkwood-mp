@@ -33,10 +33,11 @@ tools/run-test.sh all map:far                     # all can be mixed with other 
 The batteries are data: every `tools/tests/map_scenario_NAME.py` is `map:NAME`, so a new module is a battery as soon
 as it exists. Now: core, corpse (story NPCs' corpses: killed by either player, shown and looted once in both games; and a corpse removed while a player has it open leaves no window), dreams, enemies, far, farevents, fixchecks, gaps, hostile, issues, items1, items2, lights (the lights on the other players' puppets, and each game's view drawn from its own player), locations,
 night, npcs, repair (a door and furniture repaired by the client stay repaired), shortcut and shortcut2 (the village shortcut; shortcut2 with the client in the village first; each trip's view checked and screenshotted), skills, status, sweep, view (the Dry Meadow markings: each game dark only while its own player is in them, and every game's view light watched each frame while walking up at running speed), world, and dogfull (the whole scenario with the dog watch; not in `maps`). `MAP_SCENARIO=map4_view tools/run-test.sh map4` runs the view checks with four games (the markings with players 0, 1500 and 6000 behind, each player's torch, flashlight and lantern seen by every other game, four lanterns at the Old Woods hideout).
-`map:epilogue_start` doesn't either: its module says `HOST_WORLD = "new"` and `HOST_ARGS = "--dwmp-start-epilogue burned ..."`
-(added to the host's launch arguments), so the host starts a new game with *Start at: Epilogue* and the Tree burned; the
-client joins it in chapter 1, the host's *Start the epilogue* button takes both in (the Tree's flag reaches the client),
-and the epilogue goes through as in `map:epilogue`.
+`map:epilogue_start` doesn't either: its module says `HOST_WORLD = "new"` and `HOST_ARGS = "--dwmp-start-epilogue burned"`
+(added to the host's launch arguments), so the host starts a new game with *Start at: Epilogue* and the Tree burned,
+which goes into the epilogue by itself (its `PRE_JOIN` steps check that before the client starts); the client then
+joins it there (the Tree's flag reaches it), and the epilogue goes through as in `map:epilogue`. `map:epilogue_late`
+is the same with the host playing on alone to the flat before the client joins, which must land in the flat.
 `map:prologue` doesn't play the test world either: its module says `HOST_WORLD = "new"`, so the host
 starts a new game on a fresh copy of your saves (the prologue not skipped, hosting once the intro film is over) and
 the client joins it in the forest; `FINAL_AROUND_HOST = True` takes the final dumps around the host at the hideout.
