@@ -614,6 +614,26 @@ namespace DarkwoodMP.Tests
                     "its pieces ran past its length"
                 },
                 { Refusal.Words, "it isn't broken", "it isn't broken" },
+                {
+                    Refusal.NotAnEpilogueStart,
+                    null,
+                    "this game wasn't started at the epilogue"
+                },
+                {
+                    Refusal.HostStartsEpilogue,
+                    null,
+                    "only the host starts the epilogue"
+                },
+                {
+                    Refusal.WorldNotLoaded,
+                    null,
+                    "the world hasn't loaded yet"
+                },
+                {
+                    Refusal.WaitForDream,
+                    null,
+                    "wait until the dream is over"
+                },
             };
     }
 }

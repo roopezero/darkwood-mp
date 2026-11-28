@@ -366,10 +366,13 @@ test_world_up() { # test_world_up <extra args...>: the host plays a fresh test w
   $PY "$T/mapdriver.py" pre $CTL || echo "  FAIL: a pre-join step failed"
   echo "  phase: pre-join steps in $(( $(date +%s) - t0 )) s"
 }
-new_game_up() { # new_game_up: the host starts a new game (prologue not skipped) on a fresh copy of your saves, hosting it
-  local t0; t0=$(date +%s)
+new_game_up() { # new_game_up: the host starts a new game (prologue not skipped unless HOST_ARGS say so) on a fresh copy of your saves, hosting it
+  # HOST_ARGS = "..." in the module adds launch arguments (map_scenario_epilogue_start.py: --dwmp-start-epilogue).
+  local t0 extra; t0=$(date +%s)
+  extra="$(sed -n 's/^HOST_ARGS *= *"\(.*\)".*/\1/p' "$T/$MAP_SCENARIO.py")"
   copy_saves "$WORK/sandbox"
-  ctl args --dwmp-test-start-window --dwmp-sandbox "$WORK/sandbox" --dwmp-start new --dwmp-start-host direct --dwmp-debug-world
+  # shellcheck disable=SC2086 # the module's arguments, split on spaces
+  ctl args --dwmp-test-start-window --dwmp-sandbox "$WORK/sandbox" --dwmp-start new --dwmp-start-host direct --dwmp-debug-world $extra
   wait_log "hosting with Direct" 600 || die "the new game wasn't hosted"
   echo "  phase: host's new game made, its intro film over and hosting in $(( $(date +%s) - t0 )) s"
 }

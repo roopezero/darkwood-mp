@@ -686,5 +686,19 @@ namespace DarkwoodMP
         /// rules refuse with it (Authority.Refuse(string)); it goes once the
         /// last of them has.
         Words,
+
+        // A new game started at the epilogue (EpilogueStartRules).
+
+        /// The game wasn't started at the epilogue (Start Game's "Start at").
+        NotAnEpilogueStart,
+
+        /// A joiner pressed "Start the epilogue": only the host starts it.
+        HostStartsEpilogue,
+
+        /// The world hasn't loaded yet.
+        WorldNotLoaded,
+
+        /// A dream plays or is on its way.
+        WaitForDream,
     }
 }

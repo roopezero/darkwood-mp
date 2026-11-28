@@ -5,6 +5,7 @@ using System.Linq;
 using DarkwoodMP.Net;
 using DarkwoodMP.World.KeptCharacters;
 using DarkwoodMP.World.Saves;
+using DarkwoodMP.World.Story;
 using Newtonsoft.Json;
 
 namespace DarkwoodMP.World
@@ -41,6 +42,13 @@ namespace DarkwoodMP.World
             public string Name = "";
             public string Started = "";
             public List<Player> Players = new List<Player>();
+
+            // Start Game's "Start at: Epilogue": the host's Multiplayer
+            // window offers "Start the epilogue" (World.Story.EpilogueStart)
+            public bool AtEpilogue;
+
+            // and the Talking Tree burned as it starts
+            public bool TreeBurned;
         }
 
         /// <summary>
@@ -176,6 +184,46 @@ namespace DarkwoodMP.World
             r.Name = name;
             Write();
             Plugin.Log.LogInfo($"[saves] slot {slot} named \"{name}\"");
+        }
+
+        /// <summary>
+        /// Marks the new game in slot <paramref name="slot"/> as started at
+        /// the epilogue (Start Game's "Start at").
+        /// </summary>
+        public static void MarkEpilogue(int slot, TreeFate tree)
+        {
+            var r = GetOrAdd(slot);
+            if (r == null)
+            {
+                return;
+            }
+
+            r.AtEpilogue = true;
+            r.TreeBurned = tree == TreeFate.Burned;
+            Write();
+            Plugin.Log.LogInfo(
+                $"[saves] slot {slot} starts at the epilogue (the Tree "
+                    + $"{tree})");
+        }
+
+        /// Whether the save in slot <paramref name="slot"/> was started at
+        /// the epilogue.
+        public static bool AtEpilogue(int slot)
+        {
+            var r = Get(slot);
+            return r != null && r.AtEpilogue;
+        }
+
+        /// The Talking Tree of a save started at the epilogue.
+        public static TreeFate TreeAt(int slot)
+        {
+            var r = Get(slot);
+            if (r != null && r.TreeBurned)
+            {
+                return TreeFate.Burned;
+            }
+
+            return TreeFate.Standing;
         }
 
         /// <summary>

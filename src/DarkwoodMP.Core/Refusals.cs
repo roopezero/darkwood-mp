@@ -453,6 +453,14 @@ namespace DarkwoodMP
                     return "its pieces ran past its length";
                 case Refusal.Words:
                     return detail;
+                case Refusal.NotAnEpilogueStart:
+                    return "this game wasn't started at the epilogue";
+                case Refusal.HostStartsEpilogue:
+                    return "only the host starts the epilogue";
+                case Refusal.WorldNotLoaded:
+                    return "the world hasn't loaded yet";
+                case Refusal.WaitForDream:
+                    return "wait until the dream is over";
                 default:
                     return verdict.Reason.ToString();
             }

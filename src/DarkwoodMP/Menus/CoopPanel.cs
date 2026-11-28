@@ -308,9 +308,50 @@ namespace DarkwoodMP.Menus
                 }
             }
 
+            DrawEpilogueStart(f);
             if (Plugin.Instance.Host.TestMode)
             {
                 DrawTestWorld(f);
+            }
+        }
+
+        /// <summary>
+        /// A game started at the epilogue (World.Story.EpilogueStart): the
+        /// host's "Start the epilogue", which closes the menus as the step
+        /// begins.
+        /// </summary>
+        private void DrawEpilogueStart(Flow f)
+        {
+            var start = _host.EpilogueStart;
+            if (!start.Shown)
+            {
+                return;
+            }
+
+            Ui.Heading(f, "The epilogue");
+            Ui.Text(
+                f,
+                "This game was started for trying the ending together. "
+                    + "Start the epilogue once everyone has joined: nobody "
+                    + "can join while it plays.",
+                MenuSkin.Dim);
+            Verdict may = start.MayStart();
+            if (Ui.Button(f, "Start the epilogue", !may.Refused))
+            {
+                if (!start.Start().Refused)
+                {
+                    SetPanel(false);
+                    if (Singleton<MainMenu>.Instance.gameObject
+                        .activeInHierarchy)
+                    {
+                        Core.showHidePauseMenu();
+                    }
+                }
+            }
+
+            if (may.Refused)
+            {
+                Ui.Text(f, Refusals.Text(may), MenuSkin.Dim);
             }
         }
 

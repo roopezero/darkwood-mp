@@ -145,7 +145,7 @@ namespace DarkwoodMP.World.Story
         /// The step as the host runs it for a joiner (the event itself may be
         /// in a place only the joiner has).
         /// </summary>
-        private static GameEvent StepFor(StoryKind kind, int chapter)
+        internal static GameEvent StepFor(StoryKind kind, int chapter)
         {
             switch (kind)
             {
