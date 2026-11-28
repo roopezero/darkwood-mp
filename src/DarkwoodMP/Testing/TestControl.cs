@@ -340,6 +340,12 @@ namespace DarkwoodMP
         /// <summary>Host: how many players have joined and are out of loading
         /// (their PlayerState no longer comes from the loading spot at
         /// x = 75000, and they aren't away).</summary>
+        private static bool InEpilogue()
+        {
+            CoopSession coop = Coop.Current;
+            return coop != null && coop.Epilogue.Playing;
+        }
+
         private int PlayersIn()
         {
             var s = Plugin.Instance.Host.Session;
@@ -365,11 +371,11 @@ namespace DarkwoodMP
                 }
 
                 var last = kv.Value.Last;
-                // In the world, or with us in the prologue's stage (a place on
-                // the far-off grid, World.Prologue).
+                // In the world, or with us in the prologue's stage or the
+                // epilogue (places on the far-off grid).
                 if (last != null
                     && ((Mathf.Abs(last.Position.x) < 50000f && !last.Away)
-                        || World.Story.Prologue.InStage))
+                        || World.Story.Prologue.InStage || InEpilogue()))
                 {
                     n++;
                 }
