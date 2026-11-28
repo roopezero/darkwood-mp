@@ -371,7 +371,8 @@ namespace DarkwoodMP.World.Scripted
                     == UnityEngine.SceneManagement.SceneManager
                         .GetActiveScene(),
                 LocalOnly = f.Client
-                    && Combat.NetEnemies.LocalOnly(et.gameObject),
+                    && (Combat.NetEnemies.LocalOnly(et.gameObject)
+                        || WorldActions.InLaterPart(et.gameObject)),
                 Named = r.Valid,
                 Saved = r.K == ObjRef.Kind.Saved,
                 MultipleFire = t.multipleFire,

@@ -476,9 +476,12 @@ namespace DarkwoodMP.World.Scripted
                 return true;
             }
 
-            // A dream NPC's outcome in a dream of our own: the host isn't
-            // there, so it's ours alone, as in single player.
-            if (!WorldEventRules.Sends(ours, WorldActions.InOwnArea()))
+            // A dream NPC's outcome in a dream of our own, or anything in a
+            // later part of the epilogue (each game builds its own): it stays
+            // ours alone, as in single player.
+            bool ownArea = WorldActions.InOwnArea()
+                || WorldActions.InLaterPart(null);
+            if (!WorldEventRules.Sends(ours, ownArea))
             {
                 if (WorldActions.Debug)
                 {

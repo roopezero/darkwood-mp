@@ -358,6 +358,70 @@ namespace DarkwoodMP.Tests.World.Places
             }
         }
 
+        public class IsLaterPart
+        {
+            /// In the epilogue's flat, its first part's name kept as shared.
+            static readonly DreamFacts InFlat = SharedOne with
+            {
+                Epilogue = true,
+                Preset = "Dream3",
+            };
+
+            [Fact]
+            public void Finds_a_part_after_the_first()
+            {
+                PlaceRules.IsLaterPart(InFlat).ShouldBeTrue();
+            }
+
+            [Fact]
+            public void Leaves_out_the_first_part()
+            {
+                var dream = InFlat with { Preset = "Dream1" };
+
+                PlaceRules.IsLaterPart(dream).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Leaves_out_a_shared_dream_that_is_not_the_epilogue()
+            {
+                var dream = InFlat with { Epilogue = false };
+
+                PlaceRules.IsLaterPart(dream).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Leaves_out_a_player_awake()
+            {
+                var dream = InFlat with { Dreaming = false };
+
+                PlaceRules.IsLaterPart(dream).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Leaves_out_a_dream_with_no_location()
+            {
+                var dream = InFlat with { HasLocation = false };
+
+                PlaceRules.IsLaterPart(dream).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Leaves_out_a_dream_with_no_preset()
+            {
+                var dream = InFlat with { HasPreset = false };
+
+                PlaceRules.IsLaterPart(dream).ShouldBeFalse();
+            }
+
+            [Fact]
+            public void Leaves_out_a_dream_with_none_shared()
+            {
+                var dream = InFlat with { Shared = null };
+
+                PlaceRules.IsLaterPart(dream).ShouldBeFalse();
+            }
+        }
+
         public class OursNow
         {
             [Theory]

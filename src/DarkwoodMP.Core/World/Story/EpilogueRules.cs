@@ -153,6 +153,22 @@ namespace DarkwoodMP.World.Story
             return playing && !released;
         }
 
+        /// The body's clip that petting the dog in the epilogue's flat
+        /// plays (Player.special_petDog); the player stands still until it
+        /// ends.
+        public const string PetDogClip = "PetDog";
+
+        /// Whether our player may start petting the dog: in a session, only
+        /// when the body's animation library has the clip. Only the
+        /// epilogue's clothes (PlayerEpilogueAnims) have it; without it
+        /// the clip never plays, so it never ends, and the player stood
+        /// still for good (a joiner whose clothes the host's change had
+        /// used up). Playing alone is left as the game does it.
+        public static bool MayPetDog(bool inSession, bool hasClip)
+        {
+            return !inSession || hasClip;
+        }
+
         /// Whether the host sends its outcomes (EpilogueSync.SendOutcomes).
         public static bool SendsOutcomes(bool playing, bool host, int peers)
         {

@@ -126,6 +126,26 @@ namespace DarkwoodMP.World.Places
             return dream.HasPreset && dream.Preset == dream.Shared;
         }
 
+        /// Whether our player is in a later part of the epilogue played
+        /// together (its flat, its crater: any part after the first, which
+        /// the host runs). Every game builds each part for itself, and what
+        /// a player does there stays in their own game, the host's too: the
+        /// joiners' triggers there were already their own, and the host's
+        /// that reached them used up the once-only events of their flat
+        /// (its clothes, its rooms' lights), so a joiner who came second
+        /// had none of it and froze petting the dog. The parts still move
+        /// on together (DreamSync).
+        public static bool IsLaterPart(in DreamFacts dream)
+        {
+            if (!dream.Epilogue || !dream.Dreaming || !dream.HasLocation
+                || dream.Shared == null || !dream.HasPreset)
+            {
+                return false;
+            }
+
+            return dream.Preset != dream.Shared;
+        }
+
         /// The host: whether our own player is in this location now, by
         /// true names. Ours is false with no location or OutsideLocations.
         public static bool OursNow(bool inside, string ours, string theirs)
