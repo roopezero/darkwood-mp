@@ -80,11 +80,20 @@ namespace DarkwoodMP.World
             }
 
             float until = Time.realtimeSinceStartup + 240f;
+            float nudge = Time.realtimeSinceStartup + 45f;
             bool seen = false;
+            bool nudged = false;
             while (Time.realtimeSinceStartup < until
                 && SceneManager.GetActiveScene().name != "credits")
             {
                 var o = Object.FindObjectOfType<EpilogueOutcomes>();
+                if (o == null && !nudged && Time.realtimeSinceStartup > nudge)
+                {
+                    // not come by itself: the part's own screen, turned on
+                    nudged = true;
+                    ShowOutcomes(r);
+                }
+
                 if (o != null)
                 {
                     seen = true;
@@ -102,7 +111,8 @@ namespace DarkwoodMP.World
                 active = session.Active;
             }
 
-            r.Info = $"outcomes seen {seen}, credits {credits}; session "
+            r.Info = $"outcomes seen {seen} (turned on {nudged}), "
+                + $"credits {credits}; session "
                 + $"{active}";
             if (!credits)
             {
