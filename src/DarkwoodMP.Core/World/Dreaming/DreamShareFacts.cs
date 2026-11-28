@@ -43,7 +43,8 @@ namespace DarkwoodMP.World.Dreaming
         /// EpilogueSync.OutcomeAllowed for the outcome a DreamEnd names.
         public bool OutcomeAllowed { get; init; }
 
-        /// The DreamEnd names the dream we share.
+        /// The DreamEnd names the dream we share; a DreamStart, the dream
+        /// our player is in.
         public bool SameDream { get; init; }
     }
 }

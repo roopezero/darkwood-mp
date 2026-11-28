@@ -31,7 +31,9 @@ namespace DarkwoodMP.World.Dreaming
     /// chomper) and its events are the host's, a client's own copies of them
     /// are frozen and hidden and the host's are shown, and the host's enemies
     /// there go for whoever has the most threat. Dreams that come from the
-    /// story or from a kill (the night trader's) stay the player's own.
+    /// story or from a kill (the night trader's) stay the player's own,
+    /// except the few every player dreams together (the village cellar's:
+    /// StoryDreamRules, DreamSync.Story).
     ///
     /// What happens is the core's DreamRules; DreamPatches hand the game's
     /// calls here.
@@ -196,6 +198,11 @@ namespace DarkwoodMP.World.Dreaming
             PresetStep step = DreamRules.PresetChosen(DreamOf(null), share);
             if (step == PresetStep.Keep)
             {
+                if (!_hostLevelDream)
+                {
+                    StoryDrawn(preset);
+                }
+
                 return;
             }
 

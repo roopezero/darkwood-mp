@@ -172,6 +172,13 @@ namespace DarkwoodMP.World.Dreaming
 
             if (InDream(dream))
             {
+                // our player went into it first (a story dream every
+                // player dreams together): it is the shared one now
+                if (share.SameDream)
+                {
+                    return StartStep.Adopt;
+                }
+
                 return StartStep.AlreadyIn;
             }
 
@@ -214,7 +221,7 @@ namespace DarkwoodMP.World.Dreaming
         /// after the stove's menu, then go.
         public static JoinStep Join(in JoinFacts join)
         {
-            if (!join.ClientMode
+            if (!(join.ClientMode || join.HostFollows)
                 || !join.InWorld
                 || !join.HasDreams
                 || !join.HasPlayer)
